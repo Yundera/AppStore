@@ -33,7 +33,7 @@ We welcome contributions to help grow this AppStore:
 
 ## Contributors
 <a href="https://github.com/yundera/Yundera-AppStore/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=yundera/Yundera-AppStore" />
+  <img src="https://contrib.rocks/image?repo=yundera/AppStore" />
 </a>
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
