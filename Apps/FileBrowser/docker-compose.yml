@@ -51,12 +51,89 @@ x-casaos:
   author: CasaOS Team
   category: Cloud
   description:
-    en_us: File Browser - Webbased File Browser including sharing functions etc.
-    zh_cn: File Browser - 包含分享功能等的Webbased文件浏览器
+    en_us: FileBrowser: Your Personal File Manager, Self-Hosted
+
+    FileBrowser is your own cloud-based file explorer. Just like Google Drive or Windows Explorer, it lets you access, organize, and share all your files—right from your browser. You can upload, delete, rename, move, preview, and even edit files in a beautiful, modern interface.
+
+    It’s designed to work locally, so your files never leave your server. Whether you’re on your phone or computer, you can manage everything easily and securely.
+
+    No subscription. No tracking. Just your files—your way.
+
+    Optimized for Yundera PCS -  Install it on your Private Cloud Server and enjoy full control of your data.
+
+Key Features
+- Upload and download files from anywhere
+- Preview photos, videos, PDFs, and documents
+- Create folders, rename, move, or delete items
+- Built-in file editor for quick changes
+- Create share links for friends or teammates
+- Set user roles and permissions
+- Works great on mobile and desktop
+
+Perfect for teams, creators, or anyone tired of corporate clouds.
+    zh_cn: FileBrowser：您的个人文件管理器，自托管
+
+FileBrowser 是您自己的云端文件浏览器。就像 Google Drive 或 Windows 资源管理器一样，它允许您直接在浏览器中访问、组织和分享所有文件。您可以上传、删除、重命名、移动、预览，甚至编辑文件，界面简洁现代。
+
+它设计为本地运行，因此文件永远不会离开您的服务器。无论是在手机还是电脑上，您都可以轻松安全地进行管理。
+
+无需订阅，无跟踪。您的文件，由您掌控。
+
+为 Yundera PCS 优化：在您的私人云服务器上安装，完全掌控您的数据。
+
+主要功能：
+- 随时随地上传和下载文件
+- 预览照片、视频、PDF 和文档
+- 创建、重命名、移动或删除文件夹
+- 内置编辑器可快速修改文件
+- 为朋友或团队生成共享链接
+- 设置用户角色和访问权限
+- 在手机和电脑上都能良好运行
+
+适合团队、创作者或厌倦商业云服务的任何人。
+
     ar_sa: متصفح الملفات - متصفح ملفات Webbased يشمل وظائف المشاركة وما إلى ذلك
     de_de: Datei Browser - Webbasierte Datei Browser, einschließlich Sharing-Funktionen usw.
-    es_es: File Browser - Navegador de archivos Webbased que incluye funciones de compartición, etc.
-    fr_fr: File Browser - Navigateur de fichiers Webbased incluant des fonctions de partage, etc.
+    es_es: FileBrowser: Tu gestor de archivos personal, autoalojado
+
+FileBrowser es tu propio explorador de archivos en la nube. Como Google Drive o el explorador de Windows, te permite acceder, organizar y compartir todos tus archivos desde tu navegador. Puedes subir, eliminar, renombrar, mover, previsualizar e incluso editar archivos en una interfaz moderna y sencilla.
+
+Está diseñado para funcionar localmente, por lo que tus archivos nunca abandonan tu servidor. Ya sea desde el móvil o desde el ordenador, podrás gestionarlo todo de forma fácil y segura.
+
+Sin suscripciones. Sin rastreos. Tus archivos, a tu manera.
+
+Optimizado para Yundera PCS- instálalo en tu servidor en la nube privada y ten control total sobre tus datos.
+
+Funciones clave
+- Subida y descarga de archivos desde cualquier lugar
+- Previsualización de fotos, vídeos, PDF y documentos
+- Crear, renombrar, mover o borrar carpetas
+- Editor de archivos integrado
+- Crear enlaces compartidos para amigos o compañeros
+- Gestión de roles de usuario y permisos
+- Compatible con móvil y escritorio
+
+Perfecto para equipos, creadores o quienes estén cansados de las nubes comerciales.
+    fr_fr: FileBrowser : votre gestionnaire de fichiers personnel, auto-hébergé
+
+FileBrowser est votre propre explorateur de fichiers basé sur le cloud. Comme Google Drive ou l’explorateur Windows, il vous permet d’accéder à vos fichiers, de les organiser et de les partager, directement depuis votre navigateur. Vous pouvez téléverser, supprimer, renommer, déplacer, prévisualiser et même modifier vos fichiers via une interface moderne et intuitive.
+
+Il est conçu pour fonctionner localement - vos fichiers ne quittent jamais votre serveur. Que vous soyez sur votre téléphone ou votre ordinateur, gérez tout facilement et en toute sécurité.
+
+Aucun abonnement. Aucun suivi. Vos fichiers, à votre manière.
+
+Optimisé pour Yundera PCS - installez-le sur votre serveur cloud privé et gardez le contrôle total de vos données.
+
+Fonctionnalités principales 
+- Téléversement et téléchargement de fichiers depuis n’importe où
+- Aperçu des photos, vidéos, PDF et documents
+- Création, déplacement, renommage ou suppression de dossiers
+- Éditeur intégré pour des modifications rapides
+- Partage de fichiers via des liens sécurisés
+- Gestion des rôles et des accès utilisateurs
+- Compatible mobile et ordinateur
+
+Idéal pour les équipes, créateurs, ou ceux qui en ont assez des clouds commerciaux.
     hu_hu: File Browser - Webbased File Browser, beleértve a megosztási funkciókat stb.
     it_it: File Browser - Browser di file Webbased che include funzioni di condivisione, ecc.
     ru_ru: File Browser - Webbased File Browser, включая функции обмена, и т.д.
