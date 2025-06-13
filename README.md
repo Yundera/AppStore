@@ -32,7 +32,7 @@ We welcome contributions to help grow this AppStore:
 3. Check issues labeled `help wanted` for specific areas needing assistance
 
 ## Contributors
-<a href="https://github.com/yundera/Yundera-AppStore/graphs/contributors">
+<a href="https://github.com/yundera/AppStore/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=yundera/AppStore" />
 </a>
 
