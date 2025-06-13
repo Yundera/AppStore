@@ -4,15 +4,43 @@ This document describes how to contribute an app to CasaOS AppStore.
 
 **IMPORTANT**: Your PR must be *well tested* on your own CasaOS first. This is the mandatory first step for your submission.
 
-**NOTE**: The legacy `appfile.json` is no longer supported since CasaOS v0.4.4. There is no need to include this file in your PR.
+## Submission Checklist
 
-**NOTE**: Do not use `latest` tag for `image`. [What's Wrong With The Docker `:latest` Tag?](https://github.com/IceWhaleTech/CasaOS-AppStore/issues/167)
+Before submitting your PR, ensure your app meets these requirements:
+
+### Security Checklist
+- [ ] Default authentication (Basic Auth, OAuth, etc.) is enabled and documented - exceptions must be explained in rationale.md (e.g., public websites)
+- [ ] Uses PUID/PGID for proper file permissions or Docker user functionality by default - root or special capability access applications must be explained in rationale.md
+- [ ] Specific version tag (no `:latest`)
+- [ ] Resource limits are mandatory and set appropriately - exceptions must be explained in rationale.md
+- [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
+
+### Functionality Checklist
+- [ ] Works immediately after installation - no need to check logs or run commands - pre-install scripts create sensible defaults
+- [ ] Data is mapped to appropriate `/DATA` subdirectories - if things are mapped outside of /DATA, this should be explained in rationale.md
+- [ ] No manual configuration required for basic functionality - should work out of the box
+
+### Documentation Checklist
+- [ ] Clear description of the application
+- [ ] Volume and environment variable descriptions
+- [ ] Icon and screenshots meet specifications - files and URLs point to the correct repository (this one)
+
+## Testing Process
+to ensure easy testing, please follow these steps:
+
+1 . Start with a regurlar compose app, which is a directory containing a `docker-compose.yml` file. test it on your own machine that you can start it.
+2 . In your forked repo Create a new directory under `Apps` with the name of your app, e.g. `MyApp`.
+3 . test this app listing on your own CasaOS instance. 
+    - use the github url of your forked repo as the AppStore URL : Should look like this:
+```shell
+https://github.com/worph/AppStore/archive/refs/heads/main.zip 
+```
 
 ## Submit Process
 
 App submission should be done via Pull Request. Fork this repository and prepare the app per guidelines below.
 
-Once the PR is ready, create and assign your PR to anyone from CasaOS Team or some other contributor you trust.
+Once the PR is ready, create and assign your PR to anyone from the CasaOS Team or another trusted contributor.
 
 ## Guidelines
 
@@ -23,31 +51,29 @@ CasaOS-AppStore
 ├─ category-list.json   # Configuration file for category list
 ├─ recommend-list.json  # Configuration file for recommended apps list
 ├─ featured-apps.json   # TBD
-├─ help                 # Help script for old version app store
-├─ Apps                 # Apps Store files
-├─ build                # Installation script for Apps Store
+├─ Apps                 # App Store files
 └─ psd-source           # Icon thumbnail screenshot PSD Templates
 ```
 
-### A CasaOS App typically includes following files
+### A CasaOS App typically includes the following files
 
 ```shell
 App-Name
 ├─ docker-compose.yml   # (Required) A valid Docker Compose file
 ├─ icon.png             # (Required) App icon
-├─ screenshot-1.png     # (Required) At least one screenshot is needed, to demonstrate the app runs on CasaOS successfully.
-├─ screenshot-2.png     # (Optional) More screenshots to demonstrate different functionalities is highly recommended.
+├─ screenshot-1.png     # (Required) At least one screenshot is needed to demonstrate the app runs on CasaOS successfully
+├─ screenshot-2.png     # (Optional) More screenshots to demonstrate different functionalities are highly recommended
 ├─ screenshot-3.png     # (Optional) ...
-└─ thumbnail.png        # (Optional) A thumbnail file is needed only if you want it to be featured in AppStore front. (see specification at bottom)
+└─ thumbnail.png        # (Required) A thumbnail file is needed if you want it to be featured in AppStore front (see specification at bottom)
 ```
 
 #### A CasaOS App is a Docker Compose app, or a *compose app*
 
-Each directory under [Apps](Apps) correspond to a CasaOS App. The directory should contain at least a `docker-compose.yml` file:
+Each directory under [Apps](Apps) corresponds to a CasaOS App. The directory should contain at least a `docker-compose.yml` file:
 
 - It should be a valid [Docker Compose file](https://docs.docker.com/compose/compose-file/). Here are some requirements (but not limited to):
 
-  - `name` must contain only lower case letters, numbers, underscore "`_`" and hyphen "`-`" (in other words, must match `^[a-z0-9][a-z0-9_-]*$`)
+    - `name` must contain only lowercase letters, numbers, underscore "`_`" and hyphen "`-`" (in other words, must match `^[a-z0-9][a-z0-9_-]*$`)
 
 - Image tag should be specific, e.g. `:0.1.2`, instead of `:latest`.
 
@@ -55,7 +81,7 @@ Each directory under [Apps](Apps) correspond to a CasaOS App. The directory shou
 
 - The `name` property is used as the *store App ID*, which should be unique across all apps.
 
-    For example, in the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml#L1), its store App ID is `syncthing`:
+  For example, in the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml#L1), its store App ID is `syncthing`:
 
     ```yaml
     name: syncthing
@@ -65,9 +91,9 @@ Each directory under [Apps](Apps) correspond to a CasaOS App. The directory shou
     ...
     ```
 
-- Language codes are case sensitive and should be in all lower case, e.g. `en_us`, `zh_cn`.
+- Language codes are case sensitive and should be in all lowercase, e.g. `en_us`, `zh_cn`.
 
-- There are few system wide variables can be used in `environment` and `volumes`:
+- There are several system-wide variables that can be used in `environment` and `volumes`:
 
     ```yaml
     environment:
@@ -80,125 +106,181 @@ Each directory under [Apps](Apps) correspond to a CasaOS App. The directory shou
         source: /DATA/AppData/$AppID/config # $AppID = app name, e.g. syncthing
     ```
 
-- CasaOS specific metadata, also called *store info*, are stored under [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos` at two positions.
+- **Enhanced System Variables**: CasaOS now provides additional system-wide variables for enhanced functionality:
 
-    1. Service level
+    ```yaml
+    environment:
+      PGID: $PGID                           # Preset Group ID
+      PUID: $PUID                           # Preset User ID  
+      TZ: $TZ                               # Current system timezone
+      PASSWORD: $default_pwd                # Secure default password generated by CasaOS
+      DOMAIN: $domain                       # Domain (or subdomain) mapped to this container
+      PUBLIC_IP: $public_ip                 # Public IP used for port binding and announcements
+    ```
 
-        A `docker-compose.yml` file can contain one or more `services`. Each [service](https://docs.docker.com/compose/compose-file/#services-top-level-element) can have its own store info.
+- CasaOS specific metadata, also called *store info*, are stored under the [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos` at two levels.
 
-        For the same example, at the buttom of the `syncthing` service in the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml)
+  #### 1. Service Level Configuration
 
-        ```yaml
-        x-casaos:
-            envs:                           # description of each environment variable
-                ...
-              - container: PUID
-                description:
-                    en_us: Run Syncthing as specified uid.
-            ports:                          # description of each port
-              - container: "8384"
-                description:
-                    en_us: WebUI HTTP Port
-                ...
-            volumes:                        # description of each volume
-                - container: /config
-                  description:
-                      en_us: Syncthing config directory.
-                - container: /DATA
-                  description:
-                    en_us: Syncthing Accessible Directory.
-        ```
+  A `docker-compose.yml` file can contain one or more `services`. Each [service](https://docs.docker.com/compose/compose-file/#services-top-level-element) can have its own store info.
 
-    2. Compose app level
+  For example, at the bottom of the `syncthing` service in the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml):
 
-        For the same example, at the bottom of the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml)
-
-        ```yaml
-        x-casaos:
-            architectures:                  # a list of architectures that the app supports
-                - amd64
-                - arm
-                - arm64
-            main: syncthing                 # the name of the main service under `services`
-            author: CasaOS Team
-            category: Backup
-            description:                    # multiple locales are supported
-                en_us: Syncthing is a continuous file synchronization program. It synchronizes files between two or more computers in real time, safely protected from prying eyes. Your data is your data alone and you deserve to choose where it is stored, whether it is shared with some third party, and how it's transmitted over the internet.
-            developer: Syncthing
-            icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Syncthing/icon.png
-            tagline:                        # multiple locales are supported
-                en_us: Free, secure, and distributed file synchronisation tool.
-            thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Jellyfin/thumbnail.jpg
-            title:                          # multiple locales are supported
-                en_us: Syncthing
-            tips:
-                before_install:
-                    en_us: |
-                        (some notes for user to read prior to installation, such as preset `username` and `password` - markdown is supported!)
-            index: /                        # the index page for web UI, e.g. index.html
-            port_map: "8384"                # the port for web UI
-        ```
-
-    3. Magic Value
-
-        **Note**: The features is only working in casaos 0.4.4 and newer version.
-
-        For resolves some cases. Casaos provide some magic value to power your application:
-
-        - Environment variable
-
-            your application can read environment variable that user set, such as `OPENAI_API_KEY` from environment variable. It is store in `/etc/casaos/env`. User can set only once and using anywhere. It can be change by api, after change, all application will re up to inject new env var.
-
-            **Note**: change the config didn't change the env var of current container. To set env var, you should use cli to set it.
-
-        - `WEBUI_PORT`
-
-            your `docker-compose.yml` can use `WEBUI_PORT` to set webui port. Casaos will assign a available port for your application. You can use it like this:
-
-            ```yaml
+    ```yaml
+    x-casaos:
+        envs:                           # description of each environment variable
             ...
-            ports:
-                - target: 5230
-                published: ${WEBUI_PORT}
-                protocol: tcp
+          - container: PUID
+            description:
+                en_us: Run Syncthing as specified uid.
+        ports:                          # description of each port
+          - container: "8384"
+            description:
+                en_us: WebUI HTTP Port
             ...
-            x-casaos:
-                architectures:
-                    - amd64
-                    - arm64
-                    - arm
-            ...
-                port_map: ${WEBUI_PORT}
-            ```
+        volumes:                        # description of each volume
+            - container: /config
+              description:
+                  en_us: Syncthing config directory.
+            - container: /DATA
+              description:
+                en_us: Syncthing accessible directory.
+    ```
 
-            or
+  #### 2. Compose App Level Configuration
 
-            ```yaml
-            ...
-            ports:
-                - target: 5230
-                published: ${WEBUI_PORT:-5230}
-                protocol: tcp
-            ...
-            x-casaos:
-                architectures:
-                    - amd64
-                    - arm64
-                    - arm
-            ...
-                port_map: ${WEBUI_PORT:-5230}
-            ```
+  For the same example, at the bottom of the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml):
 
-            **Note**: the WEBUI_PORT only allocated once. It promise the port is available when allocated. If the port be used by other application. It didn't reallocate a new port.
+    ```yaml
+    x-casaos:
+        architectures:                  # a list of architectures that the app supports
+            - amd64
+            - arm
+            - arm64
+        main: syncthing                 # the name of the main service under `services`
+        author: CasaOS Team
+        category: Backup
+        description:                    # multiple locales are supported
+            en_us: Syncthing is a continuous file synchronization program. It synchronizes files between two or more computers in real time, safely protected from prying eyes. Your data is your data alone and you deserve to choose where it is stored, whether it is shared with some third party, and how it's transmitted over the internet.
+        developer: Syncthing
+        icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Syncthing/icon.png
+        tagline:                        # multiple locales are supported
+            en_us: Free, secure, and distributed file synchronisation tool.
+        thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Jellyfin/thumbnail.jpg
+        title:                          # multiple locales are supported
+            en_us: Syncthing
+        tips:
+            before_install:
+                en_us: |
+                    (some notes for user to read prior to installation, such as preset `username` and `password` - markdown is supported!)
+        index: /                        # the index page for web UI, e.g. index.html
+        port_map: "8384"                # the port for web UI
+    ```
+
+### New CasaOS Features
+
+CasaOS now supports additional configuration options for enhanced app management:
+
+#### Pre-Installation Commands
+
+You can specify commands to run before container startup using `pre-install-cmd`. This command executes before all other containers are started:
+
+```yaml
+x-casaos:
+    pre-install-cmd: docker run --rm -v /DATA/AppData/$AppID/:/data/ -e PASSWORD=$default_pwd nasselle/pre-install-toolbox https://example.com/init.sh
+```
+
+**Common use cases:**
+- Create default configuration files
+- Set up initial data structures
+- Generate certificates or keys
+- Prepare the environment with sensible defaults
+
+#### Web UI Configuration
+
+For applications with web interfaces, you must specify both the main service and web UI port:
+
+```yaml
+x-casaos:
+    main: webui-service              # Name of the service providing the web interface
+    webui_port: 8080                # Port exposed by the container for web UI access
+```
+
+**Web UI Requirements (all three must be configured together):**
+- The main service must `expose` the web UI port (using `expose`, not necessarily `ports`)
+- The `webui_port` field must match the exposed port number
+- The `main` field must reference a valid service name under `services`
+
+**Important Notes:**
+- Only one web UI domain is supported per app (even with multiple containers)
+- HTTPS unwrapping is handled automatically by CasaOS - no certificate management needed at container level
+- Other ports can still be bound directly to the public IP for non-web services
+
+**Example Configuration:**
+
+```yaml
+services:
+  database:
+    image: postgres:13
+    # Database service - no web UI
+    
+  webui-service:
+    image: myapp:latest
+    expose:
+      - 8080                        # Must expose the web UI port
+    ports:
+      - "9000:9000"                 # Direct port binding for API or other services
+    depends_on:
+      - database
+
+x-casaos:
+    main: webui-service             # References the service with web UI
+    webui_port: 8080               # Must match the exposed port above
+```
+
+#### Enhanced System Variables
+
+CasaOS automatically provides several system variables for your compose files:
+
+** Variables:**
+- `$default_pwd`: A secure default password generated by CasaOS for applications requiring authentication
+- `$domain`: The domain or subdomain mapped to this container for web UI access
+- `$public_ip`: The public IP address used for port binding announcements and external access
+- `$AppID`: The application name/ID
+- `$PUID/$PGID`: User/Group IDs for proper file permissions
+- `$TZ`: System timezone
+
+**Example Usage:**
+```yaml
+environment:
+  - PASSWORD=$default_pwd
+  - DOMAIN=$domain  
+  - PUBLIC_IP=$public_ip
+  - PUID=$PUID
+  - PGID=$PGID
+  - TZ=$TZ
+```
+
+#### Environment Variables
+
+CasaOS provides additional functionality for environment variable management:
+
+- **User-defined Variables**: Your application can read environment variables set by users, such as `OPENAI_API_KEY`. These are stored in `/etc/casaos/env` and can be set once and used across multiple applications.
+
+- **Variable Updates**: Environment variables can be changed via API. After changes, all applications will restart to inject the new environment variables.
+
+**Note**: Changing the configuration doesn't immediately change environment variables in running containers. Use the CLI to set environment variables for immediate effect.
 
 ## Requirements for Featured Apps
 
-Once in a while, we pick certain apps as featured apps and display them at the AppStore front. The standard for apps to be featured is a bit higher than rest of the apps:
+We occasionally select certain apps as featured apps to display at the AppStore front. Featured apps have higher standards than regular apps:
 
-- Icon image should be a transparent background PNG image with a size of 192x192 pixels.
-- Thumbnail image should be 784x442 pixels, with a rounded corner mask. It is recommended to be saved as a PNG image with a transparent background.
-- Screenshot image should be 1280x720 pixels and can be saved in either PNG or JPG format. Please try to keep the file size as small as possible.
+- **Icon**: Transparent background PNG image, 192x192 pixels
+- **Thumbnail**: 784x442 pixels with rounded corner mask, preferably PNG with transparent background
+- **Screenshots**: 1280x720 pixels, PNG or JPG format, keep file size as small as possible
 
-Please find the prepared [PSD template files](psd-source), to quickly create the above images if you need.
+Please use the prepared [PSD template files](psd-source) to quickly create these images.
 
-If you have any feedback and suggestion about this contributing process, please let us know via Discord or Issues immediately. Thanks!
+## Feedback
+
+If you have any feedback or suggestions about this contributing process, please let us know via Discord or Issues. Thanks!

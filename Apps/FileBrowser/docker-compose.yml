@@ -85,20 +85,6 @@ x-casaos:
     sv_se: Ladda upp, ta bort, förhandsgranska, byt namn, redigera och dela dina filer.
     uk_ua: Завантажте, видаліть, перегляньте, перейменуйте, відредагуйте і поділіться своїми файлами.
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/thumbnail.jpg
-  tips:
-    before_install:
-      en_us: |
-        Default Account
-
-        | Username | Password |
-        | -------- | -------- |
-        | `admin`    | `admin`    |
-      zh_cn: |
-        默认账号
-
-        | 用户名 | 密码 |
-        | -------- | -------- |
-        | `admin`    | `admin`    |
   title:
     en_us: FileBrowser
   index: /
