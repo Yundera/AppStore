@@ -25,22 +25,30 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Volume and environment variable descriptions
 - [ ] Icon and screenshots meet specifications - files and URLs point to the correct repository (this one)
 
-## Testing Process
-to ensure easy testing, please follow these steps:
-
-1 . Start with a regurlar compose app, which is a directory containing a `docker-compose.yml` file. test it on your own machine that you can start it.
-2 . In your forked repo Create a new directory under `Apps` with the name of your app, e.g. `MyApp`.
-3 . test this app listing on your own CasaOS instance. 
-    - use the github url of your forked repo as the AppStore URL : Should look like this:
-```shell
-https://github.com/worph/AppStore/archive/refs/heads/main.zip 
-```
-
-## Submit Process
+## Testing and Submit Process
 
 App submission should be done via Pull Request. Fork this repository and prepare the app per guidelines below.
-
 Once the PR is ready, create and assign your PR to anyone from the CasaOS Team or another trusted contributor.
+
+To ensure easy testing, please follow these steps:
+
+1. Start with a regular compose app, which is a directory containing a `docker-compose.yml` file. Test it on your own machine to ensure you can start it successfully. In your instance, you can edit the compose file with a text editor and restart the app to check if the changes work. Use SSH to do `docker compose up -d` if needed.
+
+2. Copy the docker compose to an instance of CasaOS, e.g., `/DATA/AppData/casaos/apps/MyApp/docker-compose.yml`. Add all the required CasaOS-specific fields (x-casaos metadata, etc.) and test from the instance using SSH and the `docker compose up -d` command.
+
+3. When the local setup is stable, push to your forked repo. Create a new directory under `Apps` with your app name (along with logo, screenshot, and description files), e.g., `MyApp`.
+
+4. Test this app listing on your own CasaOS instance:
+  - Use the GitHub URL of your forked repo as the AppStore URL. It should look like this:
+   ```shell
+   https://github.com/user/AppStore/archive/refs/heads/main.zip 
+   ```
+
+5. Once it works in your store, create a PR.
+ - See the checklist above to ensure your app meets the requirements.
+ - Remember to change where the asset links point to (should be the main repository)
+
+6. Once approved, your app will be directly available in the app listing.
 
 ## Guidelines
 
@@ -176,6 +184,18 @@ Each directory under [Apps](Apps) corresponds to a CasaOS App. The directory sho
         index: /                        # the index page for web UI, e.g. index.html
         port_map: "8384"                # the port for web UI
     ```
+
+#### use tips before_install to provide a default account if needed
+```yml
+x-casaos:
+  tips:
+    before_install:
+      en_us: |
+        Default Account
+        | Username   | Password       |
+        | --------   | ------------   |
+        | `admin`    | `$default_pwd` |
+```
 
 ### New CasaOS Features
 
