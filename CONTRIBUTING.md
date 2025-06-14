@@ -1,4 +1,4 @@
-# Contributing to CasaOS AppStore
+# Contributing to the AppStore
 
 This document describes how to contribute an app to CasaOS AppStore.
 
