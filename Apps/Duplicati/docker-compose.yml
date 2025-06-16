@@ -25,7 +25,7 @@ services:
         target: /config
       - type: bind
         source: /DATA/
-        target: /config/DATA
+        target: /source/DATA
     container_name: duplicati
 
 x-casaos:
@@ -74,6 +74,7 @@ x-casaos:
     before_install:
       en_us: |
         Default Password : `$default_pwd`
+        Your Files will appear in the `Computer/source/DATA` directory inside duplicati source panel (3).
   title:
     en_us: Duplicati
   index: /
