@@ -70,7 +70,10 @@ x-casaos:
     sv_se: Lagra säkert krypterade säkerhetskopior i molnet!
     uk_ua: Зберігайте безпечні зашифровані резервні копії у хмарі!
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png
-  tips: {}
+  tips:
+    before_install:
+      en_us: |
+        Default Password : `$default_pwd`
   title:
     en_us: Duplicati
   index: /
