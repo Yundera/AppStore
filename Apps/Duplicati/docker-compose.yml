@@ -2,9 +2,10 @@ name: duplicati
 services:
   duplicati:
     image: linuxserver/duplicati:2.1.0
+    user: 0:0
     environment:
-      PGID: $PGID
-      PUID: $PUID
+      PGID: 0
+      PUID: 0
       TZ: $TZ
       SETTINGS_ENCRYPTION_KEY: '$default_pwd'
       DUPLICATI__WEBSERVICE_PASSWORD: '$default_pwd'
@@ -17,11 +18,10 @@ services:
           memory: 256M
         reservations:
           memory: 64M
-    network_mode: bridge
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/Duplicati/config
+        source: /DATA/AppData/duplicati/config
         target: /config
       - type: bind
         source: /DATA/
