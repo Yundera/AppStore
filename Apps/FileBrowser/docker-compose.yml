@@ -1,6 +1,7 @@
 name: filebrowser
 services:
   filebrowser:
+    container_name: filebrowser
     user: $PUID:$PGID
     environment:
       PGID: $PGID
@@ -24,41 +25,17 @@ services:
       resources:
         limits:
           memory: 256M
-    x-casaos:
-      envs:
-        - container: TZ
-          description:
-            en_us: TimeZone
-            zh_cn: 时区
-        - container: PUID
-          description:
-            en_us: Run FileBrowser as specified uid.
-            zh_cn: 以指定的用户ID运行FileBrowser
-        - container: PGID
-          description:
-            en_us: Run FileBrowser as specified gid.
-            zh_cn: 以指定的组ID运行FileBrowser
-
-      volumes:
-        - container: /db
-          description:
-            en_us: FileBrowser database directory.
-            zh_cn: FileBrowser数据库目录
-        - container: /srv
-          description:
-            en_us: FileBrowser managed directory.
-            zh_cn: FileBrowser管理的目录
-    container_name: filebrowser
 x-casaos:
   pre-install-cmd: |
     docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser users add admin $default_pwd --perm.admin --database /db/database.db &&
+    chown -R $PUID:$PGID /DATA/AppData/filebrowser/db/
   architectures:
     - amd64
     - arm64
     - arm
   main: filebrowser
-  author: CasaOS Team
+  author: Yundera Team
   category: Cloud
   description:
     en_us: File Browser - Webbased File Browser including sharing functions etc.
@@ -75,11 +52,11 @@ x-casaos:
     sv_se: File Browser - Webbaserad filbläddrare inklusive delningsfunktioner etc.
     uk_ua: File Browser - Webbased File Browser, включаючи функції обміну, тощо
   developer: File Browser
-  icon: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FileBrowser/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FileBrowser/screenshot-1.jpg
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FileBrowser/screenshot-2.jpg
-    - https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FileBrowser/screenshot-3.jpg
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-1.jpg
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-2.jpg
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-3.jpg
   tagline:
     en_us: Upload, delete, preview, rename, edit and share your files.
     zh_cn: 上传，删除，预览，重命名，编辑和共享您的文件。
@@ -94,7 +71,7 @@ x-casaos:
     pt_br: Faça upload, exclua, visualize, renomeie, edite e compartilhe seus arquivos.
     sv_se: Ladda upp, ta bort, förhandsgranska, byt namn, redigera och dela dina filer.
     uk_ua: Завантажте, видаліть, перегляньте, перейменуйте, відредагуйте і поділіться своїми файлами.
-  thumbnail: https://cdn.jsdelivr.net/gh/Worph/AppStore@main/Apps/FileBrowser/thumbnail.jpg
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/thumbnail.jpg
   tips:
     before_install:
       en_us: |

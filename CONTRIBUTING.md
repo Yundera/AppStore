@@ -23,7 +23,7 @@ Before submitting your PR, ensure your app meets these requirements:
 ### Documentation Checklist
 - [ ] Clear description of the application
 - [ ] Volume and environment variable descriptions
-- [ ] Icon and screenshots meet specifications - files and URLs point to the correct repository (this one)
+- [ ] Icon and screenshots meet specifications - files and URLs point to this Yundera repository (eg https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png)
 
 ## Testing and Submit Process
 
@@ -114,7 +114,7 @@ Each directory under [Apps](Apps) corresponds to a CasaOS App. The directory sho
         source: /DATA/AppData/$AppID/config # $AppID = app name, e.g. syncthing
     ```
 
-- **Enhanced System Variables**: CasaOS now provides additional system-wide variables for enhanced functionality:
+- **System Variables**: CasaOS now provides additional system-wide variables for enhanced functionality:
 
     ```yaml
     environment:
@@ -126,36 +126,9 @@ Each directory under [Apps](Apps) corresponds to a CasaOS App. The directory sho
       PUBLIC_IP: $public_ip                 # Public IP used for port binding and announcements
     ```
 
-- CasaOS specific metadata, also called *store info*, are stored under the [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos` at two levels.
+- CasaOS specific metadata, also called *store info*, are stored under the [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos`.
 
-  #### 1. Service Level Configuration
-
-  A `docker-compose.yml` file can contain one or more `services`. Each [service](https://docs.docker.com/compose/compose-file/#services-top-level-element) can have its own store info.
-
-  For example, at the bottom of the `syncthing` service in the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml):
-
-    ```yaml
-    x-casaos:
-        envs:                           # description of each environment variable
-            ...
-          - container: PUID
-            description:
-                en_us: Run Syncthing as specified uid.
-        ports:                          # description of each port
-          - container: "8384"
-            description:
-                en_us: WebUI HTTP Port
-            ...
-        volumes:                        # description of each volume
-            - container: /config
-              description:
-                  en_us: Syncthing config directory.
-            - container: /DATA
-              description:
-                en_us: Syncthing accessible directory.
-    ```
-
-  #### 2. Compose App Level Configuration
+  #### Compose App Level Configuration
 
   For the same example, at the bottom of the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml):
 
@@ -197,9 +170,9 @@ x-casaos:
         | `admin`    | `$default_pwd` |
 ```
 
-### New CasaOS Features
+### Features
 
-CasaOS now supports additional configuration options for enhanced app management:
+CasaOS supports additional configuration options for enhanced app management:
 
 #### Pre-Installation Commands
 
@@ -258,7 +231,7 @@ x-casaos:
     webui_port: 8080               # Must match the exposed port above
 ```
 
-#### Enhanced System Variables
+#### System Variables
 
 CasaOS automatically provides several system variables for your compose files:
 
@@ -300,6 +273,10 @@ We occasionally select certain apps as featured apps to display at the AppStore 
 - **Screenshots**: 1280x720 pixels, PNG or JPG format, keep file size as small as possible
 
 Please use the prepared [PSD template files](psd-source) to quickly create these images.
+
+**Language Requirement:**  
+All apps submitted for validation must include descriptions in at least the following languages: **English, French, Korean, Chinese, and Spanish**.
+
 
 ## Feedback
 

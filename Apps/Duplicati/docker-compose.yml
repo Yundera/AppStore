@@ -1,6 +1,7 @@
 name: duplicati
 services:
   duplicati:
+    container_name: duplicati
     image: linuxserver/duplicati:2.1.0
     user: 0:0
     environment:
@@ -26,14 +27,13 @@ services:
       - type: bind
         source: /DATA/
         target: /source/DATA
-    container_name: duplicati
 
 x-casaos:
   architectures:
     - amd64
     - arm64
   main: duplicati
-  author: CasaOS Team
+  author: Yundera Team
   category: Cloud
   description:
     en_us: Duplicati is a free, open source, backup client that securely stores encrypted, incremental, compressed backups on cloud storage services and remote file servers.
