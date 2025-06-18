@@ -28,7 +28,8 @@ services:
 x-casaos:
   pre-install-cmd: |
     docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser users add admin $default_pwd --perm.admin --database /db/database.db &&
+    chown -R $PUID:$PGID /DATA/AppData/filebrowser/db/
   architectures:
     - amd64
     - arm64
