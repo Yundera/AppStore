@@ -57,19 +57,19 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/screenshot-3.png
   tagline:
-    en_us: Upload, delete, preview, rename, edit and share your files.
-    zh_cn: 上传，删除，预览，重命名，编辑和共享您的文件。
-    ar_sa: قم بتحميل، حذف، معاينة، إعادة تسمية، تحرير ومشاركة ملفاتك.
-    de_de: Hochladen, Löschen, Vorschau, Umbenennen, Bearbeiten und Freigeben Ihrer Dateien.
-    es_es: Subir, eliminar, previsualizar, renombrar, editar y compartir sus archivos.
-    fr_fr: Télécharger, supprimer, prévisualiser, renommer, modifier et partager vos fichiers.
-    hu_hu: Töltsön fel, törölje, előnézze, átnevezze, szerkessze és ossza meg fájljait.
-    it_it: Carica, elimina, anteprima, rinomina, modifica e condividi i tuoi file.
-    ru_ru: Загрузите, удалите, просмотрите, переименуйте, отредактируйте и поделитесь своими файлами.
-    pl_pl: Prześlij, usuń, podgląd, zmień nazwę, edytuj i udostępnij swoje pliki.
-    pt_br: Faça upload, exclua, visualize, renomeie, edite e compartilhe seus arquivos.
-    sv_se: Ladda upp, ta bort, förhandsgranska, byt namn, redigera och dela dina filer.
-    uk_ua: Завантажте, видаліть, перегляньте, перейменуйте, відредагуйте і поділіться своїми файлами.
+    en_us: Your Backup App. Encrypt and back up your data to the cloud, safely and automatically. Setup guide available on our website
+    zh_cn: 您的备份应用。安全自动地加密并备份您的数据到云端。网站上提供设置指南
+    ar_sa: تطبيق النسخ الاحتياطي الخاص بك. قم بتشفير ونسخ بياناتك احتياطياً إلى السحابة، بأمان وتلقائياً. دليل الإعداد متوفر على موقعنا
+    de_de: Ihre Backup-App. Verschlüsseln und sichern Sie Ihre Daten sicher und automatisch in der Cloud. Einrichtungsanleitung auf unserer Website verfügbar
+    es_es: Su aplicación de respaldo. Cifre y haga copias de seguridad de sus datos en la nube, de forma segura y automática. Guía de configuración disponible en nuestro sitio web
+    fr_fr: Votre application de sauvegarde. Chiffrez et sauvegardez vos données dans le cloud, en toute sécurité et automatiquement. Guide de configuration disponible sur notre site web
+    hu_hu: Az Ön biztonsági mentő alkalmazása. Titkosítsa és mentse fel adatait a felhőbe, biztonságosan és automatikusan. Beállítási útmutató elérhető weboldalunkon
+    it_it: La tua app di backup. Crittografa e fai il backup dei tuoi dati nel cloud, in modo sicuro e automatico. Guida alla configurazione disponibile sul nostro sito web
+    ru_ru: Ваше приложение для резервного копирования. Шифруйте и создавайте резервные копии ваших данных в облаке безопасно и автоматически. Руководство по настройке доступно на нашем сайте
+    pl_pl: Twoja aplikacja do kopii zapasowych. Szyfruj i twórz kopie zapasowe danych w chmurze, bezpiecznie i automatycznie. Przewodnik konfiguracji dostępny na naszej stronie
+    pt_br: Seu aplicativo de backup. Criptografe e faça backup de seus dados na nuvem, com segurança e automaticamente. Guia de configuração disponível em nosso site
+    sv_se: Din backup-app. Kryptera och säkerhetskopiera dina data till molnet, säkert och automatiskt. Installationsguide tillgänglig på vår webbplats
+    uk_ua: Ваш додаток для резервного копіювання. Шифруйте та створюйте резервні копії ваших даних у хмарі безпечно та автоматично. Посібник з налаштування доступний на нашому веб-сайті
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png
   tips:
     before_install:
