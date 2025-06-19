@@ -275,8 +275,8 @@ We occasionally select certain apps as featured apps to display at the AppStore 
 Please use the prepared [PSD template files](psd-source) to quickly create these images.
 
 **Language Requirement:**  
-All apps submitted for validation must include descriptions in at least the following languages: **English, French, Korean, Chinese, and Spanish**.
-
+All apps submitted for validation must include *descriptions* and *tagline* in at least the following languages: **English, French, Korean, Chinese, and Spanish**.
+For the title, only English is required.
 
 ## Feedback
 
