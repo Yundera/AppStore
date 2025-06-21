@@ -10,9 +10,11 @@ Before submitting your PR, ensure your app meets these requirements:
 
 ### Security Checklist
 - [ ] Default authentication (Basic Auth, OAuth, etc.) is enabled and documented - exceptions must be explained in rationale.md (e.g., public websites)
+- [ ] No hardcoded credentials in the compose file - use environment variables or secrets
+- [ ] No root access required - use "user:PUID:PGID" for file permissions or explain in rationale.md if root is necessary. Root level service is also ok if no volumes are mounted or only in readonly mode.
 - [ ] Uses PUID/PGID for proper file permissions or Docker user functionality by default - root or special capability access applications must be explained in rationale.md
 - [ ] Specific version tag (no `:latest`)
-- [ ] Resource limits are mandatory and set appropriately - exceptions must be explained in rationale.md
+- [ ] Resource limits are mandatory and set appropriately (on all services in case of multiple services) - exceptions must be explained in rationale.md
 - [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
 
 ### Functionality Checklist
@@ -51,6 +53,93 @@ To ensure easy testing, please follow these steps:
 6. Once approved, your app will be directly available in the app listing.
 
 ## Guidelines
+
+### File Structure
+
+Understanding the directory structure is essential for proper app development and data management. All user data and application configurations are stored under `/DATA`:
+
+The files under `/DATA` are owned by the user and group IDs specified by `PUID` and `PGID` (usually, `1000:1000` for the 'pcs:pcs' user),
+which are set during the CasaOS installation. 
+This ensures that all applications running under CasaOS have the correct 
+permissions to read and write to these directories. The applications must respect these IDs to avoid permission issues.
+Some exceptions may apply, such as when a config file needs to be protected from user access, but these should be documented in the app's rationale file.
+
+The files in Documents, Downloads, Gallery, and Media directories should be human-readable and user-friendly, no config files, no strange hash name, if unsure just store the data in the app data.
+eg Immich stores its data in `/DATA/AppData/immich/data` and `/DATA/AppData/immich/config`, not in `/DATA/Gallery/immich` because the way Immich works is that it manages its own data in a specific way.
+
+```
+/DATA/
+├── AppData/                    # Application-specific data and configurations
+│   ├── casaos/                # CasaOS system files
+│   │   ├── 1/                 # System configuration
+│   │   ├── apps/              # Individual app instances
+│   │   │   └── immich/        # Example: Immich app directory
+│   │   └── db/                # CasaOS database
+│   └── [AppName]/             # Per-app data directories
+│       ├── config/            # App configuration files
+│       ├── data/              # App-specific data
+│       └── [other-dirs]/      # Additional app directories
+├── Documents/                  # User documents
+├── Downloads/                  # Download directory
+├── Gallery/                    # Photo and image storage
+└── Media/                      # Media files
+    ├── Movies/                # Movie collection
+    ├── Music/                 # Music collection
+    └── TV Shows/              # TV series collection
+```
+
+**Key Directory Usage:**
+
+- **`/DATA/AppData/[AppName]/`**: Primary location for app-specific data
+  - Use this pattern in your `docker-compose.yml` volumes
+  - Example: `/DATA/AppData/immich/config:/app/config`
+
+- **`/DATA/Gallery/`**: Shared photo/image storage
+  - Ideal for photo management apps like Immich, PhotoPrism
+  - Example: `/DATA/Gallery/immich:/usr/src/app/upload`
+
+- **`/DATA/Media/`**: Shared media storage
+  - Use for media servers like Plex, Jellyfin, Emby
+  - Subdirectories help organize content types
+
+- **`/DATA/Documents/` & `/DATA/Downloads/`**: General file storage
+  - Document management and download directories
+
+**Volume Mapping Best Practices:**
+
+```yaml
+services:
+  myapp:
+    volumes:
+      # App configuration and data
+      - /DATA/AppData/myapp/config:/app/config
+      - /DATA/AppData/myapp/data:/app/data
+      
+      # Shared media access (if needed)
+      - /DATA/Gallery:/photos:ro          # Read-only photo access
+      - /DATA/Media:/media:ro             # Read-only media access
+      - /DATA/Downloads:/downloads        # Download directory
+      
+      # System integration
+      - /etc/localtime:/etc/localtime:ro  # Timezone sync
+```
+
+**AppData Structure Example (Immich):**
+```
+/DATA/AppData/immich/
+├── model-cache/          # ML model cache
+├── pgdata/              # PostgreSQL database files
+│   ├── base/            # Database tables
+│   ├── pg_wal/          # Write-ahead logs
+│   └── [other-pg-dirs]/ # Other PostgreSQL directories
+└── redis/               # Redis data files
+```
+
+This structure ensures:
+- Clean separation between apps
+- Shared access to common directories
+- Easy backup and migration
+- Consistent file permissions with PUID/PGID
 
 ### Project Structure
 
@@ -199,6 +288,76 @@ x-casaos:
     webui_port: 8080                # Port exposed by the container for web UI access
 ```
 
+#### NSL Router Integration
+
+The Yundera AppStore uses the NSL Router (mesh-router) system to provide clean HTTPS URLs for your applications. The mesh router automatically generates subdomains based on your compose configuration.
+
+**How NSL Router Works:**
+- The mesh router runs on nsl.sh domains and provides subdomain routing to Yundera users
+- Each user gets a subdomain like `username.nsl.sh`
+- Applications are accessible via clean URLs without port numbers
+
+**URL Generation Pattern:**
+```
+https://appname-username.nsl.sh/
+```
+
+**Compose File Requirements for NSL Router:**
+- Use `expose` instead of `ports` for web UI services
+- Set `webui_port` to port 80 when possible (recommended for clean URLs)
+- Other ports are supported but will include the port in the URL
+- The router automatically handles HTTPS termination and routing
+
+**Example - Before NSL Router:**
+```
+http://server-ip:2283/  # Direct port access
+```
+
+**Example - With NSL Router:**
+```yaml
+services:
+  immich:
+    image: altran1502/immich-server:v1.135.3
+    expose:
+      - 80                    # Expose port 80 internally
+    environment:
+      IMMICH_PORT: 80        # Configure app to use port 80
+      
+x-casaos:
+  main: immich
+  webui_port: 80            # Must match exposed port
+```
+
+**Result:** `https://immich-username.nsl.sh/` (clean URL, no port numbers)
+
+**Alternative - Non-80 Port Example:**
+```yaml
+services:
+  grafana:
+    image: grafana/grafana:latest
+    expose:
+      - 3000                  # Expose port 3000 internally
+    environment:
+      GF_SERVER_HTTP_PORT: 3000
+      
+x-casaos:
+  main: grafana
+  webui_port: 3000          # Must match exposed port
+```
+
+**Result:** `https://3000-grafana-username.nsl.sh/` (includes port in URL)
+
+**Port Selection Guidelines:**
+- **Port 80**: Clean URLs without port numbers (recommended)
+- **Other ports**: Accessible but URL includes port prefix
+- **Standard ports**: Use application defaults when port 80 conflicts with app requirements
+
+The mesh router handles:
+- HTTPS certificate management
+- Subdomain routing to the correct container
+- VPN-secured communication between router and containers
+- Port-based subdomain generation for non-80 ports
+
 **Web UI Requirements (all three must be configured together):**
 - The main service must `expose` the web UI port (using `expose`, not necessarily `ports`)
 - The `webui_port` field must match the exposed port number
@@ -206,8 +365,9 @@ x-casaos:
 
 **Important Notes:**
 - Only one web UI domain is supported per app (even with multiple containers)
-- HTTPS unwrapping is handled automatically by CasaOS - no certificate management needed at container level
+- HTTPS unwrapping is handled automatically by nsl.sh mesh router - no certificate management needed at container level
 - Other ports can still be bound directly to the public IP for non-web services
+- the main app name and hostname should be a simple name without spaces or special characters, as it will be used in the URL.
 
 **Example Configuration:**
 
