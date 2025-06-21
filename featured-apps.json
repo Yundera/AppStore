@@ -1,5 +1,11 @@
 [
     {
+        "name": "immich",
+        "editor": "Immich Team",
+        "date": "1640829941",
+        "reason": ""
+    },
+    {
         "name": "duplicati",
         "editor": "Duplicati Team",
         "date": "1640829941",
