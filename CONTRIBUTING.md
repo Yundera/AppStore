@@ -1,6 +1,6 @@
 # Contributing to the AppStore
 
-This document describes how to contribute an app to CasaOS AppStore.
+This document describes how to contribute an app to the Yundera Compose AppStore.
 
 **IMPORTANT**: Your PR must be *well tested* on your own CasaOS first. This is the mandatory first step for your submission.
 
@@ -10,9 +10,11 @@ Before submitting your PR, ensure your app meets these requirements:
 
 ### Security Checklist
 - [ ] Default authentication (Basic Auth, OAuth, etc.) is enabled and documented - exceptions must be explained in rationale.md (e.g., public websites)
+  - Example of valid exception: 
+    - A public website that does not require authentication
+    - The app handle authentication configuration on first launch via an onboarding process (eg Jellyfin, Immich, etc.)
 - [ ] No hardcoded credentials in the compose file - use environment variables or secrets
-- [ ] No root access required - use "user:PUID:PGID" for file permissions or explain in rationale.md if root is necessary. Root level service is also ok if no volumes are mounted or only in readonly mode.
-- [ ] Uses PUID/PGID for proper file permissions or Docker user functionality by default - root or special capability access applications must be explained in rationale.md
+- [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] Specific version tag (no `:latest`)
 - [ ] Resource limits are mandatory and set appropriately (on all services in case of multiple services) - exceptions must be explained in rationale.md
 - [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
@@ -58,22 +60,38 @@ To ensure easy testing, please follow these steps:
 
 Understanding the directory structure is essential for proper app development and data management. All user data and application configurations are stored under `/DATA`:
 
-The files under `/DATA` are owned by the user and group IDs specified by `PUID` and `PGID` (usually, `1000:1000` for the 'pcs:pcs' user),
-which are set during the CasaOS installation. 
-This ensures that all applications running under CasaOS have the correct 
-permissions to read and write to these directories. The applications must respect these IDs to avoid permission issues.
-Some exceptions may apply, such as when a config file needs to be protected from user access, but these should be documented in the app's rationale file.
+**Permission Strategy:**
 
-The files in Documents, Downloads, Gallery, and Media directories should be human-readable and user-friendly, no config files, no strange hash name, if unsure just store the data in the app data.
-eg Immich stores its data in `/DATA/AppData/immich/data` and `/DATA/AppData/immich/config`, not in `/DATA/Gallery/immich` because the way Immich works is that it manages its own data in a specific way.
+Yundera uses a dual permission model to balance security and usability:
+Files owned by `PUID:PGID` (usually `1000:1000` for the 'pcs:pcs' user)
+
+**User-Friendly Directories** 
+- `PUID:PGID` ownership required
+- `/DATA/Documents/`, `/DATA/Downloads/`, `/DATA/Gallery/`, `/DATA/Media/`
+- Users can directly browse, modify, and manage these files
+- Content should be human-readable with meaningful filenames
+- Applications accessing these directories **must** use `user: $PUID:$PGID`
+
+**AppData Directories** 
+- Root ownership acceptable but preferably `PUID:PGID` to allow user to change configurations easily
+- `/DATA/AppData/[AppName]/` - Application-specific data and configurations
+- Contains databases, config files, cache, logs, and internal app data
+- Users should **not** directly modify these files (system-managed)
+- Root containers are acceptable when volumes map exclusively to AppData
+- Examples: `/DATA/AppData/immich/pgdata`, `/DATA/AppData/immich/model-cache`
+
+**Mixed Usage Applications:**
+- If an app needs both AppData and user directory access, use `user: $PUID:$PGID`
+- Alternative: Use separate containers (one for system tasks, one for user file access)
+- Document the approach in rationale.md if using root containers with mixed access
 
 ```
 /DATA/
 ├── AppData/                    # Application-specific data and configurations
 │   ├── casaos/                # CasaOS system files
-│   │   ├── 1/                 # System configuration
-│   │   ├── apps/              # Individual app instances
-│   │   │   └── immich/        # Example: Immich app directory
+│   │   ├── 1/                 # CasaOS configuration
+│   │   ├── apps/              # Individual app docker-compose
+│   │   │   └── [AppName]/     # App directory (this is where the docker compose is stored - no app data)
 │   │   └── db/                # CasaOS database
 │   └── [AppName]/             # Per-app data directories
 │       ├── config/            # App configuration files
@@ -90,13 +108,13 @@ eg Immich stores its data in `/DATA/AppData/immich/data` and `/DATA/AppData/immi
 
 **Key Directory Usage:**
 
-- **`/DATA/AppData/[AppName]/`**: Primary location for app-specific data
+- **`/DATA/AppData/[AppName]/`**: Primary location for app-specific data (config files, databases, logs)
   - Use this pattern in your `docker-compose.yml` volumes
   - Example: `/DATA/AppData/immich/config:/app/config`
+  - not intended for direct user access
 
 - **`/DATA/Gallery/`**: Shared photo/image storage
-  - Ideal for photo management apps like Immich, PhotoPrism
-  - Example: `/DATA/Gallery/immich:/usr/src/app/upload`
+  - Ideal for photo management apps
 
 - **`/DATA/Media/`**: Shared media storage
   - Use for media servers like Plex, Jellyfin, Emby
@@ -105,34 +123,41 @@ eg Immich stores its data in `/DATA/AppData/immich/data` and `/DATA/AppData/immi
 - **`/DATA/Documents/` & `/DATA/Downloads/`**: General file storage
   - Document management and download directories
 
-**Volume Mapping Best Practices:**
+**Volume Mapping Examples:**
 
+**AppData-only Application (Root container OK):**
 ```yaml
 services:
-  myapp:
+  database:
+    image: postgres:13
+    # No user specification needed - root is fine for AppData-only access
     volumes:
-      # App configuration and data
+      - /DATA/AppData/myapp/pgdata:/var/lib/postgresql/data
       - /DATA/AppData/myapp/config:/app/config
-      - /DATA/AppData/myapp/data:/app/data
-      
-      # Shared media access (if needed)
-      - /DATA/Gallery:/photos:ro          # Read-only photo access
-      - /DATA/Media:/media:ro             # Read-only media access
-      - /DATA/Downloads:/downloads        # Download directory
-      
-      # System integration
-      - /etc/localtime:/etc/localtime:ro  # Timezone sync
 ```
 
-**AppData Structure Example (Immich):**
+**User Directory Application (PUID:PGID required):**
+```yaml
+services:
+  filemanager:
+    image: filebrowser/filebrowser
+    user: $PUID:$PGID                    # Required for user directory access
+    volumes:
+      - /DATA/AppData/filebrowser:/app/config
+      - /DATA/Documents:/srv/documents
+      - /DATA/Downloads:/srv/downloads
 ```
-/DATA/AppData/immich/
-├── model-cache/          # ML model cache
-├── pgdata/              # PostgreSQL database files
-│   ├── base/            # Database tables
-│   ├── pg_wal/          # Write-ahead logs
-│   └── [other-pg-dirs]/ # Other PostgreSQL directories
-└── redis/               # Redis data files
+
+**Mixed Usage Application:**
+```yaml
+services:
+  mediaserver:
+    image: jellyfin/jellyfin
+    user: $PUID:$PGID                    # Required due to media access
+    volumes:
+      - /DATA/AppData/jellyfin:/config   # System config (user can thus modify)
+      - /DATA/Media:/media:ro            # User media (read-only)
+      - /DATA/Downloads:/downloads       # User downloads
 ```
 
 This structure ensures:
@@ -152,7 +177,7 @@ CasaOS-AppStore
 └─ psd-source           # Icon thumbnail screenshot PSD Templates
 ```
 
-### A CasaOS App typically includes the following files
+### An App typically includes the following files
 
 ```shell
 App-Name
@@ -164,9 +189,9 @@ App-Name
 └─ thumbnail.png        # (Required) A thumbnail file is needed if you want it to be featured in AppStore front (see specification at bottom)
 ```
 
-#### A CasaOS App is a Docker Compose app, or a *compose app*
+#### An App is a Docker Compose app, or a *compose app*
 
-Each directory under [Apps](Apps) corresponds to a CasaOS App. The directory should contain at least a `docker-compose.yml` file:
+Each directory under [Apps](Apps) corresponds to a Compose App. The directory should contain at least a `docker-compose.yml` file:
 
 - It should be a valid [Docker Compose file](https://docs.docker.com/compose/compose-file/). Here are some requirements (but not limited to):
 
@@ -269,7 +294,19 @@ You can specify commands to run before container startup using `pre-install-cmd`
 
 ```yaml
 x-casaos:
-    pre-install-cmd: docker run --rm -v /DATA/AppData/$AppID/:/data/ -e PASSWORD=$default_pwd nasselle/pre-install-toolbox https://example.com/init.sh
+    pre-install-cmd: docker run --rm -v /DATA/AppData/$AppID/:/data/ -e PASSWORD=$default_pwd nasselle/pre-install-toolbox:1.0.0 https://example.com/init.sh
+```
+
+When using `pre-install-cmd`, ensure the command is idempotent and does not require user interaction.
+Also ensure that versions are specified for any images used in the command to avoid unexpected changes.
+
+Example:
+```yaml
+x-casaos:
+  pre-install-cmd: |
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
+    docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
 ```
 
 **Common use cases:**
@@ -278,17 +315,7 @@ x-casaos:
 - Generate certificates or keys
 - Prepare the environment with sensible defaults
 
-#### Web UI Configuration
-
-For applications with web interfaces, you must specify both the main service and web UI port:
-
-```yaml
-x-casaos:
-    main: webui-service              # Name of the service providing the web interface
-    webui_port: 8080                # Port exposed by the container for web UI access
-```
-
-#### NSL Router Integration
+#### NSL Router Integration (Web UI Access)
 
 The Yundera AppStore uses the NSL Router (mesh-router) system to provide clean HTTPS URLs for your applications. The mesh router automatically generates subdomains based on your compose configuration.
 
@@ -299,7 +326,7 @@ The Yundera AppStore uses the NSL Router (mesh-router) system to provide clean H
 
 **URL Generation Pattern:**
 ```
-https://appname-username.nsl.sh/
+https://[port]-appname-username.nsl.sh/
 ```
 
 **Compose File Requirements for NSL Router:**

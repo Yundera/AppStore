@@ -42,7 +42,6 @@ services:
           memory: 1024M
           cpus: '0.5'
     image: altran1502/immich-machine-learning:v1.135.3
-    user: $PUID:$PGID
     environment:
       DB_DATABASE_NAME: immich
       DB_PASSWORD: postgres
