@@ -10,7 +10,7 @@ services:
         limits:
           memory: 2048M
           cpus: '1.0'
-    image: altran1502/immich-server:v1.135.3
+    image: ghcr.io/immich-app/immich-server:v1.135.3
     user: $PUID:$PGID
     volumes:
       - /DATA/AppData/immich/upload:/usr/src/app/upload
@@ -33,23 +33,20 @@ services:
       - immich
 
   immich-machine-learning:
-    container_name: immich-machine-learning
+    container_name: immich_machine_learning
     hostname: immich-machine-learning
     cpu_shares: 5
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 2048M
           cpus: '0.5'
-    image: altran1502/immich-machine-learning:v1.135.3
-    user: 0:0 # Running as root
+    image: ghcr.io/immich-app/immich-machine-learning:v1.135.3
+    user: 0:0
     environment:
-      DB_DATABASE_NAME: immich
-      DB_PASSWORD: postgres
-      DB_USERNAME: postgres
+      TZ: $TZ
       PGID: 0
       PUID: 0
-      TZ: $TZ
     restart: unless-stopped
     volumes:
       - /DATA/AppData/immich/model-cache:/cache
