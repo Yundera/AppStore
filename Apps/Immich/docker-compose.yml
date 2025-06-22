@@ -35,7 +35,7 @@ services:
   immich-machine-learning:
     container_name: immich-machine-learning
     hostname: immich-machine-learning
-    cpu_shares: 10
+    cpu_shares: 5
     deploy:
       resources:
         limits:
