@@ -62,8 +62,17 @@ Understanding the directory structure is essential for proper app development an
 
 **Permission Strategy:**
 
+To be mindful of permission user *must* always be specified in the compose file.
+1 - with the user: `user: xx:xx`
+and
+2 - by setting the `PUID` and `PGID` environment variables in the compose file.
+
 Yundera uses a dual permission model to balance security and usability:
 Files owned by `PUID:PGID` (usually `1000:1000` for the 'pcs:pcs' user)
+
+if no "user" field is specified in the compose file, the container will run as PUID:PGID (different behavior than the docker default so be carful)
+if you need to run as root, you must specify `user: 0:0` in the compose file and set the `PUID` and `PGID` to `0:0` in the environment variables.
+
 
 **User-Friendly Directories** 
 - `PUID:PGID` ownership required
