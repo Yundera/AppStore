@@ -6,7 +6,7 @@ services:
     container_name: navidrome
     restart: unless-stopped
     expose:
-      - 4533  # Navidrome Web UI Port / Navidrome 웹 UI 포트
+      - 80  # Navidrome Web UI Port / Navidrome 웹 UI 포트
     depends_on:
       sample-music-downloader:
         condition: service_completed_successfully
@@ -139,4 +139,4 @@ x-casaos:
   store_app_id: navidrome
   main: navidrome
   is_uncontrolled: false
-  webui_port: 4533
+  webui_port: 80
