@@ -46,9 +46,9 @@ services:
 
         wget -O 'Chill_Hop_Beat.mp3' 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3' || true        
         wget -O 'Acoustic_Folk.mp3' 'https://codeskulptor-demos.commondatastorage.googleapis.com/GalaxyInvaders/theme_01.mp3' || true        
-        wget -O 'samplemusic-1.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/SampleMusic/samplemusic-1.mp3' || true        
-        wget -O 'samplemusic-2.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/SampleMusic/samplemusic-2.mp3' || true        
-        wget -O 'samplemusic-3.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/SampleMusic/samplemusic-3.mp3' || true
+        wget -O 'samplemusic-1.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/SampleMusic/samplemusic-1.mp3' || true        
+        wget -O 'samplemusic-2.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/SampleMusic/samplemusic-2.mp3' || true        
+        wget -O 'samplemusic-3.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/SampleMusic/samplemusic-3.mp3' || true
 
         echo 'Sample music download completed!' # Log completion message / 완료 메시지 로그
         ls -la "/music/Sample Music/" || true  # List downloaded files / 다운로드된 파일 목록 표시
@@ -104,12 +104,12 @@ x-casaos:
       
       **샘플 음악 포함:**
       이 설치에는 즉시 시작할 수 있도록 5개의 무료 Creative Commons 라이센스 샘플 트랙이 포함되어 있습니다.
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/thumbnail.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/thumbnail.png
   index: /
   
   tagline:
