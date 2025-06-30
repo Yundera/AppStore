@@ -46,9 +46,9 @@ services:
 
         wget -O 'Chill_Hop_Beat.mp3' 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3' || true        
         wget -O 'Acoustic_Folk.mp3' 'https://codeskulptor-demos.commondatastorage.googleapis.com/GalaxyInvaders/theme_01.mp3' || true        
-        wget -O 'samplemusic-1.mp3' 'https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Navidrome/samplemusic-1.mp3' || true        
-        wget -O 'samplemusic-2.mp3' 'https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Navidrome/samplemusic-2.mp3' || true        
-        wget -O 'samplemusic-3.mp3' 'https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Navidrome/samplemusic-3.mp3' || true
+        wget -O 'samplemusic-1.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/SampleMusic/samplemusic-1.mp3' || true        
+        wget -O 'samplemusic-2.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/SampleMusic/samplemusic-2.mp3' || true        
+        wget -O 'samplemusic-3.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@create/Apps/Navidrome/SampleMusic/samplemusic-3.mp3' || true
 
         echo 'Sample music download completed!' # Log completion message / 완료 메시지 로그
         ls -la "/music/Sample Music/" || true  # List downloaded files / 다운로드된 파일 목록 표시
