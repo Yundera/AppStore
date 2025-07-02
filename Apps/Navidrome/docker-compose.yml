@@ -7,9 +7,6 @@ services:
     restart: unless-stopped
     expose:
       - 80  # Navidrome Web UI Port / Navidrome 웹 UI 포트
-    depends_on:
-      sample-music-downloader:
-        condition: service_completed_successfully
     volumes:
       - /DATA/AppData/$AppID/data:/data        # Navidrome database and configuration directory / Navidrome 데이터베이스 및 설정 디렉토리
       - /DATA/Media/Music:/music               # Music library directory (read-only) / 음악 라이브러리 디렉토리 (읽기 전용)
@@ -29,31 +26,6 @@ services:
         limits:
           memory: 512M
 
-  # Init container to download sample music
-  sample-music-downloader:
-    image: alpine:latest                       # Lightweight Linux image for downloading files / 파일 다운로드를 위한 경량 리눅스 이미지
-    container_name: navidrome-sample-music-downloader
-    volumes:
-      - /DATA/Media/Music:/music               # Mount music directory to download sample files / 샘플 파일 다운로드를 위한 음악 디렉토리 마운트
-    entrypoint: ["/bin/sh"]                    # Use shell as entry point / 쉘을 진입점으로 사용
-    command: 
-      - -c
-      - |
-        apk add --no-cache curl wget           # Install download tools / 다운로드 도구 설치
-        echo 'Downloading sample music files...'
-        mkdir -p "/music/Sample Music"         # Create sample music directory / 샘플 음악 디렉토리 생성
-        cd "/music/Sample Music"
-
-        wget -O 'Chill_Hop_Beat.mp3' 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3' || true        
-        wget -O 'Acoustic_Folk.mp3' 'https://codeskulptor-demos.commondatastorage.googleapis.com/GalaxyInvaders/theme_01.mp3' || true        
-        wget -O 'samplemusic-1.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/SampleMusic/samplemusic-1.mp3' || true        
-        wget -O 'samplemusic-2.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/SampleMusic/samplemusic-2.mp3' || true        
-        wget -O 'samplemusic-3.mp3' 'https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/SampleMusic/samplemusic-3.mp3' || true
-
-        echo 'Sample music download completed!' # Log completion message / 완료 메시지 로그
-        ls -la "/music/Sample Music/" || true  # List downloaded files / 다운로드된 파일 목록 표시
-    restart: "no"                              # Run only once during initialization / 초기화 시에만 한 번 실행
-
 x-casaos:
   architectures:
     - amd64
@@ -61,6 +33,21 @@ x-casaos:
   author: Yundera Team
   category: Media
   developer: Deluan Quintão
+  
+  pre-install-cmd: |
+    docker run --rm -v /DATA/Media/Music:/music alpine:latest sh -c "
+    apk add --no-cache wget curl &&                                    # Install download tools / 다운로드 도구 설치
+    echo 'Downloading sample music files...' &&                        # Log download start message / 다운로드 시작 메시지 로그
+    mkdir -p '/music/Sample Music' &&                                   # Create sample music directory / 샘플 음악 디렉토리 생성
+    cd '/music/Sample Music' &&
+    
+    wget -O 'Chill_Hop_Beat.mp3' 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3' || true &&        
+    wget -O 'Acoustic_Folk.mp3' 'https://codeskulptor-demos.commondatastorage.googleapis.com/GalaxyInvaders/theme_01.mp3' || true &&
+    
+    echo 'Sample music download completed!' &&                          # Log completion message / 완료 메시지 로그
+    ls -la '/music/Sample Music/' || true                               # List downloaded files / 다운로드된 파일 목록 표시
+    "
+  
   description:
     en_us: |
       **Your Personal Music Streaming Server**
@@ -75,52 +62,34 @@ x-casaos:
       • Last.fm scrobbling support
       
       **Sample Music Included:**
-      This installation includes 5 free Creative Commons licensed sample tracks to get you started immediately.
-    zh_cn: |
-      **您的个人音乐流媒体服务器**
-      Navidrome是一个现代音乐服务器和流媒体播放器，兼容Subsonic/Airsonic客户端。通过漂亮的网页界面和移动应用程序从任何地方播放您的音乐收藏。
-      
-      **主要功能：**
-      • 漂亮、响应式的网页界面
-      • 兼容Subsonic应用程序（iOS/Android）
-      • 자동 음악库扫描
-      • 转码和流媒体优化
-      • 多用户支持与播放列表
-      • Last.fm记录支持
-      
-      **包含示例音乐：**
-      此安装包含5首免费Creative Commons授权的示例曲目，让您立即开始使用。
+      This installation includes sample tracks to get you started immediately.
     ko_kr: |
       **개인 음악 스트리밍 서버**
-      Navidrome은 Subsonic/Airsonic 클라이언트와 호환되는 현대적인 음악 서버이자 스트리머입니다. 아름다운 웹 인터페이스와 모바일 앱으로 어디서나 음악 컬렉션을 스트리밍하세요.
+      Navidrome은 Subsonic/Airsonic 클라이언트와 호환되는 현대적인 음악 서버입니다. 아름다운 웹 인터페이스와 모바일 앱으로 어디서나 음악을 스트리밍하세요.
       
       **주요 기능:**
       • 아름답고 반응형 웹 인터페이스
       • Subsonic 앱 호환 (iOS/Android)
       • 자동 음악 라이브러리 스캔
       • 트랜스코딩 및 스트리밍 최적화
-      • 플레이리스트가 있는 다중 사용자 지원
+      • 플레이리스트 지원
       • Last.fm 스크로블링 지원
       
       **샘플 음악 포함:**
-      이 설치에는 즉시 시작할 수 있도록 5개의 무료 Creative Commons 라이센스 샘플 트랙이 포함되어 있습니다.
+      즉시 시작할 수 있도록 샘플 트랙이 포함되어 있습니다.
+      
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/thumbnail.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-1.png
   index: /
-  
   tagline:
     en_us: Your personal music streaming server with modern web interface
-    zh_cn: 具有现代网页界面的个人音乐流媒体服务器
     ko_kr: 현대적인 웹 인터페이스를 갖춘 개인 음악 스트리밍 서버
   title:
     en_us: Navidrome
-    zh_cn: Navidrome
-    ko_kr: Navidrome
-  
   tips:
     before_install:
       en_us: |
@@ -131,12 +100,6 @@ x-casaos:
         **음악 위치:** 음악 파일을 `/DATA/Media/Music/` 폴더에 넣어주세요
         Navidrome이 자동으로 스캔하고 정리합니다.
         지원 형식: MP3, FLAC, OGG, M4A, WAV
-      zh_cn: |
-        **音乐位置：** 将音乐文件放在 `/DATA/Media/Music/` 文件夹中
-        Navidrome 将自动扫描和整理您的收藏。
-        支持格式：MP3, FLAC, OGG, M4A, WAV
-
   store_app_id: navidrome
   main: navidrome
-  is_uncontrolled: false
   webui_port: 80
