@@ -17,6 +17,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] Specific version tag (no `:latest`)
 - [ ] Resource limits are mandatory and set appropriately (on all services in case of multiple services) - exceptions must be explained in rationale.md
+- [ ] **Pre-install commands security**: If using `pre-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
 - [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
 
 ### Functionality Checklist
@@ -308,6 +309,12 @@ x-casaos:
 
 When using `pre-install-cmd`, ensure the command is idempotent and does not require user interaction.
 Also ensure that versions are specified for any images used in the command to avoid unexpected changes.
+
+**SECURITY REQUIREMENTS for pre-install-cmd:**
+- [ ] **Specific version tags**: Never use `:latest` - always specify exact versions (e.g., `alpine:3.19`, `ubuntu:22.04`)
+- [ ] **User specification**: Use `--user $PUID:$PGID` when creating files in user directories to ensure proper permissions
+- [ ] **Idempotent operations**: Commands should be safe to run multiple times
+- [ ] **No hardcoded credentials**: Use system variables like `$default_pwd`
 
 Example:
 ```yaml
