@@ -24,6 +24,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Works immediately after installation - no need to check logs or run commands - pre-install scripts create sensible defaults
 - [ ] Data is mapped to appropriate `/DATA` subdirectories - if things are mapped outside of /DATA, this should be explained in rationale.md
 - [ ] No manual configuration required for basic functionality - should work out of the box
+- [ ] Data persistence requirements are met - see [Data Persistence](#data-persistence) section for details
 
 ### Documentation Checklist
 - [ ] Clear description of the application
@@ -56,6 +57,32 @@ To ensure easy testing, please follow these steps:
 6. Once approved, your app will be directly available in the app listing.
 
 ## Guidelines
+
+### Data Persistence
+
+Applications must be designed to preserve user data across uninstallation and reinstallation cycles. This ensures users never lose their personal data when updating or reinstalling applications.
+
+**Requirements:**
+- **Persistent Volume Mapping**: All user data, configurations, and databases must be stored in volumes mapped to `/DATA/AppData/[AppName]/`
+- **Graceful Data Reuse**: Applications must detect and reuse existing data when reinstalled
+- **No Data Erasure**: Container startup processes must never erase or overwrite existing user data
+- **Configuration Preservation**: Settings, user accounts, and preferences should persist across container lifecycle
+
+**Implementation Guidelines:**
+- Map all persistent data to `/DATA/AppData/[AppName]/` subdirectories
+- Use initialization scripts that check for existing data before creating defaults
+- Ensure database migrations are handled gracefully on version updates
+- Test uninstall/reinstall scenarios to verify data persistence
+
+**Example Volume Mapping:**
+```yaml
+volumes:
+  - /DATA/AppData/myapp/config:/app/config
+  - /DATA/AppData/myapp/database:/var/lib/database
+  - /DATA/AppData/myapp/uploads:/app/uploads
+```
+
+This approach ensures that when users uninstall and reinstall applications, they can continue from where they left off without losing any personal data or configurations.
 
 ### File Structure
 
