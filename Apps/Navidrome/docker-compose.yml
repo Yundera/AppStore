@@ -36,15 +36,13 @@ x-casaos:
   
   pre-install-cmd: |
     docker run --rm --user $PUID:$PGID -v /DATA/Media/Music:/music alpine:3.22.0 sh -c "
-    apk add --no-cache wget curl &&                                    # Install download tools / 다운로드 도구 설치
-    echo 'Downloading sample music files...' &&                        # Log download start message / 다운로드 시작 메시지 로그
-    mkdir -p '/music/Sample Music' &&                                   # Create sample music directory / 샘플 음악 디렉토리 생성
+    mkdir -p '/music/Sample Music' &&
     cd '/music/Sample Music' &&
     
     wget -O 'Chill_Hop_Beat.mp3' 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3' || true &&        
 
-    echo 'Sample music download completed!' &&                          # Log completion message / 완료 메시지 로그
-    ls -la '/music/Sample Music/' || true                               # List downloaded files / 다운로드된 파일 목록 표시
+    echo 'Sample music download completed!' &&
+    ls -la '/music/Sample Music/' || true
     "
   
   description:
