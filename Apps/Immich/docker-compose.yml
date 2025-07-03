@@ -14,6 +14,8 @@ services:
     user: $PUID:$PGID
     volumes:
       - /DATA/AppData/immich/upload:/usr/src/app/upload
+      # Read-only access to the gallery directory used to import media files from the host directly (Immich external library)
+      - /DATA/Gallery:/import:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_DATABASE_NAME: immich
