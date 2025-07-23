@@ -203,6 +203,69 @@ This structure ensures:
 - Easy backup and migration
 - Consistent file permissions with PUID/PGID
 
+### CPU Share Guidelines
+
+CPU shares determine relative CPU priority between containers. Higher values get more CPU time when the system is under load.
+
+**Formula:** `cpu_shares: [value]` (relative weight, not percentage)
+
+#### CPU Share Allocation:
+
+**100 - System Critical** (Reserved)
+- System services that must never be starved
+
+**90 - Administrative Critical**
+- Applications that must always be responsive with no heavy background processes
+- Examples: CasaOS, Portainer, admin dashboards, monitoring tools
+
+**80 - User-Facing Interactive**
+- Real-time applications requiring immediate user responsiveness
+- Examples: Web servers, frontend applications, API backends, reverse proxies
+
+**70 - Interactive with Heavy Tasks**  
+- Real-time applications that may have intensive background processes
+- Examples: Nextcloud (web + background jobs), WebRTC servers, databases serving interactive apps
+
+**50 - Standard Applications** (Default)
+- Regular applications without special performance requirements
+- Examples: Most containerized applications, file servers, basic services
+
+**30 - Background Services**
+- Non-interactive services that don't require immediate responsiveness  
+- Examples: Backup services (Duplicati), log aggregation, scheduled tasks
+
+**20 - Heavy Background Processing**
+- Resource-intensive background tasks with no real-time requirements
+- Examples: Machine learning services (Immich ML), video transcoding, batch processing
+
+**10 - System Background** (Reserved)
+- Reserved for system maintenance tasks
+
+#### Implementation Notes:
+
+1. **Multi-container apps**: Allocate shares based on each service's role
+   ```yaml
+   services:
+     webapp:
+       cpu_shares: 80    # User-facing
+     database:
+       cpu_shares: 70    # Supporting interactive app
+     worker:
+       cpu_shares: 30    # Background processing
+   ```
+
+2. **Resource limits**: Always combine with memory limits
+   ```yaml
+   deploy:
+     resources:
+       limits:
+         memory: 512M
+         cpus: '0.5'
+   cpu_shares: 70
+   ```
+
+3. **Testing**: Consider your server's typical load when choosing values
+
 ### Project Structure
 
 ```shell
