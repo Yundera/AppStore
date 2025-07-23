@@ -2,7 +2,7 @@ name: nextcloud
 
 services:
   nextcloud:
-    image: nextcloud:30.0.13
+    image: nextcloud:31.0.7
     container_name: nextcloud
     user: $PUID:$PGID
     depends_on:
