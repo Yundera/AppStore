@@ -31,9 +31,6 @@ services:
       - /DATA/AppData/$AppID/apps:/var/www/html/custom_apps
       - /DATA/AppData/$AppID/config:/var/www/html/config
       - /DATA/AppData/$AppID/data:/var/www/html/data
-      - /DATA/Documents:/var/www/html/data/Documents
-      - /DATA/Media:/var/www/html/data/Media
-      - /DATA/Gallery:/var/www/html/data/Gallery
     restart: unless-stopped
     networks:
       - nextcloud-network
