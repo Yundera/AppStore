@@ -91,18 +91,19 @@ x-casaos:
   webui_port: 3000
   author: Yundera Team
   category: Communication
+  # Download Jitsi plugin for video conferencing / 화상 회의용 Jitsi 플러그인 다운로드
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/client-plugins &&    # Create client plugins directory / 클라이언트 플러그인 디렉토리 생성
-    mkdir -p /DATA/AppData/$AppID/config &&            # Create configuration directory / 설정 디렉토리 생성
-    mkdir -p /DATA/AppData/$AppID/data &&              # Create data storage directory / 데이터 저장 디렉토리 생성
-    mkdir -p /DATA/AppData/$AppID/logs &&              # Create logs directory / 로그 디렉토리 생성
-    mkdir -p /DATA/AppData/$AppID/plugins &&           # Create server plugins directory / 서버 플러그인 디렉토리 생성
-    mkdir -p /DATA/AppData/$AppID/postgres &&          # Create PostgreSQL data directory / PostgreSQL 데이터 디렉토리 생성
-    chown -R $PUID:$PGID /DATA/AppData/$AppID/ &&      # Set proper ownership for all directories / 모든 디렉토리에 적절한 소유권 설정
-    echo "Downloading Jitsi Plugin..." &&              # Display download status message / 다운로드 상태 메시지 표시
-    curl -L -o /DATA/AppData/$AppID/jitsi-plugin.tar.gz "https://github.com/mattermost-community/mattermost-plugin-jitsi/releases/latest/download/com.mattermost.plugin-jitsi.tar.gz" &&  # Download Jitsi plugin for video conferencing / 화상 회의용 Jitsi 플러그인 다운로드
-    echo "Jitsi Plugin downloaded to /DATA/AppData/$AppID/jitsi-plugin.tar.gz" &&  # Display download completion message / 다운로드 완료 메시지 표시
-    echo "Install it via System Console > Plugins > Plugin Management after first login"  # Display installation instructions / 설치 안내 메시지 표시
+    mkdir -p /DATA/AppData/$AppID/client-plugins &&
+    mkdir -p /DATA/AppData/$AppID/config &&
+    mkdir -p /DATA/AppData/$AppID/data &&
+    mkdir -p /DATA/AppData/$AppID/logs &&
+    mkdir -p /DATA/AppData/$AppID/plugins &&
+    mkdir -p /DATA/AppData/$AppID/postgres &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID/ &&
+    echo "Downloading Jitsi Plugin..." &&
+    curl -L -o /DATA/AppData/$AppID/jitsi-plugin.tar.gz "https://github.com/mattermost-community/mattermost-plugin-jitsi/releases/latest/download/com.mattermost.plugin-jitsi.tar.gz" &&
+    echo "Jitsi Plugin downloaded to /DATA/AppData/$AppID/jitsi-plugin.tar.gz" &&
+    echo "Install it via System Console > Plugins > Plugin Management after first login"
   description:
     en_us: |
       Self-hosted Microsoft Teams alternative with voice calls, video calls, screen sharing and team collaboration
