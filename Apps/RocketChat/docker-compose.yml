@@ -1,0 +1,191 @@
+name: rocketchat
+
+services:
+  mongodb:
+    image: mongo:7.0
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+    environment:
+      PUID: $PUID                                    # Process user ID / 프로세스 사용자 ID
+      PGID: $PGID                                    # Process group ID / 프로세스 그룹 ID
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]  # MongoDB replica set configuration / MongoDB replica set 구성
+    
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}) }" | mongosh --port 27017 --quiet
+      interval: 5s
+      timeout: 30s
+      start_period: 10s
+      start_interval: 1s
+      retries: 30
+    
+    volumes:
+      - /DATA/AppData/$AppID/mongodb:/data/db
+      - /DATA/AppData/$AppID/mongodb-config:/data/configdb
+    restart: unless-stopped
+
+  rocketchat:
+    image: registry.rocket.chat/rocketchat/rocket.chat:7.8.3
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+    environment:
+      # MongoDB connection settings / MongoDB 연결 설정
+      MONGO_URL: mongodb://mongodb:27017/rocketchat?replicaSet=rs0      # MongoDB connection URL / MongoDB 연결 URL
+      MONGO_OPLOG_URL: mongodb://mongodb:27017/local?replicaSet=rs0     # MongoDB oplog URL for real-time updates / 실시간 업데이트용 MongoDB oplog URL
+      MONGO_WATCHDB_ENABLED: "true"                                     # Enable MongoDB change streams / MongoDB 변경 스트림 활성화
+      
+      # Server connection settings / 서버 연결 설정
+      ROOT_URL: http://localhost:80                                      # Public root URL / 공개 루트 URL
+      PORT: 80                                                           # Server port / 서버 포트
+      BIND_IP: "0.0.0.0"                                                 # Server binding IP / 서버 바인딩 IP
+      
+      # Admin account settings / 관리자 계정 설정
+      ADMIN_USERNAME: admin                                              # Admin username / 관리자 사용자명
+      ADMIN_PASS: $default_pwd                                           # Admin password / 관리자 비밀번호
+      ADMIN_EMAIL: admin@localhost                                       # Admin email address / 관리자 이메일 주소
+      
+      # System settings / 시스템 설정
+      PUID: $PUID                                                        # Process user ID / 프로세스 사용자 ID
+      PGID: $PGID                                                        # Process group ID / 프로세스 그룹 ID
+      TZ: $TZ                                                            # Timezone setting / 시간대 설정
+      LOG_LEVEL: "info"                                                  # Logging level / 로그 레벨
+      
+      # Microservices settings (disabled for simplicity) / 마이크로서비스 설정 (단순화를 위해 비활성화)
+      MOLECULER_DISABLED: "true"                                         # Disable Moleculer microservices / Moleculer 마이크로서비스 비활성화
+      DISABLE_MICROSERVICES: "true"                                      # Disable microservices architecture / 마이크로서비스 아키텍처 비활성화
+      MICRO_SERVICES_ENABLED: "false"                                    # Micro services support / 마이크로 서비스 지원
+      
+      # Privacy and telemetry settings / 프라이버시 및 원격 측정 설정
+      ROCKETCHAT_STATISTICS_OPT_OUT: "true"                              # Opt out of statistics collection / 통계 수집 거부
+      ROCKETCHAT_UPDATE_CHECK_ENABLED: "false"                           # Disable automatic update checks / 자동 업데이트 확인 비활성화
+      ROCKETCHAT_FEDERATION_ENABLED: "false"                             # Disable federation with other servers / 다른 서버와의 연합 비활성화
+      
+      # Apps marketplace settings / 앱 마켓플레이스 설정
+      ROCKETCHAT_APPS_ENGINE_ENABLED: "true"                             # Enable apps engine / 앱 엔진 활성화
+      OVERWRITE_SETTING_APPS_ENGINE_ENABLED: "true"                      # Force enable apps engine / 앱 엔진 강제 활성화
+      OVERWRITE_SETTING_MARKETPLACE_ENABLED: "true"                      # Force enable marketplace / 마켓플레이스 강제 활성화
+      
+      # Cloud workspace settings / 클라우드 워크스페이스 설정
+      ROCKETCHAT_CLOUD_WORKSPACE_REGISTRATION_REQUIRED: "false"          # Disable cloud workspace registration / 클라우드 워크스페이스 등록 비활성화
+      OVERWRITE_SETTING_CLOUD_WORKSPACE_REGISTRATION_REQUIRED: "false"   # Force disable cloud workspace registration / 클라우드 워크스페이스 등록 강제 비활성화
+      
+      # Real-time communication settings / 실시간 통신 설정
+      OVERWRITE_SETTING_WEBSOCKET_ENABLED: "true"                        # Force enable WebSocket / WebSocket 강제 활성화
+      OVERWRITE_SETTING_REALTIME_ENABLED: "true"                         # Force enable real-time features / 실시간 기능 강제 활성화
+      DDP_DEFAULT_CONNECTION_REUSE_ENABLED: "true"                       # Enable DDP connection reuse / DDP 연결 재사용 활성화
+      
+      # Performance optimization / 성능 최적화
+      METEOR_DISABLE_OPTIMISTIC_CACHING: "1"                             # Disable optimistic caching / 낙관적 캐싱 비활성화
+      
+      # Feature toggles (disabled for simplicity) / 기능 토글 (단순화를 위해 비활성화)
+      OVERWRITE_SETTING_LIVECHAT_ENABLED: "false"                        # Disable live chat feature / 라이브 채팅 기능 비활성화
+      OVERWRITE_SETTING_OMNICHANNEL_ENABLED: "false"                     # Disable omnichannel feature / 옴니채널 기능 비활성화
+      OVERWRITE_SETTING_WEBRTC_ENABLED: "false"                          # Disable WebRTC for video calls / 화상 통화용 WebRTC 비활성화
+      
+      # Security settings / 보안 설정
+      OVERWRITE_SETTING_ACCOUNTS_ALLOW_ANONYMOUS_READ: "false"           # Disable anonymous read access / 익명 읽기 접근 비활성화
+      OVERWRITE_SETTING_ACCOUNTS_ALLOW_ANONYMOUS_WRITE: "false"          # Disable anonymous write access / 익명 쓰기 접근 비활성화
+      OVERWRITE_SETTING_API_ENABLE_CORS: "false"                         # Disable CORS for API / API용 CORS 비활성화
+    
+    expose:
+      - 80
+    volumes:
+      - /DATA/AppData/$AppID/uploads:/app/uploads
+      - /DATA/AppData/$AppID/data:/app/data
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: rocketchat
+  author: Yundera Team
+  category: Communication
+  description:
+    en_us: Rocket.Chat 7.8.3 with marketplace enabled for team collaboration. Uses latest MongoDB 7.0 with verified replica set configuration.
+    ko_kr: 마켓플레이스가 활성화된 팀 협업용 Rocket.Chat 7.8.3. 최신 MongoDB 7.0과 검증된 replica set 구성 사용.
+  developer: Rocket.Chat Technologies Corp.
+  tagline:
+    en_us: Latest team communication with marketplace & MongoDB 7.0
+    ko_kr: 마켓플레이스와 MongoDB 7.0을 지원하는 최신 팀 커뮤니케이션
+  title:
+    en_us: Rocket.Chat
+    ko_kr: Rocket.Chat
+  tips:
+    before_install:
+      en_us: |
+        **Rocket.Chat 7.8.3 with Apps Marketplace Enabled**
+        
+        **Default Account**
+        | Username    | Password       |
+        | ----------- | -------------- |
+        | `admin`     | `$default_pwd` |
+        
+        **Latest Features (7.8.3):**
+        - ✅ Apps Marketplace (install integrations)
+        - ✅ MongoDB 7.0 support (latest database)
+        - ✅ Node.js 20.x and Meteor 3.0 performance boost
+        - ✅ Enhanced security and stability
+        - ✅ Real-time messaging with replica set
+        - ✅ VoIP for Team Collaboration (beta)
+        
+        **Privacy Settings:**
+        - ❌ Statistics reporting disabled
+        - ❌ Automatic updates disabled  
+        - ❌ Federation disabled
+        - ✅ Your data stays on your server
+        
+        **Setup Process:**
+        1. Initial setup wizard will appear
+        2. Complete email verification for marketplace access
+        3. Apps marketplace will be available in admin panel
+        4. Install apps like GitHub, Jira, Google Drive integrations
+        
+        **MongoDB 7.0 Benefits:**
+        - Better performance and scalability
+        - Enhanced security features
+        - Future-proof database version
+      ko_kr: |
+        **앱 마켓플레이스가 활성화된 Rocket.Chat 7.8.3**
+        
+        **기본 계정**
+        | 사용자명     | 비밀번호        |
+        | ----------- | -------------- |
+        | `admin`     | `$default_pwd` |
+        
+        **최신 기능 (7.8.3):**
+        - ✅ 앱 마켓플레이스 (통합 앱 설치)
+        - ✅ MongoDB 7.0 지원 (최신 데이터베이스)
+        - ✅ Node.js 20.x 및 Meteor 3.0 성능 향상
+        - ✅ 강화된 보안성과 안정성
+        - ✅ Replica set 실시간 메시징
+        - ✅ 팀 협업용 VoIP (베타)
+        
+        **프라이버시 설정:**
+        - ❌ 통계 리포팅 비활성화
+        - ❌ 자동 업데이트 비활성화
+        - ❌ 연합 기능 비활성화
+        - ✅ 데이터는 사용자 서버에만 보관
+        
+        **설정 과정:**
+        1. 초기 설정 마법사가 나타남
+        2. 마켓플레이스 접근을 위한 이메일 인증 완료
+        3. 관리자 패널에서 앱 마켓플레이스 사용 가능
+        4. GitHub, Jira, Google Drive 통합 등 앱 설치 가능
+        
+        **MongoDB 7.0 장점:**
+        - 향상된 성능과 확장성
+        - 강화된 보안 기능
+        - 미래 지향적 데이터베이스 버전
+  index: /
+  webui_port: 80
