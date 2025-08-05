@@ -1,0 +1,261 @@
+name: nextcloud
+
+services:
+  nextcloud:
+    image: nextcloud:31.0.7
+    container_name: nextcloud
+    user: $PUID:$PGID
+    depends_on:
+      - db
+      - redis
+      - collabora
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+          cpus: '2.0'
+    expose:
+      - 80
+    environment:
+      - PUID=$PUID                                    # Process user ID / 프로세스 사용자 ID
+      - PGID=$PGID                                    # Process group ID / 프로세스 그룹 ID
+      - TZ=$TZ                                        # Timezone setting / 시간대 설정
+      - MYSQL_HOST=db                                 # MySQL/MariaDB host name / MySQL/MariaDB 호스트명
+      - MYSQL_DATABASE=nextcloud                      # Database name for Nextcloud / Nextcloud용 데이터베이스명
+      - MYSQL_USER=nextcloud                          # Database username / 데이터베이스 사용자명
+      - MYSQL_PASSWORD=$default_pwd                   # Database password / 데이터베이스 비밀번호
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $domain nextcloud  # Trusted domains for access / 접근 허용 도메인들
+      - OVERWRITEPROTOCOL=https                       # Force HTTPS protocol / HTTPS 프로토콜 강제 사용
+      - OVERWRITEHOST=$domain                         # Override host for URL generation / URL 생성용 호스트 오버라이드
+      - REDIS_HOST=redis                              # Redis cache server hostname / Redis 캐시 서버 호스트명
+      - REDIS_HOST_PORT=6379                          # Redis server port / Redis 서버 포트
+      - REDIS_HOST_PASSWORD=$default_pwd              # Redis authentication password / Redis 인증 비밀번호
+      - NEXTCLOUD_INIT_HTACCESS=true                  # Initialize .htaccess file / .htaccess 파일 초기화
+      - PHP_MEMORY_LIMIT=2048M                        # PHP memory limit / PHP 메모리 제한
+      - PHP_UPLOAD_LIMIT=1024M                        # PHP file upload size limit / PHP 파일 업로드 크기 제한
+    volumes:
+      - /DATA/AppData/$AppID/html:/var/www/html
+      - /DATA/AppData/$AppID/config:/var/www/html/config
+      - /DATA/AppData/$AppID/data:/var/www/html/data
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  db:
+    image: mariadb:11.2
+    container_name: nextcloud_db
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    environment:
+      - TZ=$TZ                                        # Timezone setting / 시간대 설정
+      - MYSQL_ROOT_PASSWORD=$default_pwd              # MySQL root user password / MySQL root 사용자 비밀번호
+      - MYSQL_DATABASE=nextcloud                      # Database name to create / 생성할 데이터베이스명
+      - MYSQL_USER=nextcloud                          # Database user to create / 생성할 데이터베이스 사용자
+      - MYSQL_PASSWORD=$default_pwd                   # Password for database user / 데이터베이스 사용자 비밀번호
+      - MARIADB_AUTO_UPGRADE=1                        # Enable automatic database upgrades / 자동 데이터베이스 업그레이드 활성화
+      - MARIADB_DISABLE_UPGRADE_BACKUP=1              # Disable backup during upgrades / 업그레이드 시 백업 비활성화
+    volumes:
+      - /DATA/AppData/$AppID/db:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+    # MariaDB performance optimization for Nextcloud / Nextcloud를 위한 MariaDB 성능 최적화
+    command: >
+      --innodb-buffer-pool-size=256M
+      --transaction-isolation=READ-COMMITTED
+      --binlog-format=ROW
+      --innodb-file-per-table=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$default_pwd"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: nextcloud_redis
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+    # Redis with password authentication and data persistence / 비밀번호 인증과 데이터 지속성을 가진 Redis
+    command: redis-server --requirepass $default_pwd --appendonly yes
+    volumes:
+      - /DATA/AppData/$AppID/redis:/data
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "$default_pwd", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  nextcloud-network:
+    driver: bridge
+
+x-casaos:
+  main: nextcloud
+  webui_port: 80
+  category: Utilities
+  architectures: [amd64, arm64]
+  author: Yundera Team
+  developer: Nextcloud GmbH
+  pre-install-cmd: |
+    rm -rf /DATA/AppData/$AppID/* &&
+    mkdir -p /DATA/AppData/$AppID/{config,data,html,db,redis,collabora/tmp} &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID &&
+    chmod -R 755 /DATA/AppData/$AppID
+  title:
+    en_us: Nextcloud
+    ko_kr: Nextcloud
+  tagline:
+    en_us: Personal cloud with Collabora document editing
+    ko_kr: Collabora 문서 편집이 포함된 개인 클라우드
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/thumbnail.png
+  description:
+    en_us: |
+      **☁️ Nextcloud with Collabora Integration**
+
+      Complete personal cloud solution with **Collabora Online** document server for professional document editing.
+
+      **🚀 What's Included:**
+      • **Nextcloud** - File management, sharing, calendar, contacts
+      • **Collabora Online** - Professional document editing server
+      • **Redis Cache** - Optimized performance
+      • **MariaDB** - Reliable database backend
+
+      **📝 Office Features:**
+      • **Word Documents** (.docx, .doc) - Full editing capabilities
+      • **Excel Spreadsheets** (.xlsx, .xls) - Advanced formulas and charts
+      • **PowerPoint Presentations** (.pptx, .ppt) - Rich media support
+      • **Real-time Collaboration** - Multiple users editing simultaneously
+      • **Comment System** - Review and feedback workflow
+      • **Version History** - Track document changes
+
+      **🔧 Technical Features:**
+      • **NSL Router Compatible** - Clean HTTPS URLs
+      • **Privileged Container** - Proper jail permissions for Collabora
+      • **High Performance** - Dedicated resources for document editing
+      • **Secure** - All data stays on your server
+
+      **Perfect for teams and individuals who need professional document editing with complete privacy control!**
+    ko_kr: |
+      **☁️ Collabora 통합 Nextcloud**
+
+      전문적인 문서 편집을 위한 **Collabora Online** 문서 서버가 포함된 완전한 개인 클라우드 솔루션입니다.
+
+      **🚀 포함된 기능:**
+      • **Nextcloud** - 파일 관리, 공유, 일정, 연락처
+      • **Collabora Online** - 전문적인 문서 편집 서버
+      • **Redis 캐시** - 최적화된 성능
+      • **MariaDB** - 안정적인 데이터베이스 백엔드
+
+      **📝 오피스 기능:**
+      • **Word 문서** (.docx, .doc) - 완전한 편집 기능
+      • **Excel 스프레드시트** (.xlsx, .xls) - 고급 수식 및 차트
+      • **PowerPoint 프레젠테이션** (.pptx, .ppt) - 풍부한 미디어 지원
+      • **실시간 협업** - 여러 사용자가 동시에 편집
+      • **댓글 시스템** - 검토 및 피드백 워크플로
+      • **버전 기록** - 문서 변경 사항 추적
+
+      **🔧 기술적 기능:**
+      • **NSL Router 호환** - 깔끔한 HTTPS URL
+      • **특권 컨테이너** - Collabora를 위한 적절한 jail 권한
+      • **고성능** - 문서 편집을 위한 전용 리소스
+      • **보안** - 모든 데이터가 서버에 보관
+
+      **완전한 개인정보 보호 통제와 함께 전문적인 문서 편집이 필요한 팀과 개인에게 완벽합니다!**
+  tips:
+    before_install:
+      en_us: |
+        **🚀 Nextcloud + Collabora Setup Guide**
+        
+        **What This Includes:**
+        ✅ Nextcloud with all features
+        ✅ Collabora Online server (dedicated)
+        ✅ Redis cache for performance
+        ✅ MariaDB database
+        ✅ NSL Router optimized configuration
+        
+        **📋 After Installation:**
+        1. **Wait 4-5 minutes** for Collabora to fully initialize
+        2. **Access Nextcloud:** `https://nextcloud-username.nsl.sh`
+        3. **Complete setup wizard** (create admin account)
+        4. **Install Nextcloud Office app:**
+           - Go to **Apps** → Search "**Nextcloud Office**"
+           - Click **Download and enable**
+        5. **Configure Collabora:**
+           - Go to **Settings** → **Office**
+           - Select "**Use your own server**"
+           - **Server URL:** `https://9980-nextcloud-username.nsl.sh/`
+           - **Secret key:** Leave blank
+           - **Check:** "Disable certificate verification" ✅
+           - **Advanced settings:** Add WOPI allow-list: `172.17.0.0/16`
+           - Click **Save**
+        
+        **🎯 Test Collabora:**
+        - Go to **Files** → **+ button**
+        - You should see: **Document**, **Spreadsheet**, **Presentation**
+        - Click any option → Collabora editor opens!
+        
+        **💡 Troubleshooting:**
+        - First document load takes 1-2 minutes (normal)
+        - If connection fails, wait longer - Collabora needs time
+        - Collabora runs on external port 9980 for NSL Router access
+        
+        **Fixed the TRUSTED_PROXIES error that caused 502 Bad Gateway!**
+      ko_kr: |
+        **🚀 Nextcloud + Collabora 설정 가이드**
+        
+        **포함된 기능:**
+        ✅ 모든 기능이 포함된 Nextcloud
+        ✅ Collabora Online 서버 (전용)
+        ✅ 성능을 위한 Redis 캐시
+        ✅ MariaDB 데이터베이스
+        ✅ NSL Router 최적화 구성
+        
+        **📋 설치 후:**
+        1. **4-5분 대기** - Collabora 완전 초기화를 위해
+        2. **Nextcloud 접속:** `https://nextcloud-사용자명.nsl.sh`
+        3. **설정 마법사 완료** (관리자 계정 생성)
+        4. **Nextcloud Office 앱 설치:**
+           - **앱** → "**Nextcloud Office**" 검색
+           - **다운로드 및 활성화** 클릭
+        5. **Collabora 구성:**
+           - **설정** → **Office**로 이동
+           - "**Use your own server**" 선택
+           - **서버 URL:** `https://9980-nextcloud-사용자명.nsl.sh/`
+           - **Secret key:** 비워두기
+           - **체크:** "Disable certificate verification" ✅
+           - **고급 설정:** WOPI 허용 목록에 `172.17.0.0/16` 추가
+           - **저장** 클릭
+        
+        **🎯 Collabora 테스트:**
+        - **파일** → **+ 버튼**으로 이동
+        - 다음이 보여야 함: **문서**, **스프레드시트**, **프레젠테이션**
+        - 아무 옵션 클릭 → Collabora 편집기 열림!
+        
+        **💡 문제 해결:**
+        - 첫 문서 로드는 1-2분 소요 (정상)
+        - 연결 실패 시 더 기다리기 - Collabora 초기화 시간 필요
+        - Collabora는 NSL Router 접근을 위해 외부 포트 9980에서 실행
+        
+        **502 Bad Gateway를 일으키던 TRUSTED_PROXIES 오류를 수정했습니다!**
+  index: /
