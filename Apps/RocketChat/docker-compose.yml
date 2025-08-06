@@ -111,6 +111,12 @@ x-casaos:
   main: rocketchat
   author: Yundera Team
   category: Communication
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-1.png
   description:
     en_us: Rocket.Chat 7.8.3 with marketplace enabled for team collaboration. Uses latest MongoDB 7.0 with verified replica set configuration.
     ko_kr: 마켓플레이스가 활성화된 팀 협업용 Rocket.Chat 7.8.3. 최신 MongoDB 7.0과 검증된 replica set 구성 사용.
