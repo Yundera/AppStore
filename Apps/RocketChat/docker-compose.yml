@@ -1,0 +1,211 @@
+name: rocketchat
+
+services:
+  mongodb:
+    image: mongo:7.0
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+    environment:
+      PUID: $PUID                                    # Process user ID / 프로세스 사용자 ID
+      PGID: $PGID                                    # Process group ID / 프로세스 그룹 ID
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}) }" | mongosh --port 27017 --quiet
+      interval: 5s
+      timeout: 30s
+      start_period: 10s
+      start_interval: 1s
+      retries: 30
+    
+    volumes:
+      - /DATA/AppData/$AppID/mongodb:/data/db
+      - /DATA/AppData/$AppID/mongodb-config:/data/configdb
+    restart: unless-stopped
+
+  rocketchat:
+    image: registry.rocket.chat/rocketchat/rocket.chat:7.8.3
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+    environment:
+      # MongoDB connection settings
+      MONGO_URL: mongodb://mongodb:27017/rocketchat?replicaSet=rs0
+      MONGO_OPLOG_URL: mongodb://mongodb:27017/local?replicaSet=rs0
+      MONGO_WATCHDB_ENABLED: "true"
+      
+      # Server connection settings
+      ROOT_URL: http://localhost:80                                      # 기본 localhost URL
+      PORT: 80
+      BIND_IP: "0.0.0.0"
+      
+      # Admin account settings
+      ADMIN_USERNAME: admin
+      ADMIN_PASS: $default_pwd
+      ADMIN_EMAIL: admin@localhost
+      
+      # System settings
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      LOG_LEVEL: "info"
+      
+      # Microservices settings (disabled for simplicity)
+      MOLECULER_DISABLED: "true"
+      DISABLE_MICROSERVICES: "true"
+      MICRO_SERVICES_ENABLED: "false"
+      
+      # Privacy and telemetry settings
+      ROCKETCHAT_STATISTICS_OPT_OUT: "true"
+      ROCKETCHAT_UPDATE_CHECK_ENABLED: "false"
+      ROCKETCHAT_FEDERATION_ENABLED: "false"
+      
+      # Apps marketplace settings - Jitsi 설치를 위해 필수
+      ROCKETCHAT_APPS_ENGINE_ENABLED: "true"
+      OVERWRITE_SETTING_APPS_ENGINE_ENABLED: "true"
+      OVERWRITE_SETTING_MARKETPLACE_ENABLED: "true"
+      
+      # Cloud workspace settings
+      ROCKETCHAT_CLOUD_WORKSPACE_REGISTRATION_REQUIRED: "false"
+      OVERWRITE_SETTING_CLOUD_WORKSPACE_REGISTRATION_REQUIRED: "false"
+      
+      # Real-time communication settings
+      OVERWRITE_SETTING_WEBSOCKET_ENABLED: "true"
+      OVERWRITE_SETTING_REALTIME_ENABLED: "true"
+      DDP_DEFAULT_CONNECTION_REUSE_ENABLED: "true"
+      
+      # Performance optimization
+      METEOR_DISABLE_OPTIMISTIC_CACHING: "1"
+      
+      # Feature toggles (disabled for simplicity)
+      OVERWRITE_SETTING_LIVECHAT_ENABLED: "false"
+      OVERWRITE_SETTING_OMNICHANNEL_ENABLED: "false"
+      OVERWRITE_SETTING_WEBRTC_ENABLED: "false"                          # Disable WebRTC for video calls
+      
+      # Security settings
+      OVERWRITE_SETTING_ACCOUNTS_ALLOW_ANONYMOUS_READ: "false"
+      OVERWRITE_SETTING_ACCOUNTS_ALLOW_ANONYMOUS_WRITE: "false"
+      OVERWRITE_SETTING_API_ENABLE_CORS: "false"
+    
+    expose:
+      - 80
+    volumes:
+      - /DATA/AppData/$AppID/uploads:/app/uploads
+      - /DATA/AppData/$AppID/data:/app/data
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: rocketchat
+  author: Yundera Team
+  category: Communication
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RocketChat/screenshot-1.png
+  description:
+    en_us: Rocket.Chat 7.8.3 with marketplace enabled for team collaboration. Uses latest MongoDB 7.0 with verified replica set configuration.
+    ko_kr: 마켓플레이스가 활성화된 팀 협업용 Rocket.Chat 7.8.3. 최신 MongoDB 7.0과 검증된 replica set 구성 사용.
+  developer: Rocket.Chat Technologies Corp.
+  tagline:
+    en_us: Latest team communication with marketplace & MongoDB 7.0
+    ko_kr: 마켓플레이스와 MongoDB 7.0을 지원하는 최신 팀 커뮤니케이션
+  title:
+    en_us: Rocket.Chat
+    ko_kr: Rocket.Chat
+  tips:
+    before_install:
+      en_us: |
+        **Rocket.Chat 7.8.3 with Apps Marketplace Enabled**
+        
+        **Default Account**
+        | Username    | Password       |
+        | ----------- | -------------- |
+        | `admin`     | `$default_pwd` |
+        
+        **Latest Features (7.8.3):**
+        - ✅ Apps Marketplace (install integrations)
+        - ✅ MongoDB 7.0 support (latest database)
+        - ✅ Node.js 20.x and Meteor 3.0 performance boost
+        - ✅ Enhanced security and stability
+        - ✅ Real-time messaging with replica set
+        - ✅ VoIP for Team Collaboration (beta)
+        
+        **Privacy Settings:**
+        - ❌ Statistics reporting disabled
+        - ❌ Automatic updates disabled  
+        - ❌ Federation disabled
+        - ✅ Your data stays on your server
+        
+        **Setup Process:**
+        1. Initial setup wizard will appear
+        2. Complete email verification for marketplace access
+        3. Apps marketplace will be available in admin panel
+        4. Install apps like GitHub, Jira, Google Drive integrations
+        
+        **Jitsi Video Conferencing Setup:**
+        1. Go to **Administration → Apps → Marketplace**
+        2. Search for "Jitsi" and click **Install**
+        3. Use `/jitsi` command in any chat to start video calls
+        4. Custom room: `/jitsi @MeetingRoom`
+        5. Share the generated link with participants
+        
+        **MongoDB 7.0 Benefits:**
+        - Better performance and scalability
+        - Enhanced security features
+        - Future-proof database version
+      ko_kr: |
+        **앱 마켓플레이스가 활성화된 Rocket.Chat 7.8.3**
+        
+        **기본 계정**
+        | 사용자명     | 비밀번호        |
+        | ----------- | -------------- |
+        | `admin`     | `$default_pwd` |
+        
+        **최신 기능 (7.8.3):**
+        - ✅ 앱 마켓플레이스 (통합 앱 설치)
+        - ✅ MongoDB 7.0 지원 (최신 데이터베이스)
+        - ✅ Node.js 20.x 및 Meteor 3.0 성능 향상
+        - ✅ 강화된 보안성과 안정성
+        - ✅ Replica set 실시간 메시징
+        - ✅ 팀 협업용 VoIP (베타)
+        
+        **프라이버시 설정:**
+        - ❌ 통계 리포팅 비활성화
+        - ❌ 자동 업데이트 비활성화
+        - ❌ 연합 기능 비활성화
+        - ✅ 데이터는 사용자 서버에만 보관
+        
+        **설정 과정:**
+        1. 초기 설정 마법사가 나타남
+        2. 마켓플레이스 접근을 위한 이메일 인증 완료
+        3. 관리자 패널에서 앱 마켓플레이스 사용 가능
+        4. GitHub, Jira, Google Drive 통합 등 앱 설치 가능
+        
+        **Jitsi 화상회의 설정:**
+        1. **관리 → 앱 → 마켓플레이스**로 이동
+        2. "Jitsi" 검색 후 **설치** 클릭
+        3. 채팅에서 `/jitsi` 명령어로 화상통화 시작
+        4. 커스텀 룸: `/jitsi @회의실`
+        5. 생성된 링크를 참가자들과 공유
+        
+        **MongoDB 7.0 장점:**
+        - 향상된 성능과 확장성
+        - 강화된 보안 기능
+        - 미래 지향적 데이터베이스 버전
+  index: /
+  webui_port: 80
