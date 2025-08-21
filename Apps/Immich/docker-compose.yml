@@ -10,10 +10,10 @@ services:
         limits:
           memory: 2048M
           cpus: '1.0'
-    image: ghcr.io/immich-app/immich-server:v1.135.3
+    image: ghcr.io/immich-app/immich-server:v1.138.0
     user: $PUID:$PGID
     volumes:
-      - /DATA/AppData/immich/upload:/usr/src/app/upload
+      - /DATA/AppData/immich/upload:/data
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_DATABASE_NAME: immich
@@ -41,7 +41,7 @@ services:
         limits:
           memory: 2048M
           cpus: '0.5'
-    image: ghcr.io/immich-app/immich-machine-learning:v1.135.3
+    image: ghcr.io/immich-app/immich-machine-learning:v1.138.0
     user: 0:0
     environment:
       TZ: $TZ
@@ -62,7 +62,7 @@ services:
         limits:
           memory: 256M
           cpus: '0.25'
-    image: docker.io/redis:6.2-alpine@sha256:148bb5411c184abd288d9aaed139c98123eeb8824c5d3fce03cf721db58066d8
+    image: docker.io/valkey/valkey:8-bookworm@sha256:5b8f8c333bef895c925f56629d6ba90aea95a4f7391f62411e625267c600b19c
     user: $PUID:$PGID
     healthcheck:
       test: redis-cli ping || exit 1
@@ -85,7 +85,7 @@ services:
         limits:
           memory: 1024M
           cpus: '0.5'
-    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:739cdd626151ff1f796dc95a6591b55a714f341c737e27f045019ceabf8e8c52
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
     user: $PUID:$PGID
     environment:
       POSTGRES_PASSWORD: postgres
@@ -95,12 +95,13 @@ services:
       TZ: UTC
       PGID: $PGID
       PUID: $PUID
+      # Uncomment the DB_STORAGE_TYPE: 'HDD' var if your database isn't stored on SSDs
+      # DB_STORAGE_TYPE: 'HDD'
     volumes:
       - /DATA/AppData/immich/pgdata:/var/lib/postgresql/data
     healthcheck:
       test: pg_isready --dbname='immich' --username='postgres' || exit 1; Chksum="$$(psql --dbname='immich' --username='postgres' --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
       interval: 5m
-      start_interval: 30s
       start_period: 5m
     command:
       [
