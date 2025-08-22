@@ -1,0 +1,302 @@
+name: mealie
+
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:v3.0.2
+    container_name: mealie
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    expose:
+      - 80
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      # Security settings / 보안 설정
+      ALLOW_SIGNUP: "false"
+      # Mealie v3 default account (first installation) / Mealie v3 기본 계정 (첫 설치 시)
+      # changeme@example.com / MyPassword
+      # NSL Router settings / NSL Router 설정
+      BASE_URL: https://$domain
+      # Performance settings / 성능 설정
+      MAX_WORKERS: 1
+      WEB_CONCURRENCY: 1
+      # Port settings / 포트 설정
+      API_PORT: 80
+    volumes:
+      - /DATA/AppData/$AppID/data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/api/app/about"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: mealie
+  author: CasaOS Team
+  category: Utilities
+  description:
+    en_us: |
+      **🍽️ What is Mealie?**
+      
+      **Mealie** is your smart recipe manager that turns any recipe URL into your personal cookbook. Instead of bookmarking recipes that disappear or hunting through scattered notes, you get **one organized place for all your family recipes**.
+      
+      Just paste any recipe URL and Mealie automatically extracts ingredients, steps, and photos. No more lost recipes or dead links.
+      
+      You can:
+      • Import recipes from thousands of websites with one click
+      • Plan meals for the week, month, or year
+      • Generate shopping lists from your meal plans
+      • Organize recipes into custom cookbooks
+      • Share recipes with family members
+      
+      Everything is **self-hosted on your server**, so your family recipes stay private forever.
+      
+      **🚀 Why Choose Mealie?**
+      
+      **Mealie** runs on your own server, giving you complete control over your recipe collection. Think of it like having your own private cookbook library instead of relying on random websites.
+      
+      Why choose Mealie?
+      • **Your recipes stay with you** — no third-party services or disappearing websites
+      • **Smart import** — works with virtually any recipe website  
+      • **Family-friendly** — multiple users can share and contribute recipes
+      • **Meal planning made easy** — automatically generates shopping lists
+      
+      With Mealie on **Yundera**, you can:
+      • Build your permanent recipe collection that never disappears
+      • Access recipes from any device (mobile, tablet, desktop)
+      • Plan family meals and automatically create shopping lists
+      • Keep your cooking data private — it never leaves your server
+      
+      **🛠️ Perfect For:**
+      • Families who want to organize their favorite recipes
+      • Home cooks tired of losing great recipes to dead links
+      • Anyone who wants to plan meals efficiently
+      • Households that love trying new recipes from the web
+    fr_fr: |
+      **🍽️ Qu'est-ce que Mealie ?**
+      
+      **Mealie** est votre gestionnaire de recettes intelligent qui transforme n'importe quelle URL de recette en votre livre de cuisine personnel. Au lieu de marquer des recettes qui disparaissent ou de chercher dans des notes éparpillées, vous obtenez **un endroit organisé pour toutes vos recettes familiales**.
+      
+      Collez simplement une URL de recette et Mealie extrait automatiquement les ingrédients, les étapes et les photos. Fini les recettes perdues ou les liens morts.
+      
+      Vous pouvez :
+      • Importer des recettes de milliers de sites web en un clic
+      • Planifier les repas pour la semaine, le mois ou l'année
+      • Générer des listes de courses à partir de vos plans de repas
+      • Organiser les recettes en livres de cuisine personnalisés
+      • Partager des recettes avec les membres de la famille
+      
+      Tout est **auto-hébergé sur votre serveur**, donc vos recettes familiales restent privées pour toujours.
+      
+      **🚀 Pourquoi choisir Mealie ?**
+      
+      **Mealie** fonctionne sur votre propre serveur, vous donnant un contrôle total sur votre collection de recettes. C'est comme avoir votre propre bibliothèque de livres de cuisine privée au lieu de dépendre de sites web aléatoires.
+      
+      Pourquoi choisir Mealie ?
+      • **Vos recettes restent avec vous** — aucun service tiers ou sites web qui disparaissent
+      • **Import intelligent** — fonctionne avec pratiquement n'importe quel site de recettes
+      • **Familial** — plusieurs utilisateurs peuvent partager et contribuer aux recettes
+      • **Planification de repas facile** — génère automatiquement des listes de courses
+      
+      Avec Mealie sur **Yundera**, vous pouvez :
+      • Construire votre collection permanente de recettes qui ne disparaît jamais
+      • Accéder aux recettes depuis n'importe quel appareil (mobile, tablette, ordinateur)
+      • Planifier les repas familiaux et créer automatiquement des listes de courses
+      • Garder vos données culinaires privées — elles ne quittent jamais votre serveur
+    ko_kr: |
+      **🍽️ Mealie이란 무엇인가요?**
+      
+      **Mealie**는 모든 레시피 URL을 개인 요리책으로 변환하는 스마트 레시피 관리자입니다. 사라지는 레시피를 북마크하거나 흩어진 메모를 찾는 대신, **모든 가족 레시피를 위한 하나의 정리된 공간**을 얻을 수 있습니다.
+      
+      레시피 URL을 붙여넣기만 하면 Mealie가 자동으로 재료, 단계, 사진을 추출합니다. 더 이상 잃어버린 레시피나 깨진 링크는 없습니다.
+      
+      할 수 있는 일:
+      • 수천 개의 웹사이트에서 원클릭으로 레시피 가져오기
+      • 주, 월, 연 단위로 식사 계획하기
+      • 식사 계획에서 쇼핑 목록 자동 생성
+      • 맞춤 요리책으로 레시피 정리하기
+      • 가족 구성원과 레시피 공유하기
+      
+      모든 것이 **서버에 자체 호스팅**되므로 가족 레시피가 영원히 비공개로 유지됩니다.
+      
+      **🚀 왜 Mealie을 선택해야 할까요?**
+      
+      **Mealie**는 자체 서버에서 실행되어 레시피 컬렉션을 완전히 제어할 수 있습니다. 무작위 웹사이트에 의존하는 대신 자신만의 개인 요리책 라이브러리를 갖는 것과 같습니다.
+      
+      Mealie을 선택하는 이유:
+      • **레시피가 함께 유지됩니다** — 제3자 서비스나 사라지는 웹사이트 없음
+      • **스마트 가져오기** — 거의 모든 레시피 웹사이트와 호환
+      • **가족 친화적** — 여러 사용자가 레시피를 공유하고 기여할 수 있음
+      • **쉬운 식사 계획** — 쇼핑 목록을 자동으로 생성
+      
+      **Yundera**의 Mealie로 다음을 할 수 있습니다:
+      • 절대 사라지지 않는 영구 레시피 컬렉션 구축
+      • 모든 기기에서 레시피 접근 (모바일, 태블릿, 데스크톱)
+      • 가족 식사 계획 및 쇼핑 목록 자동 생성
+      • 요리 데이터를 비공개로 유지 — 서버를 벗어나지 않음
+    zh_cn: |
+      **🍽️ 什么是 Mealie？**
+      
+      **Mealie** 是您的智能食谱管理器，可以将任何食谱URL转换为您的个人食谱书。不再需要收藏可能消失的食谱或在散乱的笔记中搜索，您可以获得**一个整理所有家庭食谱的地方**。
+      
+      只需粘贴任何食谱URL，Mealie就会自动提取配料、步骤和照片。不再有丢失的食谱或失效的链接。
+      
+      您可以：
+      • 一键从数千个网站导入食谱
+      • 规划一周、一月或一年的膳食
+      • 从您的膳食计划生成购物清单
+      • 将食谱整理到自定义食谱书中
+      • 与家庭成员分享食谱
+      
+      一切都在**您的服务器上自托管**，因此您的家庭食谱永远保持私密。
+      
+      **🚀 为什么选择 Mealie？**
+      
+      **Mealie** 在您自己的服务器上运行，让您完全控制食谱收藏。这就像拥有自己的私人食谱图书馆，而不是依赖随机网站。
+      
+      选择 Mealie 的原因：
+      • **您的食谱与您同在** — 没有第三方服务或消失的网站
+      • **智能导入** — 几乎适用于任何食谱网站
+      • **家庭友好** — 多个用户可以分享和贡献食谱
+      • **轻松膳食规划** — 自动生成购物清单
+      
+      在 **Yundera** 上使用 Mealie，您可以：
+      • 建立永不消失的永久食谱收藏
+      • 从任何设备访问食谱（手机、平板、桌面）
+      • 规划家庭膳食并自动创建购物清单
+      • 保持烹饪数据私密 — 永不离开您的服务器
+    es_es: |
+      **🍽️ ¿Qué es Mealie?**
+      
+      **Mealie** es tu gestor inteligente de recetas que convierte cualquier URL de receta en tu libro de cocina personal. En lugar de marcar recetas que desaparecen o buscar en notas dispersas, obtienes **un lugar organizado para todas tus recetas familiares**.
+      
+      Solo pega cualquier URL de receta y Mealie extrae automáticamente ingredientes, pasos y fotos. No más recetas perdidas o enlaces rotos.
+      
+      Puedes:
+      • Importar recetas de miles de sitios web con un clic
+      • Planificar comidas para la semana, mes o año
+      • Generar listas de compras desde tus planes de comidas
+      • Organizar recetas en libros de cocina personalizados
+      • Compartir recetas con miembros de la familia
+      
+      Todo está **auto-hospedado en tu servidor**, por lo que tus recetas familiares permanecen privadas para siempre.
+      
+      **🚀 ¿Por qué elegir Mealie?**
+      
+      **Mealie** funciona en tu propio servidor, dándote control completo sobre tu colección de recetas. Es como tener tu propia biblioteca privada de libros de cocina en lugar de depender de sitios web aleatorios.
+      
+      ¿Por qué elegir Mealie?
+      • **Tus recetas permanecen contigo** — sin servicios de terceros o sitios web que desaparecen
+      • **Importación inteligente** — funciona con prácticamente cualquier sitio web de recetas
+      • **Amigable para la familia** — múltiples usuarios pueden compartir y contribuir recetas
+      • **Planificación de comidas fácil** — genera automáticamente listas de compras
+      
+      Con Mealie en **Yundera**, puedes:
+      • Construir tu colección permanente de recetas que nunca desaparece
+      • Acceder a recetas desde cualquier dispositivo (móvil, tableta, escritorio)
+      • Planificar comidas familiares y crear automáticamente listas de compras
+      • Mantener tus datos culinarios privados — nunca salen de tu servidor
+  developer: Mealie Recipes Team    
+  icon: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Mealie/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Mealie/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Mealie/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Mealie/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Mealie/screenshot-1.png
+  tagline:
+    en_us: Your family recipes, organized and accessible forever
+    fr_fr: Vos recettes familiales, organisées et accessibles pour toujours
+    ko_kr: 가족 레시피를 영원히 체계적으로 관리
+    zh_cn: 您的家庭食谱，永久整理和访问
+    es_es: Tus recetas familiares, organizadas y accesibles para siempre
+  title:
+    en_us: Mealie
+  tips:
+    before_install:
+      en_us: |
+        **Default Account**
+        | Username | Password |
+        | -------- | -------- |
+        | `changeme@example.com` | `MyPassword` |
+        
+        **⚠️ Change these credentials after first login!**
+        
+        **Quick Start:**
+        1. Login with default credentials
+        2. Go to Profile Settings → Change email & password
+        3. Click **+ button** → **Link icon** → Paste recipe URL
+        4. Admin Settings → Disable "Allow Signup"
+        
+        **Import works with:** 10000recipe.com, AllRecipes, Food Network, and 1000+ recipe sites!
+      fr_fr: |
+        **Compte par défaut**
+        | Nom d'utilisateur | Mot de passe |
+        | ----------------- | ------------ |
+        | `changeme@example.com` | `MyPassword` |
+        
+        **⚠️ Changez ces identifiants après la première connexion !**
+        
+        **Démarrage rapide :**
+        1. Connectez-vous avec les identifiants par défaut
+        2. Paramètres du profil → Changez email et mot de passe
+        3. Cliquez **+ bouton** → **Icône lien** → Collez URL de recette
+        4. Paramètres admin → Désactiver "Allow Signup"
+        
+        **Import fonctionne avec :** AllRecipes, Food Network, et 1000+ sites de recettes !
+      ko_kr: |
+        **기본 계정**
+        | 사용자명 | 비밀번호 |
+        | ------- | ------- |
+        | `changeme@example.com` | `MyPassword` |
+        
+        **⚠️ 첫 로그인 후 자격 증명을 변경하세요!**
+        
+        **빠른 시작:**
+        1. 기본 자격 증명으로 로그인
+        2. 프로필 설정 → 이메일 및 비밀번호 변경
+        3. **+ 버튼** 클릭 → **링크 아이콘** → 레시피 URL 붙여넣기
+        4. 관리자 설정 → "Allow Signup" 비활성화
+        
+        **가져오기 지원:** 만개의레시피, AllRecipes, Food Network 등 1000+ 사이트!
+      zh_cn: |
+        **默认账户**
+        | 用户名 | 密码 |
+        | ----- | ---- |
+        | `changeme@example.com` | `MyPassword` |
+        
+        **⚠️ 首次登录后请更改这些凭据！**
+        
+        **快速开始：**
+        1. 使用默认凭据登录
+        2. 个人资料设置 → 更改邮箱和密码
+        3. 点击 **+ 按钮** → **链接图标** → 粘贴食谱URL
+        4. 管理员设置 → 禁用"Allow Signup"
+        
+        **导入支持：** AllRecipes, Food Network 等 1000+ 食谱网站！
+      es_es: |
+        **Cuenta predeterminada**
+        | Usuario | Contraseña |
+        | ------- | ---------- |
+        | `changeme@example.com` | `MyPassword` |
+        
+        **⚠️ ¡Cambia estas credenciales después del primer inicio de sesión!**
+        
+        **Inicio rápido:**
+        1. Inicia sesión con credenciales predeterminadas
+        2. Configuración de perfil → Cambiar email y contraseña
+        3. Clic **+ botón** → **Icono enlace** → Pegar URL de receta
+        4. Configuración admin → Deshabilitar "Allow Signup"
+        
+        **Importación funciona con:** AllRecipes, Food Network, ¡y 1000+ sitios de recetas!
+  webui_port: 80
+  index: /
