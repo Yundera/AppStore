@@ -1,0 +1,339 @@
+name: excalidraw
+
+services:
+  # Redis - Data storage / Redis - 데이터 저장소
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+    volumes:
+      - /DATA/AppData/$AppID/redis:/data
+    command: redis-server --appendonly yes
+
+  # Storage Backend - Drawing storage and sharing server / Storage Backend - 그림 저장 및 공유 서버
+  storage:
+    image: kiliandeca/excalidraw-storage-backend:v2.0.0
+    platform: linux/amd64
+    container_name: storage
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    environment:
+      - PORT=8081
+      - STORAGE_URI=redis://redis:6379
+      - LOG_LEVEL=info
+      - GLOBAL_PREFIX=/api/v2
+      # CORS configuration / CORS 설정 추가
+      - CORS_ORIGIN=*
+      # CasaOS system variables / CasaOS 시스템 변수
+      - PUID=0
+      - PGID=0
+      - TZ=$TZ
+    expose:
+      - 8081
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/api/v2/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Room Server - Real-time collaboration server / Room Server - 실시간 협업 서버
+  room:
+    image: excalidraw/excalidraw-room:sha-49bf529
+    platform: linux/amd64
+    container_name: room
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+    environment:
+      - PORT=3002
+      # CasaOS system variables / CasaOS 시스템 변수
+      - PUID=0
+      - PGID=0
+      - TZ=$TZ
+    expose:
+      - 3002
+
+  # Excalidraw Frontend - Main application / Excalidraw Frontend - 메인 애플리케이션
+  excalidraw:
+    image: alswl/excalidraw:v0.17.3-fork-b1
+    platform: linux/amd64
+    user: "0:0"
+    container_name: excalidraw
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    expose:
+      - 80
+    environment:
+      # CasaOS system variables / CasaOS 시스템 변수
+      - PUID=0
+      - PGID=0
+      - TZ=$TZ
+      - DOMAIN=$domain
+      # Storage Backend connection settings (dynamic domain) / Storage Backend 연결 설정 (동적 도메인 사용)
+      - VITE_APP_BACKEND_V2_GET_URL=https://8081-$domain/api/v2/scenes/
+      - VITE_APP_BACKEND_V2_POST_URL=https://8081-$domain/api/v2/scenes/
+      - VITE_APP_HTTP_STORAGE_BACKEND_URL=https://8081-$domain/api/v2
+      - VITE_APP_STORAGE_BACKEND=http
+      # Room Server connection settings (dynamic domain) / Room Server 연결 설정 (동적 도메인 사용)
+      - VITE_APP_WS_SERVER_URL=wss://3002-$domain
+      # Disable Firebase / Firebase 비활성화
+      - VITE_APP_FIREBASE_CONFIG={}
+    depends_on:
+      - storage
+      - room
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: excalidraw
+  webui_port: 80
+  author: CasaOS Team
+  category: Productivity
+  description:
+    en_us: |
+      **✏️ What is Excalidraw?**
+      
+      **Excalidraw** is your virtual collaborative whiteboard that makes brainstorming feel natural and human. Instead of fighting with complex design tools or rigid software, you get **a simple, intuitive canvas where ideas flow freely**.
+      
+      Just open your browser and start sketching. No accounts, no downloads, no friction — just pure creativity with that beautiful hand-drawn feel.
+      
+      You can:
+      • Sketch diagrams, wireframes, and flowcharts instantly
+      • Collaborate in real-time with your team
+      • Share your work with a single link
+      • Export to PNG, SVG, or clipboard
+      • Use extensive shape libraries and templates
+      
+      Everything is **self-hosted on your server**, so your brainstorming sessions and sensitive diagrams stay completely private.
+      
+      **🚀 Why Choose Excalidraw?**
+      
+      **Excalidraw** runs on your own server, giving you complete control over your creative workspace. Think of it like having your own private design studio instead of relying on cloud services.
+      
+      Why choose Excalidraw?
+      • **Your ideas stay with you** — no cloud dependency or data mining
+      • **Feels natural** — hand-drawn aesthetic that's easy on the eyes
+      • **Zero friction** — no accounts needed, just start drawing
+      • **Real collaboration** — see others draw in real-time like magic
+      
+      With Excalidraw on **Yundera**, you can:
+      • Create unlimited diagrams without storage limits
+      • Collaborate with teams without privacy concerns  
+      • Share work internally or generate public links
+      • Keep your design process private — it never leaves your server
+      
+      **🛠️ Perfect For:**
+      • Teams that need quick visual brainstorming
+      • Designers creating wireframes and mockups
+      • Educators illustrating concepts and processes
+      • Anyone who thinks better with pictures than words
+    fr_fr: |
+      **✏️ Qu'est-ce qu'Excalidraw ?**
+      
+      **Excalidraw** est votre tableau blanc collaboratif virtuel qui rend le brainstorming naturel et humain. Au lieu de lutter avec des outils de conception complexes ou des logiciels rigides, vous obtenez **une toile simple et intuitive où les idées coulent librement**.
+      
+      Ouvrez simplement votre navigateur et commencez à esquisser. Pas de comptes, pas de téléchargements, pas de friction — juste de la créativité pure avec cette belle sensation dessinée à la main.
+      
+      Vous pouvez :
+      • Esquisser des diagrammes, maquettes et organigrammes instantanément
+      • Collaborer en temps réel avec votre équipe
+      • Partager votre travail avec un seul lien
+      • Exporter en PNG, SVG ou presse-papiers
+      • Utiliser des bibliothèques de formes et modèles étendues
+      
+      Tout est **auto-hébergé sur votre serveur**, donc vos sessions de brainstorming et diagrammes sensibles restent complètement privés.
+    ko_kr: |
+      **✏️ Excalidraw란 무엇인가요?**
+      
+      **Excalidraw**는 브레인스토밍을 자연스럽고 인간적으로 만들어주는 가상 협업 화이트보드입니다. 복잡한 디자인 도구나 경직된 소프트웨어와 씨름하는 대신, **아이디어가 자유롭게 흐르는 간단하고 직관적인 캔버스**를 얻을 수 있습니다.
+      
+      브라우저를 열고 스케치를 시작하기만 하면 됩니다. 계정도, 다운로드도, 마찰도 없이 — 아름다운 손으로 그린 느낌의 순수한 창의성만 있을 뿐입니다.
+      
+      할 수 있는 일:
+      • 다이어그램, 와이어프레임, 플로우차트를 즉시 스케치
+      • 팀과 실시간으로 협업
+      • 단일 링크로 작업 공유
+      • PNG, SVG 또는 클립보드로 내보내기
+      • 광범위한 모양 라이브러리 및 템플릿 사용
+      
+      모든 것이 **서버에 자체 호스팅**되므로 브레인스토밍 세션과 민감한 다이어그램이 완전히 비공개로 유지됩니다.
+    zh_cn: |
+      **✏️ 什么是 Excalidraw？**
+      
+      **Excalidraw** 是您的虚拟协作白板，让头脑风暴感觉自然而人性化。无需与复杂的设计工具或僵化的软件作斗争，您可以获得**一个简单直观的画布，让想法自由流淌**。
+      
+      只需打开浏览器开始绘制。无需账户，无需下载，无摩擦 — 只有纯粹的创造力和美丽的手绘感觉。
+      
+      您可以：
+      • 即时绘制图表、线框图和流程图
+      • 与您的团队实时协作
+      • 通过单个链接分享您的工作
+      • 导出为 PNG、SVG 或剪贴板
+      • 使用广泛的形状库和模板
+      
+      一切都在**您的服务器上自托管**，因此您的头脑风暴会话和敏感图表完全保持私密。
+    es_es: |
+      **✏️ ¿Qué es Excalidraw?**
+      
+      **Excalidraw** es tu pizarra colaborativa virtual que hace que la lluvia de ideas se sienta natural y humana. En lugar de luchar con herramientas de diseño complejas o software rígido, obtienes **un lienzo simple e intuitivo donde las ideas fluyen libremente**.
+      
+      Solo abre tu navegador y comienza a dibujar. Sin cuentas, sin descargas, sin fricción — solo creatividad pura con esa hermosa sensación dibujada a mano.
+      
+      Puedes:
+      • Dibujar diagramas, wireframes y diagramas de flujo al instante
+      • Colaborar en tiempo real con tu equipo
+      • Compartir tu trabajo con un solo enlace
+      • Exportar a PNG, SVG o portapapeles
+      • Usar bibliotecas extensas de formas y plantillas
+      
+      Todo está **auto-hospedado en tu servidor**, por lo que tus sesiones de lluvia de ideas y diagramas sensibles permanecen completamente privados.
+  developer: Excalidraw Team
+  icon: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Excalidraw/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Excalidraw/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Excalidraw/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Excalidraw/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Excalidraw/screenshot-1.png
+  tagline:
+    en_us: Think it, sketch it, share it instantly
+    fr_fr: Pensez-le, esquissez-le, partagez-le instantanément
+    ko_kr: 생각하고, 스케치하고, 즉시 공유하세요
+    zh_cn: 思考它，绘制它，立即分享它
+    es_es: Piénsalo, dibújalo, compártelo al instante
+  title:
+    en_us: Excalidraw
+  tips:
+    before_install:
+      en_us: |
+        **🚀 Self-Hosted Excalidraw with Full Features**
+        
+        **✅ What Works:**
+        - Real-time collaboration ✅
+        - Shareable links ✅
+        - Export to PNG/SVG ✅
+        - Hand-drawn style ✅
+        - No accounts needed ✅
+        
+        **🔧 Auto-Configuration:**
+        - Uses `$domain` for automatic setup
+        - No manual URL configuration needed
+        - Works for any username automatically
+        
+        **📱 Quick Start:**
+        1. Open the app URL
+        2. Start drawing immediately
+        3. Click "Live collaboration" to invite others
+        4. Use "Export to link" to share your work
+        
+        **🌐 Access:**
+        - Main App: `https://excalidraw-[username].nsl.sh/`
+        - Direct collaboration and sharing work instantly
+        
+        **💾 Resources:** ~768MB memory, ~0.7 CPU cores
+      fr_fr: |
+        **🚀 Excalidraw auto-hébergé avec toutes les fonctionnalités**
+        
+        **✅ Ce qui fonctionne :**
+        - Collaboration en temps réel ✅
+        - Liens partageables ✅
+        - Export PNG/SVG ✅
+        - Style dessiné à la main ✅
+        - Aucun compte nécessaire ✅
+        
+        **🔧 Configuration automatique :**
+        - Utilise `$domain` pour la configuration automatique
+        - Aucune configuration d'URL manuelle nécessaire
+        - Fonctionne automatiquement pour tout nom d'utilisateur
+        
+        **📱 Démarrage rapide :**
+        1. Ouvrir l'URL de l'application
+        2. Commencer à dessiner immédiatement
+        3. Cliquer sur "Collaboration en direct" pour inviter d'autres
+        4. Utiliser "Exporter vers lien" pour partager votre travail
+      ko_kr: |
+        **🚀 모든 기능을 갖춘 자체 호스팅 Excalidraw**
+        
+        **✅ 작동하는 기능:**
+        - 실시간 협업 ✅
+        - 공유 링크 ✅
+        - PNG/SVG 내보내기 ✅
+        - 손으로 그린 스타일 ✅
+        - 계정 불필요 ✅
+        
+        **🔧 자동 설정:**
+        - `$domain`을 사용한 자동 설정
+        - 수동 URL 설정 불필요
+        - 모든 사용자명에 자동 작동
+        
+        **📱 빠른 시작:**
+        1. 앱 URL 열기
+        2. 즉시 그리기 시작
+        3. "실시간 협업" 클릭하여 다른 사람 초대
+        4. "링크로 내보내기"로 작업 공유
+      zh_cn: |
+        **🚀 具有完整功能的自托管 Excalidraw**
+        
+        **✅ 有效功能：**
+        - 实时协作 ✅
+        - 可分享链接 ✅
+        - 导出 PNG/SVG ✅
+        - 手绘风格 ✅
+        - 无需账户 ✅
+        
+        **🔧 自动配置：**
+        - 使用 `$domain` 进行自动设置
+        - 无需手动 URL 配置
+        - 自动适用于任何用户名
+        
+        **📱 快速开始：**
+        1. 打开应用 URL
+        2. 立即开始绘制
+        3. 点击"实时协作"邀请他人
+        4. 使用"导出到链接"分享您的工作
+      es_es: |
+        **🚀 Excalidraw auto-hospedado con todas las funciones**
+        
+        **✅ Lo que funciona:**
+        - Colaboración en tiempo real ✅
+        - Enlaces compartibles ✅
+        - Exportar PNG/SVG ✅
+        - Estilo dibujado a mano ✅
+        - No se necesitan cuentas ✅
+        
+        **🔧 Configuración automática:**
+        - Usa `$domain` para configuración automática
+        - No se necesita configuración manual de URL
+        - Funciona automáticamente para cualquier nombre de usuario
+        
+        **📱 Inicio rápido:**
+        1. Abrir la URL de la aplicación
+        2. Comenzar a dibujar inmediatamente
+        3. Hacer clic en "Colaboración en vivo" para invitar a otros
+        4. Usar "Exportar a enlace" para compartir tu trabajo
+  index: /
