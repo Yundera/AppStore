@@ -17,12 +17,14 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] Specific version tag (no `:latest`)
 - [ ] Resource limits are mandatory and set appropriately (on all services in case of multiple services) - exceptions must be explained in rationale.md
+- [ ] **Pre-install commands security**: If using `pre-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
 - [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
 
 ### Functionality Checklist
 - [ ] Works immediately after installation - no need to check logs or run commands - pre-install scripts create sensible defaults
 - [ ] Data is mapped to appropriate `/DATA` subdirectories - if things are mapped outside of /DATA, this should be explained in rationale.md
 - [ ] No manual configuration required for basic functionality - should work out of the box
+- [ ] Data persistence requirements are met - see [Data Persistence](#data-persistence) section for details
 
 ### Documentation Checklist
 - [ ] Clear description of the application
@@ -55,6 +57,32 @@ To ensure easy testing, please follow these steps:
 6. Once approved, your app will be directly available in the app listing.
 
 ## Guidelines
+
+### Data Persistence
+
+Applications must be designed to preserve user data across uninstallation and reinstallation cycles. This ensures users never lose their personal data when updating or reinstalling applications.
+
+**Requirements:**
+- **Persistent Volume Mapping**: All user data, configurations, and databases must be stored in volumes mapped to `/DATA/AppData/[AppName]/`
+- **Graceful Data Reuse**: Applications must detect and reuse existing data when reinstalled
+- **No Data Erasure**: Container startup processes must never erase or overwrite existing user data
+- **Configuration Preservation**: Settings, user accounts, and preferences should persist across container lifecycle
+
+**Implementation Guidelines:**
+- Map all persistent data to `/DATA/AppData/[AppName]/` subdirectories
+- Use initialization scripts that check for existing data before creating defaults
+- Ensure database migrations are handled gracefully on version updates
+- Test uninstall/reinstall scenarios to verify data persistence
+
+**Example Volume Mapping:**
+```yaml
+volumes:
+  - /DATA/AppData/myapp/config:/app/config
+  - /DATA/AppData/myapp/database:/var/lib/database
+  - /DATA/AppData/myapp/uploads:/app/uploads
+```
+
+This approach ensures that when users uninstall and reinstall applications, they can continue from where they left off without losing any personal data or configurations.
 
 ### File Structure
 
@@ -174,6 +202,69 @@ This structure ensures:
 - Shared access to common directories
 - Easy backup and migration
 - Consistent file permissions with PUID/PGID
+
+### CPU Share Guidelines
+
+CPU shares determine relative CPU priority between containers. Higher values get more CPU time when the system is under load.
+
+**Formula:** `cpu_shares: [value]` (relative weight, not percentage)
+
+#### CPU Share Allocation:
+
+**100 - System Critical** (Reserved)
+- System services that must never be starved
+
+**90 - Administrative Critical**
+- Applications that must always be responsive with no heavy background processes
+- Examples: CasaOS, Portainer, admin dashboards, monitoring tools
+
+**80 - User-Facing Interactive**
+- Real-time applications requiring immediate user responsiveness
+- Examples: Web servers, frontend applications, API backends, reverse proxies
+
+**70 - Interactive with Heavy Tasks**  
+- Real-time applications that may have intensive background processes
+- Examples: Nextcloud (web + background jobs), WebRTC servers, databases serving interactive apps
+
+**50 - Standard Applications** (Default)
+- Regular applications without special performance requirements
+- Examples: Most containerized applications, file servers, basic services
+
+**30 - Background Services**
+- Non-interactive services that don't require immediate responsiveness  
+- Examples: Backup services (Duplicati), log aggregation, scheduled tasks
+
+**20 - Heavy Background Processing**
+- Resource-intensive background tasks with no real-time requirements
+- Examples: Machine learning services (Immich ML), video transcoding, batch processing
+
+**10 - System Background** (Reserved)
+- Reserved for system maintenance tasks
+
+#### Implementation Notes:
+
+1. **Multi-container apps**: Allocate shares based on each service's role
+   ```yaml
+   services:
+     webapp:
+       cpu_shares: 80    # User-facing
+     database:
+       cpu_shares: 70    # Supporting interactive app
+     worker:
+       cpu_shares: 30    # Background processing
+   ```
+
+2. **Resource limits**: Always combine with memory limits
+   ```yaml
+   deploy:
+     resources:
+       limits:
+         memory: 512M
+         cpus: '0.5'
+   cpu_shares: 70
+   ```
+
+3. **Testing**: Consider your server's typical load when choosing values
 
 ### Project Structure
 
@@ -308,6 +399,12 @@ x-casaos:
 
 When using `pre-install-cmd`, ensure the command is idempotent and does not require user interaction.
 Also ensure that versions are specified for any images used in the command to avoid unexpected changes.
+
+**SECURITY REQUIREMENTS for pre-install-cmd:**
+- [ ] **Specific version tags**: Never use `:latest` - always specify exact versions (e.g., `alpine:3.19`, `ubuntu:22.04`)
+- [ ] **User specification**: Use `--user $PUID:$PGID` when creating files in user directories to ensure proper permissions
+- [ ] **Idempotent operations**: Commands should be safe to run multiple times
+- [ ] **No hardcoded credentials**: Use system variables like `$default_pwd`
 
 Example:
 ```yaml

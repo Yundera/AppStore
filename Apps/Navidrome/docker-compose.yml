@@ -93,7 +93,6 @@ x-casaos:
       • Transcodificación y optimización de streaming
       • Soporte multiusuario con listas de reproducción
       • Soporte de scrobbling Last.fm      
-      
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-1.png
@@ -151,6 +150,7 @@ x-casaos:
       Formatos soportados: MP3, FLAC, OGG, M4A, WAV
       
       **Autenticación:** Navidrome requiere crear una cuenta de administrador durante el primer lanzamiento.
+
   store_app_id: navidrome
   main: navidrome
   webui_port: 80
