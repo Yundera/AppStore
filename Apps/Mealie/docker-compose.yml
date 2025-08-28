@@ -11,27 +11,23 @@ services:
           memory: 1G
           cpus: '1.0'
     expose:
-      - 80
+      - 9000                    # Use default ports for Mealie v3
     environment:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-      # Security settings / 보안 설정
+      # Security settings
       ALLOW_SIGNUP: "false"
-      # Mealie v3 default account (first installation) / Mealie v3 기본 계정 (첫 설치 시)
-      # changeme@example.com / MyPassword
-      # NSL Router settings / NSL Router 설정
+      # NSL Router settings
       BASE_URL: https://$domain
-      # Performance settings / 성능 설정
+      # Performance settings
       MAX_WORKERS: 1
       WEB_CONCURRENCY: 1
-      # Port settings / 포트 설정
-      API_PORT: 80
     volumes:
       - /DATA/AppData/$AppID/data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/api/app/about"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/api/app/about"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -42,6 +38,12 @@ x-casaos:
     - amd64
     - arm64
   main: mealie
+  pre-install-cmd: |
+    docker run --rm -v /DATA/AppData/$AppID:/data alpine:latest sh -c '
+    mkdir -p /data/data &&
+    chown -R 1000:1000 /data &&
+    chmod -R 755 /data/data
+    '
   author: CasaOS Team
   category: Utilities
   description:
@@ -298,5 +300,5 @@ x-casaos:
         4. Configuración admin → Deshabilitar "Allow Signup"
         
         **Importación funciona con:** AllRecipes, Food Network, ¡y 1000+ sitios de recetas!
-  webui_port: 80
+  webui_port: 9000                 # healthcheck와 일치하도록 9000번 포트로 변경
   index: /
