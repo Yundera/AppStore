@@ -8,58 +8,58 @@ services:
     expose:
       - 80
     environment:
-      PUID: $PUID                                    # Process user ID / 프로세스 사용자 ID
-      PGID: $PGID                                    # Process group ID / 프로세스 그룹 ID
-      TZ: $TZ                                        # Timezone setting / 시간대 설정
+      PUID: $PUID                                    # Process user ID
+      PGID: $PGID                                    # Process group ID
+      TZ: $TZ                                        # Timezone setting
       
-      # Port settings / 포트 설정
-      BIND_IP: 0.0.0.0                               # Server binding IP address / 서버 바인딩 IP 주소
-      BIND_PORT: 80                                  # Server binding port / 서버 바인딩 포트
+      # Port settings
+      BIND_IP: 0.0.0.0                               # Server binding IP address
+      BIND_PORT: 80                                  # Server binding port
       
-      # Authentication settings - Simple Login method / 인증 설정 - 단순 로그인 방식
-      AUTH_MODE: simple_login                        # Authentication mode / 인증 모드
-      AUTH_USERNAME: admin                           # Admin username / 관리자 사용자명
-      AUTH_PASSWORD: $default_pwd                    # Admin password / 관리자 비밀번호
+      # Authentication settings - Simple Login method
+      AUTH_MODE: simple_login                        # Authentication mode
+      AUTH_USERNAME: admin                           # Admin username
+      AUTH_PASSWORD: $default_pwd                    # Admin password
       
-      # Download settings / 다운로드 설정
-      DOWNLOAD_AS_CBZ: true                          # Download manga as CBZ format / 만화를 CBZ 형식으로 다운로드
-      AUTO_DOWNLOAD_CHAPTERS: false                  # Auto download chapters (manual control) / 챕터 자동 다운로드 (수동 제어)
-      AUTO_DOWNLOAD_EXCLUDE_UNREAD: true             # Exclude unread chapters from auto download / 자동 다운로드에서 읽지 않은 챕터 제외
-      AUTO_DOWNLOAD_NEW_CHAPTERS_LIMIT: 0            # Limit for new chapter auto downloads / 새 챕터 자동 다운로드 제한
+      # Download settings
+      DOWNLOAD_AS_CBZ: true                          # Download manga as CBZ format
+      AUTO_DOWNLOAD_CHAPTERS: false                  # Auto download chapters (manual control)
+      AUTO_DOWNLOAD_EXCLUDE_UNREAD: true             # Exclude unread chapters from auto download
+      AUTO_DOWNLOAD_NEW_CHAPTERS_LIMIT: 0            # Limit for new chapter auto downloads
       
-      # Update settings (more conservative) / 업데이트 설정 (더 보수적)
-      UPDATE_EXCLUDE_UNREAD: true                    # Exclude unread manga from updates / 업데이트에서 읽지 않은 만화 제외
-      UPDATE_EXCLUDE_STARTED: true                   # Exclude started manga from updates / 업데이트에서 시작된 만화 제외
-      UPDATE_EXCLUDE_COMPLETED: true                 # Exclude completed manga from updates / 업데이트에서 완료된 만화 제외
-      UPDATE_INTERVAL: 0                             # Auto update interval (disabled) / 자동 업데이트 간격 (비활성화)
-      UPDATE_MANGA_INFO: false                       # Update manga information / 만화 정보 업데이트
+      # Update settings (more conservative)
+      UPDATE_EXCLUDE_UNREAD: true                    # Exclude unread manga from updates
+      UPDATE_EXCLUDE_STARTED: true                   # Exclude started manga from updates
+      UPDATE_EXCLUDE_COMPLETED: true                 # Exclude completed manga from updates
+      UPDATE_INTERVAL: 0                             # Auto update interval (disabled)
+      UPDATE_MANGA_INFO: false                       # Update manga information
       
-      # WebUI settings - Preview version (per-device settings support) / WebUI 설정 - 프리뷰 버전 (기기별 설정 지원)
-      WEB_UI_ENABLED: true                           # Enable web user interface / 웹 사용자 인터페이스 활성화
-      WEB_UI_FLAVOR: WebUI                           # Web UI flavor type / 웹 UI 플레이버 타입
-      WEB_UI_CHANNEL: preview                        # 🔥 Per-device settings feature / 기기별 설정 기능
-      WEB_UI_UPDATE_INTERVAL: 23                     # Web UI update check interval / 웹 UI 업데이트 확인 간격
+      # WebUI settings - Preview version (per-device settings support)
+      WEB_UI_ENABLED: true                           # Enable web user interface
+      WEB_UI_FLAVOR: WebUI                           # Web UI flavor type
+      WEB_UI_CHANNEL: preview                        # Per-device settings feature
+      WEB_UI_UPDATE_INTERVAL: 23                     # Web UI update check interval
       
-      # Extension repository (Keiyoushi only) / 확장 저장소 (Keiyoushi만)
+      # Extension repository (Keiyoushi only)
       EXTENSION_REPOS: >-
-        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]  # Extension repository URLs / 확장 저장소 URL들
+        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]  # Extension repository URLs
       
-      # Performance settings / 성능 설정
-      MAX_SOURCES_IN_PARALLEL: 3                     # Maximum sources to process in parallel (conservative) / 병렬 처리할 최대 소스 수 (보수적)
+      # Performance settings
+      MAX_SOURCES_IN_PARALLEL: 3                     # Maximum sources to process in parallel (conservative)
       
-      # Backup settings / 백업 설정
-      BACKUP_INTERVAL: 7                             # Backup interval in days (weekly) / 백업 간격 (일) (주간)
-      BACKUP_TTL: 30                                 # Backup retention period in days / 백업 보관 기간 (일)
+      # Backup settings
+      BACKUP_INTERVAL: 7                             # Backup interval in days (weekly)
+      BACKUP_TTL: 30                                 # Backup retention period in days
       
-      # FlareSolverr integration / FlareSolverr 연동
-      FLARESOLVERR_ENABLED: true                     # Enable FlareSolverr support / FlareSolverr 지원 활성화
-      FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191  # FlareSolverr service URL / FlareSolverr 서비스 URL
-      FLARESOLVERR_TIMEOUT: 60                       # FlareSolverr request timeout / FlareSolverr 요청 타임아웃
-      FLARESOLVERR_SESSION_NAME: suwayomi            # FlareSolverr session name / FlareSolverr 세션 이름
-      FLARESOLVERR_SESSION_TTL: 15                   # FlareSolverr session TTL in minutes / FlareSolverr 세션 TTL (분)
+      # FlareSolverr integration
+      FLARESOLVERR_ENABLED: true                     # Enable FlareSolverr support
+      FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191  # FlareSolverr service URL
+      FLARESOLVERR_TIMEOUT: 60                       # FlareSolverr request timeout
+      FLARESOLVERR_SESSION_NAME: suwayomi            # FlareSolverr session name
+      FLARESOLVERR_SESSION_TTL: 15                   # FlareSolverr session TTL in minutes
       
-      # Security settings / 보안 설정
-      DEBUG: false                                   # Enable debug mode / 디버그 모드 활성화
+      # Security settings
+      DEBUG: false                                   # Enable debug mode
     volumes:
       - /DATA/Media/Mangas:/home/suwayomi/.local/share/Tachidesk/downloads
       - /DATA/AppData/$AppID/data:/home/suwayomi/.local/share/Tachidesk
@@ -77,14 +77,14 @@ services:
     container_name: suwayomi-flaresolverr
     user: $PUID:$PGID
     environment:
-      PUID: $PUID                                    # Process user ID / 프로세스 사용자 ID
-      PGID: $PGID                                    # Process group ID / 프로세스 그룹 ID
-      TZ: $TZ                                        # Timezone setting / 시간대 설정
-      LOG_LEVEL: info                                # Logging level / 로그 레벨
-      CAPTCHA_SOLVER: none                           # CAPTCHA solver method / CAPTCHA 해결 방법
-      # FlareSolverr optimization / FlareSolverr 최적화
-      BROWSER_TIMEOUT: 40000                         # Browser timeout in milliseconds / 브라우저 타임아웃 (밀리초)
-      TEST_URL: https://www.google.com               # Test URL for health checks / 헬스 체크용 테스트 URL
+      PUID: $PUID                                    # Process user ID
+      PGID: $PGID                                    # Process group ID
+      TZ: $TZ                                        # Timezone setting
+      LOG_LEVEL: info                                # Logging level
+      CAPTCHA_SOLVER: none                           # CAPTCHA solver method
+      # FlareSolverr optimization
+      BROWSER_TIMEOUT: 40000                         # Browser timeout in milliseconds
+      TEST_URL: https://www.google.com               # Test URL for health checks
     volumes:
       - /DATA/AppData/$AppID/flaresolverr:/app/data
     restart: unless-stopped
