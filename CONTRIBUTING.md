@@ -16,8 +16,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] No hardcoded credentials in the compose file - use environment variables or secrets
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] Specific version tag (no `:latest`)
-- [ ] Resource limits are mandatory and set appropriately (on all services in case of multiple services) - exceptions must be explained in rationale.md
-- [ ] **Pre-install commands security**: If using `pre-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
+- [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
 - [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
 
 ### Functionality Checklist
@@ -25,6 +24,10 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Data is mapped to appropriate `/DATA` subdirectories - if things are mapped outside of /DATA, this should be explained in rationale.md
 - [ ] No manual configuration required for basic functionality - should work out of the box
 - [ ] Data persistence requirements are met - see [Data Persistence](#data-persistence) section for details
+- [ ] CPU field cpu_shares is set appropriately (on all services)
+- [ ] fresh installation tested
+- [ ] uninstall/reinstall tested - An application should be able to be uninstalled and reinstalled without losing user data or configuration (See the keep user data option when uninstalling)
+
 
 ### Documentation Checklist
 - [ ] Clear description of the application
@@ -98,8 +101,8 @@ and
 Yundera uses a dual permission model to balance security and usability:
 Files owned by `PUID:PGID` (usually `1000:1000` for the 'pcs:pcs' user)
 
-if no "user" field is specified in the compose file, the container will run as PUID:PGID (different behavior than the docker default so be carful)
-if you need to run as root, you must specify `user: 0:0` in the compose file and set the `PUID` and `PGID` to `0:0` in the environment variables.
+**if no "user" field is specified in the compose file, the container will run as PUID:PGID (different behavior than the docker default so be carful)**
+if you need to run as root, you must specify `user: 0:0` in the compose file.
 
 
 **User-Friendly Directories** 
@@ -110,12 +113,26 @@ if you need to run as root, you must specify `user: 0:0` in the compose file and
 - Applications accessing these directories **must** use `user: $PUID:$PGID`
 
 **AppData Directories** 
-- Root ownership acceptable but preferably `PUID:PGID` to allow user to change configurations easily
-- `/DATA/AppData/[AppName]/` - Application-specific data and configurations
+Contains the App folder : `/DATA/AppData/[AppName]/` - Application-specific data and configurations
+
+- Root ownership withing the App folder is acceptable but preferably `PUID:PGID` to allow user to change configurations easily
 - Contains databases, config files, cache, logs, and internal app data
-- Users should **not** directly modify these files (system-managed)
 - Root containers are acceptable when volumes map exclusively to AppData
 - Examples: `/DATA/AppData/immich/pgdata`, `/DATA/AppData/immich/model-cache`
+
+The App folder should always be owned by `PUID:PGID` to allow the user to romove the folder if needed.
+inside this folder the permission may vary depending on usage.
+
+example`:
+```
+root@yundera:/DATA/AppData# ls -al
+drwxr-xr-x 13 pcs  pcs    4096 Sep  3 14:17 .
+drwxrwxrwx  8 pcs  pcs    4096 Sep  3 14:17 ..
+drwxr-xr-x  5 pcs  pcs    4096 Sep  4 12:12 casaos
+drwxr-xr-x  3 pcs  pcs    4096 Jun 25 10:30 duplicati
+drwxr-xr-x  3 pcs  pcs    4096 Aug  3 19:35 filebrowser
+drwxr-xr-x  4 pcs  pcs    4096 Jun 25 10:30 jellyfin
+```
 
 **Mixed Usage Applications:**
 - If an app needs both AppData and user directory access, use `user: $PUID:$PGID`
@@ -205,12 +222,14 @@ This structure ensures:
 
 ### CPU Share Guidelines
 
+It is mandatory to set CPU shares for all services in your compose file. This helps ensure fair resource allocation and prevents any single container from monopolizing CPU resources.
+
 CPU shares determine relative CPU priority between containers. Higher values get more CPU time when the system is under load.
 
 **Formula:** `cpu_shares: [value]` (relative weight, not percentage)
 
 #### CPU Share Allocation:
-
+```
 **100 - System Critical** (Reserved)
 - System services that must never be starved
 
@@ -240,29 +259,19 @@ CPU shares determine relative CPU priority between containers. Higher values get
 
 **10 - System Background** (Reserved)
 - Reserved for system maintenance tasks
+```
 
-#### Implementation Notes:
+#### Resource limits
 
-1. **Multi-container apps**: Allocate shares based on each service's role
-   ```yaml
-   services:
-     webapp:
-       cpu_shares: 80    # User-facing
-     database:
-       cpu_shares: 70    # Supporting interactive app
-     worker:
-       cpu_shares: 30    # Background processing
-   ```
-
-2. **Resource limits**: Always combine with memory limits
-   ```yaml
+Optional
+Only add if necessary to prevent resource exhaustion but most application don't need it.
+   
+```yaml
    deploy:
      resources:
        limits:
          memory: 512M
-         cpus: '0.5'
-   cpu_shares: 70
-   ```
+```
 
 3. **Testing**: Consider your server's typical load when choosing values
 
