@@ -3,17 +3,17 @@ name: immich
 services:
   immich:
     container_name: immich
-    hostname: immich
+    image: ghcr.io/immich-app/immich-server:v1.141.1
+    user: $PUID:$PGID
     cpu_shares: 10
     deploy:
       resources:
         limits:
           memory: 2048M
-          cpus: '1.0'
-    image: ghcr.io/immich-app/immich-server:v1.138.0
-    user: $PUID:$PGID
     volumes:
       - /DATA/AppData/immich/upload:/data
+      # Read-only access to the gallery directory used to import media files from the host directly (Immich external library)
+      - /DATA/Gallery:/import:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_DATABASE_NAME: immich
@@ -41,7 +41,7 @@ services:
         limits:
           memory: 2048M
           cpus: '0.5'
-    image: ghcr.io/immich-app/immich-machine-learning:v1.138.0
+    image: ghcr.io/immich-app/immich-machine-learning:v1.141.1
     user: 0:0
     environment:
       TZ: $TZ
@@ -62,7 +62,7 @@ services:
         limits:
           memory: 256M
           cpus: '0.25'
-    image: docker.io/valkey/valkey:8-bookworm@sha256:5b8f8c333bef895c925f56629d6ba90aea95a4f7391f62411e625267c600b19c
+    image: docker.io/redis:6.2-alpine@sha256:148bb5411c184abd288d9aaed139c98123eeb8824c5d3fce03cf721db58066d8
     user: $PUID:$PGID
     healthcheck:
       test: redis-cli ping || exit 1
@@ -85,7 +85,7 @@ services:
         limits:
           memory: 1024M
           cpus: '0.5'
-    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:739cdd626151ff1f796dc95a6591b55a714f341c737e27f045019ceabf8e8c52
     user: $PUID:$PGID
     environment:
       POSTGRES_PASSWORD: postgres
@@ -95,13 +95,12 @@ services:
       TZ: UTC
       PGID: $PGID
       PUID: $PUID
-      # Uncomment the DB_STORAGE_TYPE: 'HDD' var if your database isn't stored on SSDs
-      # DB_STORAGE_TYPE: 'HDD'
     volumes:
       - /DATA/AppData/immich/pgdata:/var/lib/postgresql/data
     healthcheck:
       test: pg_isready --dbname='immich' --username='postgres' || exit 1; Chksum="$$(psql --dbname='immich' --username='postgres' --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
       interval: 5m
+      start_interval: 30s
       start_period: 5m
     command:
       [
@@ -128,20 +127,35 @@ networks:
     name: immich
 
 x-casaos:
-  architectures:
-    - amd64
-    - arm64
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/immich/upload &&
+    mkdir -p /DATA/AppData/immich/model-cache &&
+    mkdir -p /DATA/AppData/immich/redis &&
+    mkdir -p /DATA/AppData/immich/pgdata &&
+    chown $PUID:$PGID /DATA/AppData/immich &&
+    chown $PUID:$PGID /DATA/AppData/immich/upload &&
+    chown $PUID:$PGID /DATA/AppData/immich/model-cache &&
+    chown $PUID:$PGID /DATA/AppData/immich/redis &&
+    chown $PUID:$PGID /DATA/AppData/immich/pgdata
+
   main: immich
-  store_app_id: immich
-  category: Gallery
-  author: Cp0204
-  developer: alextran1502
+  webui_port: 80
+  index: /
+
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/thumbnail.png
+
+  architectures:
+    - amd64
+    - arm64
+  store_app_id: immich
+  category: Gallery
+  author: Cp0204
+  developer: alextran1502
   description:
     en_us: |
       Immich gives you a modern, self-hosted photo and video gallery, without the limits or tracking of traditional cloud services.
@@ -354,9 +368,6 @@ x-casaos:
     pt_pt: A sua biblioteca de fotos privada, totalmente sob o seu controlo
     ru_ru: Ваша личная фотобиблиотека, полностью под вашим контролем
     tr_tr: Tamamen kontrolünüz altında olan özel fotoğraf kütüphaneniz
-    fr_fr: Votre bibliothèque photo privée, entièrement sous votre contrôle
-    ko_kr: 완전히 통제하는 개인 사진 라이브러리
-    zh_cn: 完全由您掌控的私人照片库
     es_es: Tu biblioteca de fotos privada, completamente bajo tu control
   title:
     en_us: Immich
@@ -482,5 +493,3 @@ x-casaos:
         ⏰ **Başlatma Süresi**: Immich'in tamamen başlaması yaklaşık 5 dakika sürer. Web paneline erişmeden önce lütfen bekleyin.
         
         🔐 **İlk Kurulum**: Web arayüzünü ilk ziyaret ettiğinizde yönetici hesabınızı oluşturun.
-  index: /
-  webui_port: 80
