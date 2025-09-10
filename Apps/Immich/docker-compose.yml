@@ -2,18 +2,14 @@ name: immich
 
 services:
   immich:
-    container_name: immich
     image: ghcr.io/immich-app/immich-server:v1.141.1
+    container_name: immich
     user: $PUID:$PGID
-    cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 2048M
+    cpu_shares: 70
     volumes:
-      - /DATA/AppData/immich/upload/:/data
+      - /DATA/AppData/immich/upload/:/data/
       # Read-only access to the gallery directory used to import media files from the host directly (Immich external library)
-      - /DATA/Gallery/:/import:ro
+      - /DATA/Gallery/:/import/:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_DATABASE_NAME: immich
@@ -33,15 +29,14 @@ services:
       - immich
 
   immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v1.141.1
     container_name: immich_machine_learning
-    hostname: immich-machine-learning
     cpu_shares: 5
     deploy:
       resources:
         limits:
           memory: 2048M
           cpus: '0.5'
-    image: ghcr.io/immich-app/immich-machine-learning:v1.141.1
     user: 0:0
     environment:
       TZ: $TZ
@@ -49,20 +44,14 @@ services:
       PUID: 0
     restart: unless-stopped
     volumes:
-      - /DATA/AppData/immich/model-cache/:/cache
+      - model-cache:/cache
     networks:
       - immich
 
   redis:
+    image: docker.io/valkey/valkey:8-bookworm@sha256:a137a2b60aca1a75130022d6bb96af423fefae4eb55faf395732db3544803280
     container_name: immich-redis
-    hostname: immich-redis
     cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-    image: docker.io/redis:6.2-alpine@sha256:148bb5411c184abd288d9aaed139c98123eeb8824c5d3fce03cf721db58066d8
     user: $PUID:$PGID
     healthcheck:
       test: redis-cli ping || exit 1
@@ -70,54 +59,32 @@ services:
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
-    volumes:
-      - /DATA/AppData/immich/redis/:/data
     restart: unless-stopped
     networks:
       - immich
 
   database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:32324a2f41df5de9efe1af166b7008c3f55646f8d0e00d9550c16c9822366b4a
     container_name: immich-postgres
-    hostname: immich-postgres
     cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-          cpus: '0.5'
-    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:739cdd626151ff1f796dc95a6591b55a714f341c737e27f045019ceabf8e8c52
     user: $PUID:$PGID
+    shm_size: 128mb
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: immich
       POSTGRES_INITDB_ARGS: '--data-checksums'
+      DB_STORAGE_TYPE: 'HDD'
       TZ: UTC
       PGID: $PGID
       PUID: $PUID
     volumes:
-      - /DATA/AppData/immich/pgdata/:/var/lib/postgresql/data
+      - /DATA/AppData/immich/pgdata/:/var/lib/postgresql/data/
     healthcheck:
       test: pg_isready --dbname='immich' --username='postgres' || exit 1; Chksum="$$(psql --dbname='immich' --username='postgres' --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
       interval: 5m
       start_interval: 30s
       start_period: 5m
-    command:
-      [
-        'postgres',
-        '-c',
-        'shared_preload_libraries=vectors.so',
-        '-c',
-        'search_path="$$user", public, vectors',
-        '-c',
-        'logging_collector=on',
-        '-c',
-        'max_wal_size=2GB',
-        '-c',
-        'shared_buffers=512MB',
-        '-c',
-        'wal_compression=on',
-      ]
     restart: unless-stopped
     networks:
       - immich
@@ -126,18 +93,10 @@ networks:
   immich:
     name: immich
 
-x-casaos:
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/immich/upload &&
-    mkdir -p /DATA/AppData/immich/model-cache &&
-    mkdir -p /DATA/AppData/immich/redis &&
-    mkdir -p /DATA/AppData/immich/pgdata &&
-    chown $PUID:$PGID /DATA/AppData/immich &&
-    chown $PUID:$PGID /DATA/AppData/immich/upload &&
-    chown $PUID:$PGID /DATA/AppData/immich/model-cache &&
-    chown $PUID:$PGID /DATA/AppData/immich/redis &&
-    chown $PUID:$PGID /DATA/AppData/immich/pgdata
+volumes:
+  model-cache:
 
+x-casaos:
   main: immich
   webui_port: 80
   index: /
