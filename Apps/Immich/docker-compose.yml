@@ -11,9 +11,9 @@ services:
         limits:
           memory: 2048M
     volumes:
-      - /DATA/AppData/immich/upload:/data
+      - /DATA/AppData/immich/upload/:/data
       # Read-only access to the gallery directory used to import media files from the host directly (Immich external library)
-      - /DATA/Gallery:/import:ro
+      - /DATA/Gallery/:/import:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_DATABASE_NAME: immich
@@ -49,7 +49,7 @@ services:
       PUID: 0
     restart: unless-stopped
     volumes:
-      - /DATA/AppData/immich/model-cache:/cache
+      - /DATA/AppData/immich/model-cache/:/cache
     networks:
       - immich
 
@@ -71,7 +71,7 @@ services:
       PUID: $PUID
       TZ: $TZ
     volumes:
-      - /DATA/AppData/immich/redis:/data
+      - /DATA/AppData/immich/redis/:/data
     restart: unless-stopped
     networks:
       - immich
@@ -96,7 +96,7 @@ services:
       PGID: $PGID
       PUID: $PUID
     volumes:
-      - /DATA/AppData/immich/pgdata:/var/lib/postgresql/data
+      - /DATA/AppData/immich/pgdata/:/var/lib/postgresql/data
     healthcheck:
       test: pg_isready --dbname='immich' --username='postgres' || exit 1; Chksum="$$(psql --dbname='immich' --username='postgres' --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
       interval: 5m

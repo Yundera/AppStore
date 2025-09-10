@@ -16,7 +16,7 @@ services:
         source: /DATA/AppData/filebrowser/db/
         target: /db/
       - type: bind
-        source: /DATA
+        source: /DATA/
         target: /srv
     expose:
       - 80

@@ -27,10 +27,10 @@ services:
       - OVERWRITEHOST=$domain
       - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
     volumes:
-      - /DATA/AppData/$AppID/html:/var/www/html
-      - /DATA/AppData/$AppID/apps:/var/www/html/custom_apps
-      - /DATA/AppData/$AppID/config:/var/www/html/config
-      - /DATA/AppData/$AppID/data:/var/www/html/data
+      - /DATA/AppData/$AppID/html/:/var/www/html
+      - /DATA/AppData/$AppID/apps/:/var/www/html/custom_apps
+      - /DATA/AppData/$AppID/config/:/var/www/html/config
+      - /DATA/AppData/$AppID/data/:/var/www/html/data
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -53,7 +53,7 @@ services:
       - MYSQL_PASSWORD=$default_pwd
       - MARIADB_AUTO_UPGRADE=1
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/mysql
+      - /DATA/AppData/$AppID/db/:/var/lib/mysql
     restart: unless-stopped
     networks:
       - nextcloud-network

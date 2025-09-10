@@ -9,8 +9,8 @@ services:
     expose:
       - 80  # Navidrome Web UI Port
     volumes:
-      - /DATA/AppData/navidrome/data:/data        # Navidrome database and configuration directory
-      - /DATA/Media/Music:/music:ro            # Music library directory (read-only)
+      - /DATA/AppData/navidrome/data/:/data        # Navidrome database and configuration directory
+      - /DATA/Media/Music/:/music:ro            # Music library directory (read-only)
     environment:
       PGID: $PGID
       PUID: $PUID

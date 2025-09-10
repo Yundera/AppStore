@@ -13,7 +13,7 @@ services:
       - MARIADB_AUTO_UPGRADE=1
       - TZ=$TZ
     volumes:
-      - /DATA/AppData/seafile/mysql:/var/lib/mysql
+      - /DATA/AppData/seafile/mysql/:/var/lib/mysql
     networks:
       - seafile-net
     healthcheck:
@@ -62,7 +62,7 @@ services:
       - 80
       - 8080
     volumes:
-      - /DATA/AppData/seafile/shared:/shared
+      - /DATA/AppData/seafile/shared/:/shared
     environment:
       - INIT_SEAFILE_ADMIN_EMAIL=admin@$domain
       - INIT_SEAFILE_ADMIN_PASSWORD=$default_pwd
@@ -136,7 +136,7 @@ services:
     expose:
       - 8083
     volumes:
-      - /DATA/AppData/seafile/shared/seafile/logs:/shared/seafile/logs
+      - /DATA/AppData/seafile/shared/seafile/logs/:/shared/seafile/logs
     environment:
       - SEAFILE_SERVER_HOSTNAME=seafile-$domain
       - SEAFILE_SERVER_PROTOCOL=https
@@ -169,7 +169,7 @@ services:
     expose:
       - 80
     volumes:
-      - /DATA/AppData/seafile/seadoc-data:/shared
+      - /DATA/AppData/seafile/seadoc-data/:/shared
     environment:
       - DB_HOST=db
       - DB_PORT=3306
@@ -230,8 +230,8 @@ services:
       --uid $PUID
       --gid $PGID
     volumes:
-      - /DATA/Seafile:/data/seafile:shared
-      - /DATA/AppData/seafile/rclone:/config
+      - /DATA/Seafile/:/data/seafile:shared
+      - /DATA/AppData/seafile/rclone/:/config
     environment:
       - PUID=$PUID
       - PGID=$PGID

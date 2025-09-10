@@ -17,7 +17,7 @@ services:
       BASE_URL: https://mealie-$domain  # Set base URL for proper routing
 
     volumes:
-      - /DATA/AppData/mealie/data:/app/data
+      - /DATA/AppData/mealie/data/:/app/data
     healthcheck:
       test: ["CMD", "timeout", "5", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/80"]
       interval: 30s
