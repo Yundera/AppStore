@@ -2,117 +2,73 @@ name: suwayomi
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:v2.1.1875
+    image: ghcr.io/suwayomi/tachidesk:v2.1.1867
     user: $PUID:$PGID
     container_name: suwayomi
     expose:
       - 80
     environment:
-      PUID: $PUID                                    # Process user ID
-      PGID: $PGID                                    # Process group ID
-      TZ: $TZ                                        # Timezone setting
-      
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+
       # Port settings
-      BIND_IP: 0.0.0.0                               # Server binding IP address
-      BIND_PORT: 80                                  # Server binding port
-      
+      BIND_IP: 0.0.0.0
+      BIND_PORT: 80
+
       # Authentication settings - Simple Login method
-      AUTH_MODE: simple_login                        # Authentication mode
-      AUTH_USERNAME: admin                           # Admin username
-      AUTH_PASSWORD: $default_pwd                    # Admin password
-      
+      AUTH_MODE: simple_login
+      AUTH_USERNAME: admin
+      AUTH_PASSWORD: $default_pwd
+
       # Download settings
-      DOWNLOAD_AS_CBZ: true                          # Download manga as CBZ format
-      AUTO_DOWNLOAD_CHAPTERS: false                  # Auto download chapters (manual control)
-      AUTO_DOWNLOAD_EXCLUDE_UNREAD: true             # Exclude unread chapters from auto download
-      AUTO_DOWNLOAD_NEW_CHAPTERS_LIMIT: 0            # Limit for new chapter auto downloads
-      
-      # Update settings (more conservative)
-      UPDATE_EXCLUDE_UNREAD: true                    # Exclude unread manga from updates
-      UPDATE_EXCLUDE_STARTED: true                   # Exclude started manga from updates
-      UPDATE_EXCLUDE_COMPLETED: true                 # Exclude completed manga from updates
-      UPDATE_INTERVAL: 0                             # Auto update interval (disabled)
-      UPDATE_MANGA_INFO: false                       # Update manga information
-      
+      DOWNLOAD_AS_CBZ: true
+      AUTO_DOWNLOAD_CHAPTERS: false
+
       # WebUI settings - Preview version (per-device settings support)
-      WEB_UI_ENABLED: true                           # Enable web user interface
-      WEB_UI_FLAVOR: WebUI                           # Web UI flavor type
-      WEB_UI_CHANNEL: preview                        # Per-device settings feature
-      WEB_UI_UPDATE_INTERVAL: 23                     # Web UI update check interval
-      
+      WEB_UI_CHANNEL: bundled
+      WEB_UI_UPDATE_INTERVAL: 0.0
+
       # Extension repository (Keiyoushi only)
       EXTENSION_REPOS: >-
-        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]  # Extension repository URLs
-      
-      # Performance settings
-      MAX_SOURCES_IN_PARALLEL: 3                     # Maximum sources to process in parallel (conservative)
-      
-      # Backup settings
-      BACKUP_INTERVAL: 7                             # Backup interval in days (weekly)
-      BACKUP_TTL: 30                                 # Backup retention period in days
-      
+        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]
+
       # FlareSolverr integration
-      FLARESOLVERR_ENABLED: true                     # Enable FlareSolverr support
-      FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191  # FlareSolverr service URL
-      FLARESOLVERR_TIMEOUT: 60                       # FlareSolverr request timeout
-      FLARESOLVERR_SESSION_NAME: suwayomi            # FlareSolverr session name
-      FLARESOLVERR_SESSION_TTL: 15                   # FlareSolverr session TTL in minutes
-      
-      # Security settings
-      DEBUG: false                                   # Enable debug mode
+      FLARESOLVERR_ENABLED: true
+      FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
+
     volumes:
       - /DATA/Media/Mangas:/home/suwayomi/.local/share/Tachidesk/downloads
-      - /DATA/AppData/$AppID/data:/home/suwayomi/.local/share/Tachidesk
+      - /DATA/AppData/suwayomi/data:/home/suwayomi/.local/share/Tachidesk
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.0'
     depends_on:
       - flaresolverr
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.0
     container_name: suwayomi-flaresolverr
-    user: $PUID:$PGID
+    user: 0:0
     environment:
-      PUID: $PUID                                    # Process user ID
-      PGID: $PGID                                    # Process group ID
-      TZ: $TZ                                        # Timezone setting
-      LOG_LEVEL: info                                # Logging level
-      CAPTCHA_SOLVER: none                           # CAPTCHA solver method
-      # FlareSolverr optimization
-      BROWSER_TIMEOUT: 40000                         # Browser timeout in milliseconds
-      TEST_URL: https://www.google.com               # Test URL for health checks
-    volumes:
-      - /DATA/AppData/$AppID/flaresolverr:/app/data
+      TZ: $TZ
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
 
 x-casaos:
-  architectures:
-    - amd64
-    - arm64
   main: suwayomi
-  pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/suwayomi:/fix-permissions ubuntu:22.04 sh -c "
-    mkdir -p /fix-permissions/data /fix-permissions/flaresolverr &&
-    chown -R 1000:1000 /fix-permissions &&
-    chmod -R 755 /fix-permissions
-    "
-  author: Yundera Team
-  category: Media
+  index: /
+  webui_port: 80
+
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
+
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Media
   description:
     en_us: |
       **Read manga like Netflix for comics**
@@ -280,5 +236,3 @@ x-casaos:
         One Piece, Naruto, Ataque a los Titanes, Demon Slayer, y miles más de sitios de todo el mundo.
         
         **Consejo:** ¡Descarga capítulos en WiFi, luego lee sin conexión durante viajes!
-  index: /
-  webui_port: 80
