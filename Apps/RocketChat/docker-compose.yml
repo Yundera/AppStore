@@ -33,42 +33,9 @@ services:
       # For future use
       INSTANCE_IP:
 
-      # Microservices settings (needed to start the service)
-      MOLECULER_DISABLED: "true"
-      DISABLE_MICROSERVICES: "true"
-      MICRO_SERVICES_ENABLED: "false"
-
-      # Privacy and telemetry settings
-      ROCKETCHAT_STATISTICS_OPT_OUT: "true"
-      ROCKETCHAT_UPDATE_CHECK_ENABLED: "false"
-      ROCKETCHAT_FEDERATION_ENABLED: "false"
-
-      # Apps marketplace settings
-      ROCKETCHAT_APPS_ENGINE_ENABLED: "true"
-      OVERWRITE_SETTING_APPS_ENGINE_ENABLED: "true"
-      OVERWRITE_SETTING_MARKETPLACE_ENABLED: "true"
-
-      # Cloud workspace settings
-      ROCKETCHAT_CLOUD_WORKSPACE_REGISTRATION_REQUIRED: "false"
-      OVERWRITE_SETTING_CLOUD_WORKSPACE_REGISTRATION_REQUIRED: "false"
-
-      # Real-time communication settings
-      OVERWRITE_SETTING_WEBSOCKET_ENABLED: "true"
-      OVERWRITE_SETTING_REALTIME_ENABLED: "true"
-      DDP_DEFAULT_CONNECTION_REUSE_ENABLED: "true"
-
-      # Performance optimization
-      METEOR_DISABLE_OPTIMISTIC_CACHING: "1"
-
-      # Feature toggles (disabled for simplicity)
-      OVERWRITE_SETTING_LIVECHAT_ENABLED: "false"
-      OVERWRITE_SETTING_OMNICHANNEL_ENABLED: "false"
-      OVERWRITE_SETTING_WEBRTC_ENABLED: "false"
-
-      # Security settings
-      OVERWRITE_SETTING_ACCOUNTS_ALLOW_ANONYMOUS_READ: "false"
-      OVERWRITE_SETTING_ACCOUNTS_ALLOW_ANONYMOUS_WRITE: "false"
-      OVERWRITE_SETTING_API_ENABLE_CORS: "false"
+      # Moleculer transporter configuration (needed to start the service)
+      MOLECULER_TRANSPORTER_TYPE: TCP
+      MOLECULER_TRANSPORTER_OPTIONS: '{"port":0,"bindAddress":"127.0.0.1"}'
 
     expose:
       - 80
