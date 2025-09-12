@@ -1,24 +1,6 @@
 name: rocketchat
 
 services:
-  mongodb:
-    image: mongo:7.0
-    user: $PUID:$PGID
-    restart: unless-stopped
-    environment:
-      PUID: $PUID
-      PGID: $PGID
-    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
-    healthcheck:
-      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}) }" | mongosh --port 27017 --quiet
-      interval: 5s
-      timeout: 30s
-      start_period: 10s
-      start_interval: 1s
-      retries: 30
-    volumes:
-      - /DATA/AppData/rocketchat/mongodb/:/data/db/
-
   rocketchat:
     image: registry.rocket.chat/rocketchat/rocket.chat:7.10.0
     restart: unless-stopped
@@ -43,11 +25,30 @@ services:
       mongodb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "nc", "-zv", "-w", "10", "rocketchat", "80"]
+      test: [ "CMD", "nc", "-zv", "-w", "10", "rocketchat", "80" ]
       interval: 30s
       timeout: 10s
       retries: 10
       start_period: 30s
+  
+
+  mongodb:
+    image: mongo:7.0
+    user: $PUID:$PGID
+    restart: unless-stopped
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}) }" | mongosh --port 27017 --quiet
+      interval: 5s
+      timeout: 30s
+      start_period: 10s
+      start_interval: 1s
+      retries: 30
+    volumes:
+      - /DATA/AppData/rocketchat/mongodb/:/data/db/
 
 x-casaos:
   index: /
