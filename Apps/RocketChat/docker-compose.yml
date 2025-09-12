@@ -17,7 +17,7 @@ services:
       start_interval: 1s
       retries: 30
     volumes:
-      - /DATA/AppData/$AppID/mongodb:/data/db
+      - /DATA/AppData/rocketchat/mongodb/:/data/db/
 
   rocketchat:
     image: registry.rocket.chat/rocketchat/rocket.chat:7.10.0
