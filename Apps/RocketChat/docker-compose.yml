@@ -1,5 +1,6 @@
 name: rocketchat
 
+
 services:
   rocketchat:
     image: registry.rocket.chat/rocketchat/rocket.chat:7.10.0
@@ -11,14 +12,9 @@ services:
       PORT: 80
       DEPLOY_METHOD: docker
       DEPLOY_PLATFORM: compose
-      MONGO_URL: mongodb://mongodb:27017/rocketchat?replicaSet=rs0
+      MONGO_URL: "mongodb://mongodb:27017/rocketchat?replicaSet=rs0"
       # For future use
-      INSTANCE_IP:
-
-      # Moleculer transporter configuration (needed to start the service)
-      MOLECULER_TRANSPORTER_TYPE: TCP
-      MOLECULER_TRANSPORTER_OPTIONS: '{"port":0,"bindAddress":"127.0.0.1"}'
-
+      INSTANCE_IP: "127.0.0.1"
     expose:
       - 80
     depends_on:
@@ -30,7 +26,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
-  
 
   mongodb:
     image: mongo:7.0
