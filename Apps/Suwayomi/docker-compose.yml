@@ -38,8 +38,8 @@ services:
       FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
 
     volumes:
-      - /DATA/Media/Mangas:/home/suwayomi/.local/share/Tachidesk/downloads
-      - /DATA/AppData/suwayomi/data:/home/suwayomi/.local/share/Tachidesk
+      - /DATA/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
+      - /DATA/AppData/suwayomi/data/:/home/suwayomi/.local/share/Tachidesk
     restart: unless-stopped
     depends_on:
       - flaresolverr
