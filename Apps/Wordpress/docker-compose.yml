@@ -5,47 +5,45 @@ services:
     image: wordpress:6.7-apache
     container_name: wordpress_app
     restart: unless-stopped
-    # WordPress도 루트로 실행 (파일 복사 문제 해결)
     user: 0:0
     expose:
-      - 80
+      - 80                              # Web UI port for NSL router
     volumes:
-      - /DATA/AppData/$AppID/html:/var/www/html
+      - /DATA/AppData/$AppID/html:/var/www/html  # WordPress files and uploads 
     environment:
-      PUID: $PUID
-      PGID: $PGID
-      WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: $default_pwd
-      WORDPRESS_DB_NAME: wordpress    
-      WORDPRESS_SITE_URL: https://$domain
-      WORDPRESS_HOME: https://$domain
+      PUID: $PUID                        # Process User ID
+      PGID: $PGID                        # Process Group ID
+      WORDPRESS_DB_HOST: db:3306         # Database host and port
+      WORDPRESS_DB_USER: wordpress       # Database username
+      WORDPRESS_DB_PASSWORD: $default_pwd # Database password (auto-generated) 
+      WORDPRESS_DB_NAME: wordpress       # Database name
+      WORDPRESS_SITE_URL: https://$domain # Site URL for WordPress 
+      WORDPRESS_HOME: https://$domain    # Home URL for WordPress
     depends_on:
       - db
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 1G                    # Memory limit for WordPress 
 
   db:
     image: mariadb:10.11
     container_name: wordpress_db
     restart: unless-stopped
-    # MariaDB는 루트로 실행 (AppData 전용이므로 허용됨)
     user: 0:0
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/mysql
+      - /DATA/AppData/$AppID/db:/var/lib/mysql   # Database files storage
     environment:
-      MYSQL_ROOT_PASSWORD: $default_pwd
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: $default_pwd
-      MARIADB_AUTO_UPGRADE: 1
-      MARIADB_DISABLE_UPGRADE_BACKUP: 1
+      MYSQL_ROOT_PASSWORD: $default_pwd  # MySQL root password (auto-generated)
+      MYSQL_DATABASE: wordpress          # Database to create on startup
+      MYSQL_USER: wordpress              # MySQL user to create
+      MYSQL_PASSWORD: $default_pwd       # Password for MySQL user
+      MARIADB_AUTO_UPGRADE: 1            # Enable automatic database upgrades
+      MARIADB_DISABLE_UPGRADE_BACKUP: 1  # Disable backup during upgrades
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 1G                    # Memory limit for database
 x-casaos:
   architectures:
     - amd64
@@ -53,12 +51,12 @@ x-casaos:
   author: CasaOS Team
   category: Web
   developer: WordPress Foundation
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/icon.png
+  icon: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/thumbnail.png
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/thumbnail.png
   index: /
   tagline:
     en_us: Create beautiful websites with ease
