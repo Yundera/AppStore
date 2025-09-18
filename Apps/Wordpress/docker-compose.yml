@@ -17,9 +17,9 @@ services:
       WORDPRESS_DB_HOST: db:3306
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: $default_pwd
-      WORDPRESS_DB_NAME: wordpress
-      WORDPRESS_SITE_URL: https://wordpress-ikjunyundera.nsl.sh
-      WORDPRESS_HOME: https://wordpress-ikjunyundera.nsl.sh
+      WORDPRESS_DB_NAME: wordpress    
+      WORDPRESS_SITE_URL: https://$domain
+      WORDPRESS_HOME: https://$domain
     depends_on:
       - db
     deploy:
@@ -67,7 +67,7 @@ x-casaos:
     fr_fr: Créez facilement de beaux sites web
     es_es: Crea hermosos sitios web con facilidad
   title:
-    en_us: WordPress
+    en_us: Wordpress
   store_app_id: wordpress
   main: wordpress
   webui_port: 80
