@@ -11,24 +11,24 @@ services:
     #  - "7359:7359/udp"
     #  - "1900:1900/udp"
     expose:
-      - 8096
+      - 8096                            # Web UI port for NSL router / NSL 라우터용 웹 UI 포트
     volumes:
-      - /DATA/AppData/jellyfin/config:/config
-      - /DATA/AppData/jellyfin/cache:/cache
-      - /DATA/Media/Movies:/media/movies
-      - /DATA/Media/TV Shows:/media/tvshows
-      - /DATA/Media/Music:/media/music
-      - /DATA/Downloads:/media/downloads
-    user: $PUID:$PGID
+      - /DATA/AppData/jellyfin/config:/config     # Jellyfin configuration files / Jellyfin 설정 파일
+      - /DATA/AppData/jellyfin/cache:/cache       # Jellyfin cache data / Jellyfin 캐시 데이터
+      - /DATA/Media/Movies:/media/movies          # Movies library / 영화 라이브러리
+      - /DATA/Media/TV Shows:/media/tvshows       # TV Shows library / TV 쇼 라이브러리
+      - /DATA/Media/Music:/media/music            # Music library / 음악 라이브러리
+      - /DATA/Downloads:/media/downloads          # Downloads folder / 다운로드 폴더
+    user: $PUID:$PGID                   # Run as user for file permissions / 파일 권한을 위한 사용자로 실행
     environment:
-      PGID: $PGID
-      PUID: $PUID
-      TZ: $TZ
+      PGID: $PGID                       # Process Group ID / 프로세스 그룹 ID
+      PUID: $PUID                       # Process User ID / 프로세스 사용자 ID
+      TZ: $TZ                           # System timezone / 시스템 시간대
     cpu_shares: 50
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 256M                  # Memory limit for Jellyfin / Jellyfin 메모리 제한
 
 x-casaos:
   architectures:
@@ -62,3 +62,35 @@ x-casaos:
   main: jellyfin
   is_uncontrolled: false
   webui_port: 8096
+  tips:
+    before_install:
+      en_us: |
+        💡 **Tips**: Jellyfin gives you a Netflix-style interface for the TV shows and movies stored on your computer or server.
+        
+        📖 **Setup guide**: [Set up your own streaming service](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **Enjoy!** ❓ Questions? Contact us at help@yundera.com
+      ko_kr: |
+        💡 **팁**: Jellyfin은 컴퓨터나 서버에 저장된 TV 프로그램과 영화를 위한 Netflix 스타일 인터페이스를 제공합니다.
+        
+        📖 **설정 가이드**: [나만의 스트리밍 서비스 설정하기](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **즐기세요!** ❓ 궁금한 점이 있으신가요? help@yundera.com으로 연락주세요
+      zh_cn: |
+        💡 **提示**: Jellyfin 为存储在您计算机或服务器上的电视节目和电影提供 Netflix 风格的界面。
+        
+        📖 **设置指南**: [设置您自己的流媒体服务](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **尽情享受！** ❓ 有问题？请联系 help@yundera.com
+      es_es: |
+        💡 **Consejos**: Jellyfin te ofrece una interfaz estilo Netflix para los programas de TV y películas almacenados en tu computadora o servidor.
+        
+        📖 **Guía de configuración**: [Configura tu propio servicio de streaming](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **¡Disfruta!** ❓ ¿Preguntas? Contáctanos en help@yundera.com
+      fr_fr: |
+        💡 **Conseils**: Jellyfin vous offre une interface de style Netflix pour les émissions TV et films stockés sur votre ordinateur ou serveur.
+        
+        📖 **Guide de configuration**: [Configurez votre propre service de streaming](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **Profitez-en !** ❓ Des questions ? Contactez-nous à help@yundera.com
