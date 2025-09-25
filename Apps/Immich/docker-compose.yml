@@ -37,7 +37,7 @@ services:
         limits:
           memory: 2048M
           cpus: '0.5'
-    user: 0:0
+    user: 0:0  # no users volume mount so can run as root
     environment:
       TZ: $TZ
       PGID: 0
@@ -52,12 +52,10 @@ services:
     image: docker.io/valkey/valkey:8-bookworm@sha256:a137a2b60aca1a75130022d6bb96af423fefae4eb55faf395732db3544803280
     container_name: immich-redis
     cpu_shares: 10
-    user: $PUID:$PGID
+    user: 0:0 # no volume mount so can run as root
     healthcheck:
       test: redis-cli ping || exit 1
     environment:
-      PGID: $PGID
-      PUID: $PUID
       TZ: $TZ
     restart: unless-stopped
     networks:
