@@ -2,7 +2,7 @@ name: immich
 
 services:
   immich:
-    image: ghcr.io/immich-app/immich-server:v1.141.1
+    image: ghcr.io/immich-app/immich-server:v1.143.1
     container_name: immich
     user: $PUID:$PGID
     cpu_shares: 70
@@ -29,7 +29,7 @@ services:
       - immich
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v1.141.1
+    image: ghcr.io/immich-app/immich-machine-learning:v1.143.1
     container_name: immich_machine_learning
     cpu_shares: 5
     deploy:
