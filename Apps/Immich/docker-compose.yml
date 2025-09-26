@@ -338,14 +338,11 @@ x-casaos:
         ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel.
         
         🔐 **First Setup**: Create your admin account on first visit to the web interface.
-      en_gb: |
-        **Setup Information:**
         
-        📱 **Mobile App**: After installation, download the Immich mobile app by scanning the QR code from the web interface settings page.
-        
-        ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel.
-        
-        🔐 **First Setup**: Create your admin account on first visit to the web interface.
+        📁 **Direct Upload from PCS**: To upload files directly from your host (useful for initial import of existing photo libraries or large file imports):
+        1. Generate an API key in Immich (Account Settings > API Keys) - Immich is multi-user so you can create a api keys for different users if needed
+        2. Login: `docker exec immich immich login-key https://immich-$domain YOUR_API_KEY`
+        3. Place files in `/DATA/Gallery/` and run: `docker exec immich immich upload --recursive /import`
       it_it: |
         **Informazioni di configurazione:**
         
