@@ -341,7 +341,7 @@ x-casaos:
         
         📁 **Direct Upload from PCS**: To upload files directly from your host (useful for initial import of existing photo libraries or large file imports):
         1. Generate an API key in Immich (Account Settings > API Keys) - Immich is multi-user so you can create a api keys for different users if needed
-        2. Login: `docker exec immich immich login-key https://immich-$domain YOUR_API_KEY`
+        2. Login: `docker exec immich immich login-key http://localhost YOUR_API_KEY`
         3. Place files in `/DATA/Gallery/` and run: `docker exec immich immich upload --recursive /import`
       it_it: |
         **Informazioni di configurazione:**
