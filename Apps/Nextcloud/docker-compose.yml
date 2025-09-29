@@ -93,6 +93,7 @@ services:
       ofelia.job-exec.nextcloud-cron.container: "nextcloud"
       ofelia.job-exec.nextcloud-cron.user: "$PUID"
       ofelia.job-exec.nextcloud-cron.command: "php -f /var/www/html/cron.php"
+      ofelia.job-exec.nextcloud-cron.no-overlap: "true"
     networks:
       - nextcloud-network
 
