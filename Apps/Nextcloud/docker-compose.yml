@@ -79,16 +79,20 @@ services:
       - nextcloud-network
 
   cron:
-    image: nextcloud:31.0.9
+    image: mcuadros/ofelia:v0.3.19
     container_name: nextcloud_cron
     restart: unless-stopped
-    user: $PUID:$PGID
-    volumes:
-      - /DATA/AppData/nextcloud/root/:/var/www/html:z
-    entrypoint: /cron.sh
+    user: 0:0 # Requires root to access docker socket
     depends_on:
-      - db
-      - redis
+      - nextcloud
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      ofelia.job-exec.nextcloud-cron.schedule: "@every 5m"
+      ofelia.job-exec.nextcloud-cron.container: "nextcloud"
+      ofelia.job-exec.nextcloud-cron.user: "$PUID"
+      ofelia.job-exec.nextcloud-cron.command: "php -f /var/www/html/cron.php"
     networks:
       - nextcloud-network
 
