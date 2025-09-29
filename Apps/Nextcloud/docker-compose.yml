@@ -34,12 +34,6 @@ services:
     volumes:
       # nextcloud root directory, Contains the core application files
       - /DATA/AppData/nextcloud/root/:/var/www/html:z
-      # Stores all user files, uploads, and app data
-      - /DATA/AppData/nextcloud/data/:/var/www/html/data/
-      # Essential for maintaining settings between container updates
-      - /DATA/AppData/nextcloud/config/:/var/www/html/config/
-      # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
-      - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
     networks:
       - nextcloud-network
 
