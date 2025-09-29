@@ -79,7 +79,7 @@ services:
       - nextcloud-network
 
   cron:
-    image: mcuadros/ofelia:v0.3.19
+    image: mcuadros/ofelia:0.3.19
     container_name: nextcloud_cron
     restart: unless-stopped
     user: 0:0 # Requires root to access docker socket
