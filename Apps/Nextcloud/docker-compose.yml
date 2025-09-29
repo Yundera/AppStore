@@ -4,6 +4,7 @@ services:
   nextcloud:
     image: nextcloud:31.0.9
     container_name: nextcloud
+    restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 70
     depends_on:
@@ -31,13 +32,14 @@ services:
       # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
       - NC_maintenance_window_start=4
     volumes:
+      # nextcloud root directory, Contains the core application files
+      - /DATA/AppData/nextcloud/root/:/var/www/html:z
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
       # Essential for maintaining settings between container updates
       - /DATA/AppData/nextcloud/config/:/var/www/html/config/
       # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
       - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
-    restart: unless-stopped
     networks:
       - nextcloud-network
 
@@ -81,6 +83,16 @@ services:
     restart: unless-stopped
     networks:
       - nextcloud-network
+
+  cron:
+    image: nextcloud:31.0.9
+    restart: unless-stopped
+    volumes:
+      - /DATA/AppData/nextcloud/root/:/var/www/html:z
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis
 
 networks:
   nextcloud-network:
@@ -372,6 +384,7 @@ x-casaos:
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
 
+  # IMPORTANT: Keep these commands idempotent - safe to run multiple times
   # Security & setup warnings fixes : "Some headers are not set correctly on your instance - The `Strict-Transport-Security` HTTP header is not set (should be at least `15552000` seconds). For enhanced security, it is recommended to enable HSTS"
   post-install-cmd: |
     # Wait for NextCloud to be ready by checking HTTP status
@@ -399,7 +412,6 @@ x-casaos:
       fi
 
       # Configure Redis memcache via occ commands
-      # IMPORTANT: Keep these commands idempotent - safe to run multiple times
       echo "Configuring Redis memcache..."
 
       # Only configure memcache if not already set to Redis
@@ -414,6 +426,11 @@ x-casaos:
       else
         echo "Redis memcache already configured, skipping"
       fi
+
+      # Configure background jobs to use cron
+      echo "Configuring background jobs to use cron..."
+      php occ background:cron
+      echo "Background jobs configured to use cron"
     '
   tips:
     before_install:
