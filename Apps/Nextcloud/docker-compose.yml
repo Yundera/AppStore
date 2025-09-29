@@ -80,14 +80,17 @@ services:
 
   cron:
     image: nextcloud:31.0.9
-    user: $PUID:$PGID
+    container_name: nextcloud_cron
     restart: unless-stopped
+    user: $PUID:$PGID
     volumes:
       - /DATA/AppData/nextcloud/root/:/var/www/html:z
     entrypoint: /cron.sh
     depends_on:
       - db
       - redis
+    networks:
+      - nextcloud-network
 
 networks:
   nextcloud-network:
