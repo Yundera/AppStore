@@ -88,12 +88,25 @@ services:
     command: daemon --docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
     labels:
+      # Regular cron job every 5 minutes
       ofelia.job-exec.nextcloud-cron.schedule: "@every 5m"
       ofelia.job-exec.nextcloud-cron.container: "nextcloud"
       ofelia.job-exec.nextcloud-cron.user: "$PUID"
       ofelia.job-exec.nextcloud-cron.command: "php -f /var/www/html/cron.php"
       ofelia.job-exec.nextcloud-cron.no-overlap: "true"
+
+      # Expensive maintenance job daily at 4am
+      ofelia.job-exec.nextcloud-maintenance.schedule: "0 4 * * *"
+      ofelia.job-exec.nextcloud-maintenance.container: "nextcloud"
+      ofelia.job-exec.nextcloud-maintenance.user: "$PUID"
+      ofelia.job-exec.nextcloud-maintenance.command: "php occ maintenance:repair --include-expensive"
+      ofelia.job-exec.nextcloud-maintenance.no-overlap: "true"
     networks:
       - nextcloud-network
 
