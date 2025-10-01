@@ -1,0 +1,89 @@
+name: convertx
+
+services:
+  convertx:
+    image: ghcr.io/c4illin/convertx:v0.14.1
+    container_name: convertx
+    restart: unless-stopped
+    user: "0:0"  # Root user required for SQLite access - see rationale.md
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    expose:
+      - 3000
+    environment:
+      - PUID=0
+      - PGID=0
+      - JWT_SECRET=$default_pwd
+      - ACCOUNT_REGISTRATION=false
+      - HTTP_ALLOWED=true
+      - ALLOW_UNAUTHENTICATED=false
+      - AUTO_DELETE_EVERY_N_HOURS=24
+    volumes:
+      - /DATA/AppData/$AppID/data:/app/data
+      - /DATA/Downloads:/downloads:ro
+      - /DATA/Documents:/documents:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--tries=1", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: convertx
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/data &&
+    chmod -R 777 /DATA/AppData/$AppID/data &&
+    echo "ConvertX data directory prepared with full permissions"
+  author: CasaOS Team
+  category: Utilities
+  developer: C4illin
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/thumbnail.png
+  title:
+    en_us: ConvertX
+  tagline:
+    en_us: Universal file converter supporting 1000+ formats
+    ko_kr: 1000개 이상의 형식을 지원하는 범용 파일 변환기
+    zh_cn: 支持1000多种格式的通用文件转换器
+    fr_fr: Convertisseur de fichiers universel supportant plus de 1000 formats
+    es_es: Convertidor de archivos universal que admite más de 1000 formatos
+  description:
+    en_us: ConvertX is a self-hosted universal file converter that supports over 1000 different file formats. Convert images, videos, audio files, documents, 3D models, and more directly from your browser. All processing happens locally on your server, ensuring complete privacy and security. Built with TypeScript and powered by FFmpeg, Pandoc, ImageMagick, and other proven libraries for reliable file conversion.
+    ko_kr: ConvertX는 1000개 이상의 다양한 파일 형식을 지원하는 자가 호스팅 범용 파일 변환기입니다. 브라우저에서 직접 이미지, 비디오, 오디오 파일, 문서, 3D 모델 등을 변환하세요. 모든 처리는 서버에서 로컬로 이루어져 완전한 개인정보 보호와 보안을 보장합니다. TypeScript로 구축되었으며 FFmpeg, Pandoc, ImageMagick 등 검증된 라이브러리로 구동되어 신뢰할 수 있는 파일 변환을 제공합니다.
+    zh_cn: ConvertX是一个支持1000多种不同文件格式的自托管通用文件转换器。直接从浏览器转换图像、视频、音频文件、文档、3D模型等。所有处理都在您的服务器上本地进行,确保完全的隐私和安全。使用TypeScript构建,并由FFmpeg、Pandoc、ImageMagick等经过验证的库提供支持,实现可靠的文件转换。
+    fr_fr: ConvertX est un convertisseur de fichiers universel auto-hébergé qui prend en charge plus de 1000 formats de fichiers différents. Convertissez images, vidéos, fichiers audio, documents, modèles 3D et plus directement depuis votre navigateur. Tout le traitement se fait localement sur votre serveur, garantissant une confidentialité et une sécurité complètes. Construit avec TypeScript et alimenté par FFmpeg, Pandoc, ImageMagick et d'autres bibliothèques éprouvées pour une conversion de fichiers fiable.
+    es_es: ConvertX es un convertidor de archivos universal auto-hospedado que admite más de 1000 formatos de archivo diferentes. Convierte imágenes, videos, archivos de audio, documentos, modelos 3D y más directamente desde tu navegador. Todo el procesamiento ocurre localmente en tu servidor, garantizando privacidad y seguridad completas. Construido con TypeScript y potenciado por FFmpeg, Pandoc, ImageMagick y otras bibliotecas probadas para una conversión de archivos confiable.
+  tips:
+    before_install:
+      en_us: |
+        **Important Setup Instructions**
+        
+        - **First User is Admin**: The first registered account becomes administrator
+        - **HTTP_ALLOWED**: Set to true for NSL router compatibility
+        - **Auto Cleanup**: Files auto-delete after 24 hours (configurable)
+        - **Root User**: Running as root (0:0) due to SQLite permission requirements (see rationale.md)
+        
+        **Supported Formats**
+        - Images: PNG, JPG, WebP, AVIF, SVG, GIF, TIFF, BMP via ImageMagick
+        - Videos: MP4, WebM, AVI, MOV, MKV via FFmpeg
+        - Audio: MP3, WAV, FLAC, OGG, AAC, M4A
+        - Documents: PDF, DOCX, HTML, Markdown via Pandoc
+        - 3D Models: STL, OBJ, PLY, DAE
+        - Archives: ZIP, RAR, 7Z, TAR
+        
+        Access via: `https://convertx-[username].nsl.sh`
+        
+        **Note**: This app requires root permissions to function properly with SQLite database.
+  index: /
+  webui_port: 3000
