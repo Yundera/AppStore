@@ -26,32 +26,23 @@ services:
       SIGNUPS_ALLOWED: "true"
       ADMIN_TOKEN: $default_pwd
       DOMAIN: https://vaultwarden-$domain
-      SMTP_HOST: postfix
-      SMTP_FROM: vaultwarden@$domain
-      SMTP_PORT: 25
+      SMTP_HOST: casaos
+      SMTP_PORT: 587
       SMTP_SECURITY: off
+      SMTP_USERNAME: casaos
+      SMTP_PASSWORD: $default_pwd
+      SMTP_FROM: vaultwarden@$domain
       SMTP_FROM_NAME: Vaultwarden
     volumes:
       - /DATA/AppData/vaultwarden/data/:/data/
     restart: unless-stopped
-    depends_on:
-      - postfix
     networks:
-      - vaultwarden
-
-  postfix:
-    image: boky/postfix:latest
-    user: 0:0
-    cpu_shares: 30
-    environment:
-      ALLOWED_SENDER_DOMAINS: $domain
-    networks:
-      - vaultwarden
-    restart: unless-stopped
+      - pcs
 
 networks:
-  vaultwarden:
-    name: vaultwarden
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:
