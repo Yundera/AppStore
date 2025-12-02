@@ -3,7 +3,7 @@ name: qbittorrent
 services:
   qbittorrent:
     user: $PUID:$PGID
-    image: lscr.io/linuxserver/qbittorrent:5.1.1
+    image: lscr.io/linuxserver/qbittorrent:5.1.4
     container_name: qbittorrent
     restart: unless-stopped
     expose:
@@ -41,6 +41,7 @@ x-casaos:
         Login : `admin`
         Password : `$default_pwd`
         The download directory is `/DATA/Downloads`
+        $PCS_DEFAULT_PASSWORD
   architectures:
     - amd64
     - arm64
