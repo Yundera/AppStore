@@ -7,17 +7,17 @@ services:
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: odoo
-      POSTGRES_PASSWORD: $default_pwd
+      POSTGRES_PASSWORD: $PCS_DEFAULT_PASSWORD
       PGDATA: /var/lib/postgresql/data/pgdata
       PUID: "0"
       PGID: "0"
     volumes:
       - /DATA/AppData/$AppID/postgres-data:/var/lib/postgresql/data
+    cpu_shares: 50
     deploy:
       resources:
         limits:
           memory: 512M
-          cpus: '0.5'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
       interval: 10s
@@ -28,15 +28,16 @@ services:
   odoo:
     image: odoo:18.0
     user: "0:0"
+    command: odoo --http-port=80
     depends_on:
       postgres:
         condition: service_healthy
     expose:
-      - 8069
+      - 80
     environment:
       HOST: postgres
       USER: odoo
-      PASSWORD: $default_pwd
+      PASSWORD: $PCS_DEFAULT_PASSWORD
       PUID: "0"
       PGID: "0"
       TZ: $TZ
@@ -44,11 +45,11 @@ services:
       - /DATA/AppData/$AppID/odoo-data:/var/lib/odoo
       - /DATA/AppData/$AppID/config:/etc/odoo
       - /DATA/AppData/$AppID/addons:/mnt/extra-addons
+    cpu_shares: 70
     deploy:
       resources:
         limits:
           memory: 1G
-          cpus: '1.0'
     restart: unless-stopped
 
 x-casaos:
@@ -56,7 +57,7 @@ x-casaos:
     - amd64
     - arm64
   main: odoo
-  webui_port: 8069
+  webui_port: 80
   category: Business
   author: CasaOS Team
   developer: Odoo S.A.
@@ -108,7 +109,7 @@ x-casaos:
         
         | Item | Value |
         | --- | --- |
-        | Master Password | `$default_pwd` |
+        | Master Password | `$PCS_DEFAULT_PASSWORD` |
         | Database Name | `odoo` |
         | Email | Admin email address |
         | Password | Admin account password |
@@ -125,7 +126,7 @@ x-casaos:
         
         | 항목 | 값 |
         | --- | --- |
-        | 마스터 비밀번호 | `$default_pwd` |
+        | 마스터 비밀번호 | `$PCS_DEFAULT_PASSWORD` |
         | 데이터베이스 이름 | `odoo` |
         | 이메일 | 관리자 이메일 주소 |
         | 비밀번호 | 관리자 계정 비밀번호 |
@@ -142,7 +143,7 @@ x-casaos:
         
         | 项目 | 值 |
         | --- | --- |
-        | 主密码 | `$default_pwd` |
+        | 主密码 | `$PCS_DEFAULT_PASSWORD` |
         | 数据库名称 | `odoo` |
         | 电子邮件 | 管理员电子邮件地址 |
         | 密码 | 管理员帐户密码 |
@@ -159,7 +160,7 @@ x-casaos:
         
         | Elemento | Valor |
         | --- | --- |
-        | Contraseña maestra | `$default_pwd` |
+        | Contraseña maestra | `$PCS_DEFAULT_PASSWORD` |
         | Nombre de la base de datos | `odoo` |
         | Correo electrónico | Dirección de correo electrónico del administrador |
         | Contraseña | Contraseña de la cuenta de administrador |
@@ -176,7 +177,7 @@ x-casaos:
         
         | Élément | Valeur |
         | --- | --- |
-        | Mot de passe principal | `$default_pwd` |
+        | Mot de passe principal | `$PCS_DEFAULT_PASSWORD` |
         | Nom de la base de données | `odoo` |
         | Email | Adresse e-mail de l'administrateur |
         | Mot de passe | Mot de passe du compte administrateur |
