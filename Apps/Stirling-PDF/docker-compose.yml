@@ -2,11 +2,11 @@ name: stirlingpdf
 
 services:
   stirlingpdf:
-    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:1.2.0
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:1.6.0
     container_name: stirling-pdf
     restart: unless-stopped
     expose:
-      - 8080
+      - 80
     volumes:
       - /DATA/AppData/$AppID/tessdata:/usr/share/tessdata
       - /DATA/AppData/$AppID/configs:/configs
@@ -26,19 +26,24 @@ services:
       SYSTEM_DEFAULTLOCALE: en_US
       INSTALL_BOOK_AND_ADVANCED_HTML_OPS: false
       TMPDIR: /tmp
-      JAVA_OPTS: "-Djava.io.tmpdir=/tmp"
+      # Optimized Java memory management - prevents OOM errors and improves stability
+      JAVA_TOOL_OPTIONS: "-XX:+UnlockExperimentalVMOptions -XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=40 -XX:MinRAMPercentage=30 -XX:+UseG1GC -XX:+UseStringDeduplication -XX:G1PeriodicGCInterval=30000 -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled -Djava.io.tmpdir=/tmp"
+      SERVER_PORT: 80  # Run on port 80 for NSL router compatibility
     deploy:
       resources:
         limits:
-          memory: 2G
-          cpus: '1.0'
+          memory: 5G  # Increased from 4G for better stability with large PDFs
+          cpus: '1.0'  # Increased from 1.0 for better performance
+        reservations:
+          memory: 2G  # Reserve minimum memory
+    cpu_shares: 50  # Standard application priority
 
 x-casaos:
   architectures:
     - amd64
     - arm64
   main: stirlingpdf
-  webui_port: 8080
+  webui_port: 80
   author: Yundera Team
   category: Office
   developer: Stirling Tools
@@ -191,7 +196,17 @@ x-casaos:
         • Compress PDFs to reduce file size
 
         **🌐 Access:**
-        Once ready, your app will be available at a clean URL without port numbers!
+        Once ready, your app will be available at `https://stirlingpdf-[username].nsl.sh`
+
+        **💡 Performance Improvements (v1.6.0):**
+        • Upgraded to latest stable V1 release with Debian base
+        • Enhanced memory management (5GB limit with 2GB reservation)
+        • Optimized Java GC settings for better stability
+        • Support for PDF/A-3b, PDF/X formats
+        • New features: PDF to video, eBook to PDF, linearize PDF
+
+        **📋 Version Note:**
+        Using v1.6.0 (last stable V1). V2.0 is available but requires migration. You can upgrade later when ready.
 
         **How to use:**
         Upload PDF files through your web browser and start editing them right away!
@@ -211,7 +226,17 @@ x-casaos:
         • PDF 압축으로 파일 크기 줄이기
 
         **🌐 접근:**
-        준비가 되면 포트 번호 없는 깔끔한 URL로 앱에 접근할 수 있습니다!
+        준비가 되면 `https://stirlingpdf-[username].nsl.sh`로 앱에 접근할 수 있습니다!
+
+        **💡 성능 개선 (v1.6.0):**
+        • Debian 기반의 최신 안정 V1 릴리스로 업그레이드
+        • 향상된 메모리 관리 (5GB 제한, 2GB 예약)
+        • 더 나은 안정성을 위한 Java GC 설정 최적화
+        • PDF/A-3b, PDF/X 형식 지원
+        • 새로운 기능: PDF to video, eBook to PDF, PDF 선형화
+
+        **📋 버전 참고:**
+        v1.6.0 (마지막 안정 V1) 사용. V2.0도 사용 가능하지만 마이그레이션이 필요합니다. 준비가 되면 나중에 업그레이드할 수 있습니다.
 
         **사용 방법:**
         웹 브라우저를 통해 PDF 파일을 업로드하고 바로 편집을 시작할 수 있습니다!
@@ -231,7 +256,17 @@ x-casaos:
         • 压缩PDF以减少文件大小
 
         **🌐 访问:**
-        准备就绪后,您的应用将通过无端口号的清洁URL可用!
+        准备就绪后,您的应用将通过`https://stirlingpdf-[username].nsl.sh`可用!
+
+        **💡 性能改进 (v1.6.0):**
+        • 升级到基于Debian的最新稳定V1版本
+        • 增强的内存管理(5GB限制,2GB保留)
+        • 优化Java GC设置以提高稳定性
+        • 支持PDF/A-3b、PDF/X格式
+        • 新功能:PDF转视频、电子书转PDF、PDF线性化
+
+        **📋 版本说明:**
+        使用v1.6.0(最后稳定V1)。V2.0可用但需要迁移。准备好后可以稍后升级。
 
         **如何使用:**
         通过网页浏览器上传PDF文件并立即开始编辑!
@@ -251,7 +286,17 @@ x-casaos:
         • Compresser les PDF pour réduire la taille
 
         **🌐 Accès :**
-        Une fois prêt, votre application sera disponible via une URL propre sans numéros de port !
+        Une fois prêt, votre application sera disponible à `https://stirlingpdf-[username].nsl.sh` !
+
+        **💡 Améliorations de performance (v1.6.0) :**
+        • Mise à niveau vers la dernière version stable V1 basée sur Debian
+        • Gestion mémoire améliorée (limite 5GB avec réservation 2GB)
+        • Paramètres Java GC optimisés pour une meilleure stabilité
+        • Support des formats PDF/A-3b, PDF/X
+        • Nouvelles fonctionnalités : PDF vers vidéo, eBook vers PDF, linéarisation PDF
+
+        **📋 Note de version :**
+        Utilise v1.6.0 (dernière V1 stable). V2.0 disponible mais nécessite migration. Vous pouvez mettre à niveau plus tard.
 
         **Comment utiliser :**
         Téléchargez des fichiers PDF via votre navigateur web et commencez à les éditer immédiatement !
@@ -271,7 +316,18 @@ x-casaos:
         • Comprimir PDFs para reducir el tamaño
 
         **🌐 Acceso:**
-        Una vez listo, tu aplicación estará disponible en una URL limpia sin números de puerto!
+        Una vez listo, tu aplicación estará disponible en `https://stirlingpdf-[username].nsl.sh`!
+
+        **💡 Mejoras de rendimiento (v1.6.0):**
+        • Actualizado a la última versión estable V1 basada en Debian
+        • Gestión de memoria mejorada (límite 5GB con reserva 2GB)
+        • Configuración Java GC optimizada para mayor estabilidad
+        • Soporte para formatos PDF/A-3b, PDF/X
+        • Nuevas funciones: PDF a video, eBook a PDF, linealización PDF
+
+        **📋 Nota de versión:**
+        Usando v1.6.0 (última V1 estable). V2.0 disponible pero requiere migración. Puedes actualizar más tarde.
 
         **Cómo usar:**
-        ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediatamente!
+        ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!
+  index: /
