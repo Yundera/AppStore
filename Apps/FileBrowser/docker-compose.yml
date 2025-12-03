@@ -1,123 +1,164 @@
 name: filebrowser
 services:
   filebrowser:
+    cpu_shares: 80
+    command: []
     container_name: filebrowser
-    user: $PUID:$PGID
+    deploy:
+      resources:
+        reservations:
+          memory: "64M"
     environment:
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
-      FB_DATABASE: /db/database.db
-    image: filebrowser/filebrowser:v2.32.0
+    image: filebrowser/filebrowser:v2.44.0
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/icon.png
     network_mode: bridge
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/filebrowser/db/
-        target: /db/
+        source: /DATA/AppData/$AppID/db
+        target: /database
+      - type: bind
+        source: /DATA/AppData/$AppID/config
+        target: /config
       - type: bind
         source: /DATA
         target: /srv
     expose:
-      - 80
-    cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+      - "80"
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: TimeZone
+            zh_cn: 时区
+            ko_kr: 시간대
+            es_es: Zona horaria
+            fr_fr: Fuseau horaire
+        - container: PUID
+          description:
+            en_us: Run FileBrowser as specified uid.
+            zh_cn: 以指定的用户ID运行FileBrowser
+            ko_kr: 지정된 uid로 FileBrowser 실행
+            es_es: Ejecutar FileBrowser con el uid especificado
+            fr_fr: Exécuter FileBrowser avec l'uid spécifié
+        - container: PGID
+          description:
+            en_us: Run FileBrowser as specified gid.
+            zh_cn: 以指定的组ID运行FileBrowser
+            ko_kr: 지정된 gid로 FileBrowser 실행
+            es_es: Ejecutar FileBrowser con el gid especificado
+            fr_fr: Exécuter FileBrowser avec le gid spécifié
+      volumes:
+        - container: /database
+          description:
+            en_us: FileBrowser database directory.
+            zh_cn: FileBrowser数据库目录
+            ko_kr: FileBrowser 데이터베이스 디렉토리
+            es_es: Directorio de base de datos de FileBrowser
+            fr_fr: Répertoire de base de données FileBrowser
+        - container: /config
+          description:
+            en_us: FileBrowser configuration directory.
+            zh_cn: FileBrowser配置目录
+            ko_kr: FileBrowser 설정 디렉토리
+            es_es: Directorio de configuración de FileBrowser
+            fr_fr: Répertoire de configuration FileBrowser
+        - container: /srv
+          description:
+            en_us: FileBrowser managed directory.
+            zh_cn: FileBrowser管理的目录
+            ko_kr: FileBrowser가 관리하는 디렉토리
+            es_es: Directorio gestionado por FileBrowser
+            fr_fr: Répertoire géré par FileBrowser
 x-casaos:
-  pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
     - arm
   main: filebrowser
-  author: Yundera Team
+  author: CasaOS Team
   category: Cloud
   description:
-    en_us: |
-      FileBrowser Your Private File Manager Made Easy
-      
-      FileBrowser transforms the way you manage files on your Yundera Private Cloud Server. Just like Google Drive or Windows Explorer, it gives you a full-featured file management experience right in your browser. No setup required, no subscriptions, no tracking.
-      
-      Upload, organize, preview and share files from any device—desktop or mobile. Edit text files, view images or videos, create folders, and even generate custom access links for others. Whether you're backing up documents, managing media, or collaborating on projects, FileBrowser gives you full control.
-      
-      Designed for local hosting, FileBrowser ensures your files stay on your server—with zero reliance on third parties. Ideal for creators, teams, and privacy-focused users. Multi‑user access and role‑based permissions make it fit for home or business.
-      
-      With FileBrowser on your Yundera PCS, enjoy the speed of local hosting, the freedom of open source, and the simplicity of a modern file explorer.
-    zh_cn: |
-      FileBrowser - 让私有文件管理变得简单
-      
-      FileBrowser 重新定义了你在 Yundera 私有云服务器上管理文件的方式。就像使用 Google Drive 或 Windows 资源管理器一样，你可以直接在浏览器中享受完整的文件管理体验。无需配置，无需订阅，无需追踪。
-      
-      无论你使用电脑还是手机都可以轻松上传、组织、预览和分享文件。你可以编辑文本文件、查看图片或视频、创建文件夹，甚至生成自定义的共享链接。无论是备份文档、整理媒体内容，还是共享项目资料，FileBrowser 都能帮你轻松掌控一切。
-      
-      FileBrowser 专为本地部署而设计，所有文件始终保留在你的服务器上，无需依赖外部服务。非常适合创作者、团队，以及注重隐私的用户。支持多用户访问和角色权限管理，从家庭文件存储到商业文件共享都能轻松应对。
-      
-      在你的 Yundera 私有云服务器上部署 FileBrowser，你将拥有本地部署的速度、开源工具的自由，以及现代文件浏览器的简洁体验。
-    fr_fr: |
-      FileBrowser - Votre gestionnaire de fichiers privé simplifié
-      
-      FileBrowser transforme votre façon de gérer vos fichiers sur votre serveur cloud privé Yundera. Comme avec Google Drive ou l’Explorateur Windows, vous profitez d’une expérience complète de gestion directement dans votre navigateur. Pas besoin de configuration, pas d’abonnement, pas de suivi.
-      
-      Téléchargez, organisez, prévisualisez et partagez vos fichiers depuis n’importe quel appareil — ordinateur ou mobile. Éditez des fichiers texte, visualisez des images ou vidéos, créez des dossiers et générez des liens d’accès personnalisés. Que vous sauvegardiez des documents, gériez des médias ou collaboriez sur des projets, FileBrowser vous donne le contrôle total.
-      
-      Conçu pour l’hébergement local, FileBrowser garantit que vos fichiers restent sur votre serveur, sans dépendre de tiers. Idéal pour les créateurs, équipes et utilisateurs soucieux de leur vie privée. Accès multi‑utilisateur avec permissions par rôle. Parfait pour usage personnel ou professionnel.
-      
-      Avec FileBrowser sur votre PCS Yundera, profitez de la vitesse de l’hébergement local, de la liberté open source, et de la simplicité d’un explorateur moderne.
-    ko_kr: |
-      FileBrowser - 쉽고 강력한 개인 파일 관리자
-      
-      FileBrowser는 Yundera 프라이빗 클라우드 서버에서 파일을 관리하는 방식을 완전히 새롭게 바꿉니다. Google Drive나 Windows 탐색기처럼 브라우저만으로도 완전한 파일 관리 경험을 제공합니다. 설치 불필요, 구독 없음, 추적 없음.
-      
-      데스크탑이나 모바일에서 파일을 업로드, 정리, 미리보기, 공유할 수 있습니다. 텍스트 파일 편집, 이미지/영상 보기, 폴더 생성, 맞춤 공유 링크 생성도 가능합니다. 문서 백업, 미디어 관리, 프로젝트 협업에 이르기까지 FileBrowser는 당신의 모든 작업을 완벽히 제어합니다.
-      
-      로컬 호스팅을 기반으로 설계되어 파일은 서버에만 저장되고 외부 서비스에 의존하지 않습니다. 창작자, 팀, 개인정보 중시 사용자 모두에게 이상적입니다. 다중 사용자 접근과 역할 기반 권한 설정을 지원하여 홈 또는 비즈니스 환경에 적합합니다.
-      
-      Yundera PCS에 FileBrowser를 설치하면 로컬 호스팅의 속도, 오픈 소스의 자유, 현대적인 파일 탐색기의 편리함을 모두 누릴 수 있습니다。
-    ar_sa: متصفح الملفات - متصفح ملفات Webbased يشمل وظائف المشاركة وما إلى ذلك
-    de_de: Datei Browser - Webbasierte Datei Browser, einschließlich Sharing-Funktionen usw.
-    es_es: File Browser - Navegador de archivos Webbased que incluye funciones de compartición, etc.
-    hu_hu: File Browser - Webbased File Browser, beleértve a megosztási funkciókat stb.
-    it_it: File Browser - Browser di file Webbased che include funzioni di condivisione, ecc.
-    ru_ru: File Browser - Webbased File Browser, включая функции обмена, и т.д.
-    pl_pl: File Browser - Przeglądarka plików Webbased, w tym funkcje udostępniania itp.
-    pt_br: File Browser - Navegador de arquivos Webbased que inclui funções de compartilhamento, etc.
-    sv_se: File Browser - Webbaserad filbläddrare inklusive delningsfunktioner etc.
-    uk_ua: File Browser - Webbased File Browser, включаючи функції обміну, тощо
-  developer: File Browser
+    en_us: File Browser provides a file managing interface within a specified directory. It can be used to upload, delete, preview, rename and edit your files. It allows the creation of multiple users and each user can have its own directory.
+    zh_cn: File Browser 在指定目录中提供文件管理界面。它可用于上传、删除、预览、重命名和编辑您的文件。它允许创建多个用户，每个用户可以拥有自己的目录。
+    ko_kr: File Browser는 지정된 디렉토리 내에서 파일 관리 인터페이스를 제공합니다. 파일 업로드, 삭제, 미리보기, 이름 변경 및 편집에 사용할 수 있습니다. 여러 사용자 생성이 가능하며 각 사용자는 자신의 디렉토리를 가질 수 있습니다.
+    es_es: File Browser proporciona una interfaz de gestión de archivos dentro de un directorio especificado. Se puede usar para cargar, eliminar, previsualizar, renombrar y editar sus archivos. Permite la creación de múltiples usuarios y cada usuario puede tener su propio directorio.
+    fr_fr: File Browser fournit une interface de gestion de fichiers dans un répertoire spécifié. Il peut être utilisé pour télécharger, supprimer, prévisualiser, renommer et modifier vos fichiers. Il permet la création de plusieurs utilisateurs et chaque utilisateur peut avoir son propre répertoire.
+    de_de: File Browser bietet eine Dateiverwaltungsoberfläche in einem bestimmten Verzeichnis. Es kann zum Hochladen, Löschen, Vorschau, Umbenennen und Bearbeiten Ihrer Dateien verwendet werden.
+    ar_sa: يوفر File Browser واجهة إدارة الملفات ضمن دليل محدد. يمكن استخدامه لتحميل الملفات وحذفها ومعاينتها وإعادة تسميتها وتحريرها.
+    hu_hu: A File Browser fájlkezelési felületet biztosít egy megadott könyvtárban. Használható fájlok feltöltésére, törlésére, előnézetére, átnevezésére és szerkesztésére.
+    it_it: File Browser fornisce un'interfaccia di gestione file all'interno di una directory specificata. Può essere utilizzato per caricare, eliminare, visualizzare in anteprima, rinominare e modificare i tuoi file.
+    ru_ru: File Browser предоставляет интерфейс управления файлами в указанном каталоге. Его можно использовать для загрузки, удаления, предварительного просмотра, переименования и редактирования ваших файлов.
+    pl_pl: File Browser zapewnia interfejs zarządzania plikami w określonym katalogu. Może być używany do przesyłania, usuwania, podglądu, zmiany nazwy i edycji plików.
+    pt_br: O File Browser fornece uma interface de gerenciamento de arquivos dentro de um diretório especificado. Pode ser usado para fazer upload, excluir, visualizar, renomear e editar seus arquivos.
+    sv_se: File Browser tillhandahåller ett filhanteringsgränssnitt inom en specificerad katalog. Det kan användas för att ladda upp, ta bort, förhandsgranska, byta namn på och redigera dina filer.
+    uk_ua: File Browser надає інтерфейс керування файлами у вказаному каталозі. Його можна використовувати для завантаження, видалення, попереднього перегляду, перейменування та редагування ваших файлів.
+  developer: File Browser Contributors
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-1.jpg
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-2.jpg
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-3.jpg
   tagline:
-    en_us: This is your Cloud. Your own Drive alternative - upload, organize, and share files with full control and privacy.
-    zh_cn: 上传，删除，预览，重命名，编辑和共享您的文件。
-    ar_sa: قم بتحميل، حذف، معاينة، إعادة تسمية، تحرير ومشاركة ملفاتك.
+    en_us: Upload, delete, preview, rename, edit and share your files.
+    zh_cn: 上传、删除、预览、重命名、编辑和共享您的文件。
+    ko_kr: 파일을 업로드, 삭제, 미리보기, 이름 변경, 편집 및 공유하세요.
+    es_es: Cargue, elimine, previsualice, renombre, edite y comparta sus archivos.
+    fr_fr: Téléchargez, supprimez, prévisualisez, renommez, modifiez et partagez vos fichiers.
     de_de: Hochladen, Löschen, Vorschau, Umbenennen, Bearbeiten und Freigeben Ihrer Dateien.
-    es_es: Subir, eliminar, previsualizar, renombrar, editar y compartir sus archivos.
-    fr_fr: Télécharger, supprimer, prévisualiser, renommer, modifier et partager vos fichiers.
+    ar_sa: قم بتحميل وحذف ومعاينة وإعادة تسمية وتحرير ومشاركة ملفاتك.
     hu_hu: Töltsön fel, törölje, előnézze, átnevezze, szerkessze és ossza meg fájljait.
     it_it: Carica, elimina, anteprima, rinomina, modifica e condividi i tuoi file.
-    ru_ru: Загрузите, удалите, просмотрите, переименуйте, отредактируйте и поделитесь своими файлами.
-    pl_pl: Prześlij, usuń, podgląd, zmień nazwę, edytuj i udostępnij swoje pliki.
+    ru_ru: Загружайте, удаляйте, просматривайте, переименовывайте, редактируйте и делитесь своими файлами.
+    pl_pl: Przesyłaj, usuwaj, przeglądaj, zmieniaj nazwy, edytuj i udostępniaj swoje pliki.
     pt_br: Faça upload, exclua, visualize, renomeie, edite e compartilhe seus arquivos.
     sv_se: Ladda upp, ta bort, förhandsgranska, byt namn, redigera och dela dina filer.
-    uk_ua: Завантажте, видаліть, перегляньте, перейменуйте, відредагуйте і поділіться своїми файлами.
-    ko_kr: 파일을 업로드, 삭제, 미리보기, 이름 변경, 편집 및 공유하세요.
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/thumbnail.png
+    uk_ua: Завантажуйте, видаляйте, переглядайте, перейменовуйте, редагуйте та діліться своїми файлами.
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/thumbnail.jpg
   tips:
     before_install:
       en_us: |
         Default Account
-        | Username   | Password       |
-        | --------   | ------------   |
-        | `admin`    | `$default_pwd` |
+
+        | Username | Password |
+        | -------- | -------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+      zh_cn: |
+        默认账号
+
+        | 用户名 | 密码 |
+        | -------- | -------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+      ko_kr: |
+        기본 계정
+
+        | 사용자명 | 비밀번호 |
+        | -------- | -------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+      es_es: |
+        Cuenta predeterminada
+
+        | Usuario | Contraseña |
+        | -------- | -------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+      fr_fr: |
+        Compte par défaut
+
+        | Nom d'utilisateur | Mot de passe |
+        | -------- | -------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
   title:
     en_us: FileBrowser
   index: /
+  scheme: https
+  store_app_id: filebrowser
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/filebrowser/db /DATA/AppData/filebrowser/config &&
+    chown -R $PUID:$PGID /DATA/AppData/filebrowser &&
+    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.44.0 config init --database /database/filebrowser.db --config /config/settings.json &&
+    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.44.0 users add admin $PCS_DEFAULT_PASSWORD --perm.admin --database /database/filebrowser.db
   webui_port: 80
