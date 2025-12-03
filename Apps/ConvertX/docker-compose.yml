@@ -2,10 +2,11 @@ name: convertx
 
 services:
   convertx:
-    image: ghcr.io/c4illin/convertx:v0.14.1
+    image: ghcr.io/c4illin/convertx:v0.15.1
     container_name: convertx
     restart: unless-stopped
     user: "0:0"  # Root user required for SQLite access - see rationale.md
+    cpu_shares: 70
     deploy:
       resources:
         limits:
@@ -16,7 +17,7 @@ services:
     environment:
       - PUID=0
       - PGID=0
-      - JWT_SECRET=$default_pwd
+      - JWT_SECRET=$PCS_DEFAULT_PASSWORD
       - ACCOUNT_REGISTRATION=false
       - HTTP_ALLOWED=true
       - ALLOW_UNAUTHENTICATED=false
@@ -26,7 +27,7 @@ services:
       - /DATA/Downloads:/downloads:ro
       - /DATA/Documents:/documents:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--tries=1", "http://localhost:3000/"]
+      test: ["CMD", "wget", "--spider", "--tries=1", "http://localhost:80/"]
       interval: 30s
       timeout: 10s
       retries: 3
