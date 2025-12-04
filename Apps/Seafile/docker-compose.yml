@@ -52,7 +52,7 @@ services:
       retries: 5
 
   seafile-app:
-    image: seafileltd/seafile-mc:13.0.9
+    image: seafileltd/seafile-mc:13.0.12
     container_name: seafile
     hostname: seafile-app
     restart: unless-stopped
@@ -128,7 +128,7 @@ services:
       retries: 5
 
   notification-server:
-    image: seafileltd/notification-server:13.0.7
+    image: seafileltd/notification-server:13.0.10
     container_name: notification-server
     restart: unless-stopped
     user: 0:0
@@ -160,7 +160,7 @@ services:
       caddy.reverse_proxy: "notification-server:8083"
 
   seadoc:
-    image: seafileltd/sdoc-server:2.0.6
+    image: seafileltd/sdoc-server:2.0.9
     container_name: seafile-seadoc
     hostname: seadoc
     restart: unless-stopped
