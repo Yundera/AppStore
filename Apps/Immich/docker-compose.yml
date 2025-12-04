@@ -2,7 +2,7 @@ name: immich
 
 services:
   immich:
-    image: ghcr.io/immich-app/immich-server:v1.143.1
+    image: ghcr.io/immich-app/immich-server:v2.3.1
     container_name: immich
     user: $PUID:$PGID
     cpu_shares: 70
@@ -25,11 +25,13 @@ services:
       - redis
       - database
     restart: unless-stopped
+    healthcheck:
+      disable: false
     networks:
       - immich
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v1.143.1
+    image: ghcr.io/immich-app/immich-machine-learning:v2.3.1
     container_name: immich_machine_learning
     cpu_shares: 5
     deploy:
@@ -43,13 +45,15 @@ services:
       PGID: 0
       PUID: 0
     restart: unless-stopped
+    healthcheck:
+      disable: false
     volumes:
       - model-cache:/cache
     networks:
       - immich
 
   redis:
-    image: docker.io/valkey/valkey:8-bookworm@sha256:a137a2b60aca1a75130022d6bb96af423fefae4eb55faf395732db3544803280
+    image: docker.io/valkey/valkey:8@sha256:81db6d39e1bba3b3ff32bd3a1b19a6d69690f94a3954ec131277b9a26b95b3aa
     container_name: immich-redis
     cpu_shares: 10
     user: 0:0 # no volume mount so can run as root
@@ -62,7 +66,7 @@ services:
       - immich
 
   database:
-    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:32324a2f41df5de9efe1af166b7008c3f55646f8d0e00d9550c16c9822366b4a
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
     container_name: immich-postgres
     cpu_shares: 10
     user: $PUID:$PGID
@@ -119,6 +123,8 @@ x-casaos:
 
       Automatically back up your photos and videos from your phone. Organize them by date, location, or face. Browse everything from a sleek web app, stream in 4K to your smart TV, and share albums privately with family and friends : no account or app needed.
 
+      **New in v2.x:** Optical Character Recognition (OCR) lets you search for text within your photos, supporting English, Chinese, Japanese, Korean, Russian, Greek, Thai, and Latin-script languages.
+
       Unlike other platforms, Immich runs on your own private server. That means:
 
       * **Unlimited storage** - You can upgrade the storage anytime at market price on your Yundera interface
@@ -131,6 +137,8 @@ x-casaos:
       Immich gives you a modern, self-hosted photo and video gallery, without the limits or tracking of traditional cloud services.
 
       Automatically back up your photos and videos from your phone. Organise them by date, location, or face. Browse everything from a sleek web app, stream in 4K to your smart TV, and share albums privately with family and friends : no account or app needed.
+
+      **New in v2.x:** Optical Character Recognition (OCR) lets you search for text within your photos, supporting English, Chinese, Japanese, Korean, Russian, Greek, Thai, and Latin-script languages.
 
       Unlike other platforms, Immich runs on your own private server. That means:
 
@@ -332,13 +340,15 @@ x-casaos:
     before_install:
       en_us: |
         **Setup Information:**
-        
+
         📱 **Mobile App**: After installation, download the Immich mobile app by scanning the QR code from the web interface settings page.
-        
+
         ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel.
-        
+
         🔐 **First Setup**: Create your admin account on first visit to the web interface.
-        
+
+        🔍 **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.
+
         📁 **Direct Upload from PCS**: To upload files directly from your host (useful for initial import of existing photo libraries or large file imports):
         1. Generate an API key in Immich (Account Settings > API Keys) - Immich is multi-user so you can create a api keys for different users if needed
         2. Login: `docker exec immich immich login-key http://localhost YOUR_API_KEY`
