@@ -13,12 +13,12 @@ services:
     expose:
       - 8096
     volumes:
-      - /DATA/AppData/jellyfin/config:/config
-      - /DATA/AppData/jellyfin/cache:/cache
-      - /DATA/Media/Movies:/media/movies
-      - /DATA/Media/TV Shows:/media/tvshows
-      - /DATA/Media/Music:/media/music
-      - /DATA/Downloads:/media/downloads
+      - /DATA/AppData/jellyfin/config/:/config
+      - /DATA/AppData/jellyfin/cache/:/cache
+      - /DATA/Media/Movies/:/media/movies
+      - /DATA/Media/TV Shows/:/media/tvshows
+      - /DATA/Media/Music/:/media/music
+      - /DATA/Downloads/:/media/downloads
     user: $PUID:$PGID
     environment:
       PGID: $PGID
