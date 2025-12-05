@@ -2,18 +2,14 @@ name: immich
 
 services:
   immich:
+    image: ghcr.io/immich-app/immich-server:v2.3.1
     container_name: immich
-    hostname: immich
-    cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 2048M
-          cpus: '1.0'
-    image: ghcr.io/immich-app/immich-server:v1.135.3
     user: $PUID:$PGID
+    cpu_shares: 70
     volumes:
-      - /DATA/AppData/immich/upload:/usr/src/app/upload
+      - /DATA/AppData/immich/upload/:/data/
+      # Read-only access to the gallery directory used to import media files from the host directly (Immich external library)
+      - /DATA/Gallery/:/import/:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       DB_DATABASE_NAME: immich
@@ -29,95 +25,68 @@ services:
       - redis
       - database
     restart: unless-stopped
+    healthcheck:
+      disable: false
     networks:
       - immich
 
   immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v2.3.1
     container_name: immich_machine_learning
-    hostname: immich-machine-learning
     cpu_shares: 5
     deploy:
       resources:
         limits:
           memory: 2048M
           cpus: '0.5'
-    image: ghcr.io/immich-app/immich-machine-learning:v1.135.3
-    user: 0:0
+    user: 0:0  # no users volume mount so can run as root
     environment:
       TZ: $TZ
       PGID: 0
       PUID: 0
     restart: unless-stopped
+    healthcheck:
+      disable: false
     volumes:
-      - /DATA/AppData/immich/model-cache:/cache
+      - model-cache:/cache
     networks:
       - immich
 
   redis:
+    image: docker.io/valkey/valkey:8@sha256:81db6d39e1bba3b3ff32bd3a1b19a6d69690f94a3954ec131277b9a26b95b3aa
     container_name: immich-redis
-    hostname: immich-redis
     cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-    image: docker.io/redis:6.2-alpine@sha256:148bb5411c184abd288d9aaed139c98123eeb8824c5d3fce03cf721db58066d8
-    user: $PUID:$PGID
+    user: 0:0 # no volume mount so can run as root
     healthcheck:
       test: redis-cli ping || exit 1
     environment:
-      PGID: $PGID
-      PUID: $PUID
       TZ: $TZ
-    volumes:
-      - /DATA/AppData/immich/redis:/data
     restart: unless-stopped
     networks:
       - immich
 
   database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
     container_name: immich-postgres
-    hostname: immich-postgres
     cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-          cpus: '0.5'
-    image: docker.io/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:739cdd626151ff1f796dc95a6591b55a714f341c737e27f045019ceabf8e8c52
     user: $PUID:$PGID
+    shm_size: 128mb
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: immich
       POSTGRES_INITDB_ARGS: '--data-checksums'
+      DB_STORAGE_TYPE: 'HDD'
       TZ: UTC
       PGID: $PGID
       PUID: $PUID
     volumes:
-      - /DATA/AppData/immich/pgdata:/var/lib/postgresql/data
+      - /DATA/AppData/immich/pgdata/:/var/lib/postgresql/data/
     healthcheck:
       test: pg_isready --dbname='immich' --username='postgres' || exit 1; Chksum="$$(psql --dbname='immich' --username='postgres' --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
       interval: 5m
       start_interval: 30s
       start_period: 5m
-    command:
-      [
-        'postgres',
-        '-c',
-        'shared_preload_libraries=vectors.so',
-        '-c',
-        'search_path="$$user", public, vectors',
-        '-c',
-        'logging_collector=on',
-        '-c',
-        'max_wal_size=2GB',
-        '-c',
-        'shared_buffers=512MB',
-        '-c',
-        'wal_compression=on',
-      ]
     restart: unless-stopped
     networks:
       - immich
@@ -126,170 +95,365 @@ networks:
   immich:
     name: immich
 
+volumes:
+  model-cache:
+
 x-casaos:
-  architectures:
-    - amd64
-    - arm64
   main: immich
-  store_app_id: immich
-  category: Gallery
-  author: Cp0204
-  developer: alextran1502
+  webui_port: 80
+  index: /
+
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Immich/thumbnail.png
+
+  architectures:
+    - amd64
+    - arm64
+  store_app_id: immich
+  category: Gallery
+  author: Cp0204
+  developer: alextran1502
   description:
-    en_US: |
-      Immich: Revolutionizing Your Home Media Experience
+    en_us: |
+      Immich gives you a modern, self-hosted photo and video gallery, without the limits or tracking of traditional cloud services.
 
-      Immich is here to transform the way you manage and enjoy your media files across your home TV, smartphones, and other devices. Unlike traditional photo albums or mainstream cloud services, immich offers a seamless and modern platform for organizing, sharing, and accessing your photos and videos. Imagine effortlessly backing up your precious moments from your mobile devices and viewing them instantly on your TV or sharing them with family members—immich makes it all possible.
+      Automatically back up your photos and videos from your phone. Organize them by date, location, or face. Browse everything from a sleek web app, stream in 4K to your smart TV, and share albums privately with family and friends : no account or app needed.
 
-      Immich stands out with its automatic backup from mobile devices, a sleek web-based interface for easy media browsing, and advanced features like face recognition and object detection. You can organize your media by location, enjoy 4K video playback, and even manage RAW photos. Plus, with multi-user support, sharing memories with friends and family is a breeze. The best part? Immich offers these powerful features for low cost, ensuring you get a premium experience without breaking the bank.
+      **New in v2.x:** Optical Character Recognition (OCR) lets you search for text within your photos, supporting English, Chinese, Japanese, Korean, Russian, Greek, Thai, and Latin-script languages.
 
-      Deploying immich on a private cloud device like Zima brings unparalleled convenience. Enjoy unlimited storage capacity, blazing-fast local network speeds, and easy multi-device access. With immich on your Zima private cloud, your media is always at your fingertips, safe and secure in your home.
-    en_GB: |
-      Immich: Revolutionising Your Home Media Experience
+      Unlike other platforms, Immich runs on your own private server. That means:
 
-      Immich is here to transform the way you manage and enjoy your media files across your home TV, smartphones, and other devices. Unlike traditional photo albums or mainstream cloud services, immich offers a seamless and modern platform for organising, sharing, and accessing your photos and videos. Imagine effortlessly backing up your precious moments from your mobile devices and viewing them instantly on your TV or sharing them with family members—immich makes it all possible.
+      * **Unlimited storage** - You can upgrade the storage anytime at market price on your Yundera interface
+      * **No data mining**
+      * **Lightning-fast access on your local network**
+      * **Multi-user support**, so everyone in your home has their own space
 
-      Immich stands out with its automatic backup from mobile devices, a sleek web-based interface for easy media browsing, and advanced features like face recognition and object detection. You can organise your media by location, enjoy 4K video playback, and even manage RAW photos. Plus, with multi-user support, sharing memories with friends and family is a breeze. The best part? Immich offers these powerful features at a low cost, ensuring you get a premium experience without breaking the bank.
+      Perfect for photographers, families, or anyone who wants to take back control of their memories. Immich works beautifully on your Yundera Personal Cloud Server, so your media stays **yours : forever**.
+    en_gb: |
+      Immich gives you a modern, self-hosted photo and video gallery, without the limits or tracking of traditional cloud services.
 
-      Deploying immich on a private cloud device like Zima brings unparalleled convenience. Enjoy unlimited storage capacity, blazing-fast local network speeds, and easy multi-device access. With immich on your Zima private cloud, your media is always at your fingertips, safe and secure in your home.
-    it_IT: |
-      Immich: Rivoluziona la tua esperienza multimediale domestica
+      Automatically back up your photos and videos from your phone. Organise them by date, location, or face. Browse everything from a sleek web app, stream in 4K to your smart TV, and share albums privately with family and friends : no account or app needed.
 
-      Immich è qui per trasformare il modo in cui gestisci e godi dei tuoi file multimediali su TV, smartphone e altri dispositivi. A differenza degli album fotografici tradizionali o dei servizi cloud mainstream, immich offre una piattaforma moderna e fluida per organizzare, condividere e accedere alle tue foto e video. Immagina di eseguire il backup dei tuoi momenti preziosi dai dispositivi mobili in modo semplice e di visualizzarli istantaneamente sulla tua TV o condividerli con i membri della famiglia: immich rende tutto questo possibile.
+      **New in v2.x:** Optical Character Recognition (OCR) lets you search for text within your photos, supporting English, Chinese, Japanese, Korean, Russian, Greek, Thai, and Latin-script languages.
 
-      Immich si distingue per il backup automatico dai dispositivi mobili, un'interfaccia web elegante per una facile navigazione dei contenuti e funzionalità avanzate come il riconoscimento facciale e il rilevamento di oggetti. Puoi organizzare i tuoi contenuti per posizione, goderti la riproduzione di video in 4K e persino gestire foto RAW. Inoltre, con il supporto multiutente, condividere ricordi con amici e familiari è semplicissimo. La parte migliore? Immich offre queste potenti funzionalità a basso costo, garantendo un'esperienza premium senza spendere una fortuna.
+      Unlike other platforms, Immich runs on your own private server. That means:
 
-      Installare immich su un dispositivo cloud privato come Zima offre una comodità senza pari. Goditi una capacità di archiviazione illimitata, velocità di rete locale incredibilmente rapide e un facile accesso multi-dispositivo. Con immich sul tuo cloud privato Zima, i tuoi contenuti sono sempre a portata di mano, sicuri e protetti a casa tua.
-    nb_NO: |
-      Immich: Revolusjonerer din hjemmemedieopplevelse
+      * **Unlimited storage** - You can upgrade the storage anytime at market price on your Yundera interface
+      * **No data mining**
+      * **Lightning-fast access on your local network**
+      * **Multi-user support**, so everyone in your home has their own space
 
-      Immich er her for å forvandle måten du administrerer og nyter mediefilene dine på tvers av hjemme-TV, smarttelefoner og andre enheter. I motsetning til tradisjonelle fotoalbum eller vanlige skylagringstjenester, tilbyr immich en sømløs og moderne plattform for å organisere, dele og få tilgang til bildene og videoene dine. Forestill deg å enkelt sikkerhetskopiere dine dyrebare øyeblikk fra mobilenheter og se dem umiddelbart på TV-en eller dele dem med familiemedlemmer – immich gjør alt dette mulig.
+      Perfect for photographers, families, or anyone who wants to take back control of their memories. Immich works beautifully on your Yundera Personal Cloud Server, so your media stays **yours : forever**.
+    it_it: |
+      Immich ti offre una galleria moderna di foto e video auto-ospitata, senza i limiti o il tracciamento dei servizi cloud tradizionali.
 
-      Immich skiller seg ut med automatisk sikkerhetskopiering fra mobilenheter, et elegant nettbasert grensesnitt for enkel medienavigering og avanserte funksjoner som ansiktsgjenkjenning og objektdeteksjon. Du kan organisere mediene dine etter sted, nyte 4K-videoplayback og til og med administrere RAW-bilder. Med støtte for flere brukere er det enkelt å dele minner med venner og familie. Det beste? Immich tilbyr disse kraftige funksjonene til en lav kostnad, slik at du får en førsteklasses opplevelse uten å sprenge budsjettet.
+      Effettua automaticamente il backup delle tue foto e video dal telefono. Organizzali per data, posizione o volto. Sfoglia tutto da un'elegante app web, trasmetti in 4K alla tua smart TV e condividi album privatamente con familiari e amici: non serve account o app.
 
-      Å distribuere immich på en privat skysenhet som Zima gir uovertruffen bekvemmelighet. Nyt ubegrenset lagringskapasitet, lynraske lokale nettverkshastigheter og enkel tilgang fra flere enheter. Med immich på din private Zima-sky er mediene dine alltid tilgjengelige, trygge og sikre hjemme hos deg.
-    zh_CN: |
-      Immich：革新您的家庭媒体体验
+      A differenza di altre piattaforme, Immich funziona sul tuo server privato. Questo significa:
 
-      Immich 致力于改变您在家庭电视、智能手机和其他设备上管理和享受媒体文件的方式。与传统相册或主流云服务不同，Immich 提供了一个无缝且现代的平台，用于组织、分享和访问您的照片和视频。想象一下，从移动设备轻松备份您珍贵的时刻，立即在电视上观看，或与家人分享——Immich 让这一切成为可能。
+      * **Archiviazione illimitata** - Puoi aggiornare lo spazio di archiviazione in qualsiasi momento a prezzo di mercato sulla tua interfaccia Yundera
+      * **Nessun data mining**
+      * **Accesso ultra-veloce sulla tua rete locale**
+      * **Supporto multi-utente**, così tutti in casa hanno il proprio spazio
 
-      Immich 以其从移动设备自动备份、优雅的基于网页的界面便于浏览媒体，以及人脸识别和物体检测等高级功能而脱颖而出。您可以按位置组织媒体，享受 4K 视频播放，甚至管理 RAW 格式照片。此外，通过多用户支持，与朋友和家人分享回忆变得轻而易举。最棒的是？Immich 以低成本提供这些强大功能，确保您无需花费过多即可获得优质体验。
+      Perfetto per fotografi, famiglie o chiunque voglia riprendere il controllo dei propri ricordi. Immich funziona meravigliosamente sul tuo Server Cloud Personale Yundera, così i tuoi media rimangono **tuoi : per sempre**.
+    nb_no: |
+      Immich gir deg et moderne, selvdrevet foto- og videogalleri, uten begrensningene eller sporingen fra tradisjonelle skytjenester.
 
-      在 Zima 等私有云设备上部署 Immich 带来无与伦比的便利。享受无限存储容量、极快的本地网络速度和轻松的多设备访问。使用 Zima 私有云上的 Immich，您的媒体始终触手可及，在家中安全无忧。
-    ja_JP: |
-      Immich：家庭メディア体験の革新
+      Sikkerhetskopier automatisk dine bilder og videoer fra telefonen. Organiser dem etter dato, sted eller ansikt. Bla gjennom alt fra en elegant nettapp, strøm i 4K til din smart-TV, og del album privat med familie og venner: ingen konto eller app nødvendig.
 
-      Immichは、家庭のテレビ、スマートフォン、その他のデバイスでメディアファイルを管理し、楽しむ方法を一変させます。従来のフォトアルバムや主流のクラウドサービスとは異なり、Immichは写真やビデオの整理、共有、アクセスを簡単に行える、シームレスでモダンなプラットフォームを提供します。モバイルデバイスから大切な瞬間を簡単にバックアップし、テレビで即座に視聴したり、家族と共有したりすることを想像してみてください—Immichがそれを実現します。
+      I motsetning til andre plattformer kjører Immich på din egen private server. Det betyr:
 
-      Immichは、モバイルデバイスからの自動バックアップ、メディアを簡単に閲覧できる洗練されたウェブベースのインターフェース、顔認識や物体検出などの高度な機能で際立っています。位置情報に基づいてメディアを整理したり、4Kビデオの再生を楽しんだり、RAW写真を管理したりできます。さらに、複数ユーザー対応により、友人や家族との思い出の共有が簡単です。最大の魅力は？Immichはこれらの強力な機能を低コストで提供し、予算を抑えながらプレミアムな体験を保証します。
+      * **Ubegrenset lagring** - Du kan oppgradere lagringen når som helst til markedspris på ditt Yundera-grensesnitt
+      * **Ingen datautvinning**
+      * **Lynrask tilgang på ditt lokale nettverk**
+      * **Støtte for flere brukere**, så alle i hjemmet ditt har sitt eget rom
 
-      ZimaのようなプライベートクラウドデバイスにImmichを導入することで、比類ない利便性が得られます。無制限のストレージ容量、超高速なローカルネットワーク速度、複数のデバイスからの簡単なアクセスが可能です。Zimaプライベートクラウド上のImmichを使えば、メディアは常に手の届くところにあり、家庭内で安全に保護されます。
-    ko_KR: |
-      Immich: 가정 미디어 경험의 혁신
+      Perfekt for fotografer, familier eller alle som vil ta tilbake kontrollen over sine minner. Immich fungerer vakkert på din Yundera Personal Cloud Server, så mediene dine forblir **dine : for alltid**.
+    zh_cn: |
+      Immich为您提供现代化的自托管照片和视频画廊，没有传统云服务的限制或跟踪。
 
-      Immich는 가정용 TV, 스마트폰, 기타 디바이스에서 미디어 파일을 관리하고 즐기는 방식을 완전히 바꿔줍니다. 전통적인 사진 앨범이나 주류 클라우드 서비스와 달리, Immich는 사진과 비디오를 정리하고, 공유하고, 접근할 수 있는 매끄럽고 현대적인 플랫폼을 제공합니다. 모바일 디바이스에서 소중한 순간을 손쉽게 백업하고, TV에서 즉시 감상하거나 가족과 공유하는 모습을 상상해보세요—Immich가 이를 가능하게 합니다.
+      从手机自动备份您的照片和视频。按日期、位置或人脸整理它们。从精美的网络应用浏览所有内容，在智能电视上以4K流媒体播放，与家人朋友私密分享相册：无需账户或应用程序。
 
-      Immich는 모바일 디바이스에서 자동 백업, 미디어 탐색을 위한 깔끔한 웹 기반 인터페이스, 얼굴 인식 및 객체 감지와 같은 고급 기능으로 돋보입니다. 위치별로 미디어를 정리하고, 4K 비디오 재생을 즐기며, RAW 사진도 관리할 수 있습니다. 또한, 다중 사용자 지원으로 친구와 가족과 추억을 공유하는 것이 매우 간편합니다. 가장 좋은 점은? Immich는 이러한 강력한 기능을 저렴한 비용으로 제공하여 예산을 초과하지 않으면서도 프리미엄 경험을 보장합니다.
+      与其他平台不同，Immich在您自己的私人服务器上运行。这意味着：
 
-      Zima와 같은 프라이빗 클라우드 디바이스에 Immich를 배포하면 비교할 수 없는 편리함을 누릴 수 있습니다. 무제한 저장 용량, 빠른 로컬 네트워크 속도, 그리고 간편한 다중 디바이스 접근이 가능합니다. Zima 프라이빗 클라우드의 Immich를 사용하면 미디어가 항상 손끝에 있으며, 집 안에서 안전하고 보호됩니다.
-    fr_FR: |
-      Immich : Révolutionnez votre expérience multimédia à domicile
+      * **无限存储** - 您可以随时在Yundera界面以市场价格升级存储
+      * **无数据挖掘**
+      * **本地网络的闪电般快速访问**
+      * **多用户支持**，让家中每个人都有自己的空间
 
-      Immich est là pour transformer la façon dont vous gérez et profitez de vos fichiers multimédias sur votre télévision, smartphones et autres appareils. Contrairement aux albums photo traditionnels ou aux services cloud grand public, immich offre une plateforme moderne et fluide pour organiser, partager et accéder à vos photos et vidéos. Imaginez sauvegarder sans effort vos précieux moments depuis vos appareils mobiles et les visualiser instantanément sur votre télévision ou les partager avec vos proches—immich rend tout cela possible.
+      非常适合摄影师、家庭或任何想要重新控制自己回忆的人。Immich在您的Yundera个人云服务器上完美运行，让您的媒体**永远属于您**。
+    ja_jp: |
+      Immichは、従来のクラウドサービスの制限や追跡なしに、モダンなセルフホスト型の写真・動画ギャラリーを提供します。
 
-      Immich se distingue par sa sauvegarde automatique depuis les appareils mobiles, une interface web élégante pour naviguer facilement dans vos contenus, et des fonctionnalités avancées comme la reconnaissance faciale et la détection d'objets. Vous pouvez organiser vos médias par localisation, profiter de la lecture de vidéos en 4K, et même gérer des photos RAW. De plus, avec le support multi-utilisateur, partager des souvenirs avec vos amis et votre famille est un jeu d'enfant. Le meilleur ? Immich propose ces puissantes fonctionnalités à faible coût, vous offrant une expérience premium sans vous ruiner.
+      スマートフォンから写真や動画を自動バックアップ。日付、場所、顔で整理できます。洗練されたWebアプリですべてを閲覧し、スマートTVで4Kストリーミングし、家族や友人とアルバムをプライベートに共有：アカウントやアプリは不要です。
 
-      Déployer immich sur un appareil cloud privé comme Zima offre une commodité inégalée. Profitez d'une capacité de stockage illimitée, de vitesses de réseau local ultra-rapides, et d'un accès multi-appareils simplifié. Avec immich sur votre cloud privé Zima, vos médias sont toujours à portée de main, en sécurité chez vous.
-    de_DE: |
-      Immich: Revolutionieren Sie Ihr Medien-Erlebnis zu Hause
+      他のプラットフォームとは異なり、Immichはあなた自身のプライベートサーバーで動作します。これは以下を意味します：
 
-      Immich ist da, um die Art und Weise, wie Sie Ihre Mediendateien auf Ihrem Heim-TV, Smartphones und anderen Geräten verwalten und genießen, zu verändern. Im Gegensatz zu traditionellen Fotoalben oder gängigen Cloud-Diensten bietet immich eine nahtlose und moderne Plattform zum Organisieren, Teilen und Abrufen Ihrer Fotos und Videos. Stellen Sie sich vor, Sie sichern mühelos Ihre wertvollen Momente von Ihren mobilen Geräten und können sie sofort auf Ihrem Fernseher ansehen oder mit Familienmitgliedern teilen – immich macht all das möglich.
+      * **無制限ストレージ** - Yunderaインターフェースでいつでも市場価格でストレージをアップグレード可能
+      * **データマイニングなし**
+      * **ローカルネットワークでの超高速アクセス**
+      * **マルチユーザーサポート**、家庭の全員が自分のスペースを持てます
 
-      Immich hebt sich durch automatische Backups von Mobilgeräten, eine elegante webbasierte Benutzeroberfläche für einfaches Medienbrowsing und fortschrittliche Funktionen wie Gesichtserkennung und Objekterkennung ab. Sie können Ihre Medien nach Standort organisieren, 4K-Videowiedergabe genießen und sogar RAW-Fotos verwalten. Mit der Unterstützung für mehrere Benutzer ist das Teilen von Erinnerungen mit Freunden und Familie kinderleicht. Das Beste daran? Immich bietet diese leistungsstarken Funktionen zu geringen Kosten, sodass Sie ein Premium-Erlebnis erhalten, ohne Ihr Budget zu sprengen.
+      写真家、家族、または自分の思い出のコントロールを取り戻したい誰にでも最適です。ImmichはYundera Personal Cloud Serverで美しく動作し、あなたのメディアは**永遠にあなたのもの**です。
+    ko_kr: |
+      Immich는 기존 클라우드 서비스의 제한이나 추적 없이 현대적인 자체 호스팅 사진 및 비디오 갤러리를 제공합니다。
 
-      Das Bereitstellen von immich auf einem privaten Cloud-Gerät wie Zima bietet unvergleichlichen Komfort. Genießen Sie unbegrenzte Speicherkapazität, blitzschnelle lokale Netzwerkgeschwindigkeiten und einfachen Zugriff von mehreren Geräten. Mit immich auf Ihrer privaten Zima-Cloud sind Ihre Medien immer griffbereit, sicher und geschützt in Ihrem Zuhause.
-    sv_SE: |
-      Immich: Revolutionerar din hemmamediaupplevelse
+      휴대폰에서 사진과 비디오를 자동으로 백업하세요。날짜、위치 또는 얼굴별로 정리하세요。세련된 웹 앱에서 모든 것을 탐색하고、스마트 TV에서 4K로 스트리밍하며、가족 및 친구들과 앨범을 비공개로 공유하세요 : 계정이나 앱이 필요하지 않습니다。
 
-      Immich är här för att förändra hur du hanterar och njuter av dina mediefiler på din hemmabio-TV, smarttelefoner och andra enheter. Till skillnad från traditionella fotoalbum eller vanliga molntjänster erbjuder immich en smidig och modern plattform för att organisera, dela och komma åt dina bilder och videor. Föreställ dig att enkelt säkerhetskopiera dina värdefulla ögonblick från mobila enheter och omedelbart visa dem på din TV eller dela dem med familjemedlemmar – immich gör allt detta möjligt.
+      다른 플랫폼과 달리 Immich는 자신만의 개인 서버에서 실행됩니다。이것의 의미는:
 
-      Immich sticker ut med sin automatiska säkerhetskopiering från mobila enheter, ett elegant webbaserat gränssnitt för enkel medienavigering och avancerade funktioner som ansiktsigenkänning och objektdetektering. Du kan organisera dina medier efter plats, njuta av 4K-videouppspelning och till och med hantera RAW-foton. Med stöd för flera användare är det enkelt att dela minnen med vänner och familj. Det bästa? Immich erbjuder dessa kraftfulla funktioner till en låg kostnad, vilket garanterar en premiumupplevelse utan att spräcka budgeten.
+      * **무제한 저장소** - Yundera 인터페이스에서 언제든지 시장 가격으로 저장소를 업그레이드할 수 있습니다
+      * **데이터 마이닝 없음**
+      * **로컬 네트워크에서의 초고속 접근**
+      * **멀티 사용자 지원**、집안의 모든 사람이 자신만의 공간을 가질 수 있습니다
 
-      Att distribuera immich på en privat molnenhet som Zima ger oöverträffad bekvämlighet. Njut av obegränsad lagringskapacitet, blixtsnabba lokala nätverkshastigheter och enkel åtkomst från flera enheter. Med immich på din privata Zima-moln är dina medier alltid inom räckhåll, säkra och skyddade i ditt hem.
-    el_GR: |
-      Immich: Επανάσταση στην εμπειρία οικιακών μέσων
+      사진작가、가족 또는 자신의 추억을 다시 통제하고 싶은 누구에게나 완벽합니다。Immich는 Yundera 개인 클라우드 서버에서 아름답게 작동하므로 미디어가 **영원히 당신의 것**으로 남습니다。
+    fr_fr: |
+      Immich vous offre une galerie moderne de photos et vidéos auto-hébergée, sans les limites ou le suivi des services cloud traditionnels.
 
-      Το Immich είναι εδώ για να μεταμορφώσει τον τρόπο που διαχειρίζεστε και απολαμβάνετε τα αρχεία πολυμέσων σας σε οικιακή τηλεόραση, smartphones και άλλες συσκευές. Σε αντίθεση με τα παραδοσιακά φωτογραφικά άλμπουμ ή τις mainstream υπηρεσίες cloud, το Immich προσφέρει μια απρόσκοπτη και σύγχρονη πλατφόρμα για την οργάνωση, κοινή χρήση και πρόσβαση στις φωτογραφίες και τα βίντεό σας. Φανταστείτε να δημιουργείτε αντίγραφα ασφαλείας των πολύτιμων στιγμών σας από τις κινητές συσκευές σας χωρίς κόπο και να τα βλέπετε αμέσως στην τηλεόρασή σας ή να τα μοιράζεστε με μέλη της οικογένειας—το Immich τα κάνει όλα δυνατά.
+      Sauvegardez automatiquement vos photos et vidéos depuis votre téléphone. Organisez-les par date, lieu ou visage. Parcourez tout depuis une application web élégante, diffusez en 4K sur votre smart TV, et partagez des albums en privé avec votre famille et vos amis : aucun compte ou application nécessaire.
 
-      Το Immich ξεχωρίζει με την αυτόματη δημιουργία αντιγράφων ασφαλείας από κινητές συσκευές, μια κομψή διαδικτυακή διεπαφή για εύκολη περιήγηση στα μέσα και προηγμένες λειτουργίες όπως αναγνώριση προσώπων και ανίχνευση αντικειμένων. Μπορείτε να οργανώσετε τα μέσα σας ανά τοποθεσία, να απολαύσετε αναπαραγωγή βίντεο 4K και ακόμα να διαχειριστείτε φωτογραφίες RAW. Επιπλέον, με την υποστήριξη πολλαπλών χρηστών, η κοινή χρήση αναμνήσεων με φίλους και οικογένεια είναι παιχνιδάκι. Το καλύτερο; Το Immich προσφέρει αυτές τις ισχυρές λειτουργίες σε χαμηλό κόστος, εξασφαλίζοντας μια premium εμπειρία χωρίς να ξοδέψετε πολλά.
+      Contrairement aux autres plateformes, Immich fonctionne sur votre propre serveur privé. Cela signifie :
 
-      Η ανάπτυξη του Immich σε μια ιδιωτική συσκευή cloud όπως το Zima προσφέρει απαράμιλλη ευκολία. Απολαύστε απεριόριστη χωρητικότητα αποθήκευσης, αστραπιαίες ταχύτητες τοπικού δικτύου και εύκολη πρόσβαση από πολλαπλές συσκευές. Με το Immich στο ιδιωτικό σας cloud Zima, τα μέσα σας είναι πάντα στα χέρια σας, ασφαλή και προστατευμένα στο σπίτι σας.
-    hr_HR: |
-      Immich: Revolucioniranje vašeg iskustva s medijima kod kuće
+      * **Stockage illimité** - Vous pouvez mettre à niveau le stockage à tout moment au prix du marché sur votre interface Yundera
+      * **Aucune exploitation de données**
+      * **Accès ultra-rapide sur votre réseau local**
+      * **Support multi-utilisateur**, pour que chacun dans votre foyer ait son propre espace
 
-      Immich je tu da promijeni način na koji upravljate i uživate u svojim medijskim datotekama na kućnom televizoru, pametnim telefonima i drugim uređajima. Za razliku od tradicionalnih fotoalbuma ili mainstream cloud usluga, immich nudi besprijekornu i modernu platformu za organizaciju, dijeljenje i pristup vašim fotografijama i videima. Zamislite jednostavno sigurnosno kopiranje dragocjenih trenutaka s vaših mobilnih uređaja i trenutno gledanje na televizoru ili dijeljenje s članovima obitelji—immich to sve omogućuje.
+      Parfait pour les photographes, les familles, ou quiconque veut reprendre le contrôle de ses souvenirs. Immich fonctionne parfaitement sur votre serveur cloud personnel Yundera, ainsi vos médias restent **les vôtres : pour toujours**.
+    de_de: |
+      Immich bietet Ihnen eine moderne, selbstgehostete Foto- und Videogalerie ohne die Einschränkungen oder das Tracking traditioneller Cloud-Dienste.
 
-      Immich se ističe automatskim sigurnosnim kopiranjem s mobilnih uređaja, elegantnim web-baziranim sučeljem za jednostavno pregledavanje medija i naprednim značajkama poput prepoznavanja lica i detekcije objekata. Možete organizirati svoje medije po lokaciji, uživati u reprodukciji 4K videa i čak upravljati RAW fotografijama. Uz podršku za više korisnika, dijeljenje uspomena s prijateljima i obitelji je jednostavno. Najbolji dio? Immich nudi ove snažne značajke po niskoj cijeni, osiguravajući vrhunsko iskustvo bez velikih troškova.
+      Sichern Sie automatisch Ihre Fotos und Videos von Ihrem Telefon. Organisieren Sie sie nach Datum, Ort oder Gesicht. Durchstöbern Sie alles über eine elegante Web-App, streamen Sie in 4K auf Ihren Smart-TV und teilen Sie Alben privat mit Familie und Freunden: kein Account oder App erforderlich.
 
-      Razmještanje immicha na privatnom cloud uređaju poput Zime donosi neusporedivu praktičnost. Uživajte u neograničenom kapacitetu pohrane, munjevitim brzinama lokalne mreže i jednostavnom pristupu s više uređaja. S immichom na vašem privatnom Zima cloudu, vaši mediji su uvijek nadohvat ruke, sigurni i zaštićeni u vašem domu.
-    pt_PT: |
-      Immich: Revolucionando a Sua Experiência Multimédia em Casa
+      Anders als andere Plattformen läuft Immich auf Ihrem eigenen privaten Server. Das bedeutet:
 
-      O Immich está aqui para transformar a forma como gere e desfruta dos seus ficheiros multimédia na televisão de casa, smartphones e outros dispositivos. Ao contrário dos álbuns de fotos tradicionais ou dos serviços de nuvem convencionais, o immich oferece uma plataforma moderna e fluida para organizar, partilhar e aceder às suas fotos e vídeos. Imagine fazer o backup dos seus momentos preciosos a partir dos seus dispositivos móveis sem esforço e visualizá-los instantaneamente na sua televisão ou partilhá-los com membros da família—o immich torna tudo isso possível.
+      * **Unbegrenzter Speicher** - Sie können den Speicher jederzeit zum Marktpreis über Ihr Yundera-Interface erweitern
+      * **Kein Data-Mining**
+      * **Blitzschneller Zugriff in Ihrem lokalen Netzwerk**
+      * **Multi-User-Unterstützung**, damit jeder in Ihrem Zuhause seinen eigenen Bereich hat
 
-      O Immich destaca-se pelo backup automático a partir de dispositivos móveis, uma interface web elegante para uma navegação fácil pelos conteúdos e funcionalidades avançadas como reconhecimento facial e deteção de objetos. Pode organizar os seus conteúdos por localização, desfrutar da reprodução de vídeos em 4K e até gerir fotos RAW. Além disso, com suporte multiutilizador, partilhar memórias com amigos e família é extremamente simples. A melhor parte? O Immich oferece estas funcionalidades poderosas a baixo custo, garantindo uma experiência premium sem gastar muito.
+      Perfekt für Fotografen, Familien oder jeden, der die Kontrolle über seine Erinnerungen zurückgewinnen möchte. Immich funktioniert wunderbar auf Ihrem Yundera Personal Cloud Server, damit Ihre Medien **für immer Ihnen gehören**.
+    sv_se: |
+      Immich ger dig ett modernt, självhostat foto- och videogalleri, utan begränsningarna eller spårningen från traditionella molntjänster.
 
-      Implementar o immich num dispositivo de nuvem privada como o Zima proporciona uma conveniência incomparável. Desfrute de capacidade de armazenamento ilimitada, velocidades de rede local extremamente rápidas e acesso fácil a partir de múltiplos dispositivos. Com o immich na sua nuvem privada Zima, os seus conteúdos estão sempre ao seu alcance, seguros e protegidos em sua casa.
-    ru_RU: |
-      Immich: Революция в управлении домашними медиа
+      Säkerhetskopiera automatiskt dina foton och videor från din telefon. Organisera dem efter datum, plats eller ansikte. Bläddra igenom allt från en elegant webbapp, streama i 4K till din smart-TV och dela album privat med familj och vänner: inget konto eller app behövs.
 
-      Immich меняет подход к управлению и наслаждению медиафайлами на вашем домашнем телевизоре, смартфонах и других устройствах. В отличие от традиционных фотоальбомов или популярных облачных сервисов, Immich предлагает бесшовную и современную платформу для организации, обмена и доступа к вашим фотографиям и видео. Представьте, как легко создавать резервные копии ваших драгоценных моментов с мобильных устройств и мгновенно просматривать их на телевизоре или делиться ими с членами семьи — Immich делает это возможным.
+      Till skillnad från andra plattformar körs Immich på din egen privata server. Det betyder:
 
-      Immich выделяется автоматическим резервным копированием с мобильных устройств, стильным веб-интерфейсом для удобного просмотра медиа и продвинутыми функциями, такими как распознавание лиц и обнаружение объектов. Вы можете организовывать медиа по местоположению, наслаждаться воспроизведением видео в 4K и даже управлять фотографиями в формате RAW. Благодаря поддержке нескольких пользователей делиться воспоминаниями с друзьями и семьей проще простого. И самое лучшее? Immich предлагает эти мощные функции по низкой цене, обеспечивая премиальный опыт без лишних затрат.
+      * **Obegränsad lagring** - Du kan uppgradera lagringen när som helst till marknadspris på ditt Yundera-gränssnitt
+      * **Ingen datautvinning**
+      * **Blixtsnabb åtkomst på ditt lokala nätverk**
+      * **Stöd för flera användare**, så alla i ditt hem har sitt eget utrymme
 
-      Развертывание Immich на частном облачном устройстве, таком как Zima, обеспечивает непревзойденное удобство. Наслаждайтесь неограниченной емкостью хранилища, молниеносной скоростью локальной сети и легким доступом с нескольких устройств. С Immich на вашем частном облаке Zima ваши медиа всегда под рукой, надежно и безопасно в вашем доме.
-    tr_TR: |
-      Immich: Ev Medya Deneyiminizi Devrimleştiriyor
+      Perfekt för fotografer, familjer eller alla som vill ta tillbaka kontrollen över sina minnen. Immich fungerar vackert på din Yundera Personal Cloud Server, så dina medier förblir **dina : för alltid**.
+    el_gr: |
+      Το Immich σας προσφέρει μια σύγχρονη, αυτο-φιλοξενούμενη συλλογή φωτογραφιών και βίντεο, χωρίς τους περιορισμούς ή την παρακολούθηση των παραδοσιακών υπηρεσιών cloud.
 
-      Immich, ev televizyonunuzda, akıllı telefonlarınızda ve diğer cihazlarınızda medya dosyalarınızı yönetme ve keyfini çıkarma şeklinizi dönüştürmek için burada. Geleneksel fotoğraf albümlerinden veya ana akım bulut hizmetlerinden farklı olarak, immich fotoğraflarınızı ve videolarınızı düzenlemek, paylaşmak ve erişmek için kusursuz ve modern bir platform sunar. Değerli anlarınızı mobil cihazlarınızdan kolayca yedeklemeyi ve anında televizyonunuzda görüntülemeyi ya da aile üyeleriyle paylaşmayı hayal edin—immich tüm bunları mümkün kılar.
+      Δημιουργήστε αυτόματα αντίγραφα ασφαλείας των φωτογραφιών και βίντεό σας από το τηλέφωνό σας. Οργανώστε τα κατά ημερομηνία, τοποθεσία ή πρόσωπο. Περιηγηθείτε σε όλα από μια κομψή web εφαρμογή, κάντε streaming σε 4K στη smart TV σας και μοιραστείτε άλμπουμ ιδιωτικά με την οικογένεια και τους φίλους σας : δεν χρειάζεται λογαριασμός ή εφαρμογή.
 
-      Immich, mobil cihazlardan otomatik yedekleme, medya tarama için şık bir web tabanlı arayüz ve yüz tanıma ile nesne algılama gibi gelişmiş özellikleriyle öne çıkar. Medyalarınızı konuma göre düzenleyebilir, 4K video oynatımının keyfini çıkarabilir ve hatta RAW fotoğrafları yönetebilirsiniz. Ayrıca, çok kullanıcılı destek sayesinde arkadaşlarınız ve ailenizle anıları paylaşmak çok kolay. En iyi yanı? Immich, bu güçlü özellikleri düşük maliyetle sunarak bütçenizi zorlamadan birinci sınıf bir deneyim sağlar.
+      Σε αντίθεση με άλλες πλατφόρμες, το Immich λειτουργεί στον δικό σας ιδιωτικό διακομιστή. Αυτό σημαίνει:
 
-      Immich'i Zima gibi özel bir bulut cihazına kurmak, eşsiz bir kolaylık sunar. Sınırsız depolama kapasitesinin, yıldırım hızında yerel ağ hızlarının ve birden fazla cihazdan kolay erişimin keyfini çıkarın. Zima özel bulutunuzdaki immich ile medyalarınız her zaman parmaklarınızın ucunda, evinizde güvenli ve emniyettedir.
+      * **Απεριόριστη αποθήκευση** - Μπορείτε να αναβαθμίσετε την αποθήκευση ανά πάσα στιγμή σε τιμή αγοράς στο περιβάλλον Yundera
+      * **Χωρίς εξόρυξη δεδομένων**
+      * **Αστραπιαία πρόσβαση στο τοπικό σας δίκτυο**
+      * **Υποστήριξη πολλαπλών χρηστών**, ώστε όλοι στο σπίτι σας να έχουν τον δικό τους χώρο
 
+      Ιδανικό για φωτογράφους, οικογένειες ή οποιονδήποτε θέλει να ανακτήσει τον έλεγχο των αναμνήσεών του. Το Immich λειτουργεί υπέροχα στον Yundera Personal Cloud Server σας, έτσι τα μέσα σας παραμένουν **δικά σας : για πάντα**.
+    hr_hr: |
+      Immich vam pruža modernu, samo-hostovanu galeriju fotografija i videozapisa, bez ograničenja ili praćenja tradicionalnih cloud servisa.
+
+      Automatski napravite sigurnosne kopije svojih fotografija i videozapisa s telefona. Organizirajte ih po datumu, lokaciji ili licu. Pregledajte sve putem elegantne web aplikacije, streamajte u 4K na vaš pametni TV i privatno dijelite albume s obitelji i prijateljima : nije potreban račun ili aplikacija.
+
+      Za razliku od drugih platformi, Immich radi na vašem vlastitom privatnom serveru. To znači:
+
+      * **Neograničeno spremište** - Možete nadograditi spremište u bilo koje vrijeme po tržišnoj cijeni na vašem Yundera sučelju
+      * **Nema rudarenja podataka**
+      * **Munja-brz pristup na vašoj lokalnoj mreži**
+      * **Podrška za više korisnika**, tako da svatko u vašem domu ima svoj vlastiti prostor
+
+      Savršeno za fotografe, obitelji ili bilo koga tko želi povratiti kontrolu nad svojim uspomenama. Immich radi prekrasno na vašem Yundera Personal Cloud Serveru, tako da vaši mediji ostaju **vaši : zauvijek**.
+    pt_pt: |
+      O Immich oferece-lhe uma galeria moderna de fotos e vídeos auto-hospedada, sem as limitações ou rastreamento dos serviços cloud tradicionais.
+
+      Faça automaticamente backup das suas fotos e vídeos do telefone. Organize-os por data, localização ou rosto. Navegue por tudo numa elegante aplicação web, transmita em 4K para a sua smart TV e partilhe álbuns privadamente com família e amigos : não é necessária conta ou aplicação.
+
+      Ao contrário de outras plataformas, o Immich executa no seu próprio servidor privado. Isso significa:
+
+      * **Armazenamento ilimitado** - Pode atualizar o armazenamento a qualquer momento ao preço de mercado na sua interface Yundera
+      * **Sem mineração de dados**
+      * **Acesso ultra-rápido na sua rede local**
+      * **Suporte multi-utilizador**, para que todos em sua casa tenham o seu próprio espaço
+
+      Perfeito para fotógrafos, famílias ou qualquer pessoa que queira recuperar o controlo das suas memórias. O Immich funciona magnificamente no seu Servidor Cloud Pessoal Yundera, para que os seus conteúdos permaneçam **seus : para sempre**.
+    ru_ru: |
+      Immich предоставляет вам современную самостоятельно размещенную галерею фотографий и видео, без ограничений и отслеживания традиционных облачных сервисов.
+
+      Автоматически создавайте резервные копии фотографий и видео с телефона. Организуйте их по дате, местоположению или лицу. Просматривайте всё через элегантное веб-приложение, транслируйте в 4K на ваш умный телевизор и делитесь альбомами приватно с семьёй и друзьями : не нужен аккаунт или приложение.
+
+      В отличие от других платформ, Immich работает на вашем собственном частном сервере. Это означает:
+
+      * **Неограниченное хранилище** - Вы можете обновить хранилище в любое время по рыночной цене в вашем интерфейсе Yundera
+      * **Никакого сбора данных**
+      * **Молниеносный доступ в вашей локальной сети**
+      * **Поддержка нескольких пользователей**, чтобы у каждого в вашем доме было своё пространство
+
+      Идеально для фотографов, семей или любого, кто хочет вернуть контроль над своими воспоминаниями. Immich прекрасно работает на вашем Yundera Personal Cloud Server, поэтому ваши медиа остаются **вашими : навсегда**.
+    tr_tr: |
+      Immich size geleneksel bulut hizmetlerinin sınırlamaları veya takibi olmadan modern, kendi kendine barındırılan bir fotoğraf ve video galerisi sunar.
+
+      Telefonunuzdan fotoğraflarınızı ve videolarınızı otomatik olarak yedekleyin. Onları tarih, konum veya yüze göre düzenleyin. Her şeyi şık bir web uygulamasından göz atın, akıllı TV'nizde 4K olarak yayınlayın ve aile ve arkadaşlarınızla albümleri özel olarak paylaşın : hesap veya uygulama gerekmez.
+
+      Diğer platformların aksine, Immich kendi özel sunucunuzda çalışır. Bu şu anlama gelir:
+
+      * **Sınırsız depolama** - Yundera arayüzünüzde istediğiniz zaman piyasa fiyatından depolamayı yükseltebilirsiniz
+      * **Veri madenciliği yok**
+      * **Yerel ağınızda şimşek hızında erişim**
+      * **Çoklu kullanıcı desteği**, böylece evinizdeki herkes kendi alanına sahip olabilir
+
+      Fotoğrafçılar, aileler veya anılarının kontrolünü geri almak isteyen herkes için mükemmel. Immich, Yundera Kişisel Bulut Sunucunuzda harika çalışır, böylece medyanız **sizin : sonsuza kadar** kalır.
   tagline:
-    en_US: Self-hosted media management solution
-    en_GB: Self-hosted media management solution
-    it_IT: Soluzione di gestione multimediale self-hosted
-    nb_NO: Selvdrevet løsning for mediefilbehandling
-    zh_CN: 自托管媒体管理解决方案
-    ja_JP: セルフホスト型メディア管理ソリューション
-    ko_KR: 자체 호스팅 미디어 관리 솔루션
-    fr_FR: Solution de gestion multimédia auto-hébergée
-    de_DE: Selbstgehostete Medienverwaltungslösung
-    sv_SE: Självhostad lösning för mediahantering
-    el_GR: Αυτο-φιλοξενούμενη λύση διαχείρισης μέσων
-    hr_HR: Samostalna rješenja za upravljanje medijima
-    pt_PT: Solução de gestão de multimédia auto-hospedada
-    ru_RU: Самоуправляемое решение для управления медиа
-    tr_TR: Kendi kendine barındırılan medya yönetimi çözümü
+    en_us: Your Private Photo Library, Fully Under Your Control
+    en_gb: Your Private Photo Library, Fully Under Your Control
+    it_it: La tua libreria fotografica privata, completamente sotto il tuo controllo
+    nb_no: Ditt private fotobibliotek, fullt under din kontroll
+    zh_cn: 您的私人照片库，完全在您的掌控之下
+    ja_jp: あなたのプライベート写真ライブラリ、完全にあなたのコントロール下で
+    ko_kr: 완전히 통제하는 개인 사진 라이브러리
+    fr_fr: Votre bibliothèque photo privée, entièrement sous votre contrôle
+    de_de: Ihre private Fotobibliothek, vollständig unter Ihrer Kontrolle
+    sv_se: Ditt privata fotobibliotek, helt under din kontroll
+    el_gr: Η ιδιωτική σας φωτογραφική βιβλιοθήκη, πλήρως υπό τον έλεγχό σας
+    hr_hr: Vaša privatna fotografska knjižnica, potpuno pod vašom kontrolom
+    pt_pt: A sua biblioteca de fotos privada, totalmente sob o seu controlo
+    ru_ru: Ваша личная фотобиблиотека, полностью под вашим контролем
+    tr_tr: Tamamen kontrolünüz altında olan özel fotoğraf kütüphaneniz
+    es_es: Tu biblioteca de fotos privada, completamente bajo tu control
   title:
     en_us: Immich
   tips:
     before_install:
       en_us: |
         **Setup Information:**
-        
-        📱 **Mobile App**: After installation, you can download the Immich mobile app by scanning the QR code from the web interface settings page.
-        
-        ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel to ensure all services are ready.
-        
+
+        📱 **Mobile App**: After installation, download the Immich mobile app by scanning the QR code from the web interface settings page.
+
+        ⏰ **Startup Time**: Immich takes approximately 5 minutes to fully start up. Please wait before accessing the web panel.
+
         🔐 **First Setup**: Create your admin account on first visit to the web interface.
-  index: /
-  webui_port: 80
+
+        🔍 **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.
+
+        📁 **Direct Upload from PCS**: To upload files directly from your host (useful for initial import of existing photo libraries or large file imports):
+        1. Generate an API key in Immich (Account Settings > API Keys) - Immich is multi-user so you can create a api keys for different users if needed
+        2. Login: `docker exec immich immich login-key http://localhost YOUR_API_KEY`
+        3. Place files in `/DATA/Gallery/` and run: `docker exec immich immich upload --recursive /import`
+      it_it: |
+        **Informazioni di configurazione:**
+        
+        📱 **App mobile**: Dopo l'installazione, scarica l'app mobile Immich scansionando il codice QR dalla pagina delle impostazioni dell'interfaccia web.
+        
+        ⏰ **Tempo di avvio**: Immich impiega circa 5 minuti per avviarsi completamente. Attendere prima di accedere al pannello web.
+        
+        🔐 **Prima configurazione**: Crea il tuo account amministratore alla prima visita dell'interfaccia web.
+      nb_no: |
+        **Oppsettsinformasjon:**
+        
+        📱 **Mobilapp**: Etter installasjon, last ned Immich-mobilappen ved å skanne QR-koden fra innstillingssiden på nettgrensesnittet.
+        
+        ⏰ **Oppstartstid**: Immich tar omtrent 5 minutter å starte opp fullstendig. Vennligst vent før du åpner nettgrensesnittet.
+        
+        🔐 **Første oppsett**: Opprett din administratorkonto ved første besøk til nettgrensesnittet.
+      zh_cn: |
+        **设置信息：**
+        
+        📱 **移动应用**：安装后，通过扫描网页界面设置页面的二维码下载 Immich 移动应用。
+        
+        ⏰ **启动时间**：Immich 需要大约 5 分钟才能完全启动。请在访问网页面板前等待。
+        
+        🔐 **首次设置**：首次访问网页界面时创建您的管理员账户。
+      ja_jp: |
+        **セットアップ情報:**
+        
+        📱 **モバイルアプリ**: インストール後、Webインターフェースの設定ページからQRコードをスキャンしてImmichモバイルアプリをダウンロードしてください。
+        
+        ⏰ **起動時間**: Immichは完全に起動するまで約5分かかります。Webパネルにアクセスする前にお待ちください。
+        
+        🔐 **初回設定**: Webインターフェースに初回アクセス時に管理者アカウントを作成してください。
+      ko_kr: |
+        **설정 정보:**
+        
+        📱 **모바일 앱**: 설치 후, 웹 인터페이스 설정 페이지의 QR 코드를 스캔하여 Immich 모바일 앱을 다운로드하세요.
+        
+        ⏰ **시작 시간**: Immich가 완전히 시작되는 데 약 5분이 걸립니다. 웹 패널에 접근하기 전에 기다려 주세요.
+        
+        🔐 **첫 설정**: 웹 인터페이스에 처음 방문할 때 관리자 계정을 생성하세요.
+      fr_fr: |
+        **Informations de configuration :**
+        
+        📱 **Application mobile** : Après l'installation, téléchargez l'application mobile Immich en scannant le code QR depuis la page des paramètres de l'interface web.
+        
+        ⏰ **Temps de démarrage** : Immich prend environ 5 minutes pour démarrer complètement. Veuillez patienter avant d'accéder au panneau web.
+        
+        🔐 **Première configuration** : Créez votre compte administrateur lors de votre première visite de l'interface web.
+      de_de: |
+        **Setup-Informationen:**
+        
+        📱 **Mobile App**: Nach der Installation laden Sie die Immich Mobile App herunter, indem Sie den QR-Code von der Einstellungsseite der Web-Oberfläche scannen.
+        
+        ⏰ **Startzeit**: Immich benötigt etwa 5 Minuten, um vollständig zu starten. Bitte warten Sie, bevor Sie auf das Web-Panel zugreifen.
+        
+        🔐 **Erste Einrichtung**: Erstellen Sie Ihr Administratorkonto beim ersten Besuch der Web-Oberfläche.
+      sv_se: |
+        **Installationsinformation:**
+        
+        📱 **Mobilapp**: Efter installation, ladda ner Immich-mobilappen genom att skanna QR-koden från inställningssidan i webbgränssnittet.
+        
+        ⏰ **Starttid**: Immich tar cirka 5 minuter att starta helt. Vänligen vänta innan du öppnar webbpanelen.
+        
+        🔐 **Första inställning**: Skapa ditt administratörskonto vid första besöket till webbgränssnittet.
+      el_gr: |
+        **Πληροφορίες ρύθμισης:**
+        
+        📱 **Εφαρμογή κινητού**: Μετά την εγκατάσταση, κατεβάστε την εφαρμογή κινητού Immich σκανάροντας τον κωδικό QR από τη σελίδα ρυθμίσεων της διαδικτυακής διεπαφής.
+        
+        ⏰ **Χρόνος εκκίνησης**: Το Immich χρειάζεται περίπου 5 λεπτά για να ξεκινήσει πλήρως. Παρακαλώ περιμένετε πριν προσπελάσετε το web panel.
+        
+        🔐 **Πρώτη ρύθμιση**: Δημιουργήστε τον λογαριασμό διαχειριστή κατά την πρώτη επίσκεψή σας στη διαδικτυακή διεπαφή.
+      hr_hr: |
+        **Informacije o postavci:**
+        
+        📱 **Mobilna aplikacija**: Nakon instalacije, preuzmite Immich mobilnu aplikaciju skeniranjem QR koda s stranice postavki web sučelja.
+        
+        ⏰ **Vrijeme pokretanja**: Immich treba približno 5 minuta da se potpuno pokrene. Molimo pričekajte prije pristupanja web panelu.
+        
+        🔐 **Prva postavka**: Stvorite svoj administratorski račun pri prvom posjetu web sučelju.
+      pt_pt: |
+        **Informações de configuração:**
+        
+        📱 **Aplicação móvel**: Após a instalação, descarregue a aplicação móvel Immich digitalizando o código QR da página de definições da interface web.
+        
+        ⏰ **Tempo de arranque**: O Immich demora aproximadamente 5 minutos para iniciar completamente. Por favor aguarde antes de aceder ao painel web.
+        
+        🔐 **Primeira configuração**: Crie a sua conta de administrador na primeira visita à interface web.
+      ru_ru: |
+        **Информация о настройке:**
+        
+        📱 **Мобильное приложение**: После установки загрузите мобильное приложение Immich, отсканировав QR-код со страницы настроек веб-интерфейса.
+        
+        ⏰ **Время запуска**: Immich требуется примерно 5 минут для полного запуска. Пожалуйста, подождите перед доступом к веб-панели.
+        
+        🔐 **Первая настройка**: Создайте учётную запись администратора при первом посещении веб-интерфейса.
+      tr_tr: |
+        **Kurulum Bilgileri:**
+        
+        📱 **Mobil Uygulama**: Kurulumdan sonra, web arayüzü ayarlar sayfasındaki QR kodunu tarayarak Immich mobil uygulamasını indirin.
+        
+        ⏰ **Başlatma Süresi**: Immich'in tamamen başlaması yaklaşık 5 dakika sürer. Web paneline erişmeden önce lütfen bekleyin.
+        
+        🔐 **İlk Kurulum**: Web arayüzünü ilk ziyaret ettiğinizde yönetici hesabınızı oluşturun.
