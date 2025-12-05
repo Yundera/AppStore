@@ -80,15 +80,15 @@ x-casaos:
       
       클라우드 서비스에 의존하지 않고 동료, 고객 또는 친구와 대용량 파일을 공유하는 데 완벽합니다.
   developer: psi-4ward
-  icon: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/PsiTransfer/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/PsiTransfer/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/PsiTransfer/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/PsiTransfer/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/screenshot-3.png
   tagline:
     en_us: Simple, lightweight file sharing - WeTransfer alternative
     ko_kr: 간단하고 가벼운 파일 공유 - WeTransfer 대안
-  thumbnail: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/PsiTransfer/thumbnail.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/thumbnail.png
   title:
     en_us: PsiTransfer
   index: /
