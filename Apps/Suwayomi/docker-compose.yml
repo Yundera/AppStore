@@ -17,10 +17,10 @@ services:
       BIND_PORT: 80
 
       # Authentication settings - Simple Login method
-      AUTH_MODE: simple_login
-      AUTH_USERNAME: admin
-      AUTH_PASSWORD: $default_pwd
-
+      AUTH_MODE: simple_login                        # Authentication mode
+      AUTH_USERNAME: admin                           # Admin username
+      AUTH_PASSWORD: $PCS_DEFAULT_PASSWORD           # Admin password
+      
       # Download settings
       DOWNLOAD_AS_CBZ: true
       AUTO_DOWNLOAD_CHAPTERS: false
@@ -41,16 +41,28 @@ services:
       - /DATA/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
       - /DATA/AppData/suwayomi/data/:/home/suwayomi/.local/share/Tachidesk
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    cpu_shares: 70
     depends_on:
       - flaresolverr
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.4.0
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
     container_name: suwayomi-flaresolverr
     user: 0:0
     environment:
       TZ: $TZ
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    cpu_shares: 30
 
 x-casaos:
   main: suwayomi
@@ -101,12 +113,12 @@ x-casaos:
     zh_cn: |
       **像Netflix一样阅读漫画**
       
-      Suwayomi让您在一个地方阅读来自世界各地的数千部漫画。不再需要访问数十个不同的网站或忘记读到哪里，所有内容都在一个美观的应用中整理。
+      Suwayomi让您在一个地方阅读来自世界各地的数千部漫画。不再需要访问数十个不同的网站或忘记读到哪里,所有内容都在一个美观的应用中整理。
       
       **您可以做的事:**
       • 在手机、平板或电脑上阅读漫画
       • 自动跟踪您的阅读进度
-      • 下载章节离线阅读（通勤时很棒！）
+      • 下载章节离线阅读(通勤时很棒!)
       • 与您已使用的热门漫画应用配合使用
       
       **可以这样想:** 一个自动整理所有喜爱漫画并准确记住您停止阅读位置的个人图书馆。
@@ -153,9 +165,9 @@ x-casaos:
     before_install:
       en_us: |
         **Getting Started**
-        | Username | Password       |
-        | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | Username | Password                |
+        | -------- | ----------------------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
         
         **How to use:**
         1. Open the website in your browser
@@ -170,9 +182,9 @@ x-casaos:
         **Tip:** Download chapters when on WiFi, then read offline during commutes!
       ko_kr: |
         **시작하기**
-        | 사용자명 | 비밀번호       |
-        | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | 사용자명 | 비밀번호                |
+        | -------- | ----------------------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
         
         **사용 방법:**
         1. 브라우저에서 웹사이트 열기
@@ -187,26 +199,26 @@ x-casaos:
         **팁:** WiFi에서 챕터를 다운로드한 후 통근 중에 오프라인으로 읽어보세요!
       zh_cn: |
         **开始使用**
-        | 用户名   | 密码           |
-        | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | 用户名   | 密码                    |
+        | -------- | ----------------------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
         
         **使用方法:**
         1. 在浏览器中打开网站
         2. 使用上述用户名和密码登录
         3. 点击"浏览"查找漫画源
         4. 搜索您喜爱的漫画标题
-        5. 开始阅读！您的进度会自动保存
+        5. 开始阅读!您的进度会自动保存
         
         **您可以找到的热门漫画:**
-        海贼王、火影忍者、进击的巨人、鬼灭之刃，以及来自世界各地网站的数千部作品。
+        海贼王、火影忍者、进击的巨人、鬼灭之刃,以及来自世界各地网站的数千部作品。
         
-        **提示:** 在WiFi下下载章节，然后在通勤时离线阅读！
+        **提示:** 在WiFi下下载章节,然后在通勤时离线阅读!
       fr_fr: |
         **Commencer**
-        | Nom d'utilisateur | Mot de passe   |
-        | ----------------- | -------------- |
-        | `admin`           | `$default_pwd` |
+        | Nom d'utilisateur | Mot de passe            |
+        | ----------------- | ----------------------- |
+        | `admin`           | `$PCS_DEFAULT_PASSWORD` |
         
         **Comment utiliser:**
         1. Ouvrez le site web dans votre navigateur
@@ -221,9 +233,9 @@ x-casaos:
         **Astuce:** Téléchargez les chapitres en WiFi, puis lisez hors ligne pendant les trajets !
       es_es: |
         **Comenzar**
-        | Usuario  | Contraseña     |
-        | -------- | -------------- |
-        | `admin`  | `$default_pwd` |
+        | Usuario  | Contraseña              |
+        | -------- | ----------------------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
         
         **Cómo usar:**
         1. Abre el sitio web en tu navegador
