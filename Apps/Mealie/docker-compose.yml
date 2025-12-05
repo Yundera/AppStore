@@ -1,59 +1,49 @@
 name: mealie
 
+
 services:
   mealie:
-    image: ghcr.io/mealie-recipes/mealie:v3.0.2
+    image: ghcr.io/mealie-recipes/mealie:v3.5.0
     container_name: mealie
+    restart: unless-stopped
     user: $PUID:$PGID
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.0'
     expose:
-      - 9000                    # Default port for Mealie v3
+      - 80                    # Default port for Mealie v3
     environment:
       PUID: $PUID              # Process user ID
       PGID: $PGID              # Process group ID
       TZ: $TZ                  # Timezone setting
-      
-      # Security settings
-      ALLOW_SIGNUP: "false"    # Disable user registration after initial setup
-      
-      # NSL Router settings
-      BASE_URL: https://$domain  # Set base URL for proper routing
-      
-      # Performance settings
-      MAX_WORKERS: 1           # Single worker for resource efficiency
-      WEB_CONCURRENCY: 1       # Single concurrent process
-      
-      # Database settings
-      DB_ENGINE: sqlite        # Use SQLite for simplicity
-      
-      # Default admin user (will be created on first run)
-      DEFAULT_EMAIL: changeme@example.com
-      DEFAULT_PASSWORD: MyPassword
+      LOG_LEVEL: warning
+      API_PORT: 80
+      BASE_URL: https://mealie-$domain  # Set base URL for proper routing
+
     volumes:
-      - /DATA/AppData/$AppID/data:/app/data
-    restart: unless-stopped
+      - /DATA/AppData/mealie/data/:/app/data
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/api/app/about"]
+      test: ["CMD", "timeout", "5", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/80"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
 x-casaos:
+  main: mealie
+  webui_port: 80
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/mealie/data &&
+    chown -R $PUID:$PGID /DATA/AppData/mealie
+
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
+
   architectures:
     - amd64
     - arm64
-  main: mealie
-  pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/$AppID:/fix-permissions ubuntu:22.04 sh -c "
-    mkdir -p /fix-permissions/data &&
-    chown -R 1000:1000 /fix-permissions &&
-    chmod -R 755 /fix-permissions/data
-    "
   author: Yundera Team
   category: Utilities
   description:
@@ -127,13 +117,7 @@ x-casaos:
       **Piénsalo como:** Una caja de recetas inteligente que automáticamente recorta recetas de revistas y sitios web, luego te ayuda a planificar comidas y hacer listas de compras.
       
       **Perfecto si:** Cocinas en casa, quieres probar nuevas recetas, o estás cansado de perder excelentes recetas cuando los sitios cambian o desaparecen.
-  developer: Mealie Recipes Team    
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/icon.png
-  screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
+  developer: Mealie Recipes Team
   tagline:
     en_us: Your family recipes, organized and accessible forever
     fr_fr: Vos recettes familiales, organisées et accessibles pour toujours
@@ -244,5 +228,3 @@ x-casaos:
         AllRecipes, Food Network, BBC Good Food, y miles de blogs de cocina y sitios web.
         
         **Consejo:** ¡Intenta copiar URLs de recetas de las descripciones de tus videos de cocina favoritos de YouTube!
-  webui_port: 9000
-  index: /
