@@ -2,7 +2,7 @@ name: wordpress
 
 services:
   wordpress:
-    image: wordpress:6.7-apache
+    image: wordpress:6.9.0-apache
     container_name: wordpress_app
     restart: unless-stopped
     user: 0:0
@@ -11,39 +11,67 @@ services:
     volumes:
       - /DATA/AppData/$AppID/html:/var/www/html  # WordPress files and uploads 
     environment:
-      PUID: $PUID                        # Process User ID
-      PGID: $PGID                        # Process Group ID
-      WORDPRESS_DB_HOST: db:3306         # Database host and port
-      WORDPRESS_DB_USER: wordpress       # Database username
-      WORDPRESS_DB_PASSWORD: $default_pwd # Database password (auto-generated) 
-      WORDPRESS_DB_NAME: wordpress       # Database name
-      WORDPRESS_SITE_URL: https://$domain # Site URL for WordPress 
-      WORDPRESS_HOME: https://$domain    # Home URL for WordPress
+      PUID: $PUID
+      PGID: $PGID
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: $default_pwd
+      WORDPRESS_DB_NAME: wordpress
+      APACHE_HTTP_PORT_NUMBER: 80
+      APACHE_HTTPS_PORT_NUMBER: 443
+      WORDPRESS_CONFIG_EXTRA: |
+        /* Force HTTPS Detection for NSL Router */
+        if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $$_SERVER['HTTPS'] = 'on';
+        }
+        
+        /* Always set HTTPS for NSL Router environment */
+        $$_SERVER['HTTPS'] = 'on';
+        
+        /* Dynamic Site URLs with HTTPS */
+        define('WP_HOME', 'https://' . getenv('DOMAIN'));
+        define('WP_SITEURL', 'https://' . getenv('DOMAIN'));
+        
+        /* Force SSL for Admin Panel */
+        define('FORCE_SSL_ADMIN', true);
+        
+        /* File System Method for Updates */
+        define('FS_METHOD', 'direct');
+        
+        /* Memory Limit */
+        define('WP_MEMORY_LIMIT', '256M');
+        
+        /* Allow file editing from dashboard */
+        define('DISALLOW_FILE_EDIT', false);
+      DOMAIN: wordpress-$domain
     depends_on:
       - db
     deploy:
       resources:
         limits:
-          memory: 1G                    # Memory limit for WordPress 
+          memory: 1G                    # Memory limit for WordPress
+    cpu_shares: 70
 
   db:
-    image: mariadb:10.11
+    image: mariadb:11.8
     container_name: wordpress_db
     restart: unless-stopped
     user: 0:0
     volumes:
       - /DATA/AppData/$AppID/db:/var/lib/mysql   # Database files storage
     environment:
-      MYSQL_ROOT_PASSWORD: $default_pwd  # MySQL root password (auto-generated)
+      MYSQL_ROOT_PASSWORD: $PCS_DEFAULT_PASSWORD  # MySQL root password (auto-generated)
       MYSQL_DATABASE: wordpress          # Database to create on startup
       MYSQL_USER: wordpress              # MySQL user to create
-      MYSQL_PASSWORD: $default_pwd       # Password for MySQL user
+      MYSQL_PASSWORD: $PCS_DEFAULT_PASSWORD       # Password for MySQL user
       MARIADB_AUTO_UPGRADE: 1            # Enable automatic database upgrades
       MARIADB_DISABLE_UPGRADE_BACKUP: 1  # Disable backup during upgrades
     deploy:
       resources:
         limits:
           memory: 1G                    # Memory limit for database
+    cpu_shares: 50
+
 x-casaos:
   architectures:
     - amd64
@@ -51,12 +79,12 @@ x-casaos:
   author: CasaOS Team
   category: Web
   developer: WordPress Foundation
-  icon: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/BookJJun-IJ/AppStore@create/Apps/Wordpress/thumbnail.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/thumbnail.png
   index: /
   tagline:
     en_us: Create beautiful websites with ease
@@ -70,10 +98,14 @@ x-casaos:
   main: wordpress
   webui_port: 80
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/html /DATA/AppData/$AppID/db &&
-    chown -R $PUID:$PGID /DATA/AppData/$AppID/html &&
-    chmod -R 755 /DATA/AppData/$AppID/html &&
-    chmod -R 777 /DATA/AppData/$AppID/db
+    docker run --rm -v /DATA/AppData/$AppID:/fix-permissions --user $PUID:$PGID ubuntu:22.04 sh -c "
+    mkdir -p /fix-permissions/html /fix-permissions/db &&
+    chown -R $PUID:$PGID /fix-permissions
+    " &&
+    docker run --rm -v /DATA/AppData/$AppID:/fix-permissions ubuntu:22.04 sh -c "
+    chmod -R 755 /fix-permissions/html &&
+    chmod -R 777 /fix-permissions/db
+    "
   description:
     en_us: |
       **The world's #1 website builder - from blogs to online stores**
