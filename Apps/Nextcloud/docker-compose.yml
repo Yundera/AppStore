@@ -2,18 +2,21 @@ name: nextcloud
 
 services:
   nextcloud:
-    image: nextcloud:31.0.7
+    image: nextcloud:31.0.9
     container_name: nextcloud
+    restart: unless-stopped
     user: $PUID:$PGID
+    cpu_shares: 70
     depends_on:
       - db
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-          cpus: '1.0'
+      - redis
     expose:
       - 80
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -22,29 +25,28 @@ services:
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
       - MYSQL_PASSWORD=$default_pwd
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost,$domain
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $domain nextcloud-$domain
       - OVERWRITEPROTOCOL=https
-      - OVERWRITEHOST=$domain
-      - TRUSTED_PROXIES=172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+      - OVERWRITEHOST=nextcloud-$domain
+      - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
+      # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
+      - NC_maintenance_window_start=4
     volumes:
-      - /DATA/AppData/$AppID/html:/var/www/html
-      - /DATA/AppData/$AppID/apps:/var/www/html/custom_apps
-      - /DATA/AppData/$AppID/config:/var/www/html/config
-      - /DATA/AppData/$AppID/data:/var/www/html/data
-    restart: unless-stopped
+      # nextcloud root directory, Contains the core application files
+      - /DATA/AppData/nextcloud/root/:/var/www/html:z
     networks:
       - nextcloud-network
-    cpu_shares: 70
 
   db:
     image: mariadb:11.2
     container_name: nextcloud_db
     user: $PUID:$PGID
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
+    cpu_shares: 70
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
     environment:
       - TZ=$TZ
       - MYSQL_ROOT_PASSWORD=$default_pwd
@@ -53,11 +55,60 @@ services:
       - MYSQL_PASSWORD=$default_pwd
       - MARIADB_AUTO_UPGRADE=1
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/mysql
+      - /DATA/AppData/nextcloud/db/:/var/lib/mysql
     restart: unless-stopped
     networks:
       - nextcloud-network
-    cpu_shares: 70
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: nextcloud_redis
+    cpu_shares: 10
+    command: redis-server --requirepass $default_pwd
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    environment:
+      - TZ=$TZ
+    volumes:
+      - /DATA/AppData/nextcloud/redis/:/data
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+
+  cron:
+    image: mcuadros/ofelia:0.3.19
+    container_name: nextcloud_cron
+    restart: unless-stopped
+    user: 0:0 # Requires root to access docker socket
+    depends_on:
+      - nextcloud
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+    labels:
+      # Regular cron job every 5 minutes
+      ofelia.job-exec.nextcloud-cron.schedule: "@every 5m"
+      ofelia.job-exec.nextcloud-cron.container: "nextcloud"
+      ofelia.job-exec.nextcloud-cron.user: "$PUID"
+      ofelia.job-exec.nextcloud-cron.command: "php -f /var/www/html/cron.php"
+      ofelia.job-exec.nextcloud-cron.no-overlap: "true"
+
+      # Expensive maintenance job daily at 4am
+      ofelia.job-exec.nextcloud-maintenance.schedule: "0 4 * * *"
+      ofelia.job-exec.nextcloud-maintenance.container: "nextcloud"
+      ofelia.job-exec.nextcloud-maintenance.user: "$PUID"
+      ofelia.job-exec.nextcloud-maintenance.command: "php occ maintenance:repair --include-expensive"
+      ofelia.job-exec.nextcloud-maintenance.no-overlap: "true"
+    networks:
+      - nextcloud-network
 
 networks:
   nextcloud-network:
@@ -66,6 +117,15 @@ networks:
 x-casaos:
   main: nextcloud
   webui_port: 80
+  index: /
+
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/thumbnail.png
+
   category: Utilities
   architectures: [amd64, arm64]
   author: Yundera Team
@@ -332,11 +392,6 @@ x-casaos:
       • Invita a tu equipo o familia y gestiona todo desde un solo lugar
   title:
     en_us: Nextcloud
-    ko_kr: Nextcloud
-    zh_cn: Nextcloud
-    fr_fr: Nextcloud
-    de_de: Nextcloud
-    es_es: Nextcloud
   tagline:
     en_us: Build your Teams alternative with guided app installation
     ko_kr: 가이드된 앱 설치로 Teams 대안 구축
@@ -344,174 +399,67 @@ x-casaos:
     fr_fr: Construisez votre alternative Teams avec l'installation guidée d'applications
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/icon.png
-  screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/thumbnail.png
+
+  # IMPORTANT: Keep these commands idempotent - safe to run multiple times
+  # Security & setup warnings fixes : "Some headers are not set correctly on your instance - The `Strict-Transport-Security` HTTP header is not set (should be at least `15552000` seconds). For enhanced security, it is recommended to enable HSTS"
+  post-install-cmd: |
+    # Wait for NextCloud to be ready by checking HTTP status
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+      echo "Waiting for NextCloud to respond..."
+      if curl -s -o /dev/null -w "%{http_code}" http://localhost:80 | grep -q "200\|302\|301"; then
+        echo "NextCloud is ready!"
+        break
+      fi
+      sleep 2
+      timeout=$((timeout-2))
+    done &&
+    sleep 60 &&
+    docker exec nextcloud bash -c '
+      # Enable headers module if available (ignore if not supported)
+      a2enmod headers 2>/dev/null || true
+
+      # Add HSTS header if not present
+      if [ -f /var/www/html/.htaccess ] && ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then
+        echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess
+        echo "HSTS header added to .htaccess"
+      else
+        echo "HSTS header already present or .htaccess not found"
+      fi
+
+      # Configure Redis memcache via occ commands
+      echo "Configuring Redis memcache..."
+
+      # Only configure memcache if not already set to Redis
+      if ! php occ config:system:get memcache.locking | grep -q "Redis" 2>/dev/null; then
+        php occ config:system:set memcache.local --value="\\OC\\Memcache\\APCu"
+        php occ config:system:set memcache.distributed --value="\\OC\\Memcache\\Redis"
+        php occ config:system:set memcache.locking --value="\\OC\\Memcache\\Redis"
+        php occ config:system:set redis host --value="redis"
+        php occ config:system:set redis port --value=6379 --type=integer
+        php occ config:system:set redis password --value="$default_pwd"
+        echo "Redis memcache configuration completed"
+      else
+        echo "Redis memcache already configured, skipping"
+      fi
+
+      # Configure background jobs to use cron
+      echo "Configuring background jobs to use cron..."
+      php occ background:cron
+      echo "Background jobs configured to use cron"
+    '
   tips:
     before_install:
       en_us: |
         **Quick Setup Guide**
-        
-        **1. Initial Setup:**
-        
-        ⚠️** Setup can take time, even if it's not shown.** **If infinite loading occurs → Restart the app**
-        
         - Create your account and complete the setup
         - When asked about storage options, choose the **recommended setting** (already configured for you)
         
-        **2. After Restart:**
         
-        - Go back to the website
-        - **Skip the setup screen** (you already did this!)
-        - Log in with your account
-        
-        **3. Add Team Apps (Your Profile → Apps):**
-        **Turn on built-in apps:**
-        ✅ Calendar, Contacts, Mail
-        
-        **Download from App Store:**
-        🔍 Search and install: Talk, Deck, Tasks, Nextcloud Office
-        
-        **4. Done!**
-        Your complete Teams replacement is ready!
-        
-        **Your files will be saved to:** Documents & Media folders
-      ko_kr: |
-        **빠른 설정 가이드**
-        
-        **1. 초기 설정:**
-        
-        ⚠️** 설정이 표시되지 않더라도 시간이 걸릴 수 있습니다.** **무한 로딩 발생 시 → 앱 재시작**
-        
-        - 계정을 만들고 설정을 완료하세요
-        - 저장소 옵션을 묻는 화면에서 **추천 설정**을 선택하세요 (이미 구성됨)
-        
-        **2. 재시작 후:**
-        
-        - 웹사이트로 다시 이동
-        - **설정 화면 건너뛰기** (이미 완료했습니다!)
-        - 계정으로 로그인
-        
-        **3. 팀 앱 추가 (프로필 → 앱):**
-        **내장 앱 켜기:**
-        ✅ Calendar, Contacts, Mail
-        
-        **앱스토어에서 다운로드:**
-        🔍 검색 후 설치: Talk, Deck, Tasks, Nextcloud Office
-        
-        **4. 완료!**
-        완전한 Teams 대체품이 준비되었습니다!
-        
-        **파일 저장 위치:** Documents & Media 폴더
-      zh_cn: |
-        **快速设置指南**
-        
-        **1. 初始设置：**
-        
-        ⚠️** 即使没有显示，设置也可能需要时间。** **如果出现无限加载 → 重启应用**
-        
-        - 创建您的账户并完成设置
-        - 当询问存储选项时，选择**推荐设置**（已为您配置）
-        
-        **2. 重启后：**
-        
-        - 回到网站
-        - **跳过设置界面**（您已经完成了！）
-        - 使用您的账户登录
-        
-        **3. 添加团队应用（个人资料 → 应用）：**
-        **开启内置应用：**
-        ✅ Calendar、Contacts、Mail
-        
-        **从应用商店下载：**
-        🔍 搜索并安装：Talk、Deck、Tasks、Nextcloud Office
-        
-        **4. 完成！**
-        您的完整Teams替代品已准备就绪！
-        
-        **文件将保存到：** Documents & Media 文件夹
-      fr_fr: |
-        **Guide de configuration rapide**
-        
-        **1. Configuration initiale :**
-        
-        ⚠️** La configuration peut prendre du temps, même si ce n'est pas affiché.** **Si un chargement infini se produit → Redémarrez l'application**
-        
-        - Créez votre compte et terminez la configuration
-        - Quand on vous demande les options de stockage, choisissez le **paramètre recommandé** (déjà configuré pour vous)
-        
-        **2. Après le redémarrage :**
-        
-        - Retournez sur le site web
-        - **Ignorez l'écran de configuration** (vous l'avez déjà fait !)
-        - Connectez-vous avec votre compte
-        
-        **3. Ajoutez les applications d'équipe (Votre Profil → Applications) :**
-        **Activez les applications intégrées :**
-        ✅ Calendar, Contacts, Mail
-        
-        **Téléchargez depuis l'App Store :**
-        🔍 Recherchez et installez : Talk, Deck, Tasks, Nextcloud Office
-        
-        **4. Terminé !**
-        Votre remplacement complet de Teams est prêt !
-        
-        **Vos fichiers seront sauvegardés dans :** Dossiers Documents & Media
-      de_de: |
-        **Schneller Setup-Leitfaden**
-        
-        **1. Erste Einrichtung:**
-        
-        ⚠️** Das Setup kann Zeit dauern, auch wenn es nicht angezeigt wird.** **Bei unendlichem Laden → App neu starten**
-        
-        - Erstellen Sie Ihr Konto und schließen Sie die Einrichtung ab
-        - Wenn nach Speicher-Optionen gefragt wird, wählen Sie die **empfohlene Einstellung** (bereits für Sie konfiguriert)
-        
-        **2. Nach dem Neustart:**
-        
-        - Gehen Sie zurück zur Website
-        - **Überspringen Sie den Einrichtungsbildschirm** (haben Sie bereits gemacht!)
-        - Melden Sie sich mit Ihrem Konto an
-        
-        **3. Team-Apps hinzufügen (Ihr Profil → Apps):**
-        **Integrierte Apps einschalten:**
-        ✅ Calendar, Contacts, Mail
-        
-        **Vom App Store herunterladen:**
-        🔍 Suchen und installieren: Talk, Deck, Tasks, Nextcloud Office
-        
-        **4. Fertig!**
-        Ihr vollständiger Teams-Ersatz ist bereit!
-        
-        **Ihre Dateien werden gespeichert in:** Documents & Media Ordner
-      es_es: |
-        **Guía de configuración rápida**
-        
-        **1. Configuración inicial:**
-        
-        ⚠️** La configuración puede tomar tiempo, incluso si no se muestra.** **Si ocurre carga infinita → Reiniciar la aplicación**
-        
-        - Crea tu cuenta y completa la configuración
-        - Cuando te pregunten sobre opciones de almacenamiento, elige la **configuración recomendada** (ya configurada para ti)
-        
-        **2. Después del reinicio:**
-        
-        - Vuelve al sitio web
-        - **Omite la pantalla de configuración** (¡ya lo hiciste!)
-        - Inicia sesión con tu cuenta
-        
-        **3. Añadir aplicaciones de equipo (Tu Perfil → Aplicaciones):**
-        **Activar aplicaciones integradas:**
-        ✅ Calendar, Contacts, Mail
-        
-        **Descargar desde la App Store:**
-        🔍 Buscar e instalar: Talk, Deck, Tasks, Nextcloud Office
-        
-        **4. ¡Listo!**
-        ¡Tu reemplazo completo de Teams está listo!
-        
-        **Tus archivos se guardarán en:** Carpetas Documents & Media
-  index: /
+        **Security and setup tips:**
+        If you got this warning after setup:
+        One or more mimetype migrations are available. Occasionally new mimetypes are added to better handle certain file types. Migrating the mimetypes take a long time on larger instances so this is not done automatically during upgrades. 
+        Please run the following command from the command line to update the mimetypes:
+        `docker exec nextcloud php occ maintenance:repair --include-expensive`
+        or
+        `php occ maintenance:repair --include-expensive` in the settings terminal of Nextcloud web interface.

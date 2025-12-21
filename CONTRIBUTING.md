@@ -16,8 +16,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] No hardcoded credentials in the compose file - use environment variables or secrets
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] Specific version tag (no `:latest`)
-- [ ] Resource limits are mandatory and set appropriately (on all services in case of multiple services) - exceptions must be explained in rationale.md
-- [ ] **Pre-install commands security**: If using `pre-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
+- [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
 - [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
 
 ### Functionality Checklist
@@ -25,6 +24,10 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Data is mapped to appropriate `/DATA` subdirectories - if things are mapped outside of /DATA, this should be explained in rationale.md
 - [ ] No manual configuration required for basic functionality - should work out of the box
 - [ ] Data persistence requirements are met - see [Data Persistence](#data-persistence) section for details
+- [ ] CPU field cpu_shares is set appropriately (on all services)
+- [ ] fresh installation tested
+- [ ] uninstall/reinstall tested - An application should be able to be uninstalled and reinstalled without losing user data or configuration (See the keep user data option when uninstalling)
+
 
 ### Documentation Checklist
 - [ ] Clear description of the application
@@ -98,8 +101,8 @@ and
 Yundera uses a dual permission model to balance security and usability:
 Files owned by `PUID:PGID` (usually `1000:1000` for the 'pcs:pcs' user)
 
-if no "user" field is specified in the compose file, the container will run as PUID:PGID (different behavior than the docker default so be carful)
-if you need to run as root, you must specify `user: 0:0` in the compose file and set the `PUID` and `PGID` to `0:0` in the environment variables.
+**if no "user" field is specified in the compose file, the container will run as PUID:PGID (different behavior than the docker default so be carful)**
+if you need to run as root, you must specify `user: 0:0` in the compose file.
 
 
 **User-Friendly Directories** 
@@ -110,12 +113,26 @@ if you need to run as root, you must specify `user: 0:0` in the compose file and
 - Applications accessing these directories **must** use `user: $PUID:$PGID`
 
 **AppData Directories** 
-- Root ownership acceptable but preferably `PUID:PGID` to allow user to change configurations easily
-- `/DATA/AppData/[AppName]/` - Application-specific data and configurations
+Contains the App folder : `/DATA/AppData/[AppName]/` - Application-specific data and configurations
+
+- Root ownership withing the App folder is acceptable but preferably `PUID:PGID` to allow user to change configurations easily
 - Contains databases, config files, cache, logs, and internal app data
-- Users should **not** directly modify these files (system-managed)
 - Root containers are acceptable when volumes map exclusively to AppData
 - Examples: `/DATA/AppData/immich/pgdata`, `/DATA/AppData/immich/model-cache`
+
+The App folder should always be owned by `PUID:PGID` to allow the user to romove the folder if needed.
+inside this folder the permission may vary depending on usage.
+
+example`:
+```
+root@yundera:/DATA/AppData# ls -al
+drwxr-xr-x 13 pcs  pcs    4096 Sep  3 14:17 .
+drwxrwxrwx  8 pcs  pcs    4096 Sep  3 14:17 ..
+drwxr-xr-x  5 pcs  pcs    4096 Sep  4 12:12 casaos
+drwxr-xr-x  3 pcs  pcs    4096 Jun 25 10:30 duplicati
+drwxr-xr-x  3 pcs  pcs    4096 Aug  3 19:35 filebrowser
+drwxr-xr-x  4 pcs  pcs    4096 Jun 25 10:30 jellyfin
+```
 
 **Mixed Usage Applications:**
 - If an app needs both AppData and user directory access, use `user: $PUID:$PGID`
@@ -205,12 +222,14 @@ This structure ensures:
 
 ### CPU Share Guidelines
 
+It is mandatory to set CPU shares for all services in your compose file. This helps ensure fair resource allocation and prevents any single container from monopolizing CPU resources.
+
 CPU shares determine relative CPU priority between containers. Higher values get more CPU time when the system is under load.
 
 **Formula:** `cpu_shares: [value]` (relative weight, not percentage)
 
 #### CPU Share Allocation:
-
+```
 **100 - System Critical** (Reserved)
 - System services that must never be starved
 
@@ -240,29 +259,19 @@ CPU shares determine relative CPU priority between containers. Higher values get
 
 **10 - System Background** (Reserved)
 - Reserved for system maintenance tasks
+```
 
-#### Implementation Notes:
+#### Resource limits
 
-1. **Multi-container apps**: Allocate shares based on each service's role
-   ```yaml
-   services:
-     webapp:
-       cpu_shares: 80    # User-facing
-     database:
-       cpu_shares: 70    # Supporting interactive app
-     worker:
-       cpu_shares: 30    # Background processing
-   ```
-
-2. **Resource limits**: Always combine with memory limits
-   ```yaml
+Optional
+Only add if necessary to prevent resource exhaustion but most application don't need it.
+   
+```yaml
    deploy:
      resources:
        limits:
          memory: 512M
-         cpus: '0.5'
-   cpu_shares: 70
-   ```
+```
 
 3. **Testing**: Consider your server's typical load when choosing values
 
@@ -328,17 +337,24 @@ Each directory under [Apps](Apps) corresponds to a Compose App. The directory sh
         source: /DATA/AppData/$AppID/config # $AppID = app name, e.g. syncthing
     ```
 
-- **System Variables**: CasaOS now provides additional system-wide variables for enhanced functionality:
+- **System Variables**: CasaOS provides additional system-wide variables for enhanced functionality. These environment variables are automatically injected by CasaOS at container creation:
 
     ```yaml
     environment:
-      PGID: $PGID                           # Preset Group ID
-      PUID: $PUID                           # Preset User ID  
-      TZ: $TZ                               # Current system timezone
-      PASSWORD: $default_pwd                # Secure default password generated by CasaOS
-      DOMAIN: $domain                       # Domain (or subdomain) mapped to this container
-      PUBLIC_IP: $public_ip                 # Public IP used for port binding and announcements
+      # Standard system variables
+      PGID: $PGID                                    # Preset Group ID
+      PUID: $PUID                                    # Preset User ID
+      TZ: $TZ                                        # Current system timezone
+
+      # V2 system variables (recommended)
+      PCS_DEFAULT_PASSWORD: $PCS_DEFAULT_PASSWORD    # Secure default password generated by CasaOS
+      PCS_DOMAIN: $PCS_DOMAIN                        # Domain without https:// (e.g., example.com)
+      PCS_DATA_ROOT: $PCS_DATA_ROOT                  # Data root directory (/DATA)
+      PCS_PUBLIC_IP: $PCS_PUBLIC_IP                  # Public IP for port binding and announcements
+      PCS_EMAIL: $PCS_EMAIL                          # Admin email (admin@DOMAIN)
     ```
+
+    **Note:** The V2 variable names (prefixed with `PCS_`) are the current standard. Use these in new applications for consistency across the CasaOS ecosystem.
 
 - CasaOS specific metadata, also called *store info*, are stored under the [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos`.
 
@@ -379,9 +395,9 @@ x-casaos:
     before_install:
       en_us: |
         Default Account
-        | Username   | Password       |
-        | --------   | ------------   |
-        | `admin`    | `$default_pwd` |
+        | Username   | Password                |
+        | --------   | ----------------------- |
+        | `admin`    | `$PCS_DEFAULT_PASSWORD` |
 ```
 
 ### Features
@@ -404,7 +420,7 @@ Also ensure that versions are specified for any images used in the command to av
 - [ ] **Specific version tags**: Never use `:latest` - always specify exact versions (e.g., `alpine:3.19`, `ubuntu:22.04`)
 - [ ] **User specification**: Use `--user $PUID:$PGID` when creating files in user directories to ensure proper permissions
 - [ ] **Idempotent operations**: Commands should be safe to run multiple times
-- [ ] **No hardcoded credentials**: Use system variables like `$default_pwd`
+- [ ] **No hardcoded credentials**: Use system variables like `$PCS_DEFAULT_PASSWORD`
 
 Example:
 ```yaml
@@ -412,7 +428,7 @@ x-casaos:
   pre-install-cmd: |
     docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
     docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $PCS_DEFAULT_PASSWORD --perm.admin --database /db/database.db
 ```
 
 **Common use cases:**
@@ -528,10 +544,12 @@ x-casaos:
 
 CasaOS automatically provides several system variables for your compose files:
 
-** Variables:**
-- `$default_pwd`: A secure default password generated by CasaOS for applications requiring authentication
-- `$domain`: The domain or subdomain mapped to this container for web UI access
-- `$public_ip`: The public IP address used for port binding announcements and external access
+**Available Variables:**
+- `$PCS_DEFAULT_PASSWORD`: A secure default password generated by CasaOS for applications requiring authentication
+- `$PCS_DOMAIN`: The domain (without https://) mapped to this container for web UI access
+- `$PCS_PUBLIC_IP`: The public IP address used for port binding announcements and external access
+- `$PCS_DATA_ROOT`: The data root directory (always `/DATA`)
+- `$PCS_EMAIL`: Admin email in the format `admin@DOMAIN`
 - `$AppID`: The application name/ID
 - `$PUID/$PGID`: User/Group IDs for proper file permissions
 - `$TZ`: System timezone
@@ -539,9 +557,11 @@ CasaOS automatically provides several system variables for your compose files:
 **Example Usage:**
 ```yaml
 environment:
-  - PASSWORD=$default_pwd
-  - DOMAIN=$domain  
-  - PUBLIC_IP=$public_ip
+  - PASSWORD=$PCS_DEFAULT_PASSWORD
+  - DOMAIN=$PCS_DOMAIN
+  - PUBLIC_IP=$PCS_PUBLIC_IP
+  - EMAIL=$PCS_EMAIL
+  - DATA_ROOT=$PCS_DATA_ROOT
   - PUID=$PUID
   - PGID=$PGID
   - TZ=$TZ

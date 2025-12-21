@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/duplicati/config
+        source: /DATA/AppData/duplicati/config/
         target: /config
       - type: bind
         source: /DATA/
