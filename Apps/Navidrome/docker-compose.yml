@@ -5,7 +5,7 @@ services:
     image: deluan/navidrome:0.58.0
     container_name: navidrome
     restart: unless-stopped
-    user: $PUID:$PGID
+    user: "0:0"
     expose:
       - 80  # Navidrome Web UI Port
     volumes:
@@ -46,6 +46,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
+  main: navidrome
   author: Yundera Team
   category: Media
   developer: Deluan Quintão
@@ -120,7 +121,12 @@ x-casaos:
       
       **Música de Muestra Incluida:**
       Esta instalación incluye pistas de muestra para comenzar inmediatamente.
-
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/thumbnail.png
   tagline:
     en_us: Your personal music streaming server with modern web interface
     ko_kr: 현대적인 웹 인터페이스를 갖춘 개인 음악 스트리밍 서버
@@ -147,3 +153,5 @@ x-casaos:
         지원 형식: MP3, FLAC, OGG, M4A, WAV
         
         **인증:** Navidrome은 첫 실행 시 관리자 계정 생성이 필요합니다.
+  store_app_id: navidrome
+  webui_port: 80
