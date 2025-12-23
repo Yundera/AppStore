@@ -62,11 +62,32 @@ services:
     command: >
       sh -c '
         echo "=== Plausible Starting ===" &&
+        
+        echo "Checking secrets directory..." &&
+        mkdir -p /secrets &&
+        
+        if [ ! -f /secrets/secret_key_base.txt ]; then
+          echo "Generating SECRET_KEY_BASE..." &&
+          cat /dev/urandom | head -c 64 | base64 | tr -d "\n" > /secrets/secret_key_base.txt &&
+          echo "SECRET_KEY_BASE generated"
+        else
+          echo "SECRET_KEY_BASE already exists"
+        fi &&
+        
+        if [ ! -f /secrets/totp_vault_key.txt ]; then
+          echo "Generating TOTP_VAULT_KEY..." &&
+          cat /dev/urandom | head -c 32 | base64 | tr -d "\n" > /secrets/totp_vault_key.txt &&
+          echo "TOTP_VAULT_KEY generated"
+        else
+          echo "TOTP_VAULT_KEY already exists"
+        fi &&
+        
         echo "Reading secrets..." &&
-        export SECRET_KEY_BASE=$(cat /secrets/secret_key_base.txt) &&
-        export TOTP_VAULT_KEY=$(cat /secrets/totp_vault_key.txt) &&
+        export SECRET_KEY_BASE=$$(cat /secrets/secret_key_base.txt) &&
+        export TOTP_VAULT_KEY=$$(cat /secrets/totp_vault_key.txt) &&
         echo "SECRET_KEY_BASE length: $${#SECRET_KEY_BASE}" &&
         echo "TOTP_VAULT_KEY length: $${#TOTP_VAULT_KEY}" &&
+        
         if [ $${#SECRET_KEY_BASE} -lt 32 ]; then
           echo "ERROR: SECRET_KEY_BASE too short" &&
           exit 1
@@ -75,6 +96,7 @@ services:
           echo "ERROR: TOTP_VAULT_KEY too short" &&
           exit 1
         fi &&
+        
         echo "Starting database initialization..." &&
         /entrypoint.sh db createdb &&
         /entrypoint.sh db migrate &&
@@ -243,41 +265,11 @@ x-casaos:
         - Registration is set to "invite only" by default
         - Requires at least 2GB RAM for optimal performance
         - Uses PostgreSQL for user data and ClickHouse for analytics
-        - Cryptographic secrets are automatically generated on first install
+        - Cryptographic secrets are automatically generated on first start
         
         For detailed configuration options, visit the [Plausible CE Wiki](https://github.com/plausible/community-edition/wiki)
   index: /
   webui_port: 80
   store_app_id: plausible
   pre-install-cmd: |
-    echo "=== Plausible Pre-Install Script ==="
-    echo "Creating directories..."
     mkdir -p /DATA/AppData/$AppID/db /DATA/AppData/$AppID/event-data /DATA/AppData/$AppID/event-logs /DATA/AppData/$AppID/secrets
-    echo "Directory structure created"
-    ls -la /DATA/AppData/$AppID/
-    if [ ! -f /DATA/AppData/$AppID/secrets/secret_key_base.txt ]; then
-      echo "Generating SECRET_KEY_BASE..."
-      openssl rand -base64 64 | tr -d '\n' > /DATA/AppData/$AppID/secrets/secret_key_base.txt
-      echo "SECRET_KEY_BASE generated"
-    else
-      echo "SECRET_KEY_BASE already exists"
-    fi
-    if [ ! -f /DATA/AppData/$AppID/secrets/totp_vault_key.txt ]; then
-      echo "Generating TOTP_VAULT_KEY..."
-      openssl rand -base64 32 | tr -d '\n' > /DATA/AppData/$AppID/secrets/totp_vault_key.txt
-      echo "TOTP_VAULT_KEY generated"
-    else
-      echo "TOTP_VAULT_KEY already exists"
-    fi
-    echo "Secrets directory contents:"
-    ls -la /DATA/AppData/$AppID/secrets/
-    echo "Verifying secret files..."
-    if [ -f /DATA/AppData/$AppID/secrets/secret_key_base.txt ]; then
-      echo "secret_key_base.txt size: $(wc -c < /DATA/AppData/$AppID/secrets/secret_key_base.txt) bytes"
-    fi
-    if [ -f /DATA/AppData/$AppID/secrets/totp_vault_key.txt ]; then
-      echo "totp_vault_key.txt size: $(wc -c < /DATA/AppData/$AppID/secrets/totp_vault_key.txt) bytes"
-    fi
-    echo "Setting permissions..."
-    chown -R $PUID:$PGID /DATA/AppData/$AppID
-    echo "Pre-install complete"
