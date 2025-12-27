@@ -2,22 +2,38 @@ name: convertx
 
 services:
   convertx:
-    image: ghcr.io/c4illin/convertx:v0.15.1
+    image: ghcr.io/yundera/nginx-hash-lock:latest
     container_name: convertx
     restart: unless-stopped
-    user: "0:0"  # Root user required for SQLite access - see rationale.md
-    cpu_shares: 70
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "convertx-backend"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+    depends_on:
+      - convertx-backend
+    networks:
+      - pcs
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+
+  convertx-backend:
+    image: ghcr.io/c4illin/convertx:v0.15.1
+    container_name: convertx-backend
+    restart: unless-stopped
+    user: "root"  # Root user required for SQLite access - see rationale.md
     deploy:
       resources:
         limits:
           memory: 2G
           cpus: '1.0'
-    expose:
-      - 3000
     environment:
-      - PUID=0
-      - PGID=0
-      - JWT_SECRET=$PCS_DEFAULT_PASSWORD
+      - JWT_SECRET=$default_pwd
       - ACCOUNT_REGISTRATION=false
       - HTTP_ALLOWED=true
       - ALLOW_UNAUTHENTICATED=false
@@ -26,23 +42,24 @@ services:
       - /DATA/AppData/$AppID/data:/app/data
       - /DATA/Downloads:/downloads:ro
       - /DATA/Documents:/documents:ro
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "--tries=1", "http://localhost:80/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+    networks:
+      - pcs
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    cpu_shares: 70
+
+networks:
+  pcs:
+    external: true
 
 x-casaos:
   architectures:
     - amd64
     - arm64
   main: convertx
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/data &&
-    chmod -R 777 /DATA/AppData/$AppID/data &&
-    echo "ConvertX data directory prepared with full permissions"
-  author: CasaOS Team
+  author: Yundera Team
   category: Utilities
   developer: C4illin
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/icon.png
@@ -86,5 +103,5 @@ x-casaos:
         Access via: `https://convertx-[username].nsl.sh`
         
         **Note**: This app requires root permissions to function properly with SQLite database.
-  index: /
-  webui_port: 3000
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
