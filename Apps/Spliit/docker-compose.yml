@@ -1,0 +1,187 @@
+name: spliit
+services:
+  nginxhashlock:
+    image: ghcr.io/yundera/nginx-hash-lock:latest
+    container_name: spliit-nginxhashlock
+    restart: unless-stopped
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "spliit"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+    expose:
+      - 80
+    depends_on:
+      - spliit
+      - db
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    cpu_shares: 80
+    networks:
+      - pcs
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+
+  db:
+    image: postgres:16-alpine
+    container_name: spliit-db
+    user: 0:0  
+    environment:
+      POSTGRES_DB: spliit
+      POSTGRES_USER: spliit
+      POSTGRES_PASSWORD: $default_pwd
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+      TZ: UTC
+    volumes:
+      - /DATA/AppData/$AppID/pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - pcs
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spliit -d spliit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  spliit:
+    image: ghcr.io/crazy-max/spliit:1.17.0
+    container_name: spliit
+    user: 0:0
+    restart: unless-stopped
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: spliit
+      POSTGRES_USER: spliit
+      POSTGRES_PASSWORD: $default_pwd
+      POSTGRES_TIMEOUT: 60
+      NEXT_PUBLIC_BASE_URL: https://$domain
+      DATABASE_URL: postgresql://spliit:$default_pwd@db:5432/spliit
+      NODE_ENV: production
+    volumes:
+      - /DATA/AppData/$AppID/data:/data
+      - /DATA/AppData/$AppID/cache:/usr/app/.next/cache    
+    networks:
+      - pcs      
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: nginxhashlock
+  webui_port: 80
+  author: CasaOS Team
+  category: Finance
+  developer: Spliit Team
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/thumbnail.png
+  index: /?hash=$AUTH_HASH  
+  store_app_id: Spliit
+  title:
+    en_us: Spliit
+  tagline:
+    en_us: Free and Open Source Expense Sharing App
+    ko_kr: 무료 오픈소스 비용 분할 앱
+    zh_cn: 免费开源费用分摊应用
+    es_es: Aplicación Gratuita para Compartir Gastos
+    fr_fr: Application Gratuite de Partage de Dépenses
+  pre_install_cmd: |
+    mkdir -p /DATA/AppData/$AppID/pgdata /DATA/AppData/$AppID/data /DATA/AppData/$AppID/cache && 
+    chown -R 999:999 /DATA/AppData/$AppID/pgdata
+  description:
+    en_us: |
+      Split expenses with friends - no signup, no hassle. Spliit is the simplest way to share expenses. Whether splitting dinner bills, vacation costs, or household expenses, everyone can see who owes what instantly. No accounts needed - just create a group and share the link.
+      
+      **Key features:**
+      • Create expense groups in seconds
+      • Add participants by name only
+      • Split by percentage, shares, or exact amounts
+      • See optimized settlements (who pays whom)
+      • Works on any device
+      • Complete privacy - data stays on your server
+      
+      **Perfect for:** Roommates splitting rent, friends sharing vacation costs, couples managing household expenses, group dinners, or any shared activity.
+    ko_kr: |
+      친구와 비용 분할 - 가입 없이, 번거로움 없이. Spliit은 비용을 공유하는 가장 간단한 방법입니다. 저녁 식사비, 휴가 비용, 가계 지출 등 누가 얼마를 빚졌는지 즉시 확인할 수 있습니다.
+    zh_cn: |
+      与朋友分摊费用 - 无需注册，没有麻烦。Spliit 是分摊费用最简单的方式。无论是分摊晚餐账单、度假费用还是家庭开支，每个人都能立即看到谁欠谁多少。
+    es_es: |
+      Divide gastos con amigos - sin registro, sin complicaciones. Spliit es la forma más simple de compartir gastos. Ya sea dividiendo cuentas de cena, costos de vacaciones o gastos del hogar.
+    fr_fr: |
+      Partagez les dépenses avec vos amis - sans inscription, sans tracas. Spliit est le moyen le plus simple de partager les dépenses. Qu'il s'agisse de diviser l'addition du dîner, les frais de vacances ou les dépenses du foyer.
+  tips:
+    before_install:
+      en_us: |
+        -----------------------------
+        **How to use:**
+        1. Click "Create a group"
+        2. Name it (e.g., "Beach Trip 2024")
+        3. Add people (just their names)
+        4. Start adding expenses
+        5. Check "Balances" to see who owes whom
+        -----------------------------        
+        Share the group link with friends - no signup needed!
+      ko_kr: |
+        -----------------------------
+        **사용 방법:**
+        1. "그룹 만들기" 클릭
+        2. 이름 지정 (예: "제주도 여행 2024")
+        3. 사람 추가 (이름만)
+        4. 비용 추가 시작
+        5. "잔액"을 확인하여 누가 누구에게 빚졌는지 확인
+        -----------------------------
+      zh_cn: |
+        -----------------------------
+        **使用方法：**
+        1. 点击"创建群组"
+        2. 命名（例如："2024海滩之旅"）
+        3. 添加人员（只需姓名）
+        4. 开始添加费用
+        5. 查看"余额"了解谁欠谁
+        -----------------------------
+      es_es: |
+        -----------------------------
+        **Cómo usar:**
+        1. Haz clic en "Crear un grupo"
+        2. Nómbralo (ej: "Viaje Playa 2024")
+        3. Añade personas (solo nombres)
+        4. Empieza a añadir gastos
+        5. Revisa "Saldos" para ver quién debe a quién
+        -----------------------------
+      fr_fr: |
+        -----------------------------
+        **Comment utiliser:**
+        1. Cliquez sur "Créer un groupe"
+        2. Nommez-le (ex: "Voyage Plage 2024")
+        3. Ajoutez des personnes (juste les noms)
+        4. Commencez à ajouter des dépenses
+        5. Vérifiez "Soldes" pour voir qui doit à qui
+        -----------------------------
