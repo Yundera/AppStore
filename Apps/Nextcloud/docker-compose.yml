@@ -438,6 +438,8 @@ x-casaos:
         **Quick Setup Guide**
         - Create your account and complete the setup
         - When asked about storage options, choose the **recommended setting** (already configured for you)
+
+        **Note:** After clicking "Install", the page may show a "Gateway time-out" error. This is normal - the installation takes longer than expected. Simply **refresh the page** after a minute and you'll see the login screen.
         
         
         **Security and setup tips:**
