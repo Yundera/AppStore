@@ -8,11 +8,11 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_USER: odoo
       POSTGRES_PASSWORD: $PCS_DEFAULT_PASSWORD
-      PGDATA: /var/lib/postgresql/data/pgdata
+      PGDATA: /var/lib/postgresql/data/pgdata/
       PUID: "0"
       PGID: "0"
     volumes:
-      - /DATA/AppData/$AppID/postgres-data:/var/lib/postgresql/data
+      - /DATA/AppData/$AppID/postgres-data/:/var/lib/postgresql/data/
     cpu_shares: 50
     deploy:
       resources:
@@ -42,9 +42,9 @@ services:
       PGID: "0"
       TZ: $TZ
     volumes:
-      - /DATA/AppData/$AppID/odoo-data:/var/lib/odoo
-      - /DATA/AppData/$AppID/config:/etc/odoo
-      - /DATA/AppData/$AppID/addons:/mnt/extra-addons
+      - /DATA/AppData/$AppID/odoo-data/:/var/lib/odoo/
+      - /DATA/AppData/$AppID/config/:/etc/odoo/
+      - /DATA/AppData/$AppID/addons/:/mnt/extra-addons/
     cpu_shares: 70
     deploy:
       resources:
