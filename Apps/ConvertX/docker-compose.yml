@@ -23,7 +23,7 @@ services:
       - NET_ADMIN
 
   convertx-backend:
-    image: ghcr.io/c4illin/convertx:v0.15.1
+    image: ghcr.io/c4illin/convertx:v0.17.0
     container_name: convertx-backend
     restart: unless-stopped
     user: "root"  # Root user required for SQLite access - see rationale.md
@@ -38,10 +38,15 @@ services:
       - HTTP_ALLOWED=true
       - ALLOW_UNAUTHENTICATED=false
       - AUTO_DELETE_EVERY_N_HOURS=24
+      - HOME=/tmp/convertx-home
     volumes:
-      - /DATA/AppData/$AppID/data:/app/data
-      - /DATA/Downloads:/downloads:ro
-      - /DATA/Documents:/documents:ro
+      - /DATA/AppData/$AppID/data/:/app/data/
+      - /DATA/AppData/$AppID/cache/:/.cache/
+      - /DATA/AppData/$AppID/home/:/tmp/convertx-home/
+      - /DATA/Downloads/:/downloads/:ro
+      - /DATA/Documents/:/documents/:ro
+    tmpfs:
+      - /tmp:mode=1777,size=512M
     networks:
       - pcs
     privileged: true
@@ -86,22 +91,30 @@ x-casaos:
     before_install:
       en_us: |
         **Important Setup Instructions**
-        
+
         - **First User is Admin**: The first registered account becomes administrator
         - **HTTP_ALLOWED**: Set to true for NSL router compatibility
         - **Auto Cleanup**: Files auto-delete after 24 hours (configurable)
         - **Root User**: Running as root (0:0) due to SQLite permission requirements (see rationale.md)
-        
+
+        **Converter Compatibility Notes**
+
+        When multiple converters are available for a format, **prefer FFmpeg** for best compatibility:
+        - **FFmpeg** (Most Reliable): Video, audio, and many image formats
+        - **ImageMagick**: Image conversions (generally reliable)
+        - **LibreOffice/Pandoc/Calibre**: Document conversions (may have issues)
+
+        Some non-FFmpeg converters may fail due to upstream container issues. If a conversion fails, try selecting FFmpeg as the converter if available.
+
         **Supported Formats**
-        - Images: PNG, JPG, WebP, AVIF, SVG, GIF, TIFF, BMP via ImageMagick
-        - Videos: MP4, WebM, AVI, MOV, MKV via FFmpeg
-        - Audio: MP3, WAV, FLAC, OGG, AAC, M4A
-        - Documents: PDF, DOCX, HTML, Markdown via Pandoc
+        - Videos/Audio (FFmpeg - Recommended): MP4, WebM, AVI, MOV, MKV, MP3, WAV, FLAC, OGG, AAC
+        - Images (ImageMagick): PNG, JPG, WebP, AVIF, SVG, GIF, TIFF, BMP
+        - Documents (Variable): PDF, DOCX, HTML, Markdown via Pandoc/LibreOffice
         - 3D Models: STL, OBJ, PLY, DAE
         - Archives: ZIP, RAR, 7Z, TAR
-        
+
         Access via: `https://convertx-[username].nsl.sh`
-        
+
         **Note**: This app requires root permissions to function properly with SQLite database.
   index: /?hash=$AUTH_HASH
   webui_port: 80
