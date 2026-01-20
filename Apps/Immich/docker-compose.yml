@@ -2,7 +2,7 @@ name: immich
 
 services:
   immich:
-    image: ghcr.io/immich-app/immich-server:v2.3.1
+    image: ghcr.io/immich-app/immich-server:v2.4.1
     container_name: immich
     user: $PUID:$PGID
     cpu_shares: 70
@@ -31,7 +31,7 @@ services:
       - immich
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v2.3.1
+    image: ghcr.io/immich-app/immich-machine-learning:v2.4.1
     container_name: immich_machine_learning
     cpu_shares: 5
     deploy:
@@ -48,7 +48,7 @@ services:
     healthcheck:
       disable: false
     volumes:
-      - model-cache:/cache
+      - /DATA/AppData/immich/model-cache/:/cache/
     networks:
       - immich
 
@@ -95,9 +95,6 @@ networks:
   immich:
     name: immich
 
-volumes:
-  model-cache:
-
 x-casaos:
   main: immich
   webui_port: 80
@@ -137,8 +134,6 @@ x-casaos:
       Immich gives you a modern, self-hosted photo and video gallery, without the limits or tracking of traditional cloud services.
 
       Automatically back up your photos and videos from your phone. Organise them by date, location, or face. Browse everything from a sleek web app, stream in 4K to your smart TV, and share albums privately with family and friends : no account or app needed.
-
-      **New in v2.x:** Optical Character Recognition (OCR) lets you search for text within your photos, supporting English, Chinese, Japanese, Korean, Russian, Greek, Thai, and Latin-script languages.
 
       Unlike other platforms, Immich runs on your own private server. That means:
 
