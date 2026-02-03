@@ -2,7 +2,7 @@ name: tailscale
 
 services:
   tailscale:
-    image: ghcr.io/tailscale/tailscale:v1.94.1
+    image: ghcr.io/tailscale/tailscale:v1.92.5
     container_name: tailscale
     hostname: tailscale
     user: 0:0
