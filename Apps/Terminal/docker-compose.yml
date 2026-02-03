@@ -1,0 +1,72 @@
+name: yunderaterminal
+
+services:
+  yunderaterminal:
+    image: krizcold/nginxhashlock:latest
+    container_name: yunderaterminal
+    restart: unless-stopped
+    expose:
+      - "80"
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "ttyd"
+      BACKEND_PORT: "7681"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $default_pwd
+    depends_on:
+      - ttyd
+    networks:
+      - pcs
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+
+  ttyd:
+    image: tsl0922/ttyd:1.7.7
+    container_name: yunderaterminaltty
+    restart: unless-stopped
+    user: "root"
+    command: ["ttyd", "--writable", "--client-option", "enableZmodem=true", "--client-option", "enableSixel=false", "--client-option", "enableTrzsz=false", "--terminal-type", "xterm-256color", "chroot", "/host", "bash"]
+    volumes:
+      - type: bind
+        source: /
+        target: /host
+    networks:
+      - pcs
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: yunderaterminal
+  author: yundera
+  developer: yundera
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Terminal/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Terminal/screenshot-1.png
+  tagline:
+    en_us: "Secure hash-locked terminal access"
+  category: Utilities
+  description:
+    en_us: "A secure terminal with hash-based authentication using nginxhashlock"
+  title:
+    en_us: "Terminal"
+  store_app_id: yunderaterminal
+  is_uncontrolled: false
+  # nginxhashlock handles the hash validation automatically
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/yunderaterminal 2>/dev/null || true
+    chmod -R 755 /DATA/AppData/yunderaterminal/ 2>/dev/null || true
