@@ -1,0 +1,126 @@
+name: dufs
+services:
+  dufs:
+    container_name: dufs
+    user: $PUID:$PGID
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+    image: sigoden/dufs:v0.45.0
+    network_mode: bridge
+    restart: unless-stopped
+    command: [
+      "/srv",
+      "--bind", "0.0.0.0",
+      "--port", "80",
+      "--enable-cors",
+      "--render-index",
+      "--render-spa",
+      "--render-try-index",
+      "--allow-upload",
+      "--allow-delete",
+      "--allow-search",
+      "--allow-symlink",
+      "--allow-archive",
+      "--auth", "admin:$default_pwd@/:rw"
+    ]
+    volumes:
+      - type: bind
+        source: /DATA
+        target: /srv
+    expose:
+      - 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: dufs
+  author: Yundera Team
+  category: Cloud
+  description:
+    en_us: |
+      Dufs - Modern File Server with WebDAV Support
+      
+      Dufs is a modern, lightweight file server that combines a beautiful web interface with powerful WebDAV capabilities. Access and manage your files through a responsive web browser or connect via WebDAV from any device or application.
+      
+      Web Interface Features:
+      • Clean, intuitive file browser with drag-and-drop uploads
+      • File preview for images, videos, documents, and code
+      • Built-in search functionality across all files
+      • Create, rename, delete files and folders
+      • Archive extraction and creation support
+      • Mobile-responsive design for any device
+      
+      WebDAV Integration:
+      • Full WebDAV protocol support for universal file access
+      • Mount as network drive on Windows, macOS, or Linux
+      • Compatible with mobile apps and cloud sync tools
+      • Secure authentication with username/password protection
+      • Read/write access control for different users
+      
+      Perfect for personal cloud storage, team file sharing, media libraries, or as a lightweight alternative to complex file management systems. Built with Rust for exceptional performance and minimal resource usage.
+    zh_cn: |
+      Dufs - 现代文件服务器，支持 WebDAV
+      
+      Dufs 是一个现代、轻量级的文件服务器，结合了美观的 Web 界面和强大的 WebDAV 功能。通过响应式网页浏览器访问和管理文件，或从任何设备或应用程序通过 WebDAV 连接。
+      
+      Web 界面功能：
+      • 清洁、直观的文件浏览器，支持拖放上传
+      • 图片、视频、文档和代码的文件预览
+      • 内置的全文件搜索功能
+      • 创建、重命名、删除文件和文件夹
+      • 支持压缩包提取和创建
+      • 移动响应式设计，适配任何设备
+      
+      WebDAV 集成：
+      • 完全支持 WebDAV 协议，提供通用文件访问
+      • 在 Windows、macOS 或 Linux 上挂载为网络驱动器
+      • 兼容移动应用和云同步工具
+      • 用户名/密码安全认证
+      • 不同用户的读/写访问控制
+      
+      非常适合个人云存储、团队文件共享、媒体库，或作为复杂文件管理系统的轻量级替代方案。使用 Rust 构建，具有卓越的性能和最小的资源使用。
+  developer: Sigoden
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-3.png
+  tagline:
+    en_us: Modern file server with WebDAV support - access your files anywhere, anytime
+    zh_cn: 支持 WebDAV 的现代文件服务器 - 随时随地访问您的文件
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/thumbnail.png
+  tips:
+    before_install:
+      en_us: |
+        Default WebDAV Access
+        | Username   | Password       | Access |
+        | --------   | ------------   | ------ |
+        | `admin`    | `$default_pwd` | Read/Write |
+        
+        WebDAV URL: https://dufs-$domain/
+        
+        Mount Instructions:
+        • Windows: Map Network Drive → https://dufs-$domain/
+        • macOS: Finder → Go → Connect to Server → https://dufs-$domain/
+        • Linux: Files → Other Locations → Connect to Server → dav://dufs-$domain/
+        
+        For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
+        ```
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v FileAttributesLimitInBytes /t REG_DWORD /d 100000000 /f
+        net stop webclient
+        net start webclient
+        ```
+  title:
+    en_us: Dufs
+  index: /
+  webui_port: 80
