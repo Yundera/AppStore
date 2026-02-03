@@ -1,0 +1,83 @@
+name: tailscale
+
+services:
+  tailscale:
+    image: ghcr.io/tailscale/tailscale:v1.86.5
+    container_name: tailscale
+    hostname: tailscale
+    user: 0:0
+    network_mode: host
+    cpu_shares: 70
+    # only uncomment  for commpatibility with some linux distros
+    #command: [ "tailscaled", "--socket=/tmp/tailscaled.sock", "--statedir=/var/lib/tailscale", "--tun=kernel" ]
+    environment:
+      - TZ=$TZ
+      # if you want to use headscale instead of tailscale.com, add the next line and set your domain
+      # - TS_EXTRA_ARGS=--login-server=https://headscale-$domain
+      - TS_ACCEPT_DNS= "true"
+      - TS_EXTRA_ARGS= "--accept-routes"
+      - TS_AUTHKEY_INFO="Connect to the Tailscale Admin Console to generate an auth key and set it in the app settings before starting."
+      - TS_AUTHKEY=  # Set this in CasaOS before starting for automatic auth, or leave blank for manual setup
+      - TS_HOSTNAME=$domain
+      - TS_USERSPACE= "false"
+      - TS_STATE_DIR=/var/lib/tailscale
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    volumes:
+      - /DATA/AppData/tailscale/state/:/var/lib/tailscale/
+      - /dev/net/tun:/dev/net/tun
+    restart: unless-stopped
+
+x-casaos:
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/tailscale/state &&
+    chown -R $PUID:$PGID /DATA/AppData/tailscale
+
+  #this is the link for the webui port
+  scheme: https
+  hostname: login.tailscale.com
+  port_map: "443"
+  index: /
+
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera
+  category: Network
+  description:
+    en_us: "Tailscale is a secure mesh VPN that creates encrypted connections between your devices. This container runs the Tailscale node daemon with web UI enabled for easy device management. Connect your CasaOS server to your Tailscale network to access it securely from anywhere. Includes exit node functionality to route traffic through your server and accept routes from other nodes. Perfect for secure remote access to your home lab and services."
+  developer: Tailscale Inc.
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tailscale/screenshot-3.png
+  tagline:
+    en_us: Zero-config mesh VPN for secure device connections
+  title:
+    en_us: Tailscale
+  tips:
+    before_install:
+      en_us: |
+        **📡 After Installation:**
+        
+        **For Tailscale.com (Default):**
+        1. Go to [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
+        2. Generate an auth key with desired settings
+        3. Set the `TS_AUTHKEY` in the app settings
+        4. Your server will appear in your Tailscale network
+        
+        **For Headscale (Self-hosted):**
+        1. Generate an auth key from your Headscale server
+        2. Set the `TS_AUTHKEY` in the app settings
+        3. Set the `TS_EXTRA_ARGS` to `--login-server=https://your-headscale-domain`
+        4. Your server will appear in your Headscale network
+        
+        **🔗 Making Other Services Available:**
+        For other services to be accessible through Tailscale, you need to bind their ports to the Tailscale interface IP address:
+        ```
+          HOST_PORT= 100.x.x.x:8080     # Replace with your actual Tailscale IP
+          CONTAINER_PORT= 8080
+        ```
+        You can find your Tailscale IP by running `tailscale ip` on the terminal or checking the Tailscale admin console.
