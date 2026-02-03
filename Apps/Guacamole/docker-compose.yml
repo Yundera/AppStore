@@ -1,0 +1,116 @@
+name: guacamole
+services:
+  guacamole:
+    image: guacamole/guacamole:1.6.0
+    restart: unless-stopped
+    user: 0:0
+    cpu_shares: 70
+    environment:
+      GUACD_HOSTNAME: guacd
+      POSTGRESQL_HOSTNAME: postgres
+      POSTGRESQL_DATABASE: guacamole_db
+      POSTGRESQL_USER: guacamole_user
+      POSTGRESQL_PASSWORD: '$default_pwd'
+    depends_on:
+      - guacd
+      - postgres
+    expose:
+      - 8080
+
+  guacd:
+    image: guacamole/guacd:1.6.0
+    restart: unless-stopped
+    user: 0:0
+    cpu_shares: 70
+
+  postgres:
+    user: $PUID:$PGID
+    image: postgres:13-alpine
+    restart: unless-stopped
+    cpu_shares: 70
+    environment:
+      POSTGRES_PASSWORD: '$default_pwd'
+      POSTGRES_USER: 'guacamole_user'
+      POSTGRES_DB: 'guacamole_db'
+    volumes:
+      - /DATA/AppData/guacamole/postgresql:/var/lib/postgresql/data
+      - /DATA/AppData/guacamole/init:/init
+    command: /init/init-db.sh
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: guacamole
+  webui_port: 8080
+  index: /guacamole
+  category: Productivity
+  tagline:
+    en_us: Open-source remote desktop gateway.
+    zh_cn: 开源远程桌面网关。
+    de_de: Open-Source-Remote-Desktop-Gateway.
+    es_es: Puerta de enlace de escritorio remoto de código abierto.
+    fr_fr: Passerelle de bureau à distance open-source.
+    it_it: Gateway desktop remoto open-source.
+    ru_ru: Шлюз удаленного рабочего стола с открытым исходным кодом.
+    pl_pl: Brama pulpitu zdalnego o otwartym kodzie źródłowym.
+    pt_br: Gateway de desktop remoto de código aberto.
+  description:
+    en_us: Apache Guacamole is a clientless remote desktop gateway. It supports standard protocols like VNC, RDP, and SSH. No plugins or client software are required, as it uses HTML5 to provide access to your desktops through a web browser.
+    zh_cn: Apache Guacamole 是一个无客户端远程桌面网关。它支持标准协议，如 VNC、RDP 和 SSH。不需要插件或客户端软件，因为它使用 HTML5 通过网络浏览器提供对您桌面的访问。
+    de_de: Apache Guacamole ist ein clientloses Remote-Desktop-Gateway. Es unterstützt Standardprotokolle wie VNC, RDP und SSH. Es werden keine Plugins oder Client-Software benötigt, da es HTML5 verwendet, um über einen Webbrowser Zugriff auf Ihre Desktops zu ermöglichen.
+    es_es: Apache Guacamole es una puerta de enlace de escritorio remoto sin cliente. Admite protocolos estándar como VNC, RDP y SSH. No se requieren complementos ni software cliente, ya que utiliza HTML5 para proporcionar acceso a sus escritorios a través de un navegador web.
+    fr_fr: Apache Guacamole est une passerelle de bureau à distance sans client. Il prend en charge les protocoles standard comme VNC, RDP et SSH. Aucun plugin ou logiciel client n'est requis, car il utilise HTML5 pour fournir un accès à vos bureaux via un navigateur web.
+    it_it: Apache Guacamole è un gateway desktop remoto senza client. Supporta protocolli standard come VNC, RDP e SSH. Non sono necessari plugin o software client, poiché utilizza HTML5 per fornire accesso ai desktop tramite un browser web.
+    ru_ru: Apache Guacamole — это шлюз удаленного рабочего стола без клиента. Он поддерживает стандартные протоколы, такие как VNC, RDP и SSH. Плагины или клиентское программное обеспечение не требуются, так как он использует HTML5 для предоставления доступа к вашим рабочим столам через веб-браузер.
+    pl_pl: Apache Guacamole to brama pulpitu zdalnego bez klienta. Obsługuje standardowe protokoły, takie jak VNC, RDP i SSH. Nie są wymagane żadne wtyczki ani oprogramowanie klienckie, ponieważ wykorzystuje HTML5 do zapewnienia dostępu do pulpitów przez przeglądarkę internetową.
+    pt_br: Apache Guacamole é um gateway de desktop remoto sem cliente. Suporta protocolos padrão como VNC, RDP e SSH. Nenhum plugin ou software cliente é necessário, pois utiliza HTML5 para fornecer acesso aos seus desktops através de um navegador web.
+  title:
+    en_us: Guacamole
+  developer: Apache Software Foundation
+  author: Apache Software Foundation
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-4.png
+  pre-install-cmd: |
+    echo "Preparing Guacamole database initialization..."
+    
+    # Create AppData directory structure
+    mkdir -p /DATA/AppData/guacamole/postgresql
+    mkdir -p /DATA/AppData/guacamole/init
+    
+    # Check if database is already initialized by looking for schema files
+    if [ ! -f "/DATA/AppData/guacamole/init/.initialized" ]; then
+      echo "Downloading Guacamole initialization script..."
+      
+      # Download the initialization script from the repository
+      wget -O /DATA/AppData/guacamole/init/init-db.sh "https://raw.githubusercontent.com/Yundera/AppStore/main/Apps/Guacamole/pre-install/init.sh"
+      
+      # Download the required database schema scripts
+      wget -O /DATA/AppData/guacamole/init/001-create-schema.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/001-create-schema.sql"
+      wget -O /DATA/AppData/guacamole/init/002-create-admin-user.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/002-create-admin-user.sql"
+      
+      chmod +x /DATA/AppData/guacamole/init/init-db.sh
+      touch /DATA/AppData/guacamole/init/.initialized
+      echo "Guacamole initialization scripts downloaded successfully!"
+    else
+      echo "Guacamole initialization scripts already prepared."
+    fi
+  tips:
+    before_install:
+      en_us: |
+        Default Account
+
+        | Username | Password |
+        | -------- | -------- |
+        | `guacadmin`    | `guacadmin`    |
+      zh_cn: |
+        默认账号
+
+        | 用户名 | 密码 |
+        | -------- | -------- |
+        | `guacadmin`    | `guacadmin`    |
