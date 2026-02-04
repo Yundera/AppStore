@@ -12,20 +12,20 @@ services:
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
-    image: filebrowser/filebrowser:v2.44.0
+    image: filebrowser/filebrowser:v2.57.0
     labels:
       icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/icon.png
     network_mode: bridge
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/db
+        source: /DATA/AppData/$AppID/db/
         target: /database
       - type: bind
-        source: /DATA/AppData/$AppID/config
+        source: /DATA/AppData/$AppID/config/
         target: /config
       - type: bind
-        source: /DATA
+        source: /DATA/
         target: /srv
     expose:
       - "80"
@@ -80,7 +80,7 @@ x-casaos:
     - arm64
     - arm
   main: filebrowser
-  author: CasaOS Team
+  author: Yundera Team
   category: Cloud
   description:
     en_us: File Browser provides a file managing interface within a specified directory. It can be used to upload, delete, preview, rename and edit your files. It allows the creation of multiple users and each user can have its own directory.
@@ -159,6 +159,6 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/filebrowser/db /DATA/AppData/filebrowser/config &&
     chown -R $PUID:$PGID /DATA/AppData/filebrowser &&
-    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.44.0 config init --database /database/filebrowser.db --config /config/settings.json &&
-    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.44.0 users add admin $PCS_DEFAULT_PASSWORD --perm.admin --database /database/filebrowser.db
+    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.57.0 config init --database /database/filebrowser.db --config /config/settings.json &&
+    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.57.0 users add admin $PCS_DEFAULT_PASSWORD --perm.admin --database /database/filebrowser.db
   webui_port: 80
