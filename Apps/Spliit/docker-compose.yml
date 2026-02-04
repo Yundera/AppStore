@@ -30,24 +30,17 @@ services:
   db:
     image: postgres:16-alpine
     container_name: spliit-db
-    user: 0:0  
+    user: 0:0
     environment:
       POSTGRES_DB: spliit
-      POSTGRES_USER: spliit
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: $default_pwd
-      POSTGRES_INITDB_ARGS: '--data-checksums'
       TZ: UTC
     volumes:
       - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
       - pcs
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U spliit -d spliit"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
     deploy:
       resources:
         limits:
@@ -56,25 +49,13 @@ services:
   spliit:
     image: ghcr.io/spliit-app/spliit:1.19.0
     container_name: spliit
-    user: 0:0
     restart: unless-stopped
     environment:
-      PUID: $PUID
-      PGID: $PGID
       TZ: $TZ
-      POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: spliit
-      POSTGRES_USER: spliit
-      POSTGRES_PASSWORD: $default_pwd
-      POSTGRES_TIMEOUT: 60
-      DATABASE_URL: postgresql://spliit:$default_pwd@db:5432/spliit
-      NODE_ENV: production
-    volumes:
-      - /DATA/AppData/$AppID/data/:/data
-      - /DATA/AppData/$AppID/cache/:/usr/app/.next/cache    
+      POSTGRES_PRISMA_URL: postgresql://postgres:$default_pwd@db:5432/spliit
+      POSTGRES_URL_NON_POOLING: postgresql://postgres:$default_pwd@db:5432/spliit
     networks:
-      - pcs      
+      - pcs
     cap_add:
       - SYS_ADMIN
       - NET_ADMIN
@@ -112,9 +93,6 @@ x-casaos:
     zh_cn: 免费开源费用分摊应用
     es_es: Aplicación Gratuita para Compartir Gastos
     fr_fr: Application Gratuite de Partage de Dépenses
-  pre_install_cmd: |
-    mkdir -p /DATA/AppData/$AppID/pgdata /DATA/AppData/$AppID/data /DATA/AppData/$AppID/cache && 
-    chown -R 999:999 /DATA/AppData/$AppID/pgdata
   description:
     en_us: |
       Split expenses with friends - no signup, no hassle. Spliit is the simplest way to share expenses. Whether splitting dinner bills, vacation costs, or household expenses, everyone can see who owes what instantly. No accounts needed - just create a group and share the link.
