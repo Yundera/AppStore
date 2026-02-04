@@ -1,79 +1,27 @@
 name: filebrowser
 services:
   filebrowser:
-    cpu_shares: 80
-    command: []
+    image: filebrowser/filebrowser:v2.32.0
     container_name: filebrowser
+    restart: unless-stopped
+    user: 0:0
+    environment:
+      TZ: $TZ
+      FB_DATABASE: /database/filebrowser.db
+      FB_ROOT: /srv
+      FB_PORT: 80
+    volumes:
+      - /DATA/AppData/filebrowser/db/:/database
+      - /DATA/AppData/filebrowser/config/:/config
+      - /DATA/:/srv
+    expose:
+      - 80
     deploy:
       resources:
-        reservations:
-          memory: "64M"
-    environment:
-      PGID: $PGID
-      PUID: $PUID
-      TZ: $TZ
-    image: filebrowser/filebrowser:v2.57.0
-    labels:
-      icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/icon.png
-    network_mode: bridge
-    restart: unless-stopped
-    volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/db/
-        target: /database
-      - type: bind
-        source: /DATA/AppData/$AppID/config/
-        target: /config
-      - type: bind
-        source: /DATA/
-        target: /srv
-    expose:
-      - "80"
-    x-casaos:
-      envs:
-        - container: TZ
-          description:
-            en_us: TimeZone
-            zh_cn: 时区
-            ko_kr: 시간대
-            es_es: Zona horaria
-            fr_fr: Fuseau horaire
-        - container: PUID
-          description:
-            en_us: Run FileBrowser as specified uid.
-            zh_cn: 以指定的用户ID运行FileBrowser
-            ko_kr: 지정된 uid로 FileBrowser 실행
-            es_es: Ejecutar FileBrowser con el uid especificado
-            fr_fr: Exécuter FileBrowser avec l'uid spécifié
-        - container: PGID
-          description:
-            en_us: Run FileBrowser as specified gid.
-            zh_cn: 以指定的组ID运行FileBrowser
-            ko_kr: 지정된 gid로 FileBrowser 실행
-            es_es: Ejecutar FileBrowser con el gid especificado
-            fr_fr: Exécuter FileBrowser avec le gid spécifié
-      volumes:
-        - container: /database
-          description:
-            en_us: FileBrowser database directory.
-            zh_cn: FileBrowser数据库目录
-            ko_kr: FileBrowser 데이터베이스 디렉토리
-            es_es: Directorio de base de datos de FileBrowser
-            fr_fr: Répertoire de base de données FileBrowser
-        - container: /config
-          description:
-            en_us: FileBrowser configuration directory.
-            zh_cn: FileBrowser配置目录
-            ko_kr: FileBrowser 설정 디렉토리
-            es_es: Directorio de configuración de FileBrowser
-            fr_fr: Répertoire de configuration FileBrowser
-        - container: /srv
-          description:
-            en_us: FileBrowser managed directory.
-            zh_cn: FileBrowser管理的目录
-            ko_kr: FileBrowser가 관리하는 디렉토리
-            es_es: Directorio gestionado por FileBrowser
-            fr_fr: Répertoire géré par FileBrowser
+        limits:
+          memory: 256M
+    cpu_shares: 80
+    
 x-casaos:
   architectures:
     - amd64
@@ -126,39 +74,38 @@ x-casaos:
 
         | Username | Password |
         | -------- | -------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$default_pwd` |
       zh_cn: |
         默认账号
 
         | 用户名 | 密码 |
         | -------- | -------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$default_pwd` |
       ko_kr: |
         기본 계정
 
         | 사용자명 | 비밀번호 |
         | -------- | -------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$default_pwd` |
       es_es: |
         Cuenta predeterminada
 
         | Usuario | Contraseña |
         | -------- | -------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$default_pwd` |
       fr_fr: |
         Compte par défaut
 
         | Nom d'utilisateur | Mot de passe |
         | -------- | -------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$default_pwd` |
   title:
     en_us: FileBrowser
   index: /
   scheme: https
   store_app_id: filebrowser
+  webui_port: 80
   pre-install-cmd: |
     mkdir -p /DATA/AppData/filebrowser/db /DATA/AppData/filebrowser/config &&
-    chown -R $PUID:$PGID /DATA/AppData/filebrowser &&
-    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.57.0 config init --database /database/filebrowser.db --config /config/settings.json &&
-    docker run --rm -v /DATA/AppData/filebrowser/db:/database -v /DATA/AppData/filebrowser/config:/config filebrowser/filebrowser:v2.57.0 users add admin $PCS_DEFAULT_PASSWORD --perm.admin --database /database/filebrowser.db
-  webui_port: 80
+    docker run --rm -v /DATA/AppData/filebrowser/db:/database filebrowser/filebrowser:v2.32.0 config init --database /database/filebrowser.db &&
+    docker run --rm -v /DATA/AppData/filebrowser/db:/database filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /database/filebrowser.db
