@@ -2,13 +2,16 @@ name: ssa
 
 services:
   ssa-hashlock:
-    image: krizcold/nginxhashlock:latest
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
     container_name: ssa-hashlock
     restart: unless-stopped
+    user: "0:0"
     expose:
       - "80"
     environment:
       AUTH_HASH: $AUTH_HASH
+      USER: "segment"
+      PASSWORD: $default_pwd
       BACKEND_HOST: "ssa"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
