@@ -17,6 +17,10 @@ services:
       - type: bind
         source: /var/run/docker.sock
         target: /var/run/docker.sock
+      # SSH keys for root access to host VM (used for system maintenance)
+      - type: bind
+        source: /root/.ssh/
+        target: /host_ssh/
       # Used for PCS integration
       - type: bind
         source: /DATA/
@@ -53,6 +57,8 @@ x-casaos:
       - Styled login page with session management
       - Persistent workspace volume
       - Claude starts automatically on connection
+      - Full administrative power: Docker socket access + SSH root access to host VM
+      - Can perform any maintenance task on the VM
 
       Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
     zh_cn: |
