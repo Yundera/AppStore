@@ -1,0 +1,119 @@
+name: segment
+
+services:
+  segmentplayer-hashlock:
+    image: krizcold/nginxhashlock:latest
+    container_name: segmentplayer-hashlock
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "segmentplayer"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+    depends_on:
+      - segmentplayer
+    networks:
+      - segment-internal
+    cpu_shares: 50
+
+  segmentplayer:
+    image: ghcr.io/worph/segmentplayer:1.3
+    container_name: segmentplayer
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    volumes:
+      - /DATA/Downloads:/data/media/Downloads:ro
+      - /DATA/Media:/data/media/Media:ro
+    environment:
+      - SEGMENT_DURATION=10
+      - NGINX_PORT=80
+    restart: unless-stopped
+    user: 0:0
+    cpu_shares: 70
+    networks:
+      - segment-internal
+
+networks:
+  segment-internal:
+    driver: bridge
+
+x-casaos:
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
+  main: segmentplayer-hashlock
+
+  architectures:
+    - amd64
+    - arm64
+  author: Worph
+  category: Media
+  description:
+    en_us: |
+      SegmentPlayer is a media streaming application that serves your video files as HLS streams on-the-fly.
+
+      Features:
+      - Browse and play any video from your Downloads folder
+      - On-demand HLS packaging with nginx-vod-module (no pre-transcoding needed)
+      - Live segment-level transcoding for incompatible codecs
+      - Instant seeking support
+      - Multi-audio track selection
+      - Embedded subtitle extraction (ASS, SRT to WebVTT)
+      - Modern responsive web player with hls.js
+
+      Supported formats: MP4, MKV, MOV, AVI, WebM
+      - Direct streaming: H.264/H.265 video with AAC audio
+      - With live transcoding: Any FFmpeg-supported codec (HEVC, VP9, AV1, 10-bit, etc.)
+
+      Simply drop video files into your Downloads folder and they become instantly streamable!
+    fr_fr: |
+      SegmentPlayer est une application de streaming qui sert vos fichiers vidéo en flux HLS à la volée.
+
+      Fonctionnalités:
+      - Parcourir et lire n'importe quelle vidéo de votre dossier Downloads
+      - Packaging HLS à la demande avec nginx-vod-module (pas de transcodage préalable)
+      - Transcodage live segment par segment pour codecs incompatibles
+      - Support de recherche instantané
+      - Sélection de piste audio multiple
+      - Extraction des sous-titres embarqués (ASS, SRT vers WebVTT)
+      - Lecteur web moderne et responsive avec hls.js
+
+      Formats supportés: MP4, MKV, MOV, AVI, WebM
+      - Streaming direct: vidéo H.264/H.265 avec audio AAC
+      - Avec transcodage live: tout codec supporté par FFmpeg (HEVC, VP9, AV1, 10-bit, etc.)
+
+      Déposez simplement vos fichiers vidéo dans votre dossier Downloads et ils deviennent instantanément streamables!
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/screenshot-1.png
+  tagline:
+    en_us: Stream any video file as HLS on-the-fly with live transcoding
+    fr_fr: Diffusez n'importe quel fichier vidéo en HLS à la volée avec transcodage live
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/icon.png
+  tips:
+    before_install:
+      en_us: |
+        This app streams video files from your Downloads folder (/DATA/Downloads).
+
+        For best performance, use videos with:
+        - H.264 or H.265 video codec
+        - AAC audio codec
+
+        Videos with incompatible codecs (like VP9, AV1, AC3 audio, or 10-bit video) will be
+        transcoded on-the-fly at the segment level for smooth playback.
+      fr_fr: |
+        Cette application diffuse les fichiers vidéo de votre dossier Downloads (/DATA/Downloads).
+
+        Pour de meilleures performances, utilisez des vidéos avec:
+        - Codec vidéo H.264 ou H.265
+        - Codec audio AAC
+
+        Les vidéos avec des codecs incompatibles (comme VP9, AV1, audio AC3, ou vidéo 10-bit)
+        seront transcodées à la volée segment par segment pour une lecture fluide.
+  title:
+    en_us: SegmentPlayer
+    fr_fr: SegmentPlayer
