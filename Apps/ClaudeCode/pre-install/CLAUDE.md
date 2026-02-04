@@ -51,35 +51,35 @@ All user data and application configurations are stored under `/DATA`:
 
 ## Docker Access
 
-You have full Docker CLI access via the mounted Docker socket. Common commands:
+You have full Docker CLI access via the mounted Docker socket. **All Docker commands require `sudo`.**
 
 ```bash
 # List running containers
-docker ps
+sudo docker ps
 
 # View container logs
-docker logs <container_name>
+sudo docker logs <container_name>
 
 # Restart a container
-docker restart <container_name>
+sudo docker restart <container_name>
 
 # View resource usage
-docker stats
+sudo docker stats
 
 # Inspect a container
-docker inspect <container_name>
+sudo docker inspect <container_name>
 
 # Execute commands in a container
-docker exec -it <container_name> /bin/sh
+sudo docker exec -it <container_name> /bin/sh
 
 # Pull updated image
-docker pull <image_name>
+sudo docker pull <image_name>
 
 # Docker Compose operations (from app directory)
 cd /DATA/AppData/casaos/apps/<AppName>
-docker compose up -d
-docker compose down
-docker compose logs -f
+sudo docker compose up -d
+sudo docker compose down
+sudo docker compose logs -f
 ```
 
 ## SSH Access to Host VM (Root Operations)
@@ -204,25 +204,25 @@ Apps are accessible via clean HTTPS URLs:
 
 ### Viewing App Logs
 ```bash
-docker logs -f <container_name>
+sudo docker logs -f <container_name>
 # Or from compose directory:
 cd /DATA/AppData/casaos/apps/<AppName>
-docker compose logs -f
+sudo docker compose logs -f
 ```
 
 ### Restarting an App
 ```bash
-docker restart <container_name>
+sudo docker restart <container_name>
 # Or full restart:
 cd /DATA/AppData/casaos/apps/<AppName>
-docker compose down && docker compose up -d
+sudo docker compose down && sudo docker compose up -d
 ```
 
 ### Updating an App
 ```bash
 cd /DATA/AppData/casaos/apps/<AppName>
-docker compose pull
-docker compose up -d
+sudo docker compose pull
+sudo docker compose up -d
 ```
 
 ### Checking Disk Usage
@@ -230,33 +230,33 @@ docker compose up -d
 df -h
 du -sh /DATA/*
 du -sh /DATA/AppData/*
-docker system df
+sudo docker system df
 ```
 
 ### Cleaning Up Docker
 ```bash
 # Remove unused images
-docker image prune -a
+sudo docker image prune -a
 
 # Remove unused volumes (careful!)
-docker volume prune
+sudo docker volume prune
 
 # Full cleanup
-docker system prune -a
+sudo docker system prune -a
 ```
 
 ### Network Debugging
 ```bash
 # Check container networks
-docker network ls
-docker network inspect <network_name>
+sudo docker network ls
+sudo docker network inspect <network_name>
 
 # Check container ports
-docker port <container_name>
+sudo docker port <container_name>
 
 # Test connectivity from container
-docker exec <container_name> ping <host>
-docker exec <container_name> curl <url>
+sudo docker exec <container_name> ping <host>
+sudo docker exec <container_name> curl <url>
 ```
 
 ## Important Notes

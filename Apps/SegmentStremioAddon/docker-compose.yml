@@ -1,9 +1,9 @@
 name: ssa
 
 services:
-  ssa-hashlock:
+  ssa:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    container_name: ssa-hashlock
+    container_name: ssa
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -12,18 +12,18 @@ services:
       AUTH_HASH: $AUTH_HASH
       USER: "segment"
       PASSWORD: $default_pwd
-      BACKEND_HOST: "ssa"
+      BACKEND_HOST: "ssa-backend"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
     depends_on:
-      - ssa
+      - ssa-backend
     networks:
       - ssa-internal
     cpu_shares: 50
 
-  ssa:
+  ssa-backend:
     image: ghcr.io/worph/segment-stremio-addon:1.2
-    container_name: ssa
+    container_name: ssa-backend
     deploy:
       resources:
         limits:
@@ -47,7 +47,7 @@ networks:
 x-casaos:
   index: /?hash=$AUTH_HASH
   webui_port: 80
-  main: ssa-hashlock
+  main: ssa
   access_domain: ssa-user.nsl.sh
 
   architectures:
