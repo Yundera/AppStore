@@ -2,7 +2,7 @@ name: claude
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.1
+    image: ghcr.io/worph/claude-code-container:1.0.2
     container_name: claude
     restart: unless-stopped
     user: 0:0
@@ -89,13 +89,10 @@ x-casaos:
       en_us: |
         Requirements:
         - Anthropic API key (get one at https://console.anthropic.com/)
+        or
+        - Anthropic account
 
-        Default login password: {$default_pwd}
-      zh_cn: |
-        要求：
-        - Anthropic API 密钥（获取地址：https://console.anthropic.com/）
-
-        默认登录密码：{$default_pwd}
+        Default login password: `$default_pwd`
   pre-install-cmd: |
     mkdir -p /DATA/AppData/claude-code/workspace &&
     if [ ! -f /DATA/AppData/claude-code/workspace/CLAUDE.md ]; then
