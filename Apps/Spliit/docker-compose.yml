@@ -38,7 +38,7 @@ services:
       POSTGRES_INITDB_ARGS: '--data-checksums'
       TZ: UTC
     volumes:
-      - /DATA/AppData/$AppID/pgdata:/var/lib/postgresql/data
+      - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
       - pcs
@@ -68,12 +68,11 @@ services:
       POSTGRES_USER: spliit
       POSTGRES_PASSWORD: $default_pwd
       POSTGRES_TIMEOUT: 60
-      NEXT_PUBLIC_BASE_URL: https://$domain
       DATABASE_URL: postgresql://spliit:$default_pwd@db:5432/spliit
       NODE_ENV: production
     volumes:
-      - /DATA/AppData/$AppID/data:/data
-      - /DATA/AppData/$AppID/cache:/usr/app/.next/cache    
+      - /DATA/AppData/$AppID/data/:/data
+      - /DATA/AppData/$AppID/cache/:/usr/app/.next/cache    
     networks:
       - pcs      
     cap_add:
@@ -94,7 +93,7 @@ x-casaos:
     - arm64
   main: nginxhashlock
   webui_port: 80
-  author: CasaOS Team
+  author: Yundera Team
   category: Finance
   developer: Spliit Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/icon.png
