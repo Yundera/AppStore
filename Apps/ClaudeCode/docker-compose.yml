@@ -1,0 +1,98 @@
+name: claude
+
+services:
+  claude:
+    image: ghcr.io/worph/claude-code-container:1.0.1
+    container_name: claude
+    restart: unless-stopped
+    user: 0:0
+    expose:
+      - 80
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY-"Please fill you key here"}
+      - AUTH_PASSWORD=$default_pwd
+      - PROXY_PORT=80
+    volumes:
+      # Docker socket for container management
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      # Used for PCS integration
+      - type: bind
+        source: /DATA/
+        target: /DATA/
+      # Claude Code workspace persistence
+      - type: bind
+        source: /DATA/AppData/claude-code/workspace
+        target: /home/claude/workspace
+    networks:
+      pcs: null
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+
+networks:
+  pcs:
+    name: pcs
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: claude
+  author: Yundera
+  category: Developer
+  description:
+    en_us: |
+      Claude Code Container - Web-based terminal interface for Claude Code (Anthropic's CLI for Claude).
+
+      Features:
+      - Web-based terminal access to Claude Code
+      - Styled login page with session management
+      - Persistent workspace volume
+      - Claude starts automatically on connection
+
+      Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
+    zh_cn: |
+      Claude Code 容器 - Claude Code（Anthropic 的 Claude CLI）的 Web 终端界面。
+
+      功能：
+      - 基于 Web 的 Claude Code 终端访问
+      - 带会话管理的登录页面
+      - 持久化工作区
+      - 连接时自动启动 Claude
+  developer: Anthropic / Yundera
+  icon: https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/screenshot-3.png
+  tagline:
+    en_us: Web terminal for Claude Code - Anthropic's AI coding assistant
+    zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/thumbnail.png
+  title:
+    en_us: Claude Code
+    zh_cn: Claude Code
+  index: /
+  webui_port: 80
+  tips:
+    before_install:
+      en_us: |
+        Requirements:
+        - Anthropic API key (get one at https://console.anthropic.com/)
+
+        Default login password: {$default_pwd}
+      zh_cn: |
+        要求：
+        - Anthropic API 密钥（获取地址：https://console.anthropic.com/）
+
+        默认登录密码：{$default_pwd}
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/claude-code/workspace &&
+    if [ ! -f /DATA/AppData/claude-code/workspace/CLAUDE.md ]; then
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude-code/workspace/CLAUDE.md
+    fi &&
+    chown -R 1000:1000 /DATA/AppData/claude-code
