@@ -1,0 +1,120 @@
+name: ssa
+
+services:
+  ssa-hashlock:
+    image: krizcold/nginxhashlock:latest
+    container_name: ssa-hashlock
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "ssa"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+    depends_on:
+      - ssa
+    networks:
+      - ssa-internal
+    cpu_shares: 50
+
+  ssa:
+    image: ghcr.io/worph/segment-stremio-addon:1.2
+    container_name: ssa
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    volumes:
+      - /DATA/Downloads:/data/media/Downloads:ro
+      - /DATA/Media:/data/media/Media:ro
+    environment:
+      - PORT=80
+      - SCHEME=https
+    restart: unless-stopped
+    cpu_shares: 70
+    user: 0:0
+    networks:
+      - ssa-internal
+
+networks:
+  ssa-internal:
+    driver: bridge
+
+x-casaos:
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
+  main: ssa-hashlock
+  access_domain: ssa-user.nsl.sh
+
+  architectures:
+    - amd64
+    - arm64
+  author: Worph
+  category: Media
+  description:
+    en_us: |
+      Stremio Addon for SegmentPlayer - Browse and stream your local media library directly in Stremio.
+
+      Features:
+      - Browse your media files in Stremio's catalog
+      - Search and filter by folder/genre
+      - Multiple stream options per video:
+        - Direct Play (original codec)
+        - HLS Original (source resolution)
+        - HLS Auto (adaptive bitrate)
+        - Open in SegmentPlayer web player
+      - Series detection (S##E## pattern)
+      - Multi-audio track support
+      - Embedded subtitle extraction
+
+      Requires SegmentPlayer to be installed for transcoding.
+      Install in Stremio using the manifest URL shown on the addon page.
+    fr_fr: |
+      Addon Stremio pour SegmentPlayer - Parcourez et diffusez votre bibliothèque multimédia locale directement dans Stremio.
+
+      Fonctionnalités:
+      - Parcourez vos fichiers multimédia dans le catalogue Stremio
+      - Recherche et filtrage par dossier/genre
+      - Plusieurs options de stream par vidéo:
+        - Lecture directe (codec original)
+        - HLS Original (résolution source)
+        - HLS Auto (débit adaptatif)
+        - Ouvrir dans le lecteur web SegmentPlayer
+      - Détection de séries (motif S##E##)
+      - Support multi-pistes audio
+      - Extraction des sous-titres embarqués
+
+      Nécessite SegmentPlayer installé pour le transcodage.
+      Installez dans Stremio en utilisant l'URL du manifest affichée sur la page de l'addon.
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/screenshot-1.png
+  tagline:
+    en_us: Stremio addon to browse and stream your local media via SegmentPlayer
+    fr_fr: Addon Stremio pour parcourir et diffuser vos médias locaux via SegmentPlayer
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/icon.png
+  tips:
+    before_install:
+      en_us: |
+        This addon requires SegmentPlayer to be installed for video transcoding.
+
+        After installation:
+        1. Open the addon page at https://ssa-user.nsl.sh
+        2. Copy the manifest URL or click "Install in Stremio"
+        3. Your media library will appear in Stremio's catalog
+
+        The addon scans the same media folders as SegmentPlayer (/DATA/Downloads and /DATA/Media).
+      fr_fr: |
+        Cet addon nécessite SegmentPlayer installé pour le transcodage vidéo.
+
+        Après l'installation:
+        1. Ouvrez la page de l'addon à https://ssa-user.nsl.sh
+        2. Copiez l'URL du manifest ou cliquez sur "Installer dans Stremio"
+        3. Votre bibliothèque multimédia apparaîtra dans le catalogue Stremio
+
+        L'addon scanne les mêmes dossiers que SegmentPlayer (/DATA/Downloads et /DATA/Media).
+  title:
+    en_us: Segment Stremio Addon
+    fr_fr: Addon Stremio Segment
