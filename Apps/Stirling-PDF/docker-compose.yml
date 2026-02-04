@@ -2,19 +2,19 @@ name: stirlingpdf
 
 services:
   stirlingpdf:
-    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:1.6.0
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.4.3
     container_name: stirling-pdf
     restart: unless-stopped
     expose:
       - 80
     volumes:
-      - /DATA/AppData/$AppID/tessdata:/usr/share/tessdata
-      - /DATA/AppData/$AppID/configs:/configs
-      - /DATA/AppData/$AppID/logs:/logs
-      - /DATA/AppData/$AppID/customFiles:/customFiles
-      - /DATA/AppData/$AppID/pipeline:/pipeline
-      - /DATA/Downloads:/downloads
-      - /DATA/AppData/$AppID/tmp:/tmp
+      - /DATA/AppData/$AppID/tessdata/:/usr/share/tessdata
+      - /DATA/AppData/$AppID/configs/:/configs
+      - /DATA/AppData/$AppID/logs/:/logs
+      - /DATA/AppData/$AppID/customFiles/:/customFiles
+      - /DATA/AppData/$AppID/pipeline/:/pipeline
+      - /DATA/Downloads/:/downloads
+      - /DATA/AppData/$AppID/tmp/:/tmp
     user: "0:0"  # Root user required for Java runtime and PDF tools - see rationale.md
     environment:
       PGID: 0
@@ -198,15 +198,13 @@ x-casaos:
         **🌐 Access:**
         Once ready, your app will be available at `https://stirlingpdf-[username].nsl.sh`
 
-        **💡 Performance Improvements (v1.6.0):**
-        • Upgraded to latest stable V1 release with Debian base
+        **💡 New in V2.4.3:**
+        • Stateful Processing - Upload once, use across multiple tools
+        • Undo & Redo with full version history
+        • 2FA support and enhanced security
+        • Improved page editor performance and UI
+        • PDF/X format support and better conversion tools
         • Enhanced memory management (5GB limit with 2GB reservation)
-        • Optimized Java GC settings for better stability
-        • Support for PDF/A-3b, PDF/X formats
-        • New features: PDF to video, eBook to PDF, linearize PDF
-
-        **📋 Version Note:**
-        Using v1.6.0 (last stable V1). V2.0 is available but requires migration. You can upgrade later when ready.
 
         **How to use:**
         Upload PDF files through your web browser and start editing them right away!
@@ -228,15 +226,13 @@ x-casaos:
         **🌐 접근:**
         준비가 되면 `https://stirlingpdf-[username].nsl.sh`로 앱에 접근할 수 있습니다!
 
-        **💡 성능 개선 (v1.6.0):**
-        • Debian 기반의 최신 안정 V1 릴리스로 업그레이드
+        **💡 V2.4.3 새로운 기능:**
+        • Stateful Processing - 한 번 업로드로 여러 도구에서 사용
+        • 실행 취소 및 다시 실행 (전체 버전 히스토리)
+        • 2FA 지원 및 향상된 보안
+        • 페이지 에디터 성능 및 UI 개선
+        • PDF/X 형식 지원 및 향상된 변환 도구
         • 향상된 메모리 관리 (5GB 제한, 2GB 예약)
-        • 더 나은 안정성을 위한 Java GC 설정 최적화
-        • PDF/A-3b, PDF/X 형식 지원
-        • 새로운 기능: PDF to video, eBook to PDF, PDF 선형화
-
-        **📋 버전 참고:**
-        v1.6.0 (마지막 안정 V1) 사용. V2.0도 사용 가능하지만 마이그레이션이 필요합니다. 준비가 되면 나중에 업그레이드할 수 있습니다.
 
         **사용 방법:**
         웹 브라우저를 통해 PDF 파일을 업로드하고 바로 편집을 시작할 수 있습니다!
@@ -258,15 +254,13 @@ x-casaos:
         **🌐 访问:**
         准备就绪后,您的应用将通过`https://stirlingpdf-[username].nsl.sh`可用!
 
-        **💡 性能改进 (v1.6.0):**
-        • 升级到基于Debian的最新稳定V1版本
+        **💡 V2.4.3 新功能:**
+        • 状态处理 - 上传一次,跨多个工具使用
+        • 撤销和重做(完整版本历史)
+        • 2FA支持和增强安全性
+        • 页面编辑器性能和UI改进
+        • PDF/X格式支持和更好的转换工具
         • 增强的内存管理(5GB限制,2GB保留)
-        • 优化Java GC设置以提高稳定性
-        • 支持PDF/A-3b、PDF/X格式
-        • 新功能:PDF转视频、电子书转PDF、PDF线性化
-
-        **📋 版本说明:**
-        使用v1.6.0(最后稳定V1)。V2.0可用但需要迁移。准备好后可以稍后升级。
 
         **如何使用:**
         通过网页浏览器上传PDF文件并立即开始编辑!
@@ -288,15 +282,13 @@ x-casaos:
         **🌐 Accès :**
         Une fois prêt, votre application sera disponible à `https://stirlingpdf-[username].nsl.sh` !
 
-        **💡 Améliorations de performance (v1.6.0) :**
-        • Mise à niveau vers la dernière version stable V1 basée sur Debian
+        **💡 Nouveautés V2.4.3 :**
+        • Traitement avec état - Téléchargez une fois, utilisez sur plusieurs outils
+        • Annuler et rétablir (historique complet des versions)
+        • Support 2FA et sécurité améliorée
+        • Performance et UI de l'éditeur de pages améliorées
+        • Support du format PDF/X et meilleurs outils de conversion
         • Gestion mémoire améliorée (limite 5GB avec réservation 2GB)
-        • Paramètres Java GC optimisés pour une meilleure stabilité
-        • Support des formats PDF/A-3b, PDF/X
-        • Nouvelles fonctionnalités : PDF vers vidéo, eBook vers PDF, linéarisation PDF
-
-        **📋 Note de version :**
-        Utilise v1.6.0 (dernière V1 stable). V2.0 disponible mais nécessite migration. Vous pouvez mettre à niveau plus tard.
 
         **Comment utiliser :**
         Téléchargez des fichiers PDF via votre navigateur web et commencez à les éditer immédiatement !
@@ -318,15 +310,13 @@ x-casaos:
         **🌐 Acceso:**
         Una vez listo, tu aplicación estará disponible en `https://stirlingpdf-[username].nsl.sh`!
 
-        **💡 Mejoras de rendimiento (v1.6.0):**
-        • Actualizado a la última versión estable V1 basada en Debian
+        **💡 Novedades V2.4.3:**
+        • Procesamiento con estado - Sube una vez, usa en múltiples herramientas
+        • Deshacer y rehacer (historial completo de versiones)
+        • Soporte 2FA y seguridad mejorada
+        • Rendimiento y UI del editor de páginas mejorados
+        • Soporte de formato PDF/X y mejores herramientas de conversión
         • Gestión de memoria mejorada (límite 5GB con reserva 2GB)
-        • Configuración Java GC optimizada para mayor estabilidad
-        • Soporte para formatos PDF/A-3b, PDF/X
-        • Nuevas funciones: PDF a video, eBook a PDF, linealización PDF
-
-        **📋 Nota de versión:**
-        Usando v1.6.0 (última V1 estable). V2.0 disponible pero requiere migración. Puedes actualizar más tarde.
 
         **Cómo usar:**
         ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!
