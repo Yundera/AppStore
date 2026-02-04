@@ -54,7 +54,7 @@ services:
           memory: 512M
 
   spliit:
-    image: ghcr.io/crazy-max/spliit:1.19.1
+    image: ghcr.io/spliit-app/spliit:1.19.0
     container_name: spliit
     user: 0:0
     restart: unless-stopped
