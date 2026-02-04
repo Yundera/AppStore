@@ -1,0 +1,157 @@
+name: Nginx
+
+services:
+  nginx:
+    image: nginx:1.29.3-alpine
+    container_name: nginx
+    user: "0:0"
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - 80:80
+    expose:
+      - 80
+    volumes:
+      - type: bind
+        source: /DATA/AppData/Nginx/www/
+        target: /usr/share/nginx/html
+        read_only: false
+      - type: bind
+        source: /DATA/AppData/Nginx/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=$TZ
+      - NGINX_HOST=$domain
+      - NGINX_PORT=80
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.25'
+    cpu_shares: 50
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: nginx
+  webui_port: 80
+  author: Yundera Team
+  category: WEB
+  description:
+    en_us: |
+      **🌐 What is nginx?**
+
+      **nginx** is a lightweight, high-performance web server for hosting static websites, HTML pages, JavaScript applications, and documentation sites. The world's most popular web server, it delivers your content blazingly fast with minimal resource usage.
+
+      Perfect for:
+      • Personal websites and portfolios
+      • Single-page applications (React, Vue, Angular)
+      • Documentation sites
+      • Landing pages and marketing sites
+      • Static site generators (Hugo, Jekyll, Gatsby)
+      • HTML/CSS/JavaScript projects
+
+      **Key Features:**
+
+      • **Zero Configuration** — Drop your files in and start serving immediately
+      • **Lightning Fast** — nginx delivers static content faster than any alternative
+      • **Minimal Resources** — Runs efficiently with just 64MB RAM
+      • **Clean URLs** — Automatic HTTPS access via NSL.SH routing
+      • **Modern Web Support** — Full support for SPAs, PWAs, and modern JavaScript
+      • **Production Ready** — Battle-tested nginx powers 30% of the internet
+
+      Simply upload your HTML, CSS, JavaScript, and assets to `/DATA/AppData/Nginx/www/` and your site is instantly live. No databases, no complex configuration, just pure static file hosting done right.
+
+      **🚀 Why Choose nginx?**
+
+      **nginx** gives you complete control over your web hosting without the complexity of managed services or the overhead of full-featured CMSs. It's the fastest way to get static content online.
+
+      Why choose nginx?
+      • **Your content, your server** — no external hosting dependencies
+      • **Industry standard** — nginx is trusted by millions of production websites
+      • **Zero overhead** — no backend processing, no database queries
+      • **Instant updates** — edit files and changes appear immediately
+      • **Developer friendly** — works with any static site workflow
+
+      With nginx on **Yundera**, you can:
+      • Host unlimited static sites
+      • Deploy modern JavaScript applications
+      • Serve API documentation
+      • Create internal company websites
+      • Test frontend projects before production
+
+      **🛠️ Perfect For:**
+      • Frontend developers testing static builds
+      • Teams needing internal documentation sites
+      • Anyone wanting simple, fast web hosting
+      • Projects that don't need server-side processing
+    zh_cn: |
+      **🌐 什么是 nginx？**
+
+      **nginx** 是一个轻量级、高性能的 Web 服务器，用于托管静态网站、HTML 页面、JavaScript 应用程序和文档站点。作为世界上最流行的 Web 服务器，它以最小的资源使用快速传递您的内容。
+
+      适用于：
+      • 个人网站和作品集
+      • 单页应用程序（React、Vue、Angular）
+      • 文档站点
+      • 登陆页面和营销站点
+      • 静态站点生成器（Hugo、Jekyll、Gatsby）
+      • HTML/CSS/JavaScript 项目
+
+      **主要功能：**
+
+      • **零配置** — 放入文件即可立即开始服务
+      • **闪电般快速** — nginx 比任何替代方案都更快地传递静态内容
+      • **最小资源** — 仅需 64MB RAM 即可高效运行
+      • **清洁 URL** — 通过 NSL.SH 路由自动 HTTPS 访问
+      • **现代 Web 支持** — 完全支持 SPA、PWA 和现代 JavaScript
+      • **生产就绪** — 经过实战检验的 nginx 为 30% 的互联网提供动力
+
+      只需将您的 HTML、CSS、JavaScript 和资源上传到 `/DATA/AppData/Nginx/www/`，您的网站就会立即上线。无需数据库，无需复杂配置，只需纯静态文件托管。
+  developer: nginx
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/screenshot-1.png
+  tagline:
+    en_us: Lightning-fast static website hosting powered by nginx
+    zh_cn: 由 nginx 提供支持的闪电般快速静态网站托管
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/thumbnail.png
+  tips:
+    before_install:
+      en_us: |
+        **📁 Setup Instructions**
+        After installation, add your website files to:
+        `/DATA/AppData/Nginx/www/`
+
+        **Quick Start:**
+        1. Install the app
+        2. Upload your website files to the www directory
+        3. Access your site at: `https://nginx-$domain/`
+
+        **File Structure:**
+        ```
+        /DATA/AppData/Nginx/
+        ├── www/              # Your website files go here
+        │   └── index.html   # Main page
+        └── nginx.conf       # nginx configuration
+        ```
+        
+        **IPv6 Direct Access:**
+        Then access your site at: `http://[$PCS_PUBLIC_IPV6]`
+  title:
+    en_us: Nginx
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/Nginx/www &&
+    if [ ! -f /DATA/AppData/Nginx/www/index.html ]; then
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/pre-install/index.html -O /DATA/AppData/Nginx/www/index.html
+    fi &&
+    if [ ! -f /DATA/AppData/Nginx/nginx.conf ]; then
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/pre-install/nginx.conf -O /DATA/AppData/Nginx/nginx.conf
+    fi &&
+    chmod -R 755 /DATA/AppData/nginx
