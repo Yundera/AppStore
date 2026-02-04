@@ -2,12 +2,12 @@ name: yunderaterminal
 
 services:
   yunderaterminal:
-    image: krizcold/nginxhashlock:latest
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
     container_name: yunderaterminal
     restart: unless-stopped
     expose:
       - "80"
-    user: "root"
+    user: "0:0"
     environment:
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "ttyd"
