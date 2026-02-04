@@ -27,7 +27,7 @@ services:
       - SYS_ADMIN
       - NET_ADMIN
   netdata:
-    image: netdata/netdata:v2.8.4
+    image: netdata/netdata:v2.8.5
     hostname: netdata
     user: 0:0
     environment:
