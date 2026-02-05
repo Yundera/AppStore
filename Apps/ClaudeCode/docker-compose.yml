@@ -27,11 +27,11 @@ services:
         target: /DATA/
       # Claude Code workspace persistence
       - type: bind
-        source: /DATA/AppData/claude-code/workspace
+        source: /DATA/AppData/claude/workspace/
         target: /home/claude/workspace
       # claude config persistence (contains user sessions, settings, and other important data - don't delete this volume or you will lose all your data)
       - type: bind
-        source: /DATA/AppData/claude-code/config
+        source: /DATA/AppData/claude/config/
         target: /home/claude/.claude
     networks:
       pcs: null
