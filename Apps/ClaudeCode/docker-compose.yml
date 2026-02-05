@@ -98,8 +98,8 @@ x-casaos:
 
         Default login password: `$default_pwd`
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/claude-code/workspace &&
-    if [ ! -f /DATA/AppData/claude-code/workspace/CLAUDE.md ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude-code/workspace/CLAUDE.md
+    mkdir -p /DATA/AppData/claude/workspace &&
+    if [ ! -f /DATA/AppData/claude/workspace/CLAUDE.md ]; then
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude/workspace/CLAUDE.md
     fi &&
-    chown -R 1000:1000 /DATA/AppData/claude-code
+    chown -R 1000:1000 /DATA/AppData/claude
