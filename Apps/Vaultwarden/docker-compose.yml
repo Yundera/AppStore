@@ -1,0 +1,441 @@
+name: vaultwarden
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.34.3
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    cpu_shares: 70
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f -o /dev/null -s -w '%{http_code}' https://vaultwarden-$domain/ | grep -q '200'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    expose:
+      - 80
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      ROCKET_PORT: 80
+      ROCKET_ADDRESS: 0.0.0.0
+      SIGNUPS_ALLOWED: "true"
+      ADMIN_TOKEN: $default_pwd
+      DOMAIN: https://vaultwarden-$domain
+      SMTP_HOST: smtp
+      SMTP_PORT: 587
+      SMTP_SECURITY: off
+      SMTP_USERNAME: casaos
+      SMTP_PASSWORD: $default_pwd
+      SMTP_FROM: vaultwarden@$domain
+      SMTP_FROM_NAME: Vaultwarden
+    volumes:
+      - /DATA/AppData/vaultwarden/data/:/data/
+    restart: unless-stopped
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: vaultwarden
+  author: Yundera Team
+  category: Utilities
+  description:
+    en_us: |
+      🔐 **What is Vaultwarden?**
+
+      **Vaultwarden, known as Bitwarden** is a secure password manager that helps you **store, organize, and access your passwords** easily across all your devices. Instead of trying to remember dozens of passwords, you only need **one master password** to unlock your vault.
+
+      ✅ Just download the **Bitwarden app** on your phone or desktop, or use the **Bitwarden browser extension** --- it works perfectly with Vaultwarden.
+
+      You can save:
+      • Login info (email + password)
+      • Credit cards
+      • Notes
+      • 2FA codes
+
+      Everything is **encrypted**, and only you can see your data.
+
+      🧱 **Why choose Vaultwarden?**
+
+      **Vaultwarden** is a lightweight version of Bitwarden that runs on your own server. Think of it like having your own personal password bank instead of using someone else's.
+
+      Why choose Vaultwarden?
+      • **Your data stays with you** --- no third-party companies involved
+      • **Faster and lighter** --- uses less resources than the official version
+      • **Same features** --- works with all Bitwarden apps and browsers
+
+      With Vaultwarden on **Yundera**, you can:
+      • Run your own password manager server
+      • Access your passwords from any device (mobile, browser, desktop)
+      • Share access with your team or family (if you want)
+      • Keep your data private --- it never leaves your server
+
+      **📧 Email Integration:**
+      This version uses Yundera's built-in SMTP service for email delivery - password recovery and notifications work automatically!
+    ko_kr: |
+      🔐 **Vaultwarden이란?**
+
+      **Vaultwarden, Bitwarden로도 알려진**은 모든 기기에서 **비밀번호를 저장, 정리, 접근**할 수 있도록 도와주는 안전한 비밀번호 관리자입니다. 수십 개의 비밀번호를 기억하려 하지 말고, **하나의 마스터 비밀번호**만으로 볼트를 열 수 있습니다.
+
+      ✅ 휴대폰이나 데스크톱에서 **Bitwarden 앱**을 다운로드하거나, **Bitwarden 브라우저 확장 프로그램**을 사용하세요 --- Vaultwarden과 완벽하게 작동합니다.
+
+      저장 가능한 항목:
+      • 로그인 정보 (이메일 + 비밀번호)
+      • 신용카드
+      • 메모
+      • 2FA 코드
+
+      모든 것이 **암호화**되어 있으며, 오직 당신만이 데이터를 볼 수 있습니다.
+
+      🧱 **왜 Vaultwarden을 선택해야 할까요?**
+
+      **Vaultwarden**은 당신의 서버에서 돌아가는 가벼운 버전의 Bitwarden입니다. 남의 은행 대신 자신만의 개인 비밀번호 금고를 갖는 것과 같습니다.
+
+      Vaultwarden을 선택하는 이유:
+      • **내 데이터는 내가 관리** --- 제3자 회사가 개입하지 않음
+      • **더 빠르고 가벼움** --- 공식 버전보다 적은 자원 사용
+      • **동일한 기능** --- 모든 Bitwarden 앱과 브라우저에서 작동
+
+      **Yundera**의 Vaultwarden으로 할 수 있는 것:
+      • 자신만의 비밀번호 관리 서버 운영
+      • 모든 기기에서 비밀번호 접근 (모바일, 브라우저, 데스크톱)
+      • 팀이나 가족과 접근 권한 공유 (원하는 경우)
+      • 데이터 프라이버시 유지 --- 데이터가 서버를 떠나지 않음
+
+      **📧 이메일 통합:**
+      이 버전은 Yundera의 내장 SMTP 서비스를 사용합니다 - 비밀번호 복구와 알림이 자동으로 작동합니다!
+    zh_cn: |
+      🔐 **什么是Vaultwarden？**
+
+      **Vaultwarden，也被称为Bitwarden**是一个安全的密码管理器，帮助您在所有设备上轻松**存储、整理和访问密码**。无需记住数十个密码，您只需要**一个主密码**来解锁您的保险库。
+
+      ✅ 只需在手机或桌面上下载**Bitwarden应用**，或使用**Bitwarden浏览器扩展程序** --- 它与Vaultwarden完美配合。
+
+      您可以保存：
+      • 登录信息（邮箱 + 密码）
+      • 信用卡
+      • 笔记
+      • 2FA代码
+
+      一切都经过**加密**，只有您能看到您的数据。
+
+      🧱 **为什么选择Vaultwarden？**
+
+      **Vaultwarden**是在您自己服务器上运行的轻量版Bitwarden。就像拥有自己的个人密码银行，而不是使用别人的。
+
+      选择Vaultwarden的原因：
+      • **数据由您掌控** --- 无第三方公司参与
+      • **更快更轻** --- 比官方版本占用更少资源
+      • **功能相同** --- 兼容所有Bitwarden应用和浏览器
+
+      在**Yundera**上使用Vaultwarden，您可以：
+      • 运行自己的密码管理服务器
+      • 从任何设备访问密码（移动端、浏览器、桌面端）
+      • 与团队或家人分享访问权限（如果您愿意）
+      • 保持数据隐私 --- 数据永不离开您的服务器
+
+      **📧 邮件集成：**
+      此版本使用Yundera内置的SMTP服务 - 密码恢复和通知自动运行！
+    fr_fr: |
+      🔐 **Qu'est-ce que Vaultwarden ?**
+
+      **Vaultwarden, connu sous le nom de Bitwarden** est un gestionnaire de mots de passe sécurisé qui vous aide à **stocker, organiser et accéder à vos mots de passe** facilement sur tous vos appareils. Au lieu d'essayer de mémoriser des dizaines de mots de passe, vous n'avez besoin que d'**un mot de passe principal** pour déverrouiller votre coffre.
+
+      ✅ Téléchargez simplement l'**application Bitwarden** sur votre téléphone ou ordinateur, ou utilisez l'**extension de navigateur Bitwarden** --- elle fonctionne parfaitement avec Vaultwarden.
+
+      Vous pouvez sauvegarder :
+      • Informations de connexion (email + mot de passe)
+      • Cartes de crédit
+      • Notes
+      • Codes 2FA
+
+      Tout est **chiffré**, et vous seul pouvez voir vos données.
+
+      🧱 **Pourquoi choisir Vaultwarden ?**
+
+      **Vaultwarden** est une version légère de Bitwarden qui fonctionne sur votre propre serveur. C'est comme avoir votre propre banque de mots de passe personnelle au lieu d'utiliser celle de quelqu'un d'autre.
+
+      Pourquoi choisir Vaultwarden ?
+      • **Vos données restent chez vous** --- aucune entreprise tierce impliquée
+      • **Plus rapide et plus léger** --- utilise moins de ressources que la version officielle
+      • **Mêmes fonctionnalités** --- fonctionne avec toutes les applications et navigateurs Bitwarden
+
+      Avec Vaultwarden sur **Yundera**, vous pouvez :
+      • Faire fonctionner votre propre serveur de gestionnaire de mots de passe
+      • Accéder à vos mots de passe depuis n'importe quel appareil (mobile, navigateur, bureau)
+      • Partager l'accès avec votre équipe ou famille (si vous le souhaitez)
+      • Garder vos données privées --- elles ne quittent jamais votre serveur
+
+      **📧 Intégration Email :**
+      Cette version utilise le service SMTP intégré de Yundera - la récupération de mots de passe et les notifications fonctionnent automatiquement !
+    de_de: |
+      🔐 **Was ist Vaultwarden?**
+
+      **Vaultwarden, bekannt als Bitwarden** ist ein sicherer Passwort-Manager, der Ihnen hilft, Ihre **Passwörter zu speichern, zu organisieren und darauf zuzugreifen** einfach auf allen Ihren Geräten. Anstatt zu versuchen, Dutzende von Passwörtern zu merken, benötigen Sie nur **ein Master-Passwort**, um Ihren Tresor zu entsperren.
+
+      ✅ Laden Sie einfach die **Bitwarden-App** auf Ihr Telefon oder Desktop herunter, oder verwenden Sie die **Bitwarden-Browser-Erweiterung** --- sie funktioniert perfekt mit Vaultwarden.
+
+      Sie können speichern:
+      • Anmeldeinformationen (E-Mail + Passwort)
+      • Kreditkarten
+      • Notizen
+      • 2FA-Codes
+
+      Alles ist **verschlüsselt**, und nur Sie können Ihre Daten sehen.
+
+      🧱 **Warum Vaultwarden wählen?**
+
+      **Vaultwarden** ist eine leichtgewichtige Version von Bitwarden, die auf Ihrem eigenen Server läuft. Denken Sie daran wie an Ihre eigene persönliche Passwort-Bank, anstatt die von jemand anderem zu verwenden.
+
+      Warum Vaultwarden wählen?
+      • **Ihre Daten bleiben bei Ihnen** --- keine Drittunternehmen involviert
+      • **Schneller und leichter** --- verbraucht weniger Ressourcen als die offizielle Version
+      • **Gleiche Funktionen** --- funktioniert mit allen Bitwarden-Apps und Browsern
+
+      Mit Vaultwarden auf **Yundera** können Sie:
+      • Ihren eigenen Passwort-Manager-Server betreiben
+      • Von jedem Gerät auf Ihre Passwörter zugreifen (mobil, Browser, Desktop)
+      • Zugang mit Ihrem Team oder Familie teilen (wenn Sie möchten)
+      • Ihre Daten privat halten --- sie verlassen niemals Ihren Server
+
+      **📧 E-Mail-Integration:**
+      Diese Version nutzt den integrierten SMTP-Dienst von Yundera - Passwort-Wiederherstellung und Benachrichtigungen funktionieren automatisch!
+    es_es: |
+      🔐 **¿Qué es Vaultwarden?**
+
+      **Vaultwarden, conocido como Bitwarden** es un gestor de contraseñas seguro que te ayuda a **almacenar, organizar y acceder a tus contraseñas** fácilmente en todos tus dispositivos. En lugar de tratar de recordar docenas de contraseñas, solo necesitas **una contraseña maestra** para desbloquear tu bóveda.
+
+      ✅ Simplemente descarga la **aplicación Bitwarden** en tu teléfono o escritorio, o usa la **extensión de navegador Bitwarden** --- funciona perfectamente con Vaultwarden.
+
+      Puedes guardar:
+      • Información de inicio de sesión (email + contraseña)
+      • Tarjetas de crédito
+      • Notas
+      • Códigos 2FA
+
+      Todo está **encriptado**, y solo tú puedes ver tus datos.
+
+      🧱 **¿Por qué elegir Vaultwarden?**
+
+      **Vaultwarden** es una versión ligera de Bitwarden que funciona en tu propio servidor. Es como tener tu propio banco personal de contraseñas en lugar de usar el de otra persona.
+
+      ¿Por qué elegir Vaultwarden?
+      • **Tus datos se quedan contigo** --- ninguna empresa externa involucrada
+      • **Más rápido y ligero** --- usa menos recursos que la versión oficial
+      • **Mismas características** --- funciona con todas las aplicaciones y navegadores de Bitwarden
+
+      Con Vaultwarden en **Yundera**, puedes:
+      • Ejecutar tu propio servidor de gestor de contraseñas
+      • Acceder a tus contraseñas desde cualquier dispositivo (móvil, navegador, escritorio)
+      • Compartir acceso con tu equipo o familia (si quieres)
+      • Mantener tus datos privados --- nunca salen de tu servidor
+
+      **📧 Integración de Email:**
+      Esta versión utiliza el servicio SMTP integrado de Yundera - ¡la recuperación de contraseñas y las notificaciones funcionan automáticamente!
+  developer: Vaultwarden Community
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-1.png
+  tagline:
+    en_us: Secure, self-hosted password manager
+    ko_kr: 안전한 셀프 호스팅 비밀번호 관리자
+    zh_cn: 安全的自托管密码管理器
+    fr_fr: Gestionnaire de mots de passe sécurisé et auto-hébergé
+    de_de: Sicherer, selbst gehosteter Passwort-Manager
+    es_es: Gestor de contraseñas seguro y autoalojado
+  title:
+    en_us: Vaultwarden
+  tips:
+    before_install:
+      en_us: |
+        `If you lose your master password, **NOBODY CAN RECOVER YOUR DATA**! Your vault will be permanently inaccessible. Store it in a safe place.`
+        
+        **Default Admin Access**
+
+        | Setting | Value |
+        |---------|-------|
+        | Admin Panel | [🔗 Admin Panel](https://vaultwarden-$domain/admin) |
+        | Admin Token | `$default_pwd` |
+        
+        Note: The admin token will not give you access to user vaults, only the user master password will.
+
+        **First Steps:**
+
+        1. **Create your main account**: After installation, create your first user account via signup.
+
+        2. **Access Admin Panel**: [🔗 Admin Panel](https://vaultwarden-$domain/admin)
+
+        3. **Secure your instance**: Disable new signups in admin panel once set up.
+
+        **For Mobile/Desktop Apps:**
+
+        Download the **Bitwarden app** or use the **Bitwarden browser extension** - works perfectly with Vaultwarden!
+      ko_kr: |
+        `마스터 비밀번호를 분실하면 **아무도 데이터를 복구할 수 없습니다**! 보관함에 영구적으로 접근할 수 없게 됩니다. 안전한 곳에 보관하세요.`
+        
+        **기본 관리자 접근**
+
+        | 설정 | 값 |
+        |------|-----|
+        | 관리자 패널 | [🔗 관리자 패널](https://vaultwarden-$domain/admin) |
+        | 관리자 토큰 | `$default_pwd` |
+        
+        참고: 관리자 토큰으로는 사용자 보관함에 접근할 수 없으며, 오직 사용자 마스터 비밀번호만으로 가능합니다.
+
+        **📧 이메일 통합**
+
+        Yundera의 내장 SMTP 서비스를 사용합니다:
+        - **비밀번호 복구 이메일**이 즉시 작동
+        - **계정 알림**이 자동으로 전송
+
+        **첫 번째 단계:**
+
+        1. **메인 계정 생성**: 설치 후 가입을 통해 첫 번째 사용자 계정을 생성하세요.
+
+        2. **관리자 패널 접근**: [🔗 관리자 패널](https://vaultwarden-$domain/admin)
+
+        3. **인스턴스 보안**: 설정 완료 후 관리자 패널에서 새로운 가입을 비활성화하세요.
+
+        **모바일/데스크톱 앱:**
+
+        **Bitwarden 앱**을 다운로드하거나 **Bitwarden 브라우저 확장프로그램**을 사용하세요 - Vaultwarden과 완벽하게 작동합니다!
+
+        **중요**: Yundera의 SMTP 서비스가 자동으로 연결되어 비밀번호 복구가 바로 작동합니다!
+      zh_cn: |
+        **默认账户设置**
+
+        | 设置 | 值 |
+        |------|-----|
+        | 管理员面板 | 在应用URL后添加 `/admin` |
+        | 管理员令牌 | `$default_pwd` |
+
+        **📧 邮件集成**
+
+        此版本使用Yundera内置的SMTP服务：
+        - **密码恢复邮件**立即可用
+        - **账户通知**自动发送
+
+        **首要步骤：**
+
+        1. **创建主账户**: 安装后通过注册创建第一个用户账户。
+
+        2. **访问管理员面板**: 访问应用URL + `/admin`
+           示例: `https://vaultwarden-yourusername.nsl.sh/admin`
+
+        3. **保护实例安全**: 设置完成后在管理员面板中禁用新注册。
+
+        **移动端/桌面端应用：**
+
+        下载**Bitwarden应用**或使用**Bitwarden浏览器扩展** - 与Vaultwarden完美配合！
+
+        **重要提示**: Yundera的SMTP服务自动连接 - 密码恢复立即可用！
+      fr_fr: |
+        `Si vous perdez votre mot de passe principal, **PERSONNE NE PEUT RÉCUPÉRER VOS DONNÉES** ! Votre coffre-fort sera définitivement inaccessible. Conservez-le dans un endroit sûr.`
+        
+        **Accès Admin par Défaut**
+
+        | Paramètre | Valeur |
+        |-----------|--------|
+        | Panneau Admin | [🔗 Panneau Admin](https://vaultwarden-$domain/admin) |
+        | Token Admin | `$default_pwd` |
+        
+        Note : Le token admin ne vous donnera pas accès aux coffres-forts des utilisateurs, seul le mot de passe principal de l'utilisateur le peut.
+
+        **📧 Intégration Email**
+
+        Cette version utilise le service SMTP intégré de Yundera :
+        - **Emails de récupération de mot de passe** fonctionnent immédiatement
+        - **Notifications de compte** sont envoyées automatiquement
+
+        **Premières Étapes :**
+
+        1. **Créez votre compte principal** : Après installation, créez votre premier compte utilisateur via inscription.
+
+        2. **Accédez au Panneau Admin** : [🔗 Panneau Admin](https://vaultwarden-$domain/admin)
+
+        3. **Sécurisez votre instance** : Désactivez les nouvelles inscriptions dans le panneau admin une fois configuré.
+
+        **Pour les Apps Mobile/Bureau :**
+
+        Téléchargez l'**app Bitwarden** ou utilisez l'**extension navigateur Bitwarden** - fonctionne parfaitement avec Vaultwarden !
+
+        **Important** : Le service SMTP de Yundera est automatiquement connecté - la récupération de mots de passe fonctionne immédiatement !
+      de_de: |
+        `Wenn Sie Ihr Master-Passwort verlieren, **KANN NIEMAND IHRE DATEN WIEDERHERSTELLEN**! Ihr Tresor wird dauerhaft unzugänglich. Bewahren Sie es an einem sicheren Ort auf.`
+        
+        **Standard-Admin-Zugang**
+
+        | Einstellung | Wert |
+        |-------------|------|
+        | Admin-Panel | [🔗 Admin-Panel](https://vaultwarden-$domain/admin) |
+        | Admin-Token | `$default_pwd` |
+        
+        Hinweis: Das Admin-Token gewährt Ihnen keinen Zugang zu Benutzer-Tresoren, nur das Benutzer-Master-Passwort kann das.
+
+        **📧 E-Mail-Integration**
+
+        Diese Version nutzt den integrierten SMTP-Dienst von Yundera:
+        - **Passwort-Wiederherstellungs-E-Mails** funktionieren sofort
+        - **Konto-Benachrichtigungen** werden automatisch gesendet
+
+        **Erste Schritte:**
+
+        1. **Erstellen Sie Ihr Hauptkonto**: Nach der Installation erstellen Sie Ihr erstes Benutzerkonto über die Registrierung.
+
+        2. **Zugriff auf das Admin-Panel**: [🔗 Admin-Panel](https://vaultwarden-$domain/admin)
+
+        3. **Sichern Sie Ihre Instanz**: Deaktivieren Sie neue Registrierungen im Admin-Panel nach der Einrichtung.
+
+        **Für Mobile/Desktop-Apps:**
+
+        Laden Sie die **Bitwarden-App** herunter oder verwenden Sie die **Bitwarden-Browser-Erweiterung** - funktioniert perfekt mit Vaultwarden!
+
+        **Wichtig**: Der SMTP-Dienst von Yundera ist automatisch verbunden - Passwort-Wiederherstellung funktioniert sofort!
+      es_es: |
+        `Si pierdes tu contraseña maestra, **NADIE PUEDE RECUPERAR TUS DATOS**! Tu bóveda será permanentemente inaccesible. Guárdala en un lugar seguro.`
+        
+        **Acceso de Admin por Defecto**
+
+        | Configuración | Valor |
+        |---------------|-------|
+        | Panel de Admin | [🔗 Panel de Admin](https://vaultwarden-$domain/admin) |
+        | Token de Admin | `$default_pwd` |
+        
+        Nota: El token de admin no te dará acceso a las bóvedas de usuarios, solo la contraseña maestra del usuario puede hacerlo.
+
+        **📧 Integración de Email**
+
+        Esta versión utiliza el servicio SMTP integrado de Yundera:
+        - **Emails de recuperación de contraseña** funcionan inmediatamente
+        - **Notificaciones de cuenta** se envían automáticamente
+
+        **Primeros Pasos:**
+
+        1. **Crea tu cuenta principal**: Después de la instalación, crea tu primera cuenta de usuario mediante registro.
+
+        2. **Accede al Panel de Admin**: [🔗 Panel de Admin](https://vaultwarden-$domain/admin)
+
+        3. **Asegura tu instancia**: Deshabilita nuevos registros en el panel de admin una vez configurado.
+
+        **Para Apps Móviles/Escritorio:**
+
+        Descarga la **app Bitwarden** o usa la **extensión de navegador Bitwarden** - ¡funciona perfectamente con Vaultwarden!
+
+        **Importante**: El servicio SMTP de Yundera está conectado automáticamente - ¡la recuperación de contraseñas funciona de inmediato!
+  index: /
+  webui_port: 80
