@@ -70,15 +70,15 @@ x-casaos:
       - 持久化工作区
       - 连接时自动启动 Claude
   developer: Anthropic / Yundera
-  icon: https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-3.png
   tagline:
     en_us: Web terminal for Claude Code - Anthropic's AI coding assistant
     zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/thumbnail.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/thumbnail.png
   title:
     en_us: Claude Code
     zh_cn: Claude Code
@@ -96,6 +96,6 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/claude-code/workspace &&
     if [ ! -f /DATA/AppData/claude-code/workspace/CLAUDE.md ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/YunderaAppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude-code/workspace/CLAUDE.md
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude-code/workspace/CLAUDE.md
     fi &&
     chown -R 1000:1000 /DATA/AppData/claude-code
