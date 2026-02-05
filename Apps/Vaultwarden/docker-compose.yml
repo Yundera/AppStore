@@ -1,7 +1,7 @@
-name: vaultwarden
+name: vaultwardentest
 
 services:
-  vaultwarden:
+  vaultwardentest:
     image: vaultwarden/server:1.34.3
     user: $PUID:$PGID
     deploy:
@@ -26,7 +26,7 @@ services:
       SIGNUPS_ALLOWED: "true"
       ADMIN_TOKEN: $default_pwd
       DOMAIN: https://vaultwarden-$domain
-      SMTP_HOST: casaos
+      SMTP_HOST: smtp
       SMTP_PORT: 587
       SMTP_SECURITY: off
       SMTP_USERNAME: casaos
@@ -48,7 +48,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: vaultwarden
+  main: vaultwardentest
   author: Yundera Team
   category: Utilities
   description:
@@ -82,8 +82,8 @@ x-casaos:
       • Share access with your team or family (if you want)
       • Keep your data private --- it never leaves your server
 
-      **📧 Standalone Email System:**
-      This version includes Postfix SMTP server for direct email delivery - perfect for password recovery and notifications without external dependencies!
+      **📧 Email Integration:**
+      This version uses Yundera's built-in SMTP service for email delivery - password recovery and notifications work automatically!
     ko_kr: |
       🔐 **Vaultwarden이란?**
 
@@ -114,8 +114,8 @@ x-casaos:
       • 팀이나 가족과 접근 권한 공유 (원하는 경우)
       • 데이터 프라이버시 유지 --- 데이터가 서버를 떠나지 않음
 
-      **📧 내장 이메일 시스템:**
-      외부 SMTP 설정 없이 이메일 기능을 위한 MailHog가 포함되어 있습니다 - 비밀번호 복구와 알림에 완벽합니다!
+      **📧 이메일 통합:**
+      이 버전은 Yundera의 내장 SMTP 서비스를 사용합니다 - 비밀번호 복구와 알림이 자동으로 작동합니다!
     zh_cn: |
       🔐 **什么是Vaultwarden？**
 
@@ -146,8 +146,8 @@ x-casaos:
       • 与团队或家人分享访问权限（如果您愿意）
       • 保持数据隐私 --- 数据永不离开您的服务器
 
-      **📧 内置邮件系统：**
-      此版本包含MailHog，无需外部SMTP设置即可实现邮件功能 - 非常适合密码恢复和通知！
+      **📧 邮件集成：**
+      此版本使用Yundera内置的SMTP服务 - 密码恢复和通知自动运行！
     fr_fr: |
       🔐 **Qu'est-ce que Vaultwarden ?**
 
@@ -178,8 +178,8 @@ x-casaos:
       • Partager l'accès avec votre équipe ou famille (si vous le souhaitez)
       • Garder vos données privées --- elles ne quittent jamais votre serveur
 
-      **📧 Système Email Intégré :**
-      Cette version inclut MailHog pour la fonctionnalité email sans configuration SMTP externe - parfait pour la récupération de mots de passe et les notifications !
+      **📧 Intégration Email :**
+      Cette version utilise le service SMTP intégré de Yundera - la récupération de mots de passe et les notifications fonctionnent automatiquement !
     de_de: |
       🔐 **Was ist Vaultwarden?**
 
@@ -210,8 +210,8 @@ x-casaos:
       • Zugang mit Ihrem Team oder Familie teilen (wenn Sie möchten)
       • Ihre Daten privat halten --- sie verlassen niemals Ihren Server
 
-      **📧 Integriertes E-Mail-System:**
-      Diese Version enthält MailHog für E-Mail-Funktionalität ohne externe SMTP-Einrichtung - perfekt für Passwort-Wiederherstellung und Benachrichtigungen!
+      **📧 E-Mail-Integration:**
+      Diese Version nutzt den integrierten SMTP-Dienst von Yundera - Passwort-Wiederherstellung und Benachrichtigungen funktionieren automatisch!
     es_es: |
       🔐 **¿Qué es Vaultwarden?**
 
@@ -242,8 +242,8 @@ x-casaos:
       • Compartir acceso con tu equipo o familia (si quieres)
       • Mantener tus datos privados --- nunca salen de tu servidor
 
-      **📧 Sistema de Email Integrado:**
-      Esta versión incluye MailHog para funcionalidad de email sin configuración SMTP externa - ¡perfecto para recuperación de contraseñas y notificaciones!
+      **📧 Integración de Email:**
+      Esta versión utiliza el servicio SMTP integrado de Yundera - ¡la recuperación de contraseñas y las notificaciones funcionan automáticamente!
   developer: Vaultwarden Community
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/icon.png
   screenshot_link:
@@ -252,12 +252,12 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-1.png
   tagline:
-    en_us: Your password manager with standalone email server
-    ko_kr: 독립형 이메일 서버를 갖춘 비밀번호 관리자
-    zh_cn: 带有独立邮件服务器的密码管理器
-    fr_fr: Votre gestionnaire de mots de passe avec serveur email autonome
-    de_de: Ihr Passwort-Manager mit eigenständigem E-Mail-Server
-    es_es: Tu gestor de contraseñas con servidor de email independiente
+    en_us: Secure, self-hosted password manager
+    ko_kr: 안전한 셀프 호스팅 비밀번호 관리자
+    zh_cn: 安全的自托管密码管理器
+    fr_fr: Gestionnaire de mots de passe sécurisé et auto-hébergé
+    de_de: Sicherer, selbst gehosteter Passwort-Manager
+    es_es: Gestor de contraseñas seguro y autoalojado
   title:
     en_us: Vaultwarden
   tips:
@@ -297,12 +297,11 @@ x-casaos:
         
         참고: 관리자 토큰으로는 사용자 보관함에 접근할 수 없으며, 오직 사용자 마스터 비밀번호만으로 가능합니다.
 
-        **📧 내장 이메일 시스템**
+        **📧 이메일 통합**
 
-        **자동 이메일 기능**을 위한 MailHog가 포함되어 있습니다:
+        Yundera의 내장 SMTP 서비스를 사용합니다:
         - **비밀번호 복구 이메일**이 즉시 작동
         - **계정 알림**이 자동으로 전송
-        - **외부 SMTP 설정 불필요**
 
         **첫 번째 단계:**
 
@@ -316,7 +315,7 @@ x-casaos:
 
         **Bitwarden 앱**을 다운로드하거나 **Bitwarden 브라우저 확장프로그램**을 사용하세요 - Vaultwarden과 완벽하게 작동합니다!
 
-        **중요**: 이메일 시스템이 내장되어 있어 비밀번호 복구를 위한 외부 설정이 필요하지 않습니다!
+        **중요**: Yundera의 SMTP 서비스가 자동으로 연결되어 비밀번호 복구가 바로 작동합니다!
       zh_cn: |
         **默认账户设置**
 
@@ -325,12 +324,11 @@ x-casaos:
         | 管理员面板 | 在应用URL后添加 `/admin` |
         | 管理员令牌 | `$default_pwd` |
 
-        **📧 内置邮件系统**
+        **📧 邮件集成**
 
-        此版本包含MailHog用于**自动邮件功能**：
+        此版本使用Yundera内置的SMTP服务：
         - **密码恢复邮件**立即可用
         - **账户通知**自动发送
-        - **无需外部SMTP设置**
 
         **首要步骤：**
 
@@ -345,7 +343,7 @@ x-casaos:
 
         下载**Bitwarden应用**或使用**Bitwarden浏览器扩展** - 与Vaultwarden完美配合！
 
-        **重要提示**: 邮件系统已内置 - 密码恢复无需外部配置！
+        **重要提示**: Yundera的SMTP服务自动连接 - 密码恢复立即可用！
       fr_fr: |
         `Si vous perdez votre mot de passe principal, **PERSONNE NE PEUT RÉCUPÉRER VOS DONNÉES** ! Votre coffre-fort sera définitivement inaccessible. Conservez-le dans un endroit sûr.`
         
@@ -358,12 +356,11 @@ x-casaos:
         
         Note : Le token admin ne vous donnera pas accès aux coffres-forts des utilisateurs, seul le mot de passe principal de l'utilisateur le peut.
 
-        **📧 Système Email Intégré**
+        **📧 Intégration Email**
 
-        Cette version inclut MailHog pour une **fonctionnalité email automatique** :
+        Cette version utilise le service SMTP intégré de Yundera :
         - **Emails de récupération de mot de passe** fonctionnent immédiatement
         - **Notifications de compte** sont envoyées automatiquement
-        - **Aucune configuration SMTP externe requise**
 
         **Premières Étapes :**
 
@@ -377,7 +374,7 @@ x-casaos:
 
         Téléchargez l'**app Bitwarden** ou utilisez l'**extension navigateur Bitwarden** - fonctionne parfaitement avec Vaultwarden !
 
-        **Important** : Le système email est maintenant intégré - aucune configuration externe nécessaire pour la récupération de mots de passe !
+        **Important** : Le service SMTP de Yundera est automatiquement connecté - la récupération de mots de passe fonctionne immédiatement !
       de_de: |
         `Wenn Sie Ihr Master-Passwort verlieren, **KANN NIEMAND IHRE DATEN WIEDERHERSTELLEN**! Ihr Tresor wird dauerhaft unzugänglich. Bewahren Sie es an einem sicheren Ort auf.`
         
@@ -390,12 +387,11 @@ x-casaos:
         
         Hinweis: Das Admin-Token gewährt Ihnen keinen Zugang zu Benutzer-Tresoren, nur das Benutzer-Master-Passwort kann das.
 
-        **📧 Integriertes E-Mail-System**
+        **📧 E-Mail-Integration**
 
-        Diese Version enthält MailHog für **automatische E-Mail-Funktionalität**:
+        Diese Version nutzt den integrierten SMTP-Dienst von Yundera:
         - **Passwort-Wiederherstellungs-E-Mails** funktionieren sofort
         - **Konto-Benachrichtigungen** werden automatisch gesendet
-        - **Keine externe SMTP-Einrichtung erforderlich**
 
         **Erste Schritte:**
 
@@ -409,7 +405,7 @@ x-casaos:
 
         Laden Sie die **Bitwarden-App** herunter oder verwenden Sie die **Bitwarden-Browser-Erweiterung** - funktioniert perfekt mit Vaultwarden!
 
-        **Wichtig**: Das E-Mail-System ist jetzt integriert - keine externe Konfiguration für Passwort-Wiederherstellung nötig!
+        **Wichtig**: Der SMTP-Dienst von Yundera ist automatisch verbunden - Passwort-Wiederherstellung funktioniert sofort!
       es_es: |
         `Si pierdes tu contraseña maestra, **NADIE PUEDE RECUPERAR TUS DATOS**! Tu bóveda será permanentemente inaccesible. Guárdala en un lugar seguro.`
         
@@ -422,12 +418,11 @@ x-casaos:
         
         Nota: El token de admin no te dará acceso a las bóvedas de usuarios, solo la contraseña maestra del usuario puede hacerlo.
 
-        **📧 Sistema de Email Integrado**
+        **📧 Integración de Email**
 
-        Esta versión incluye MailHog para **funcionalidad de email automática**:
+        Esta versión utiliza el servicio SMTP integrado de Yundera:
         - **Emails de recuperación de contraseña** funcionan inmediatamente
         - **Notificaciones de cuenta** se envían automáticamente
-        - **No se requiere configuración SMTP externa**
 
         **Primeros Pasos:**
 
@@ -441,6 +436,6 @@ x-casaos:
 
         Descarga la **app Bitwarden** o usa la **extensión de navegador Bitwarden** - ¡funciona perfectamente con Vaultwarden!
 
-        **Importante**: El sistema de email ahora está integrado - ¡no se necesita configuración externa para recuperación de contraseñas!
+        **Importante**: El servicio SMTP de Yundera está conectado automáticamente - ¡la recuperación de contraseñas funciona de inmediato!
   index: /
   webui_port: 80
