@@ -1,0 +1,114 @@
+name: psitransfer
+
+services:
+  psitransfer:
+    image: psitrax/psitransfer:v2.4.0
+    container_name: psitransfer
+    user: 0:0
+    restart: unless-stopped
+    
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    
+    expose:
+      - 80
+    
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=$TZ
+      - PSITRANSFER_ADMIN_PASS=$default_pwd
+      - PSITRANSFER_UPLOAD_PASS=$default_pwd
+      - PSITRANSFER_UPLOAD_DIR=/data
+      - PSITRANSFER_PORT=80
+      - PSITRANSFER_DEFAULT_RETENTION=86400
+      - PSITRANSFER_IFACE=0.0.0.0
+    
+    volumes:
+      - /DATA/AppData/$AppID/data/:/data
+      - /DATA/AppData/$AppID/config/:/app/config
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: psitransfer
+  author: CasaOS Team
+  category: Utilities
+  description:
+    en_us: |
+      PsiTransfer is a simple, open-source, self-hosted file sharing solution. It's designed as a lightweight alternative to WeTransfer with powerful features:
+      
+      - **No accounts required** - Share files instantly without registration
+      - **Resumable uploads/downloads** - Using tus.io protocol for reliable transfers
+      - **Mobile-friendly** - Responsive interface works on all devices
+      - **Password protection** - Secure your file shares with passwords
+      - **Flexible retention** - Set custom expiration times for uploads
+      - **One-time downloads** - Files can be set to delete after first download
+      - **Admin dashboard** - Monitor and manage all uploads
+      - **ZIP/TAR.GZ export** - Download multiple files as archives
+      - **Large file support** - No file size limits, only disk space
+      - **Lightweight** - Less than 100KB gzipped frontend
+      
+      Perfect for sharing large files with colleagues, clients, or friends without relying on cloud services.
+    ko_kr: |
+      PsiTransfer는 간단하고 오픈소스인 자체 호스팅 파일 공유 솔루션입니다. WeTransfer의 가벼운 대안으로 강력한 기능을 제공합니다:
+      
+      - **계정 불필요** - 회원가입 없이 즉시 파일 공유
+      - **재개 가능한 업로드/다운로드** - tus.io 프로토콜로 안정적인 전송
+      - **모바일 친화적** - 모든 기기에서 작동하는 반응형 인터페이스
+      - **비밀번호 보호** - 비밀번호로 파일 공유 보안
+      - **유연한 보관 기간** - 업로드에 대한 맞춤 만료 시간 설정
+      - **일회성 다운로드** - 첫 다운로드 후 파일 삭제 가능
+      - **관리자 대시보드** - 모든 업로드 모니터링 및 관리
+      - **ZIP/TAR.GZ 내보내기** - 여러 파일을 압축 파일로 다운로드
+      - **대용량 파일 지원** - 파일 크기 제한 없음, 디스크 공간만 제한
+      - **가벼움** - 100KB 미만의 Gzip 압축 프론트엔드
+      
+      클라우드 서비스에 의존하지 않고 동료, 고객 또는 친구와 대용량 파일을 공유하는 데 완벽합니다.
+  developer: psi-4ward
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/screenshot-3.png
+  tagline:
+    en_us: Simple, lightweight file sharing - WeTransfer alternative
+    ko_kr: 간단하고 가벼운 파일 공유 - WeTransfer 대안
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/thumbnail.png
+  title:
+    en_us: PsiTransfer
+  index: /
+  webui_port: 80
+  store_app_id: psitransfer
+  tips:
+    before_install:
+      en_us: |
+        ## Default Credentials
+        
+        | Field              | Value          |
+        |--------------------|----------------|
+        | Admin Password     | `$default_pwd` |
+        | Upload Password    | `$default_pwd` |
+        
+        **Access Admin Panel:** Navigate to `$domain/admin` and enter the admin password.
+        
+        **Important Notes:**
+        - Files are stored in `/DATA/AppData/psitransfer/data/`
+        - Default file retention is 24 hours (86400 seconds)
+      ko_kr: |
+        ## 기본 인증 정보
+        
+        | 항목              | 값             |
+        |------------------|----------------|
+        | 관리자 비밀번호    | `$default_pwd` |
+        | 업로드 비밀번호    | `$default_pwd` |
+        
+        **관리자 패널 접근:** `$domain/admin`으로 이동하여 관리자 비밀번호를 입력하세요.
+        
+        **중요 사항:**
+        - 파일은 `/DATA/AppData/psitransfer/data/`에 저장됩니다
+        - 기본 파일 보관 기간은 24시간(86400초)입니다
