@@ -8,16 +8,18 @@ This document describes how to contribute an app to the Yundera Compose AppStore
 
 Before submitting your PR, ensure your app meets these requirements:
 
+### Tech Checklist
+- [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
+- [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
+- [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
+
 ### Security Checklist
 - [ ] Default authentication (Basic Auth, OAuth, etc.) is enabled and documented - exceptions must be explained in rationale.md (e.g., public websites)
   - Example of valid exception: 
     - A public website that does not require authentication
     - The app handle authentication configuration on first launch via an onboarding process (eg Jellyfin, Immich, etc.)
 - [ ] No hardcoded credentials in the compose file - use environment variables or secrets
-- [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] Specific version tag (no `:latest`)
-- [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
-- [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
 
 ### Functionality Checklist
 - [ ] Works immediately after installation - no need to check logs or run commands - pre-install scripts create sensible defaults
