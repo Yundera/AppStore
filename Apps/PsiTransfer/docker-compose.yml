@@ -2,7 +2,7 @@ name: psitransfer
 
 services:
   psitransfer:
-    image: psitrax/psitransfer:v2.3.0
+    image: psitrax/psitransfer:v2.4.0
     container_name: psitransfer
     user: 0:0
     restart: unless-stopped
@@ -28,15 +28,8 @@ services:
       - PSITRANSFER_IFACE=0.0.0.0
     
     volumes:
-      - /DATA/AppData/$AppID/data:/data
-      - /DATA/AppData/$AppID/config:/app/config
-    
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s  # 앱 시작 대기 시간 증가
+      - /DATA/AppData/$AppID/data/:/data
+      - /DATA/AppData/$AppID/config/:/app/config
 
 x-casaos:
   architectures:
@@ -45,9 +38,6 @@ x-casaos:
   main: psitransfer
   author: CasaOS Team
   category: Utilities
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/data /DATA/AppData/$AppID/config &&
-    chmod -R 777 /DATA/AppData/$AppID/data
   description:
     en_us: |
       PsiTransfer is a simple, open-source, self-hosted file sharing solution. It's designed as a lightweight alternative to WeTransfer with powerful features:
