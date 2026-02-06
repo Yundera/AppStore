@@ -1,0 +1,318 @@
+name: openclaw
+
+services:
+  # Nginx-hash-lock provides perimeter authentication
+  # IMPORTANT: This service MUST be named "openclaw" (matching the app name)
+  # because the mesh-router extracts the service name from the URL subdomain
+  # (e.g. openclaw-username.nsl.sh -> routes to http://openclaw:80)
+  openclaw:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: openclaw-backend
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    depends_on:
+      - openclaw-backend
+    networks:
+      - pcs
+
+  openclaw-backend:
+    image: alpine/openclaw:2026.2.2
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    cpu_shares: 90
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q --spider http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    environment:
+      TZ: $TZ
+      NODE_ENV: production
+      # AI Provider API Keys (configure at least one)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Gateway token (matches AUTH_HASH for nginx-hash-lock)
+      OPENCLAW_GATEWAY_TOKEN: $AUTH_HASH
+      # Control UI settings for reverse proxy deployment
+      OPENCLAW_GATEWAY_CONTROL_UI_ALLOW_INSECURE_AUTH: "true"
+      OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_DISABLE_DEVICE_AUTH: "true"
+    # Gateway with token auth (perimeter auth handled by nginx-hash-lock)
+    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "8080", "--allow-unconfigured"]
+    volumes:
+      - /DATA/AppData/openclaw:/home/node/.openclaw
+    restart: unless-stopped
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: openclaw
+  author: Yundera Team
+  category: AI
+  description:
+    en_us: |
+      **What is OpenClaw?**
+
+      OpenClaw is an open-source personal AI assistant that actually does things. Unlike typical chatbots that only answer questions, OpenClaw can take real actions on your behalf.
+
+      **Key Features:**
+
+      - **Multi-platform messaging**: Connect via WhatsApp, Telegram, Discord, Slack, Signal, and more
+      - **Persistent memory**: Learns your preferences and remembers context
+      - **Web browsing**: Can browse the web and fill out forms
+      - **File access**: Read and write files on your system
+      - **Shell commands**: Execute scripts and system commands
+      - **Extensible**: Add community skills or write your own plugins
+      - **Self-improving**: Can write its own skills
+
+      **Practical Uses:**
+
+      - Email management and calendar operations
+      - Flight check-ins and reservations
+      - Health metric monitoring
+      - Document processing
+      - Automation of repetitive tasks
+
+      **Privacy First:**
+
+      Your data stays on your server. OpenClaw runs locally and connects to AI providers (Anthropic Claude or OpenAI) only for inference.
+
+      **Built-in Web UI:**
+
+      Access the Control UI and WebChat directly from your browser - no additional tools needed!
+    fr_fr: |
+      **Qu'est-ce qu'OpenClaw ?**
+
+      OpenClaw est un assistant IA personnel open-source qui agit vraiment. Contrairement aux chatbots typiques qui ne font que repondre aux questions, OpenClaw peut effectuer de vraies actions en votre nom.
+
+      **Fonctionnalites cles :**
+
+      - **Messagerie multi-plateforme** : Connectez-vous via WhatsApp, Telegram, Discord, Slack, Signal, et plus
+      - **Memoire persistante** : Apprend vos preferences et se souvient du contexte
+      - **Navigation web** : Peut naviguer sur le web et remplir des formulaires
+      - **Acces aux fichiers** : Lire et ecrire des fichiers sur votre systeme
+      - **Commandes shell** : Executer des scripts et commandes systeme
+      - **Extensible** : Ajoutez des competences communautaires ou ecrivez vos propres plugins
+
+      **Confidentialite d'abord :**
+
+      Vos donnees restent sur votre serveur. OpenClaw fonctionne localement et se connecte aux fournisseurs d'IA uniquement pour l'inference.
+    de_de: |
+      **Was ist OpenClaw?**
+
+      OpenClaw ist ein Open-Source personlicher KI-Assistent, der tatsachlich Dinge erledigt. Im Gegensatz zu typischen Chatbots, die nur Fragen beantworten, kann OpenClaw echte Aktionen in Ihrem Namen durchfuhren.
+
+      **Hauptfunktionen:**
+
+      - **Multi-Plattform-Messaging**: Verbinden Sie sich uber WhatsApp, Telegram, Discord, Slack, Signal und mehr
+      - **Persistenter Speicher**: Lernt Ihre Praferenzen und erinnert sich an den Kontext
+      - **Web-Browsing**: Kann im Web surfen und Formulare ausfullen
+      - **Dateizugriff**: Lesen und Schreiben von Dateien auf Ihrem System
+      - **Shell-Befehle**: Ausfuhren von Skripten und Systembefehlen
+      - **Erweiterbar**: Fugen Sie Community-Skills hinzu oder schreiben Sie Ihre eigenen Plugins
+
+      **Datenschutz zuerst:**
+
+      Ihre Daten bleiben auf Ihrem Server. OpenClaw lauft lokal und verbindet sich nur fur Inferenz mit KI-Anbietern.
+    es_es: |
+      **Que es OpenClaw?**
+
+      OpenClaw es un asistente de IA personal de codigo abierto que realmente hace cosas. A diferencia de los chatbots tipicos que solo responden preguntas, OpenClaw puede realizar acciones reales en tu nombre.
+
+      **Caracteristicas principales:**
+
+      - **Mensajeria multiplataforma**: Conectate via WhatsApp, Telegram, Discord, Slack, Signal y mas
+      - **Memoria persistente**: Aprende tus preferencias y recuerda el contexto
+      - **Navegacion web**: Puede navegar por la web y rellenar formularios
+      - **Acceso a archivos**: Leer y escribir archivos en tu sistema
+      - **Comandos shell**: Ejecutar scripts y comandos del sistema
+      - **Extensible**: Agrega habilidades de la comunidad o escribe tus propios plugins
+
+      **Privacidad primero:**
+
+      Tus datos permanecen en tu servidor. OpenClaw se ejecuta localmente y se conecta a proveedores de IA solo para inferencia.
+    zh_cn: |
+      **什么是OpenClaw？**
+
+      OpenClaw是一个开源的个人AI助手，它真正能够执行任务。与只能回答问题的典型聊天机器人不同，OpenClaw可以代表您执行实际操作。
+
+      **主要功能：**
+
+      - **多平台消息**: 通过WhatsApp、Telegram、Discord、Slack、Signal等连接
+      - **持久记忆**: 学习您的偏好并记住上下文
+      - **网页浏览**: 可以浏览网页并填写表单
+      - **文件访问**: 在您的系统上读写文件
+      - **Shell命令**: 执行脚本和系统命令
+      - **可扩展**: 添加社区技能或编写自己的插件
+
+      **隐私优先：**
+
+      您的数据保留在您的服务器上。OpenClaw在本地运行，仅在推理时连接到AI提供商。
+    ko_kr: |
+      **OpenClaw란?**
+
+      OpenClaw는 실제로 작업을 수행하는 오픈소스 개인 AI 어시스턴트입니다. 질문에만 답하는 일반적인 챗봇과 달리 OpenClaw는 사용자를 대신하여 실제 작업을 수행할 수 있습니다.
+
+      **주요 기능:**
+
+      - **멀티 플랫폼 메시징**: WhatsApp, Telegram, Discord, Slack, Signal 등을 통해 연결
+      - **지속적 메모리**: 선호도를 학습하고 컨텍스트를 기억
+      - **웹 브라우징**: 웹을 탐색하고 양식을 작성할 수 있음
+      - **파일 액세스**: 시스템에서 파일 읽기 및 쓰기
+      - **Shell 명령**: 스크립트 및 시스템 명령 실행
+      - **확장 가능**: 커뮤니티 스킬 추가 또는 자체 플러그인 작성
+
+      **개인정보 보호 우선:**
+
+      데이터는 서버에 보관됩니다. OpenClaw는 로컬에서 실행되며 추론을 위해서만 AI 제공업체에 연결됩니다.
+  developer: OpenClaw Community
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OpenClaw/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OpenClaw/screenshot-1.png
+  tagline:
+    en_us: Open-source AI assistant that actually does things
+    fr_fr: Assistant IA open-source qui agit vraiment
+    de_de: Open-Source KI-Assistent der tatsachlich Dinge erledigt
+    es_es: Asistente de IA de codigo abierto que realmente hace cosas
+    zh_cn: 真正能执行任务的开源AI助手
+    ko_kr: 실제로 작업을 수행하는 오픈소스 AI 어시스턴트
+  title:
+    en_us: OpenClaw
+  tips:
+    before_install:
+      en_us: |
+        **API Key Required**
+
+        OpenClaw requires an AI provider API key to function. Configure at least one:
+
+        | Provider | Environment Variable |
+        |----------|---------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **First-Time Setup**
+
+        1. **Access the Web UI**: Click the app icon from your dashboard (authentication is automatic)
+        2. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
+        3. **Start chatting**: Use the built-in WebChat or connect messaging platforms
+
+        **Messaging Integrations:**
+
+        OpenClaw supports WhatsApp, Telegram, Discord, Slack, Signal, and more. Configure through the Web UI after setup.
+
+        **Documentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      fr_fr: |
+        **Cle API requise**
+
+        OpenClaw necessite une cle API de fournisseur d'IA pour fonctionner. Configurez au moins une :
+
+        | Fournisseur | Variable d'environnement |
+        |-------------|-------------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **Configuration initiale**
+
+        1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app (authentification automatique)
+        2. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
+
+        **Documentation :** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      de_de: |
+        **API-Schlussel erforderlich**
+
+        OpenClaw benotigt einen KI-Anbieter-API-Schlussel. Konfigurieren Sie mindestens einen:
+
+        | Anbieter | Umgebungsvariable |
+        |----------|-------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **Ersteinrichtung**
+
+        1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol (automatische Authentifizierung)
+        2. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
+
+        **Dokumentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      es_es: |
+        **Clave API requerida**
+
+        OpenClaw requiere una clave API de proveedor de IA para funcionar. Configura al menos una:
+
+        | Proveedor | Variable de entorno |
+        |-----------|---------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **Configuracion inicial**
+
+        1. **Acceder a la interfaz Web**: Haz clic en el icono de la app (autenticacion automatica)
+        2. **Configurar clave API**: Agrega tu clave API en la seccion Config
+
+        **Documentacion:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      zh_cn: |
+        **需要API密钥**
+
+        OpenClaw需要AI提供商的API密钥才能运行。请至少配置一个：
+
+        | 提供商 | 环境变量 |
+        |--------|----------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **首次设置**
+
+        1. **访问Web界面**：点击应用图标（自动认证）
+        2. **配置API密钥**：在Config部分添加您的API密钥
+
+        **文档：** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      ko_kr: |
+        **API 키 필요**
+
+        OpenClaw가 작동하려면 AI 제공업체 API 키가 필요합니다. 최소 하나를 구성하세요:
+
+        | 제공업체 | 환경 변수 |
+        |----------|-----------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **최초 설정**
+
+        1. **웹 UI 접속**: 앱 아이콘 클릭 (자동 인증)
+        2. **API 키 구성**: Config 섹션에서 API 키 추가
+
+        **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+  index: /?hash=$AUTH_HASH&token=$AUTH_HASH
+  webui_port: 80
+  port_map: "80"
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/openclaw 2>/dev/null || true
+    cat > /DATA/AppData/openclaw/openclaw.json << 'OCEOF'
+    {
+      "gateway": {
+        "controlUi": {
+          "enabled": true,
+          "allowInsecureAuth": true,
+          "dangerouslyDisableDeviceAuth": true
+        },
+        "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+      }
+    }
+    OCEOF
+    chmod 644 /DATA/AppData/openclaw/openclaw.json
