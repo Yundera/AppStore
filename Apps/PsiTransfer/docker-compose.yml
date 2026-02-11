@@ -15,7 +15,10 @@ services:
     
     expose:
       - 80
-    
+    labels:
+      - "caddy=psitransfer-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
+
     environment:
       - PUID=0
       - PGID=0

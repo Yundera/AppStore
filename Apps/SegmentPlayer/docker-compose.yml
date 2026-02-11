@@ -8,6 +8,9 @@ services:
     user: "0:0"
     expose:
       - "80"
+    labels:
+      - "caddy=segmentplayer-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
       AUTH_HASH: $AUTH_HASH
       USER: "segment"

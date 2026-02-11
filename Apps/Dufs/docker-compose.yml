@@ -31,6 +31,9 @@ services:
         target: /srv
     expose:
       - 80
+    labels:
+      - "caddy=dufs-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     deploy:
       resources:
         limits:

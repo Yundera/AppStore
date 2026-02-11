@@ -7,6 +7,9 @@ services:
     restart: unless-stopped
     expose:
       - 80
+    labels:
+      - "caddy=convertx-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
@@ -113,7 +116,7 @@ x-casaos:
         - 3D Models: STL, OBJ, PLY, DAE
         - Archives: ZIP, RAR, 7Z, TAR
 
-        Access via: `https://convertx-[username].nsl.sh`
+        Access via: `https://convertx-username.nsl.sh`
 
         **Note**: This app requires root permissions to function properly with SQLite database.
   index: /?hash=$AUTH_HASH

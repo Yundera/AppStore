@@ -3,14 +3,16 @@ name: openclaw
 services:
   # Nginx-hash-lock provides perimeter authentication
   # IMPORTANT: This service MUST be named "openclaw" (matching the app name)
-  # because the mesh-router extracts the service name from the URL subdomain
-  # (e.g. openclaw-username.nsl.sh -> routes to http://openclaw:80)
+  # because Caddy routes based on the service name in the labels
   openclaw:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
     restart: unless-stopped
     cpu_shares: 50
     expose:
       - 80
+    labels:
+      - "caddy=openclaw-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH

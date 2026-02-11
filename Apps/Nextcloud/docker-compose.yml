@@ -12,6 +12,9 @@ services:
       - redis
     expose:
       - 80
+    labels:
+      - "caddy=nextcloud-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     logging:
       driver: "json-file"
       options:

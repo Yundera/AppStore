@@ -16,6 +16,9 @@ services:
       - postgres
     expose:
       - 8080
+    labels:
+      - "caddy=guacamole-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 8080}}"
 
   guacd:
     image: guacamole/guacd:1.6.0

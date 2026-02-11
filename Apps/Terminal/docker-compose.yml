@@ -7,6 +7,9 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    labels:
+      - "caddy=yunderaterminal-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     user: "0:0"
     environment:
       AUTH_HASH: $AUTH_HASH

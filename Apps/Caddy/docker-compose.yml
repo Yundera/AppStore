@@ -67,7 +67,7 @@ x-casaos:
       * **Zero Configuration** - Drop your files in and start serving immediately
       * **Modern & Fast** - Built in Go for high performance and low memory usage
       * **IPv4 + IPv6** - Full dual-stack support for modern networks
-      * **Clean URLs** - Automatic HTTPS access via NSL.SH routing
+      * **Clean URLs** - Automatic HTTPS access via Caddy reverse proxy
       * **Modern Web Support** - Full support for SPAs, PWAs, and modern JavaScript
       * **Production Ready** - Battle-tested server trusted by thousands of sites
 
@@ -116,7 +116,7 @@ x-casaos:
       * **零配置** - 放入文件即可立即开始服务
       * **现代且快速** - 使用 Go 构建，高性能低内存
       * **IPv4 + IPv6** - 完全支持双栈网络
-      * **清洁 URL** - 通过 NSL.SH 路由自动 HTTPS 访问
+      * **清洁 URL** - 通过 Caddy 反向代理自动 HTTPS 访问
       * **现代 Web 支持** - 完全支持 SPA、PWA 和现代 JavaScript
       * **生产就绪** - 经过实战检验，深受数千网站信赖
 
@@ -153,7 +153,7 @@ x-casaos:
         ```
 
         **Access Methods:**
-        - **NSL.SH (internal):** `https://caddy-$domain/` - HTTPS handled by NSL
+        - **Via Caddy:** `https://caddy-$domain/`
         - **Custom domain (external):** Point your domain to port 443 for direct TLS
         
         **IPv6 Direct Access:**

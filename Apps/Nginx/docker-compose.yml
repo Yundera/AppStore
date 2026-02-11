@@ -11,6 +11,9 @@ services:
       - 80:80
     expose:
       - 80
+    labels:
+      - "caddy=nginx-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     volumes:
       - type: bind
         source: /DATA/AppData/Nginx/www/
@@ -61,7 +64,7 @@ x-casaos:
       • **Zero Configuration** — Drop your files in and start serving immediately
       • **Lightning Fast** — nginx delivers static content faster than any alternative
       • **Minimal Resources** — Runs efficiently with just 64MB RAM
-      • **Clean URLs** — Automatic HTTPS access via NSL.SH routing
+      • **Clean URLs** — Automatic HTTPS access via Caddy reverse proxy
       • **Modern Web Support** — Full support for SPAs, PWAs, and modern JavaScript
       • **Production Ready** — Battle-tested nginx powers 30% of the internet
 
@@ -108,7 +111,7 @@ x-casaos:
       • **零配置** — 放入文件即可立即开始服务
       • **闪电般快速** — nginx 比任何替代方案都更快地传递静态内容
       • **最小资源** — 仅需 64MB RAM 即可高效运行
-      • **清洁 URL** — 通过 NSL.SH 路由自动 HTTPS 访问
+      • **清洁 URL** — 通过 Caddy 反向代理自动 HTTPS 访问
       • **现代 Web 支持** — 完全支持 SPA、PWA 和现代 JavaScript
       • **生产就绪** — 经过实战检验的 nginx 为 30% 的互联网提供动力
 

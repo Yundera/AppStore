@@ -8,6 +8,9 @@ services:
     user: "0:0"
     expose:
       - "80"
+    labels:
+      - "caddy=ssa-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
       AUTH_HASH: $AUTH_HASH
       USER: "segment"
@@ -48,7 +51,7 @@ x-casaos:
   index: /?hash=$AUTH_HASH
   webui_port: 80
   main: ssa
-  access_domain: ssa-user.nsl.sh
+  access_domain: ssa-username.nsl.sh
 
   architectures:
     - amd64
@@ -104,7 +107,7 @@ x-casaos:
         This addon requires SegmentPlayer to be installed for video transcoding.
 
         After installation:
-        1. Open the addon page at https://ssa-user.nsl.sh
+        1. Open the addon page at https://ssa-username.nsl.sh
         2. Copy the manifest URL or click "Install in Stremio"
         3. Your media library will appear in Stremio's catalog
 
@@ -113,7 +116,7 @@ x-casaos:
         Cet addon nécessite SegmentPlayer installé pour le transcodage vidéo.
 
         Après l'installation:
-        1. Ouvrez la page de l'addon à https://ssa-user.nsl.sh
+        1. Ouvrez la page de l'addon à https://ssa-username.nsl.sh
         2. Copiez l'URL du manifest ou cliquez sur "Installer dans Stremio"
         3. Votre bibliothèque multimédia apparaîtra dans le catalogue Stremio
 

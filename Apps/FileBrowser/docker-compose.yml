@@ -20,6 +20,9 @@ services:
         target: /srv
     expose:
       - 80
+    labels:
+      - "caddy=filebrowser-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     cpu_shares: 10
     deploy:
       resources:

@@ -195,28 +195,30 @@ This CasaOS instance is based on [Yundera/casa-img](https://github.com/Yundera/c
 - Docker socket access for container management
 - Proper volume and permission handling
 
-## NSL.SH Routing
+## Caddy Integration with nsl.sh
 
-Apps get secure HTTPS access via the NSL.SH mesh routing system.
+Apps get secure HTTPS access via Caddy reverse proxy with Docker labels. Free subdomains are provided by nsl.sh.
 
 ### How It Works
 
-The [mesh-router](https://github.com/Yundera/mesh-router-root) system provides:
-- **Wildcard domain routing**: `*.nsl.sh` directs traffic to appropriate backends
-- **Automatic HTTPS**: All apps get valid SSL certificates
-- **NAT traversal**: Works behind firewalls via WireGuard tunneling
+Caddy automatically discovers containers and routes traffic based on labels:
+- **Docker label discovery**: Containers with `caddy=` labels are automatically routed
+- **Automatic HTTPS**: All apps get valid SSL certificates via Let's Encrypt
+- **Clean URLs**: Apps accessible at `https://appname-username.nsl.sh/`
+- **Free subdomains**: nsl.sh provides free `*.nsl.sh` subdomains for all Yundera users
 
 ### URL Patterns
 
 Apps are accessible via clean HTTPS URLs:
 - **Clean URL**: `https://appname-username.nsl.sh/`
-- **With port**: `https://8080-appname-username.nsl.sh/`
 
-### Components
+### Label Format
 
-- **mesh-router-gateway**: HTTP reverse proxy for wildcard routing
-- **mesh-router-agent**: Registers direct IP addresses
-- **mesh-router-tunnel**: WireGuard VPN for NAT traversal
+```yaml
+labels:
+  - "caddy=appname-${APP_DOMAIN}"
+  - "caddy.reverse_proxy={{upstreams 80}}"
+```
 
 ## Common Maintenance Tasks
 

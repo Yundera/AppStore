@@ -12,6 +12,9 @@ services:
       DUPLICATI__WEBSERVICE_PASSWORD: '$default_pwd'
     expose:
       - 8200
+    labels:
+      - "caddy=duplicati-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 8200}}"
     cpu_shares: 10
     deploy:
       resources:

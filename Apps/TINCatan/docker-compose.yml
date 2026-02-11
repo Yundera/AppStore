@@ -10,6 +10,9 @@ services:
           cpus: '1.0'
     expose:
       - 4567
+    labels:
+      - "caddy=tincatan-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 4567}}"
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -121,7 +124,7 @@ x-casaos:
         ## 🎮 How to Access
         
         Open your browser and navigate to:
-        - **Clean URL**: `https://4567-tincatan-[username].nsl.sh/`
+        - **Clean URL**: `https://tincatan-username.nsl.sh/`
         - **Local Access**: `http://[server-ip]:4567/`
         
         ## ⚠️ First Run Setup
@@ -183,15 +186,15 @@ x-casaos:
         - Use Chrome for best performance
         - The game saves state between sessions
       fr_fr: |
-        Accédez au jeu: `https://4567-tincatan-[username].nsl.sh/`
+        Accédez au jeu: `https://tincatan-username.nsl.sh/`
         Premier démarrage: 5-10 minutes pour compiler avec Maven.
       ko_kr: |
-        게임 접속: `https://4567-tincatan-[username].nsl.sh/`
+        게임 접속: `https://tincatan-username.nsl.sh/`
         첫 실행: Maven 컴파일에 5-10분 소요.
       zh_cn: |
-        访问游戏：`https://4567-tincatan-[username].nsl.sh/`
+        访问游戏：`https://tincatan-username.nsl.sh/`
         首次运行：Maven编译需要5-10分钟。
       es_es: |
-        Accede al juego: `https://4567-tincatan-[username].nsl.sh/`
+        Accede al juego: `https://tincatan-username.nsl.sh/`
         Primera ejecución: 5-10 minutos para compilar con Maven.
   index: /home

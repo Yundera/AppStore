@@ -13,6 +13,9 @@ services:
       LISTEN_PORT: "80"
     expose:
       - 80
+    labels:
+      - "caddy=netdata-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     depends_on:
       - netdata
     deploy:
@@ -108,7 +111,7 @@ x-casaos:
         - Docker containers
         - System processes
         
-        **Access**: After installation, access at `https://19999-netdata-username.nsl.sh`
+        **Access**: After installation, access at `https://netdata-username.nsl.sh`
         
         **Note**: Netdata requires elevated privileges to monitor system resources.
       ko_kr: |
@@ -122,7 +125,7 @@ x-casaos:
         - Docker 컨테이너
         - 시스템 프로세스
         
-        **접속**: 설치 후 `https://19999-netdata-username.nsl.sh`에서 접속하세요
+        **접속**: 설치 후 `https://netdata-username.nsl.sh`에서 접속하세요
         
         **참고**: Netdata는 시스템 리소스 모니터링을 위해 상승된 권한이 필요합니다.
   index: /?hash=$AUTH_HASH

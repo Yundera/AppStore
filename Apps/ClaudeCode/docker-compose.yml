@@ -8,6 +8,9 @@ services:
     user: 0:0
     expose:
       - 80
+    labels:
+      - "caddy=claude-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY-"Please fill you key here"}
       - AUTH_PASSWORD=$default_pwd

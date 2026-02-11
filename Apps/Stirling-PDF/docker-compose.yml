@@ -7,6 +7,9 @@ services:
     restart: unless-stopped
     expose:
       - 80
+    labels:
+      - "caddy=stirlingpdf-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     volumes:
       - /DATA/AppData/$AppID/tessdata/:/usr/share/tessdata
       - /DATA/AppData/$AppID/configs/:/configs
@@ -196,7 +199,7 @@ x-casaos:
         • Compress PDFs to reduce file size
 
         **🌐 Access:**
-        Once ready, your app will be available at `https://stirlingpdf-[username].nsl.sh`
+        Once ready, your app will be available at `https://stirlingpdf-username.nsl.sh`
 
         **💡 New in V2.4.3:**
         • Stateful Processing - Upload once, use across multiple tools
@@ -224,7 +227,7 @@ x-casaos:
         • PDF 압축으로 파일 크기 줄이기
 
         **🌐 접근:**
-        준비가 되면 `https://stirlingpdf-[username].nsl.sh`로 앱에 접근할 수 있습니다!
+        준비가 되면 `https://stirlingpdf-username.nsl.sh`로 앱에 접근할 수 있습니다!
 
         **💡 V2.4.3 새로운 기능:**
         • Stateful Processing - 한 번 업로드로 여러 도구에서 사용
@@ -252,7 +255,7 @@ x-casaos:
         • 压缩PDF以减少文件大小
 
         **🌐 访问:**
-        准备就绪后,您的应用将通过`https://stirlingpdf-[username].nsl.sh`可用!
+        准备就绪后,您的应用将通过`https://stirlingpdf-username.nsl.sh`可用!
 
         **💡 V2.4.3 新功能:**
         • 状态处理 - 上传一次,跨多个工具使用
@@ -280,7 +283,7 @@ x-casaos:
         • Compresser les PDF pour réduire la taille
 
         **🌐 Accès :**
-        Une fois prêt, votre application sera disponible à `https://stirlingpdf-[username].nsl.sh` !
+        Une fois prêt, votre application sera disponible à `https://stirlingpdf-username.nsl.sh` !
 
         **💡 Nouveautés V2.4.3 :**
         • Traitement avec état - Téléchargez une fois, utilisez sur plusieurs outils
@@ -308,7 +311,7 @@ x-casaos:
         • Comprimir PDFs para reducir el tamaño
 
         **🌐 Acceso:**
-        Una vez listo, tu aplicación estará disponible en `https://stirlingpdf-[username].nsl.sh`!
+        Una vez listo, tu aplicación estará disponible en `https://stirlingpdf-username.nsl.sh`!
 
         **💡 Novedades V2.4.3:**
         • Procesamiento con estado - Sube una vez, usa en múltiples herramientas

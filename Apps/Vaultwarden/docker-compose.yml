@@ -17,6 +17,9 @@ services:
       start_period: 30s
     expose:
       - 80
+    labels:
+      - "caddy=vaultwarden-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -335,7 +338,7 @@ x-casaos:
         1. **创建主账户**: 安装后通过注册创建第一个用户账户。
 
         2. **访问管理员面板**: 访问应用URL + `/admin`
-           示例: `https://vaultwarden-yourusername.nsl.sh/admin`
+           示例: `https://vaultwarden-username.nsl.sh/admin`
 
         3. **保护实例安全**: 设置完成后在管理员面板中禁用新注册。
 

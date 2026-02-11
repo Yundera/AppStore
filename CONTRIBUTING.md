@@ -439,107 +439,112 @@ x-casaos:
 - Generate certificates or keys
 - Prepare the environment with sensible defaults
 
-#### NSL Router Integration (Web UI Access)
+#### Caddy Integration (Web UI Access)
 
-The Yundera AppStore uses the NSL Router (mesh-router) system to provide clean HTTPS URLs for your applications. The mesh router automatically generates subdomains based on your compose configuration.
+The Yundera AppStore uses Caddy reverse proxy with Docker labels for automatic HTTPS routing. Apps are accessible via free nsl.sh subdomains (e.g., `https://appname-username.nsl.sh`).
 
-**How NSL Router Works:**
-- The mesh router runs on nsl.sh domains and provides subdomain routing to Yundera users
-- Each user gets a subdomain like `username.nsl.sh`
-- Applications are accessible via clean URLs without port numbers
+**How It Works:**
+- Caddy watches Docker containers for specific labels
+- Labels define the subdomain prefix and backend port
+- Caddy automatically handles HTTPS certificates and routing
+- nsl.sh provides free subdomains for all Yundera users
 
-**URL Generation Pattern:**
-```
-https://[port]-appname-username.nsl.sh/
-```
-
-**Compose File Requirements for NSL Router:**
-- Use `expose` instead of `ports` for web UI services
-- Set `webui_port` to port 80 when possible (recommended for clean URLs)
-- Other ports are supported but will include the port in the URL
-- The router automatically handles HTTPS termination and routing
-
-**Example - Before NSL Router:**
-```
-http://server-ip:2283/  # Direct port access
+**Label Format:**
+```yaml
+labels:
+  - "caddy=<service-name>-${APP_DOMAIN}"
+  - "caddy.reverse_proxy={{upstreams <port>}}"
 ```
 
-**Example - With NSL Router:**
+**Compose File Requirements:**
+- Use `expose` to expose the web UI port (required for Caddy discovery)
+- Add Caddy labels to the main web UI service only
+- Use `${APP_DOMAIN}` variable (resolves to `username.nsl.sh` in production)
+
+**Example - Basic Caddy Configuration:**
 ```yaml
 services:
   immich:
     image: altran1502/immich-server:v1.135.3
     expose:
-      - 80                    # Expose port 80 internally
+      - 80                    # Expose port for Caddy discovery
+    labels:
+      - "caddy=immich-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
-      IMMICH_PORT: 80        # Configure app to use port 80
-      
+      IMMICH_PORT: 80
+
 x-casaos:
   main: immich
-  webui_port: 80            # Must match exposed port
+  webui_port: 80
 ```
 
-**Result:** `https://immich-username.nsl.sh/` (clean URL, no port numbers)
+**Result:** `https://immich-username.nsl.sh/`
 
-**Alternative - Non-80 Port Example:**
+**Example - Non-Port-80 Service:**
 ```yaml
 services:
-  grafana:
-    image: grafana/grafana:latest
+  duplicati:
+    image: linuxserver/duplicati:latest
     expose:
-      - 3000                  # Expose port 3000 internally
-    environment:
-      GF_SERVER_HTTP_PORT: 3000
-      
+      - 8200                  # Expose the service port
+    labels:
+      - "caddy=duplicati-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 8200}}"
+
 x-casaos:
-  main: grafana
-  webui_port: 3000          # Must match exposed port
+  main: duplicati
+  webui_port: 8200
 ```
 
-**Result:** `https://3000-grafana-username.nsl.sh/` (includes port in URL)
+**Result:** `https://duplicati-username.nsl.sh/`
 
 **Port Selection Guidelines:**
-- **Port 80**: Clean URLs without port numbers (recommended)
-- **Other ports**: Accessible but URL includes port prefix
-- **Standard ports**: Use application defaults when port 80 conflicts with app requirements
+- Configure applications to use port 80 when possible
+- Any port works with Caddy - just match the `expose` and label port values
+- The URL remains clean regardless of the backend port
 
-The mesh router handles:
-- HTTPS certificate management
+Caddy handles:
+- Automatic HTTPS certificate management (Let's Encrypt)
 - Subdomain routing to the correct container
-- VPN-secured communication between router and containers
-- Port-based subdomain generation for non-80 ports
+- Load balancing and health checks
+- WebSocket proxying
 
-**Web UI Requirements (all three must be configured together):**
-- The main service must `expose` the web UI port (using `expose`, not necessarily `ports`)
+**Web UI Requirements (all must be configured together):**
+- The main service must `expose` the web UI port
+- Add Caddy labels to the service with `caddy=<name>-${APP_DOMAIN}` and `caddy.reverse_proxy`
 - The `webui_port` field must match the exposed port number
-- The `main` field must reference a valid service name under `services`
+- The `main` field must reference the service with Caddy labels
 
 **Important Notes:**
-- Only one web UI domain is supported per app (even with multiple containers)
-- HTTPS unwrapping is handled automatically by nsl.sh mesh router - no certificate management needed at container level
-- Other ports can still be bound directly to the public IP for non-web services
-- the main app name and hostname should be a simple name without spaces or special characters, as it will be used in the URL.
+- Add Caddy labels only to the main web UI service (not to database or backend services)
+- The service name in the `caddy=` label should match the `main` field in x-casaos
+- Use `${APP_DOMAIN}` for portability across different deployments
+- The app name should be simple without spaces or special characters
 
-**Example Configuration:**
+**Example Multi-Service Configuration:**
 
 ```yaml
 services:
   database:
     image: postgres:13
-    # Database service - no web UI
-    
+    # Database service - no Caddy labels needed
+
   webui-service:
     image: myapp:latest
     expose:
       - 8080                        # Must expose the web UI port
+    labels:
+      - "caddy=myapp-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 8080}}"
     ports:
       - "9000:9000"                 # Direct port binding for API or other services
     depends_on:
       - database
 
 x-casaos:
-    main: webui-service             # References the service with web UI
-    webui_port: 8080               # Must match the exposed port above
+    main: webui-service             # References the service with Caddy labels
+    webui_port: 8080               # Must match the exposed port
 ```
 
 #### System Variables

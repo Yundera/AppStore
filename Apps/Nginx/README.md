@@ -11,7 +11,7 @@ nginx provides a simple way to host static websites, HTML pages, JavaScript appl
 - **Zero Configuration**: Drop your files in and start serving immediately
 - **Lightning Fast**: nginx delivers static content faster than any alternative
 - **Minimal Resources**: Runs efficiently with just 64MB RAM
-- **Clean URLs**: Automatic HTTPS access via NSL.SH routing
+- **Clean URLs**: Automatic HTTPS access via Caddy reverse proxy
 - **SPA Support**: Pre-configured for single-page applications (React, Vue, Angular)
 - **Production Ready**: nginx powers 30% of the internet
 
@@ -21,7 +21,7 @@ After installation:
 
 1. Navigate to `/DATA/AppData/Nginx/www/`
 2. Upload your website files (HTML, CSS, JavaScript, images, etc.)
-3. Access your site at `https://nginx-[username].nsl.sh/`
+3. Access your site at `https://nginx-username.nsl.sh/`
 
 ### File Structure
 
@@ -61,7 +61,7 @@ To customize, edit `/DATA/AppData/Nginx/nginx.conf` and restart the app.
 - **Image**: `nginx:1.27-alpine`
 - **Memory**: 64MB limit
 - **CPU**: 0.25 cores
-- **Port**: 80 (exposed via NSL.SH)
+- **Port**: 80 (exposed via Caddy)
 - **Category**: WEB
 
 ## TODO: Required Files
@@ -120,7 +120,7 @@ Before submitting:
 
 4. Verify data persistence through uninstall/reinstall
 
-5. Confirm web UI accessibility via NSL routing
+5. Confirm web UI accessibility via Caddy routing
 
 ## Resources
 

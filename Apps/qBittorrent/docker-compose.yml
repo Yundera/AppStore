@@ -8,6 +8,9 @@ services:
     restart: unless-stopped
     expose:
       - 80
+    labels:
+      - "caddy=qbittorrent-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     # Uncomment the ports section if you want to expose the service on specific ports
     #ports:
     #  - 6881:6881

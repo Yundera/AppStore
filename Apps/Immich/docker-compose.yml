@@ -21,6 +21,9 @@ services:
       TZ: $TZ
     expose:
       - 80
+    labels:
+      - "caddy=immich-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     depends_on:
       - redis
       - database
