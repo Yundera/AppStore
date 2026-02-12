@@ -2,7 +2,7 @@ name: vaultwarden
 
 services:
   vaultwarden:
-    image: vaultwarden/server:1.34.3
+    image: vaultwarden/server:1.35.3
     user: $PUID:$PGID
     deploy:
       resources:
