@@ -8,21 +8,28 @@ This document describes how to contribute an app to the Yundera Compose AppStore
 
 Before submitting your PR, ensure your app meets these requirements:
 
+### Tech Checklist
+- [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
+- [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
+- [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
+
 ### Security Checklist
 - [ ] Default authentication (Basic Auth, OAuth, etc.) is enabled and documented - exceptions must be explained in rationale.md (e.g., public websites)
   - Example of valid exception: 
     - A public website that does not require authentication
     - The app handle authentication configuration on first launch via an onboarding process (eg Jellyfin, Immich, etc.)
 - [ ] No hardcoded credentials in the compose file - use environment variables or secrets
-- [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] Specific version tag (no `:latest`)
-- [ ] Resource limits are mandatory and set appropriately (on all services in case of multiple services) - exceptions must be explained in rationale.md
-- [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
 
 ### Functionality Checklist
 - [ ] Works immediately after installation - no need to check logs or run commands - pre-install scripts create sensible defaults
 - [ ] Data is mapped to appropriate `/DATA` subdirectories - if things are mapped outside of /DATA, this should be explained in rationale.md
 - [ ] No manual configuration required for basic functionality - should work out of the box
+- [ ] Data persistence requirements are met - see [Data Persistence](#data-persistence) section for details
+- [ ] CPU field cpu_shares is set appropriately (on all services)
+- [ ] fresh installation tested
+- [ ] uninstall/reinstall tested - An application should be able to be uninstalled and reinstalled without losing user data or configuration (See the keep user data option when uninstalling)
+
 
 ### Documentation Checklist
 - [ ] Clear description of the application
@@ -56,6 +63,32 @@ To ensure easy testing, please follow these steps:
 
 ## Guidelines
 
+### Data Persistence
+
+Applications must be designed to preserve user data across uninstallation and reinstallation cycles. This ensures users never lose their personal data when updating or reinstalling applications.
+
+**Requirements:**
+- **Persistent Volume Mapping**: All user data, configurations, and databases must be stored in volumes mapped to `/DATA/AppData/[AppName]/`
+- **Graceful Data Reuse**: Applications must detect and reuse existing data when reinstalled
+- **No Data Erasure**: Container startup processes must never erase or overwrite existing user data
+- **Configuration Preservation**: Settings, user accounts, and preferences should persist across container lifecycle
+
+**Implementation Guidelines:**
+- Map all persistent data to `/DATA/AppData/[AppName]/` subdirectories
+- Use initialization scripts that check for existing data before creating defaults
+- Ensure database migrations are handled gracefully on version updates
+- Test uninstall/reinstall scenarios to verify data persistence
+
+**Example Volume Mapping:**
+```yaml
+volumes:
+  - /DATA/AppData/myapp/config:/app/config
+  - /DATA/AppData/myapp/database:/var/lib/database
+  - /DATA/AppData/myapp/uploads:/app/uploads
+```
+
+This approach ensures that when users uninstall and reinstall applications, they can continue from where they left off without losing any personal data or configurations.
+
 ### File Structure
 
 Understanding the directory structure is essential for proper app development and data management. All user data and application configurations are stored under `/DATA`:
@@ -70,8 +103,8 @@ and
 Yundera uses a dual permission model to balance security and usability:
 Files owned by `PUID:PGID` (usually `1000:1000` for the 'pcs:pcs' user)
 
-if no "user" field is specified in the compose file, the container will run as PUID:PGID (different behavior than the docker default so be carful)
-if you need to run as root, you must specify `user: 0:0` in the compose file and set the `PUID` and `PGID` to `0:0` in the environment variables.
+**if no "user" field is specified in the compose file, the container will run as PUID:PGID (different behavior than the docker default so be carful)**
+if you need to run as root, you must specify `user: 0:0` in the compose file.
 
 
 **User-Friendly Directories** 
@@ -82,12 +115,26 @@ if you need to run as root, you must specify `user: 0:0` in the compose file and
 - Applications accessing these directories **must** use `user: $PUID:$PGID`
 
 **AppData Directories** 
-- Root ownership acceptable but preferably `PUID:PGID` to allow user to change configurations easily
-- `/DATA/AppData/[AppName]/` - Application-specific data and configurations
+Contains the App folder : `/DATA/AppData/[AppName]/` - Application-specific data and configurations
+
+- Root ownership withing the App folder is acceptable but preferably `PUID:PGID` to allow user to change configurations easily
 - Contains databases, config files, cache, logs, and internal app data
-- Users should **not** directly modify these files (system-managed)
 - Root containers are acceptable when volumes map exclusively to AppData
 - Examples: `/DATA/AppData/immich/pgdata`, `/DATA/AppData/immich/model-cache`
+
+The App folder should always be owned by `PUID:PGID` to allow the user to romove the folder if needed.
+inside this folder the permission may vary depending on usage.
+
+example`:
+```
+root@yundera:/DATA/AppData# ls -al
+drwxr-xr-x 13 pcs  pcs    4096 Sep  3 14:17 .
+drwxrwxrwx  8 pcs  pcs    4096 Sep  3 14:17 ..
+drwxr-xr-x  5 pcs  pcs    4096 Sep  4 12:12 casaos
+drwxr-xr-x  3 pcs  pcs    4096 Jun 25 10:30 duplicati
+drwxr-xr-x  3 pcs  pcs    4096 Aug  3 19:35 filebrowser
+drwxr-xr-x  4 pcs  pcs    4096 Jun 25 10:30 jellyfin
+```
 
 **Mixed Usage Applications:**
 - If an app needs both AppData and user directory access, use `user: $PUID:$PGID`
@@ -175,6 +222,61 @@ This structure ensures:
 - Easy backup and migration
 - Consistent file permissions with PUID/PGID
 
+### CPU Share Guidelines
+
+It is mandatory to set CPU shares for all services in your compose file. This helps ensure fair resource allocation and prevents any single container from monopolizing CPU resources.
+
+CPU shares determine relative CPU priority between containers. Higher values get more CPU time when the system is under load.
+
+**Formula:** `cpu_shares: [value]` (relative weight, not percentage)
+
+#### CPU Share Allocation:
+```
+**100 - System Critical** (Reserved)
+- System services that must never be starved
+
+**90 - Administrative Critical**
+- Applications that must always be responsive with no heavy background processes
+- Examples: CasaOS, Portainer, admin dashboards, monitoring tools
+
+**80 - User-Facing Interactive**
+- Real-time applications requiring immediate user responsiveness
+- Examples: Web servers, frontend applications, API backends, reverse proxies
+
+**70 - Interactive with Heavy Tasks**  
+- Real-time applications that may have intensive background processes
+- Examples: Nextcloud (web + background jobs), WebRTC servers, databases serving interactive apps
+
+**50 - Standard Applications** (Default)
+- Regular applications without special performance requirements
+- Examples: Most containerized applications, file servers, basic services
+
+**30 - Background Services**
+- Non-interactive services that don't require immediate responsiveness  
+- Examples: Backup services (Duplicati), log aggregation, scheduled tasks
+
+**20 - Heavy Background Processing**
+- Resource-intensive background tasks with no real-time requirements
+- Examples: Machine learning services (Immich ML), video transcoding, batch processing
+
+**10 - System Background** (Reserved)
+- Reserved for system maintenance tasks
+```
+
+#### Resource limits
+
+Optional
+Only add if necessary to prevent resource exhaustion but most application don't need it.
+   
+```yaml
+   deploy:
+     resources:
+       limits:
+         memory: 512M
+```
+
+3. **Testing**: Consider your server's typical load when choosing values
+
 ### Project Structure
 
 ```shell
@@ -237,17 +339,24 @@ Each directory under [Apps](Apps) corresponds to a Compose App. The directory sh
         source: /DATA/AppData/$AppID/config # $AppID = app name, e.g. syncthing
     ```
 
-- **System Variables**: CasaOS now provides additional system-wide variables for enhanced functionality:
+- **System Variables**: CasaOS provides additional system-wide variables for enhanced functionality. These environment variables are automatically injected by CasaOS at container creation:
 
     ```yaml
     environment:
-      PGID: $PGID                           # Preset Group ID
-      PUID: $PUID                           # Preset User ID  
-      TZ: $TZ                               # Current system timezone
-      PASSWORD: $default_pwd                # Secure default password generated by CasaOS
-      DOMAIN: $domain                       # Domain (or subdomain) mapped to this container
-      PUBLIC_IP: $public_ip                 # Public IP used for port binding and announcements
+      # Standard system variables
+      PGID: $PGID                                    # Preset Group ID
+      PUID: $PUID                                    # Preset User ID
+      TZ: $TZ                                        # Current system timezone
+
+      # V2 system variables (recommended)
+      PCS_DEFAULT_PASSWORD: $PCS_DEFAULT_PASSWORD    # Secure default password generated by CasaOS
+      PCS_DOMAIN: $PCS_DOMAIN                        # Domain without https:// (e.g., example.com)
+      PCS_DATA_ROOT: $PCS_DATA_ROOT                  # Data root directory (/DATA)
+      PCS_PUBLIC_IP: $PCS_PUBLIC_IP                  # Public IP for port binding and announcements
+      PCS_EMAIL: $PCS_EMAIL                          # Admin email (admin@DOMAIN)
     ```
+
+    **Note:** The V2 variable names (prefixed with `PCS_`) are the current standard. Use these in new applications for consistency across the CasaOS ecosystem.
 
 - CasaOS specific metadata, also called *store info*, are stored under the [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos`.
 
@@ -288,9 +397,9 @@ x-casaos:
     before_install:
       en_us: |
         Default Account
-        | Username   | Password       |
-        | --------   | ------------   |
-        | `admin`    | `$default_pwd` |
+        | Username   | Password                |
+        | --------   | ----------------------- |
+        | `admin`    | `$PCS_DEFAULT_PASSWORD` |
 ```
 
 ### Features
@@ -309,13 +418,19 @@ x-casaos:
 When using `pre-install-cmd`, ensure the command is idempotent and does not require user interaction.
 Also ensure that versions are specified for any images used in the command to avoid unexpected changes.
 
+**SECURITY REQUIREMENTS for pre-install-cmd:**
+- [ ] **Specific version tags**: Never use `:latest` - always specify exact versions (e.g., `alpine:3.19`, `ubuntu:22.04`)
+- [ ] **User specification**: Use `--user $PUID:$PGID` when creating files in user directories to ensure proper permissions
+- [ ] **Idempotent operations**: Commands should be safe to run multiple times
+- [ ] **No hardcoded credentials**: Use system variables like `$PCS_DEFAULT_PASSWORD`
+
 Example:
 ```yaml
 x-casaos:
   pre-install-cmd: |
     docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
     docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $PCS_DEFAULT_PASSWORD --perm.admin --database /db/database.db
 ```
 
 **Common use cases:**
@@ -324,117 +439,124 @@ x-casaos:
 - Generate certificates or keys
 - Prepare the environment with sensible defaults
 
-#### NSL Router Integration (Web UI Access)
+#### Caddy Integration (Web UI Access)
 
-The Yundera AppStore uses the NSL Router (mesh-router) system to provide clean HTTPS URLs for your applications. The mesh router automatically generates subdomains based on your compose configuration.
+The Yundera AppStore uses Caddy reverse proxy with Docker labels for automatic HTTPS routing. Apps are accessible via free nsl.sh subdomains (e.g., `https://appname-username.nsl.sh`).
 
-**How NSL Router Works:**
-- The mesh router runs on nsl.sh domains and provides subdomain routing to Yundera users
-- Each user gets a subdomain like `username.nsl.sh`
-- Applications are accessible via clean URLs without port numbers
+**How It Works:**
+- Caddy watches Docker containers for specific labels
+- Labels define the subdomain prefix and backend port
+- Caddy automatically handles HTTPS certificates and routing
+- nsl.sh provides free subdomains for all Yundera users
 
-**URL Generation Pattern:**
-```
-https://[port]-appname-username.nsl.sh/
-```
-
-**Compose File Requirements for NSL Router:**
-- Use `expose` instead of `ports` for web UI services
-- Set `webui_port` to port 80 when possible (recommended for clean URLs)
-- Other ports are supported but will include the port in the URL
-- The router automatically handles HTTPS termination and routing
-
-**Example - Before NSL Router:**
-```
-http://server-ip:2283/  # Direct port access
+**Label Format:**
+```yaml
+labels:
+  - "caddy=<service-name>-${APP_DOMAIN}"
+  - "caddy.reverse_proxy={{upstreams <port>}}"
 ```
 
-**Example - With NSL Router:**
+**Compose File Requirements:**
+- Use `expose` to expose the web UI port (required for Caddy discovery)
+- Add Caddy labels to the main web UI service only
+- Use `${APP_DOMAIN}` variable (resolves to `username.nsl.sh` in production)
+
+**Example - Basic Caddy Configuration:**
 ```yaml
 services:
   immich:
     image: altran1502/immich-server:v1.135.3
     expose:
-      - 80                    # Expose port 80 internally
+      - 80                    # Expose port for Caddy discovery
+    labels:
+      - "caddy=immich-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
-      IMMICH_PORT: 80        # Configure app to use port 80
-      
+      IMMICH_PORT: 80
+
 x-casaos:
   main: immich
-  webui_port: 80            # Must match exposed port
+  webui_port: 80
 ```
 
-**Result:** `https://immich-username.nsl.sh/` (clean URL, no port numbers)
+**Result:** `https://immich-username.nsl.sh/`
 
-**Alternative - Non-80 Port Example:**
+**Example - Non-Port-80 Service:**
 ```yaml
 services:
-  grafana:
-    image: grafana/grafana:latest
+  duplicati:
+    image: linuxserver/duplicati:latest
     expose:
-      - 3000                  # Expose port 3000 internally
-    environment:
-      GF_SERVER_HTTP_PORT: 3000
-      
+      - 8200                  # Expose the service port
+    labels:
+      - "caddy=duplicati-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 8200}}"
+
 x-casaos:
-  main: grafana
-  webui_port: 3000          # Must match exposed port
+  main: duplicati
+  webui_port: 8200
 ```
 
-**Result:** `https://3000-grafana-username.nsl.sh/` (includes port in URL)
+**Result:** `https://duplicati-username.nsl.sh/`
 
 **Port Selection Guidelines:**
-- **Port 80**: Clean URLs without port numbers (recommended)
-- **Other ports**: Accessible but URL includes port prefix
-- **Standard ports**: Use application defaults when port 80 conflicts with app requirements
+- Configure applications to use port 80 when possible
+- Any port works with Caddy - just match the `expose` and label port values
+- The URL remains clean regardless of the backend port
 
-The mesh router handles:
-- HTTPS certificate management
+Caddy handles:
+- Automatic HTTPS certificate management (Let's Encrypt)
 - Subdomain routing to the correct container
-- VPN-secured communication between router and containers
-- Port-based subdomain generation for non-80 ports
+- Load balancing and health checks
+- WebSocket proxying
 
-**Web UI Requirements (all three must be configured together):**
-- The main service must `expose` the web UI port (using `expose`, not necessarily `ports`)
+**Web UI Requirements (all must be configured together):**
+- The main service must `expose` the web UI port
+- Add Caddy labels to the service with `caddy=<name>-${APP_DOMAIN}` and `caddy.reverse_proxy`
 - The `webui_port` field must match the exposed port number
-- The `main` field must reference a valid service name under `services`
+- The `main` field must reference the service with Caddy labels
 
 **Important Notes:**
-- Only one web UI domain is supported per app (even with multiple containers)
-- HTTPS unwrapping is handled automatically by nsl.sh mesh router - no certificate management needed at container level
-- Other ports can still be bound directly to the public IP for non-web services
-- the main app name and hostname should be a simple name without spaces or special characters, as it will be used in the URL.
+- Add Caddy labels only to the main web UI service (not to database or backend services)
+- The service name in the `caddy=` label should match the `main` field in x-casaos
+- Use `${APP_DOMAIN}` for portability across different deployments
+- The app name should be simple without spaces or special characters
 
-**Example Configuration:**
+**Example Multi-Service Configuration:**
 
 ```yaml
 services:
   database:
     image: postgres:13
-    # Database service - no web UI
-    
+    # Database service - no Caddy labels needed
+
   webui-service:
     image: myapp:latest
     expose:
       - 8080                        # Must expose the web UI port
+    labels:
+      - "caddy=myapp-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 8080}}"
     ports:
       - "9000:9000"                 # Direct port binding for API or other services
     depends_on:
       - database
 
 x-casaos:
-    main: webui-service             # References the service with web UI
-    webui_port: 8080               # Must match the exposed port above
+    main: webui-service             # References the service with Caddy labels
+    webui_port: 8080               # Must match the exposed port
 ```
 
 #### System Variables
 
 CasaOS automatically provides several system variables for your compose files:
 
-** Variables:**
-- `$default_pwd`: A secure default password generated by CasaOS for applications requiring authentication
-- `$domain`: The domain or subdomain mapped to this container for web UI access
-- `$public_ip`: The public IP address used for port binding announcements and external access
+**Available Variables:**
+- `$PCS_DEFAULT_PASSWORD`: A secure default password generated by CasaOS for applications requiring authentication
+- `$PCS_DOMAIN`: The domain (without https://) mapped to this container for web UI access
+- `$PCS_PUBLIC_IP`: The public IP address used for port binding announcements and external access
+- `$PCS_DATA_ROOT`: The data root directory (always `/DATA`)
+- `$PCS_EMAIL`: Admin email in the format `admin@DOMAIN`
 - `$AppID`: The application name/ID
 - `$PUID/$PGID`: User/Group IDs for proper file permissions
 - `$TZ`: System timezone
@@ -442,9 +564,11 @@ CasaOS automatically provides several system variables for your compose files:
 **Example Usage:**
 ```yaml
 environment:
-  - PASSWORD=$default_pwd
-  - DOMAIN=$domain  
-  - PUBLIC_IP=$public_ip
+  - PASSWORD=$PCS_DEFAULT_PASSWORD
+  - DOMAIN=$PCS_DOMAIN
+  - PUBLIC_IP=$PCS_PUBLIC_IP
+  - EMAIL=$PCS_EMAIL
+  - DATA_ROOT=$PCS_DATA_ROOT
   - PUID=$PUID
   - PGID=$PGID
   - TZ=$TZ
