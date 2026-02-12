@@ -9,17 +9,20 @@ services:
     user: $PUID:$PGID
     expose:
       - 80                    # Default port for Mealie v3
+    labels:
+      - "caddy=mealie-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
       PUID: $PUID              # Process user ID
       PGID: $PGID              # Process group ID
       TZ: $TZ                  # Timezone setting
       LOG_LEVEL: warning
       API_PORT: 80
-      BASE_URL: https://mealie-$PCS_DOMAIN  # Set base URL for proper routing
+      BASE_URL: https://mealie-${APP_DOMAIN}  # Set base URL for proper routing
 
     networks:
       - pcs
-    cpu_shares: 50
+    cpu_shares: 70
     deploy:
       resources:
         limits:
@@ -35,6 +38,7 @@ networks:
 
 x-casaos:
   main: mealie
+  store_app_id: mealie
   webui_port: 80
   index: /
 
