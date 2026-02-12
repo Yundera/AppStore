@@ -3,7 +3,7 @@ name: mealie
 
 services:
   mealie:
-    image: ghcr.io/mealie-recipes/mealie:v3.5.0
+    image: ghcr.io/mealie-recipes/mealie:v3.10.2
     container_name: mealie
     restart: unless-stopped
     user: $PUID:$PGID
@@ -15,24 +15,28 @@ services:
       TZ: $TZ                  # Timezone setting
       LOG_LEVEL: warning
       API_PORT: 80
-      BASE_URL: https://mealie-$domain  # Set base URL for proper routing
+      BASE_URL: https://mealie-$PCS_DOMAIN  # Set base URL for proper routing
 
+    networks:
+      - pcs
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
     volumes:
       - /DATA/AppData/mealie/data/:/app/data
-    healthcheck:
-      test: ["CMD", "timeout", "5", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+
+networks:
+  pcs:
+    external: true
 
 x-casaos:
   main: mealie
   webui_port: 80
   index: /
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/mealie/data &&
-    chown -R $PUID:$PGID /DATA/AppData/mealie
 
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/icon.png
   screenshot_link:
