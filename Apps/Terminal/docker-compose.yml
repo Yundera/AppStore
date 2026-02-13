@@ -1,14 +1,14 @@
-name: yunderaterminal
+name: terminal
 
 services:
-  yunderaterminal:
+  terminal:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    container_name: yunderaterminal
+    container_name: terminal
     restart: unless-stopped
     expose:
       - "80"
     labels:
-      - "caddy=yunderaterminal-${APP_DOMAIN}"
+      - "caddy=terminal-${APP_DOMAIN}"
       - "caddy.reverse_proxy={{upstreams 80}}"
     user: "0:0"
     environment:
@@ -29,7 +29,7 @@ services:
 
   ttyd:
     image: tsl0922/ttyd:1.7.7
-    container_name: yunderaterminaltty
+    container_name: terminaltty
     restart: unless-stopped
     user: "root"
     command: ["ttyd", "--writable", "--client-option", "enableZmodem=true", "--client-option", "enableSixel=false", "--client-option", "enableTrzsz=false", "--terminal-type", "xterm-256color", "chroot", "/host", "bash"]
@@ -52,7 +52,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: yunderaterminal
+  main: terminal
   author: yundera
   developer: yundera
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Terminal/icon.png
@@ -65,11 +65,11 @@ x-casaos:
     en_us: "A secure terminal with hash-based authentication using nginxhashlock"
   title:
     en_us: "Terminal"
-  store_app_id: yunderaterminal
+  store_app_id: terminal
   is_uncontrolled: false
   # nginxhashlock handles the hash validation automatically
   index: /?hash=$AUTH_HASH
   webui_port: 80
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/yunderaterminal 2>/dev/null || true
-    chmod -R 755 /DATA/AppData/yunderaterminal/ 2>/dev/null || true
+    mkdir -p /DATA/AppData/terminal 2>/dev/null || true
+    chmod -R 755 /DATA/AppData/terminal/ 2>/dev/null || true
