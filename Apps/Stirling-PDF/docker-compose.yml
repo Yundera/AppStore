@@ -20,18 +20,20 @@ services:
       - /DATA/AppData/$AppID/tmp/:/tmp
     user: "0:0"  # Root user required for Java runtime and PDF tools - see rationale.md
     environment:
-      PGID: 0
-      PUID: 0
+      PGID: $PGID
+      PUID: $PUID
       TZ: $TZ
-      DOCKER_ENABLE_SECURITY: false
-      SECURITY_ENABLELOGIN: false
+      DOCKER_ENABLE_SECURITY: true
+      SECURITY_ENABLELOGIN: true
+      SECURITY_INITIALLOGIN_USERNAME: admin
+      SECURITY_INITIALLOGIN_PASSWORD: $PCS_DEFAULT_PASSWORD
       DISABLE_ADDITIONAL_FEATURES: true
       SYSTEM_DEFAULTLOCALE: en_US
       INSTALL_BOOK_AND_ADVANCED_HTML_OPS: false
       TMPDIR: /tmp
       # Optimized Java memory management - prevents OOM errors and improves stability
       JAVA_TOOL_OPTIONS: "-XX:+UnlockExperimentalVMOptions -XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=40 -XX:MinRAMPercentage=30 -XX:+UseG1GC -XX:+UseStringDeduplication -XX:G1PeriodicGCInterval=30000 -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled -Djava.io.tmpdir=/tmp"
-      SERVER_PORT: 80  # Run on port 80 for NSL router compatibility
+      SERVER_PORT: 80  # Run on port 80 for Caddy reverse proxy
     deploy:
       resources:
         limits:
@@ -39,23 +41,24 @@ services:
           cpus: '1.0'  # Increased from 1.0 for better performance
         reservations:
           memory: 2G  # Reserve minimum memory
-    cpu_shares: 50  # Standard application priority
+    networks:
+      - pcs
+    cpu_shares: 70  # Interactive + Heavy Tasks (PDF conversion, OCR, compression)
+
+networks:
+  pcs:
+    external: true
 
 x-casaos:
   architectures:
     - amd64
     - arm64
   main: stirlingpdf
+  store_app_id: stirlingpdf
   webui_port: 80
   author: Yundera Team
   category: Office
   developer: Stirling Tools
-  pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/$AppID:/data ubuntu:22.04 sh -c '
-      mkdir -p /data/tessdata /data/configs /data/logs /data/customFiles /data/pipeline /data/tmp &&
-      chmod -R 777 /data &&
-      echo "Directories created and permissions set successfully"
-    '
   description:
     en_us: |
       **Your complete PDF toolkit - everything you need to work with PDF files, right from your web browser.**
@@ -187,8 +190,10 @@ x-casaos:
         **⏰ Setup Time:**
         This app takes about 5-10 minutes to set up after installation. Please be patient and wait before trying to access it.
 
-        **🔓 No Login Required:**
-        This app is configured without authentication for easier access. All PDF processing happens locally on your server. (See rationale.md for security justification)
+        **🔒 Login Required:**
+        | Username | Password |
+        | -------- | -------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
 
         **✨ Features Available:**
         • Split, merge, and organize PDFs
@@ -215,8 +220,10 @@ x-casaos:
         **⏰ 설정 시간:**
         이 앱은 설치 후 설정이 완료되기까지 약 5-10분이 걸립니다. 인내심을 갖고 접속하기 전에 기다려 주세요.
 
-        **🔓 로그인 필요 없음:**
-        이 앱은 쉬운 접근을 위해 인증 없이 구성되었습니다. 모든 PDF 처리는 로컬 서버에서 이루어집니다. (보안 정당성은 rationale.md 참조)
+        **🔒 로그인 필요:**
+        | 사용자명 | 비밀번호 |
+        | -------- | -------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
 
         **✨ 사용 가능한 기능:**
         • PDF 분할, 병합, 정리
@@ -243,8 +250,10 @@ x-casaos:
         **⏰ 设置时间:**
         此应用在安装后需要约5-10分钟来完成设置。请耐心等待,在尝试访问之前请等待。
 
-        **🔓 无需登录:**
-        此应用配置为无身份验证,以便于访问。所有PDF处理都在本地服务器上进行。(安全性理由见rationale.md)
+        **🔒 需要登录:**
+        | 用户名 | 密码 |
+        | ------ | ---- |
+        | `admin` | `$PCS_DEFAULT_PASSWORD` |
 
         **✨ 可用功能:**
         • PDF拆分、合并和整理
@@ -271,8 +280,10 @@ x-casaos:
         **⏰ Temps d'installation :**
         Cette application prend environ 5-10 minutes pour s'installer après l'installation. Veuillez être patient et attendre avant d'essayer d'y accéder.
 
-        **🔓 Aucune connexion requise :**
-        Cette application est configurée sans authentification pour un accès plus facile. Tout le traitement PDF se fait localement sur votre serveur. (Voir rationale.md pour la justification de sécurité)
+        **🔒 Connexion requise :**
+        | Nom d'utilisateur | Mot de passe |
+        | ----------------- | ------------ |
+        | `admin` | `$PCS_DEFAULT_PASSWORD` |
 
         **✨ Fonctionnalités disponibles :**
         • Diviser, fusionner et organiser les PDF
@@ -299,8 +310,10 @@ x-casaos:
         **⏰ Tiempo de configuración:**
         Esta aplicación toma aproximadamente 5-10 minutos para configurarse después de la instalación. Por favor ten paciencia y espera antes de intentar acceder.
 
-        **🔓 Sin inicio de sesión requerido:**
-        Esta aplicación está configurada sin autenticación para un acceso más fácil. Todo el procesamiento de PDF ocurre localmente en tu servidor. (Ver rationale.md para justificación de seguridad)
+        **🔒 Inicio de sesión requerido:**
+        | Usuario | Contraseña |
+        | ------- | ---------- |
+        | `admin` | `$PCS_DEFAULT_PASSWORD` |
 
         **✨ Características disponibles:**
         • Dividir, combinar y organizar PDFs
@@ -323,4 +336,4 @@ x-casaos:
 
         **Cómo usar:**
         ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!
-  index: /
+  index: /login
