@@ -1,0 +1,470 @@
+name: mattermost
+
+services:
+  postgres:
+    image: postgres:13-alpine
+    user: $PUID:$PGID
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    volumes:
+      - /DATA/AppData/$AppID/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: mmuser                     # PostgreSQL username / PostgreSQL 사용자명
+      POSTGRES_PASSWORD: $default_pwd           # PostgreSQL password / PostgreSQL 비밀번호
+      POSTGRES_DB: mattermost                   # PostgreSQL database name / PostgreSQL 데이터베이스명
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"  # PostgreSQL initialization arguments / PostgreSQL 초기화 인수
+      PGDATA: /var/lib/postgresql/data/pgdata   # PostgreSQL data directory path / PostgreSQL 데이터 디렉토리 경로
+      PUID: $PUID                               # Process user ID / 프로세스 사용자 ID
+      PGID: $PGID                               # Process group ID / 프로세스 그룹 ID
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmuser -d mattermost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:10.9.1
+    user: $PUID:$PGID
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    expose:
+      - 3000
+    volumes:
+      - /DATA/AppData/$AppID/config:/mattermost/config
+      - /DATA/AppData/$AppID/data:/mattermost/data
+      - /DATA/AppData/$AppID/logs:/mattermost/logs
+      - /DATA/AppData/$AppID/plugins:/mattermost/plugins
+      - /DATA/AppData/$AppID/client-plugins:/mattermost/client/plugins
+    environment:
+      PUID: $PUID                                                                           # Process user ID / 프로세스 사용자 ID
+      PGID: $PGID                                                                           # Process group ID / 프로세스 그룹 ID
+      TZ: $TZ                                                                               # Timezone setting / 시간대 설정
+      MM_SQLSETTINGS_DRIVERNAME: postgres                                                   # Database driver type / 데이터베이스 드라이버 타입
+      MM_SQLSETTINGS_DATASOURCE: postgres://mmuser:$default_pwd@postgres:5432/mattermost?sslmode=disable&connect_timeout=10  # Database connection string / 데이터베이스 연결 문자열
+      MM_SERVICESETTINGS_SITEURL: "https://3000-$domain"                                   # Public site URL / 공개 사이트 URL
+      MM_SERVICESETTINGS_LISTENADDRESS: ":3000"                                            # Server listening address / 서버 리스닝 주소
+      MM_SERVICESETTINGS_ENABLELOCALMODE: true                                             # Enable local development mode / 로컬 개발 모드 활성화
+      MM_SERVICESETTINGS_ALLOWUNTRUSTEDINTERNALCONNECTIONS: true                           # Allow untrusted internal connections / 신뢰할 수 없는 내부 연결 허용
+      MM_SERVICESETTINGS_ENABLEINSECUREOUTGOINGCONNECTIONS: true                           # Enable insecure outgoing connections / 안전하지 않은 아웃고잉 연결 활성화
+      MM_SERVICESETTINGS_ALLOWCORSFROM: "*"                                                # CORS allowed origins / CORS 허용 출처
+      MM_SERVICESETTINGS_WEBSOCKETURL: ""                                                  # WebSocket URL / 웹소켓 URL
+      MM_SERVICESETTINGS_ENABLEFILEATTACHMENTS: true                                       # Enable file attachments / 파일 첨부 활성화
+      MM_PLUGINSETTINGS_ENABLE: true                                                       # Enable plugins / 플러그인 활성화
+      MM_PLUGINSETTINGS_ENABLEUPLOADS: true                                                # Enable plugin uploads / 플러그인 업로드 활성화
+      MM_PLUGINSETTINGS_AUTOMATICPREPACKAGEDPLUGINS: true                                  # Enable automatic prepackaged plugins / 자동 사전 패키징된 플러그인 활성화
+      MM_PLUGINSETTINGS_ENABLEREMOTEMARKETPLACE: true                                      # Enable remote marketplace / 원격 마켓플레이스 활성화
+      MM_FILESETTINGS_MAXFILESIZE: 104857600                                               # Maximum file size (100MB) / 최대 파일 크기 (100MB)
+      MM_FILESETTINGS_ENABLEFILEATTACHMENTS: true                                          # Enable file attachments / 파일 첨부 활성화
+      MM_FILESETTINGS_ENABLEPUBLICLINK: true                                               # Enable public file links / 공개 파일 링크 활성화
+      MM_TEAMSETTINGS_ENABLETEAMCREATION: true                                             # Enable team creation / 팀 생성 활성화
+      MM_TEAMSETTINGS_ENABLEUSERCREATION: true                                             # Enable user creation / 사용자 생성 활성화
+      MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: false                                       # Send email notifications / 이메일 알림 전송
+      MM_LOGSETTINGS_CONSOLELEVEL: "INFO"                                                  # Console log level / 콘솔 로그 레벨
+      MM_LOGSETTINGS_FILELEVEL: "INFO"                                                     # File log level / 파일 로그 레벨
+      MM_PLUGINSETTINGS_PLUGINS_COM_MATTERMOST_CALLS_ENABLEPLUGIN: true                    # Enable Calls plugin / Calls 플러그인 활성화
+      MM_PLUGINSETTINGS_PLUGINS_COM_MATTERMOST_CALLS_ALLOWUSERSTOSTARTCALLS: true          # Allow users to start calls / 사용자 통화 시작 허용
+      MM_PLUGINSETTINGS_PLUGINS_COM_MATTERMOST_CALLS_TESTMODE: false                       # Calls plugin test mode / Calls 플러그인 테스트 모드
+      MM_PLUGINSETTINGS_PLUGINS_COM_MATTERMOST_CALLS_DEFAULTENABLED: true                  # Calls plugin enabled by default / Calls 플러그인 기본 활성화
+      MM_PLUGINSETTINGS_PLUGINS_COM_MATTERMOST_CALLS_ALLOWSCREENSHARING: true              # Allow screen sharing in calls / 통화 중 화면 공유 허용
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v4/system/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+x-casaos:
+  architectures: [amd64, arm64]
+  main: mattermost
+  webui_port: 3000
+  author: Yundera Team
+  category: Communication
+  # Download Jitsi plugin for video conferencing / 화상 회의용 Jitsi 플러그인 다운로드
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/client-plugins &&
+    mkdir -p /DATA/AppData/$AppID/config &&
+    mkdir -p /DATA/AppData/$AppID/data &&
+    mkdir -p /DATA/AppData/$AppID/logs &&
+    mkdir -p /DATA/AppData/$AppID/plugins &&
+    mkdir -p /DATA/AppData/$AppID/postgres &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID/ &&
+    echo "Downloading Jitsi Plugin..." &&
+    curl -L -o /DATA/AppData/$AppID/jitsi-plugin.tar.gz "https://github.com/mattermost-community/mattermost-plugin-jitsi/releases/latest/download/com.mattermost.plugin-jitsi.tar.gz" &&
+    echo "Jitsi Plugin downloaded to /DATA/AppData/$AppID/jitsi-plugin.tar.gz" &&
+    echo "Install it via System Console > Plugins > Plugin Management after first login"
+  description:
+    en_us: |
+      Self-hosted Microsoft Teams alternative with voice calls, video calls, screen sharing and team collaboration
+
+      **Mattermost Teams Alternative**
+
+      Ready for Microsoft Teams migration with enterprise features:
+
+      🚀 **Core Features:**
+
+      • Team channels & direct messaging
+      • File sharing (100MB per file)
+      • Mobile & desktop apps
+      • Plugin marketplace access
+      • Advanced notifications
+
+      📞 **Voice & Video Calls Setup:**
+
+      Calling features are automatically enabled and configured:
+
+      • Voice calls, video calls, and screen sharing ready
+      • No manual plugin installation required
+      • Test mode disabled for all users
+
+      🎯 **Teams vs Mattermost:**
+
+      • ✅ No per-user licensing fees
+      • ✅ Complete data ownership
+      • ✅ Better performance (self-hosted)
+      • ✅ Full customization control
+    en_gb: |
+      Self-hosted Microsoft Teams alternative with voice calls, video calls, screen sharing and team collaboration
+
+      **Mattermost Teams Alternative**
+
+      Ready for Microsoft Teams migration with enterprise features:
+
+      🚀 **Core Features:**
+
+      • Team channels & direct messaging
+      • File sharing (100MB per file)
+      • Mobile & desktop apps
+      • Plugin marketplace access
+      • Advanced notifications
+
+      📞 **Voice & Video Calls Setup:**
+
+      Calling features are automatically enabled and configured:
+
+      • Voice calls, video calls, and screen sharing ready
+      • No manual plugin installation required
+      • Test mode disabled for all users
+
+      🎯 **Teams vs Mattermost:**
+
+      • ✅ No per-user licensing fees
+      • ✅ Complete data ownership
+      • ✅ Better performance (self-hosted)
+      • ✅ Full customisation control
+    ko_kr: |
+      음성 통화, 화상 통화, 화면 공유 및 팀 협업을 지원하는 자체 호스팅 Microsoft Teams 대안
+
+      **Mattermost Teams 대안**
+
+      엔터프라이즈 기능을 갖춘 Microsoft Teams 마이그레이션 준비:
+
+      🚀 **핵심 기능:**
+
+      • 팀 채널 및 직접 메시징
+      • 파일 공유 (파일당 100MB)
+      • 모바일 및 데스크톱 앱
+      • 플러그인 마켓플레이스 접근
+      • 고급 알림
+
+      📞 **음성 및 화상 통화 설정:**
+
+      통화 기능이 자동으로 활성화되고 구성됩니다:
+
+      • 음성 통화, 화상 통화 및 화면 공유 준비 완료
+      • 수동 플러그인 설치 불필요
+      • 모든 사용자에 대해 테스트 모드 비활성화
+
+      🎯 **Teams vs Mattermost:**
+
+      • ✅ 사용자당 라이선스 비용 없음
+      • ✅ 완전한 데이터 소유권
+      • ✅ 더 나은 성능 (자체 호스팅)
+      • ✅ 완전한 사용자 정의 제어
+    zh_cn: |
+      具有语音通话、视频通话、屏幕共享和团队协作功能的自托管Microsoft Teams替代方案
+
+      **Mattermost Teams替代方案**
+
+      准备好使用企业功能进行Microsoft Teams迁移：
+
+      🚀 **核心功能：**
+
+      • 团队频道和直接消息
+      • 文件共享（每个文件100MB）
+      • 移动和桌面应用
+      • 插件市场访问
+      • 高级通知
+
+      📞 **语音和视频通话设置：**
+
+      通话功能自动启用和配置：
+
+      • 语音通话、视频通话和屏幕共享就绪
+      • 无需手动插件安装
+      • 为所有用户禁用测试模式
+
+      🎯 **Teams vs Mattermost：**
+
+      • ✅ 无按用户许可费用
+      • ✅ 完全数据所有权
+      • ✅ 更好的性能（自托管）
+      • ✅ 完全自定义控制
+    fr_fr: |
+      Alternative auto-hébergée à Microsoft Teams avec appels vocaux, appels vidéo, partage d'écran et collaboration d'équipe
+
+      **Alternative Mattermost Teams**
+
+      Prêt pour la migration Microsoft Teams avec des fonctionnalités d'entreprise :
+
+      🚀 **Fonctionnalités principales :**
+
+      • Canaux d'équipe et messagerie directe
+      • Partage de fichiers (100 MB par fichier)
+      • Applications mobiles et desktop
+      • Accès au marché des plugins
+      • Notifications avancées
+
+      📞 **Configuration des appels vocaux et vidéo :**
+
+      Les fonctionnalités d'appel sont automatiquement activées et configurées :
+
+      • Appels vocaux, appels vidéo et partage d'écran prêts
+      • Aucune installation manuelle de plugin requise
+      • Mode test désactivé pour tous les utilisateurs
+
+      🎯 **Teams vs Mattermost :**
+
+      • ✅ Aucun frais de licence par utilisateur
+      • ✅ Propriété complète des données
+      • ✅ Meilleures performances (auto-hébergé)
+      • ✅ Contrôle de personnalisation complet
+    de_de: |
+      Selbst-gehostete Microsoft Teams Alternative mit Sprachanrufen, Videoanrufen, Bildschirmfreigabe und Teamzusammenarbeit
+
+      **Mattermost Teams Alternative**
+
+      Bereit für Microsoft Teams Migration mit Unternehmensfunktionen:
+
+      🚀 **Kernfunktionen:**
+
+      • Team-Kanäle und direktes Messaging
+      • Dateifreigabe (100MB pro Datei)
+      • Mobile und Desktop-Apps
+      • Plugin-Marktplatz-Zugang
+      • Erweiterte Benachrichtigungen
+
+      📞 **Sprach- und Videoanruf-Setup:**
+
+      Anruffunktionen sind automatisch aktiviert und konfiguriert:
+
+      • Sprachanrufe, Videoanrufe und Bildschirmfreigabe bereit
+      • Keine manuelle Plugin-Installation erforderlich
+      • Testmodus für alle Benutzer deaktiviert
+
+      🎯 **Teams vs Mattermost:**
+
+      • ✅ Keine Pro-Benutzer-Lizenzgebühren
+      • ✅ Vollständige Dateneigentümerschaft
+      • ✅ Bessere Leistung (selbst-gehostet)
+      • ✅ Vollständige Anpassungskontrolle
+    es_es: |
+      Alternativa auto-alojada a Microsoft Teams con llamadas de voz, videollamadas, compartir pantalla y colaboración en equipo
+
+      **Alternativa Mattermost Teams**
+
+      Listo para migración de Microsoft Teams con características empresariales:
+
+      🚀 **Características principales:**
+
+      • Canales de equipo y mensajería directa
+      • Compartir archivos (100MB por archivo)
+      • Aplicaciones móviles y de escritorio
+      • Acceso al mercado de plugins
+      • Notificaciones avanzadas
+
+      📞 **Configuración de llamadas de voz y video:**
+
+      Las características de llamadas están automáticamente habilitadas y configuradas:
+
+      • Llamadas de voz, videollamadas y compartir pantalla listos
+      • No se requiere instalación manual de plugins
+      • Modo de prueba deshabilitado para todos los usuarios
+
+      🎯 **Teams vs Mattermost:**
+
+      • ✅ Sin tarifas de licencia por usuario
+      • ✅ Propiedad completa de datos
+      • ✅ Mejor rendimiento (auto-alojado)
+      • ✅ Control de personalización completo
+  developer: Mattermost, Inc.
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mattermost/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mattermost/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mattermost/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mattermost/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mattermost/screenshot-3.png
+  tagline:
+    en_us: Microsoft Teams alternative with calling features
+    en_gb: Microsoft Teams alternative with calling features
+    ko_kr: 통화 기능을 갖춘 Microsoft Teams 대안
+    zh_cn: 具有通话功能的Microsoft Teams替代方案
+    fr_fr: Alternative à Microsoft Teams avec fonctionnalités d'appel
+    de_de: Microsoft Teams Alternative mit Anruffunktionen
+    es_es: Alternativa a Microsoft Teams con características de llamadas
+  title:
+    en_us: Mattermost
+    en_gb: Mattermost
+    ko_kr: Mattermost
+    zh_cn: Mattermost
+    fr_fr: Mattermost
+    de_de: Mattermost
+    es_es: Mattermost
+  tips:
+    before_install:
+      en_us: |
+        📋 **Quick Start:**
+
+        1. Go to your Mattermost website (the link will be provided after installation)
+
+        2. Create your account - **the first person to sign up becomes the admin**
+
+        3. Create your team/organization (give it a name like "My Company")
+
+        4. Start using voice/video calls immediately! The calling features are already set up for you.
+
+        🎯 **Teams vs Mattermost:**
+
+        ✅ No monthly fees per user like Teams
+        ✅ Your data stays on your server
+        ✅ Faster performance since it's on your own server
+        ✅ You can customize everything
+
+        **System Password:** $default_pwd
+      en_gb: |
+        📋 **Quick Start:**
+
+        1. Go to your Mattermost website (the link will be provided after installation)
+
+        2. Create your account - **the first person to sign up becomes the admin**
+
+        3. Create your team/organisation (give it a name like "My Company")
+
+        4. Start using voice/video calls immediately! The calling features are already set up for you.
+
+        🎯 **Teams vs Mattermost:**
+
+        ✅ No monthly fees per user like Teams
+        ✅ Your data stays on your server
+        ✅ Faster performance since it's on your own server
+        ✅ You can customise everything
+
+        **System Password:** $default_pwd
+      ko_kr: |
+        📋 **빠른 시작:**
+
+        1. Mattermost 웹사이트로 이동 (설치 후 링크가 제공됩니다)
+
+        2. 계정 생성 - **처음 가입하는 사람이 관리자가 됩니다**
+
+        3. 팀/조직 생성 (예: "우리 회사" 같은 이름 지정)
+
+        4. 즉시 음성/화상 통화 사용 시작! 통화 기능이 이미 설정되어 있습니다.
+
+        🎯 **Teams vs Mattermost:**
+
+        ✅ Teams처럼 사용자당 월 요금 없음
+        ✅ 데이터가 당신의 서버에 보관됨
+        ✅ 자체 서버라서 더 빠른 성능
+        ✅ 모든 것을 사용자 정의 가능
+
+        **시스템 비밀번호:** $default_pwd
+      zh_cn: |
+        📋 **快速开始：**
+
+        1. 访问您的Mattermost网站（安装后将提供链接）
+
+        2. 创建您的账户 - **第一个注册的人成为管理员**
+
+        3. 创建您的团队/组织（给它起个名字，比如"我的公司"）
+
+        4. 立即开始使用语音/视频通话！通话功能已为您设置好。
+
+        🎯 **Teams vs Mattermost：**
+
+        ✅ 不像Teams那样按用户收取月费
+        ✅ 您的数据保留在您的服务器上
+        ✅ 由于在您自己的服务器上，性能更快
+        ✅ 您可以自定义一切
+
+        **系统密码：** $default_pwd
+      fr_fr: |
+        📋 **Démarrage rapide :**
+
+        1. Allez sur votre site web Mattermost (le lien sera fourni après l'installation)
+
+        2. Créez votre compte - **la première personne à s'inscrire devient l'administrateur**
+
+        3. Créez votre équipe/organisation (donnez-lui un nom comme "Mon Entreprise")
+
+        4. Commencez à utiliser les appels vocaux/vidéo immédiatement ! Les fonctionnalités d'appel sont déjà configurées pour vous.
+
+        🎯 **Teams vs Mattermost :**
+
+        ✅ Pas de frais mensuels par utilisateur comme Teams
+        ✅ Vos données restent sur votre serveur
+        ✅ Meilleures performances car c'est sur votre propre serveur
+        ✅ Vous pouvez tout personnaliser
+
+        **Mot de passe système :** $default_pwd
+      de_de: |
+        📋 **Schnellstart:**
+
+        1. Gehen Sie zu Ihrer Mattermost-Website (der Link wird nach der Installation bereitgestellt)
+
+        2. Erstellen Sie Ihr Konto - **die erste Person, die sich anmeldet, wird zum Administrator**
+
+        3. Erstellen Sie Ihr Team/Organisation (geben Sie ihm einen Namen wie "Meine Firma")
+
+        4. Beginnen Sie sofort mit Sprach-/Videoanrufen! Die Anruffunktionen sind bereits für Sie eingerichtet.
+
+        🎯 **Teams vs Mattermost:**
+
+        ✅ Keine monatlichen Gebühren pro Benutzer wie Teams
+        ✅ Ihre Daten bleiben auf Ihrem Server
+        ✅ Bessere Leistung, da es auf Ihrem eigenen Server ist
+        ✅ Sie können alles anpassen
+
+        **System-Passwort:** $default_pwd
+      es_es: |
+        📋 **Inicio rápido:**
+
+        1. Ve a tu sitio web de Mattermost (el enlace se proporcionará después de la instalación)
+
+        2. Crea tu cuenta - **la primera persona en registrarse se convierte en administrador**
+
+        3. Crea tu equipo/organización (dale un nombre como "Mi Empresa")
+
+        4. ¡Comienza a usar llamadas de voz/video inmediatamente! Las características de llamadas ya están configuradas para ti.
+
+        🎯 **Teams vs Mattermost:**
+
+        ✅ Sin tarifas mensuales por usuario como Teams
+        ✅ Tus datos permanecen en tu servidor
+        ✅ Mejor rendimiento ya que está en tu propio servidor
+        ✅ Puedes personalizar todo
+
+        **Contraseña del sistema:** $default_pwd
+  index: /
+  store_app_id: mattermost
