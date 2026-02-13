@@ -2,16 +2,16 @@ name: plausible
 
 services:
   plausible-db:
-    image: postgres:16-alpine
+    image: postgres:16.6-alpine
     container_name: plausible-db
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/postgresql/data
+      - /DATA/AppData/plausible/db/:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: plausible
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: $PCS_DEFAULT_PASSWORD
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d plausible"]
       interval: 30s
@@ -32,8 +32,8 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/$AppID/event-data:/var/lib/clickhouse
-      - /DATA/AppData/$AppID/event-logs:/var/log/clickhouse-server
+      - /DATA/AppData/plausible/event-data/:/var/lib/clickhouse
+      - /DATA/AppData/plausible/event-logs/:/var/log/clickhouse-server
     ulimits:
       nofile:
         soft: 262144
@@ -55,54 +55,19 @@ services:
     cpu_shares: 50
 
   plausible:
-    image: ghcr.io/plausible/community-edition:v3.1.0
+    image: ghcr.io/plausible/community-edition:v3.2.0
     container_name: plausible
     restart: unless-stopped
     user: "0:0"
-    command: >
-      sh -c '
-        echo "=== Plausible Starting ===" &&
-        
-        echo "Checking secrets directory..." &&
-        mkdir -p /secrets &&
-        
-        if [ ! -f /secrets/secret_key_base.txt ]; then
-          echo "Generating SECRET_KEY_BASE..." &&
-          cat /dev/urandom | head -c 64 | base64 | tr -d "\n" > /secrets/secret_key_base.txt &&
-          echo "SECRET_KEY_BASE generated"
-        else
-          echo "SECRET_KEY_BASE already exists"
-        fi &&
-        
-        if [ ! -f /secrets/totp_vault_key.txt ]; then
-          echo "Generating TOTP_VAULT_KEY..." &&
-          cat /dev/urandom | head -c 32 | base64 | tr -d "\n" > /secrets/totp_vault_key.txt &&
-          echo "TOTP_VAULT_KEY generated"
-        else
-          echo "TOTP_VAULT_KEY already exists"
-        fi &&
-        
-        echo "Reading secrets..." &&
-        export SECRET_KEY_BASE=$$(cat /secrets/secret_key_base.txt) &&
-        export TOTP_VAULT_KEY=$$(cat /secrets/totp_vault_key.txt) &&
-        echo "SECRET_KEY_BASE length: $${#SECRET_KEY_BASE}" &&
-        echo "TOTP_VAULT_KEY length: $${#TOTP_VAULT_KEY}" &&
-        
-        if [ $${#SECRET_KEY_BASE} -lt 32 ]; then
-          echo "ERROR: SECRET_KEY_BASE too short" &&
-          exit 1
-        fi &&
-        if [ $${#TOTP_VAULT_KEY} -lt 32 ]; then
-          echo "ERROR: TOTP_VAULT_KEY too short" &&
-          exit 1
-        fi &&
-        
-        echo "Starting database initialization..." &&
-        /entrypoint.sh db createdb &&
-        /entrypoint.sh db migrate &&
-        echo "Starting Plausible application..." &&
-        exec /entrypoint.sh run
-      '
+    command:
+      - sh
+      - -c
+      - |
+        test -f /secrets/secret_key_base || (head -c 64 /dev/urandom | base64 | tr -d '\n' > /secrets/secret_key_base)
+        test -f /secrets/totp_vault_key || (head -c 32 /dev/urandom | base64 | tr -d '\n' > /secrets/totp_vault_key)
+        export SECRET_KEY_BASE=$(cat /secrets/secret_key_base)
+        export TOTP_VAULT_KEY=$(cat /secrets/totp_vault_key)
+        /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run
     depends_on:
       plausible-db:
         condition: service_healthy
@@ -110,11 +75,14 @@ services:
         condition: service_healthy
     expose:
       - "80"
+    labels:
+      - "caddy=plausible-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     volumes:
-      - /DATA/AppData/$AppID/secrets:/secrets
+      - /DATA/AppData/plausible/secrets/:/secrets
     environment:
-      BASE_URL: https://plausible-$PCS_DOMAIN
-      DATABASE_URL: postgres://postgres:postgres@plausible-db:5432/plausible
+      BASE_URL: https://plausible-${APP_DOMAIN}
+      DATABASE_URL: postgres://postgres:$PCS_DEFAULT_PASSWORD@plausible-db:5432/plausible
       CLICKHOUSE_DATABASE_URL: http://plausible-events-db:8123/plausible_events_db
       DISABLE_REGISTRATION: invite_only
       LISTEN_IP: 0.0.0.0
@@ -125,11 +93,14 @@ services:
           memory: 512M
     networks:
       - plausible-network
+      - pcs
     cpu_shares: 70
 
 networks:
   plausible-network:
     driver: bridge
+  pcs:
+    external: true
 
 x-casaos:
   architectures:
@@ -253,23 +224,89 @@ x-casaos:
     before_install:
       en_us: |
         **First Time Setup:**
-        
+
         1. After installation, visit your Plausible instance
         2. Create your first admin account
         3. Add your website and get the tracking script
         4. Install the tracking script on your website
         5. Start receiving analytics data!
-        
+
         **Important Notes:**
         - The first user to register becomes the admin
         - Registration is set to "invite only" by default
         - Requires at least 2GB RAM for optimal performance
         - Uses PostgreSQL for user data and ClickHouse for analytics
         - Cryptographic secrets are automatically generated on first start
-        
+
         For detailed configuration options, visit the [Plausible CE Wiki](https://github.com/plausible/community-edition/wiki)
+      ko_kr: |
+        **최초 설정:**
+
+        1. 설치 후 Plausible 인스턴스를 방문하세요
+        2. 첫 번째 관리자 계정을 생성하세요
+        3. 웹사이트를 추가하고 추적 스크립트를 받으세요
+        4. 웹사이트에 추적 스크립트를 설치하세요
+        5. 분석 데이터 수신을 시작하세요!
+
+        **중요 사항:**
+        - 첫 번째 등록 사용자가 관리자가 됩니다
+        - 기본적으로 등록은 "초대 전용"으로 설정됩니다
+        - 최적의 성능을 위해 최소 2GB RAM이 필요합니다
+        - 사용자 데이터는 PostgreSQL, 분석은 ClickHouse를 사용합니다
+        - 암호화 비밀키는 첫 시작 시 자동으로 생성됩니다
+
+        자세한 설정 옵션은 [Plausible CE Wiki](https://github.com/plausible/community-edition/wiki)를 참조하세요
+      zh_cn: |
+        **首次设置:**
+
+        1. 安装后，访问您的 Plausible 实例
+        2. 创建您的第一个管理员账户
+        3. 添加您的网站并获取跟踪脚本
+        4. 在您的网站上安装跟踪脚本
+        5. 开始接收分析数据！
+
+        **重要说明:**
+        - 第一个注册的用户成为管理员
+        - 默认情况下注册设置为"仅限邀请"
+        - 需要至少 2GB RAM 以获得最佳性能
+        - 使用 PostgreSQL 存储用户数据，ClickHouse 存储分析数据
+        - 加密密钥在首次启动时自动生成
+
+        有关详细配置选项，请访问 [Plausible CE Wiki](https://github.com/plausible/community-edition/wiki)
+      fr_fr: |
+        **Configuration initiale:**
+
+        1. Après l'installation, visitez votre instance Plausible
+        2. Créez votre premier compte administrateur
+        3. Ajoutez votre site web et obtenez le script de suivi
+        4. Installez le script de suivi sur votre site web
+        5. Commencez à recevoir des données analytiques !
+
+        **Notes importantes:**
+        - Le premier utilisateur à s'inscrire devient l'administrateur
+        - L'inscription est définie sur "sur invitation uniquement" par défaut
+        - Nécessite au moins 2 Go de RAM pour des performances optimales
+        - Utilise PostgreSQL pour les données utilisateur et ClickHouse pour les analyses
+        - Les secrets cryptographiques sont générés automatiquement au premier démarrage
+
+        Pour les options de configuration détaillées, visitez le [Plausible CE Wiki](https://github.com/plausible/community-edition/wiki)
+      es_es: |
+        **Configuración inicial:**
+
+        1. Después de la instalación, visite su instancia de Plausible
+        2. Cree su primera cuenta de administrador
+        3. Agregue su sitio web y obtenga el script de seguimiento
+        4. Instale el script de seguimiento en su sitio web
+        5. ¡Comience a recibir datos analíticos!
+
+        **Notas importantes:**
+        - El primer usuario en registrarse se convierte en administrador
+        - El registro está configurado como "solo por invitación" por defecto
+        - Requiere al menos 2GB de RAM para un rendimiento óptimo
+        - Usa PostgreSQL para datos de usuario y ClickHouse para análisis
+        - Los secretos criptográficos se generan automáticamente en el primer inicio
+
+        Para opciones de configuración detalladas, visite el [Plausible CE Wiki](https://github.com/plausible/community-edition/wiki)
   index: /
   webui_port: 80
   store_app_id: plausible
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/db /DATA/AppData/$AppID/event-data /DATA/AppData/$AppID/event-logs /DATA/AppData/$AppID/secrets
