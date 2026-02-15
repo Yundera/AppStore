@@ -13,7 +13,7 @@ services:
       - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY-"Please fill you key here"}
-      - AUTH_PASSWORD=$default_pwd
+      - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
       - PROXY_PORT=80
     volumes:
       # Docker socket for container management
@@ -99,7 +99,7 @@ x-casaos:
         or
         - Anthropic account
 
-        Default login password: `$default_pwd`
+        Default login password: `$APP_DEFAULT_PASSWORD`
   pre-install-cmd: |
     mkdir -p /DATA/AppData/claude/workspace &&
     if [ ! -f /DATA/AppData/claude/workspace/CLAUDE.md ]; then

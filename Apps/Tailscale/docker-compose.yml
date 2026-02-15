@@ -13,12 +13,12 @@ services:
     environment:
       - TZ=$TZ
       # if you want to use headscale instead of tailscale.com, add the next line and set your domain
-      # - TS_EXTRA_ARGS=--login-server=https://headscale-$domain
+      # - TS_EXTRA_ARGS=--login-server=https://headscale-$APP_DOMAIN
       - TS_ACCEPT_DNS= "true"
       - TS_EXTRA_ARGS= "--accept-routes"
       - TS_AUTHKEY_INFO="Connect to the Tailscale Admin Console to generate an auth key and set it in the app settings before starting."
       - TS_AUTHKEY=  # Set this in CasaOS before starting for automatic auth, or leave blank for manual setup
-      - TS_HOSTNAME=$domain
+      - TS_HOSTNAME=$APP_DOMAIN
       - TS_USERSPACE= "false"
       - TS_STATE_DIR=/var/lib/tailscale
     cap_add:

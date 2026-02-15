@@ -140,7 +140,7 @@ x-casaos:
         **Quick Start:**
         1. Install the app
         2. Upload your website files to the www directory
-        3. Access your site at: `https://caddy-$domain/`
+        3. Access your site at: `https://caddy-$APP_DOMAIN/`
 
         **File Structure:**
         ```
@@ -153,11 +153,11 @@ x-casaos:
         ```
 
         **Access Methods:**
-        - **Via Caddy:** `https://caddy-$domain/`
+        - **Via Caddy:** `https://caddy-$APP_DOMAIN/`
         - **Custom domain (external):** Point your domain to port 443 for direct TLS
         
         **IPv6 Direct Access:**
-        Then access your site at: `https://[$PCS_PUBLIC_IPV6]`
+        Then access your site at: `https://[$APP_PUBLIC_IPV6]`
 
         **Custom Domain Access:**
         Port 443 is exposed for external access with self-signed TLS.

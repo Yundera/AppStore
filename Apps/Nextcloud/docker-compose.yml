@@ -27,10 +27,10 @@ services:
       - MYSQL_HOST=db
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=$default_pwd
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $domain nextcloud-$domain
+      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN
       - OVERWRITEPROTOCOL=https
-      - OVERWRITEHOST=nextcloud-$domain
+      - OVERWRITEHOST=nextcloud-$APP_DOMAIN
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
       # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
       - NC_maintenance_window_start=4
@@ -58,10 +58,10 @@ services:
         max-file: "2"
     environment:
       - TZ=$TZ
-      - MYSQL_ROOT_PASSWORD=$default_pwd
+      - MYSQL_ROOT_PASSWORD=$APP_DEFAULT_PASSWORD
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=$default_pwd
+      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
       - MARIADB_AUTO_UPGRADE=1
     volumes:
       - /DATA/AppData/nextcloud/db/:/var/lib/mysql
@@ -73,7 +73,7 @@ services:
     image: redis:7.4-alpine
     container_name: nextcloud_redis
     cpu_shares: 10
-    command: redis-server --requirepass $default_pwd
+    command: redis-server --requirepass $APP_DEFAULT_PASSWORD
     logging:
       driver: "json-file"
       options:
@@ -424,7 +424,7 @@ x-casaos:
         php occ config:system:set memcache.locking --value="\\OC\\Memcache\\Redis"
         php occ config:system:set redis host --value="redis"
         php occ config:system:set redis port --value=6379 --type=integer
-        php occ config:system:set redis password --value="$default_pwd"
+        php occ config:system:set redis password --value="$APP_DEFAULT_PASSWORD"
         echo "Redis memcache configuration completed"
       else
         echo "Redis memcache already configured, skipping"

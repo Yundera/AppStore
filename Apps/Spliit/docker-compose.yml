@@ -37,7 +37,7 @@ services:
     environment:
       POSTGRES_DB: spliit
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: $default_pwd
+      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
       TZ: UTC
     volumes:
       - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
@@ -55,8 +55,8 @@ services:
     restart: unless-stopped
     environment:
       TZ: $TZ
-      POSTGRES_PRISMA_URL: postgresql://postgres:$default_pwd@db:5432/spliit
-      POSTGRES_URL_NON_POOLING: postgresql://postgres:$default_pwd@db:5432/spliit
+      POSTGRES_PRISMA_URL: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
+      POSTGRES_URL_NON_POOLING: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
     networks:
       - pcs
     cap_add:

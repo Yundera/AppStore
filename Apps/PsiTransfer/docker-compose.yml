@@ -23,8 +23,8 @@ services:
       - PUID=0
       - PGID=0
       - TZ=$TZ
-      - PSITRANSFER_ADMIN_PASS=$default_pwd
-      - PSITRANSFER_UPLOAD_PASS=$default_pwd
+      - PSITRANSFER_ADMIN_PASS=$APP_DEFAULT_PASSWORD
+      - PSITRANSFER_UPLOAD_PASS=$APP_DEFAULT_PASSWORD
       - PSITRANSFER_UPLOAD_DIR=/data
       - PSITRANSFER_PORT=80
       - PSITRANSFER_DEFAULT_RETENTION=86400
@@ -94,10 +94,10 @@ x-casaos:
         
         | Field              | Value          |
         |--------------------|----------------|
-        | Admin Password     | `$default_pwd` |
-        | Upload Password    | `$default_pwd` |
+        | Admin Password     | `$APP_DEFAULT_PASSWORD` |
+        | Upload Password    | `$APP_DEFAULT_PASSWORD` |
         
-        **Access Admin Panel:** Navigate to `$domain/admin` and enter the admin password.
+        **Access Admin Panel:** Navigate to `$APP_DOMAIN/admin` and enter the admin password.
         
         **Important Notes:**
         - Files are stored in `/DATA/AppData/psitransfer/data/`
@@ -107,10 +107,10 @@ x-casaos:
         
         | 항목              | 값             |
         |------------------|----------------|
-        | 관리자 비밀번호    | `$default_pwd` |
-        | 업로드 비밀번호    | `$default_pwd` |
+        | 관리자 비밀번호    | `$APP_DEFAULT_PASSWORD` |
+        | 업로드 비밀번호    | `$APP_DEFAULT_PASSWORD` |
         
-        **관리자 패널 접근:** `$domain/admin`으로 이동하여 관리자 비밀번호를 입력하세요.
+        **관리자 패널 접근:** `$APP_DOMAIN/admin`으로 이동하여 관리자 비밀번호를 입력하세요.
         
         **중요 사항:**
         - 파일은 `/DATA/AppData/psitransfer/data/`에 저장됩니다

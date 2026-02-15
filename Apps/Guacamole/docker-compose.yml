@@ -10,7 +10,7 @@ services:
       POSTGRESQL_HOSTNAME: postgres
       POSTGRESQL_DATABASE: guacamole_db
       POSTGRESQL_USER: guacamole_user
-      POSTGRESQL_PASSWORD: '$default_pwd'
+      POSTGRESQL_PASSWORD: '$APP_DEFAULT_PASSWORD'
     depends_on:
       - guacd
       - postgres
@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
     cpu_shares: 70
     environment:
-      POSTGRES_PASSWORD: '$default_pwd'
+      POSTGRES_PASSWORD: '$APP_DEFAULT_PASSWORD'
       POSTGRES_USER: 'guacamole_user'
       POSTGRES_DB: 'guacamole_db'
     volumes:

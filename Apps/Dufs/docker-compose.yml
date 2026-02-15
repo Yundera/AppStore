@@ -23,7 +23,7 @@ services:
       "--allow-search",
       "--allow-symlink",
       "--allow-archive",
-      "--auth", "admin:$default_pwd@/:rw"
+      "--auth", "admin:$APP_DEFAULT_PASSWORD@/:rw"
     ]
     volumes:
       - type: bind
@@ -107,14 +107,14 @@ x-casaos:
         Default WebDAV Access
         | Username   | Password       | Access |
         | --------   | ------------   | ------ |
-        | `admin`    | `$default_pwd` | Read/Write |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` | Read/Write |
         
-        WebDAV URL: https://dufs-$domain/
+        WebDAV URL: https://dufs-$APP_DOMAIN/
         
         Mount Instructions:
-        • Windows: Map Network Drive → https://dufs-$domain/
-        • macOS: Finder → Go → Connect to Server → https://dufs-$domain/
-        • Linux: Files → Other Locations → Connect to Server → dav://dufs-$domain/
+        • Windows: Map Network Drive → https://dufs-$APP_DOMAIN/
+        • macOS: Finder → Go → Connect to Server → https://dufs-$APP_DOMAIN/
+        • Linux: Files → Other Locations → Connect to Server → dav://dufs-$APP_DOMAIN/
         
         For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
         ```

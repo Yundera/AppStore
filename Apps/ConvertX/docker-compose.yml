@@ -36,7 +36,7 @@ services:
           memory: 2G
           cpus: '1.0'
     environment:
-      - JWT_SECRET=$default_pwd
+      - JWT_SECRET=$APP_DEFAULT_PASSWORD
       - ACCOUNT_REGISTRATION=false
       - HTTP_ALLOWED=true
       - ALLOW_UNAUTHENTICATED=false

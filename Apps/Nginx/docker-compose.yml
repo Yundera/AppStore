@@ -27,7 +27,7 @@ services:
       - PUID=0
       - PGID=0
       - TZ=$TZ
-      - NGINX_HOST=$domain
+      - NGINX_HOST=$APP_DOMAIN
       - NGINX_PORT=80
     deploy:
       resources:
@@ -134,7 +134,7 @@ x-casaos:
         **Quick Start:**
         1. Install the app
         2. Upload your website files to the www directory
-        3. Access your site at: `https://nginx-$domain/`
+        3. Access your site at: `https://nginx-$APP_DOMAIN/`
 
         **File Structure:**
         ```
@@ -145,7 +145,7 @@ x-casaos:
         ```
         
         **IPv6 Direct Access:**
-        Then access your site at: `http://[$PCS_PUBLIC_IPV6]`
+        Then access your site at: `http://[$APP_PUBLIC_IPV6]`
   title:
     en_us: Nginx
   index: /

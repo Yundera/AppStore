@@ -17,7 +17,7 @@ services:
       BACKEND_PORT: "7681"
       LISTEN_PORT: "80"
       USER: "ADMIN"
-      PASSWORD: $default_pwd
+      PASSWORD: $APP_DEFAULT_PASSWORD
     depends_on:
       - ttyd
     networks:

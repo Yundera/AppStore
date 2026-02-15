@@ -8,8 +8,8 @@ services:
       PGID: 0
       PUID: 0
       TZ: $TZ
-      SETTINGS_ENCRYPTION_KEY: '$default_pwd'
-      DUPLICATI__WEBSERVICE_PASSWORD: '$default_pwd'
+      SETTINGS_ENCRYPTION_KEY: '$APP_DEFAULT_PASSWORD'
+      DUPLICATI__WEBSERVICE_PASSWORD: '$APP_DEFAULT_PASSWORD'
     expose:
       - 8200
     labels:
@@ -77,7 +77,7 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Default Password : `$default_pwd`
+        Default Password : `$APP_DEFAULT_PASSWORD`
         Your Files will appear in the `Computer/source/DATA` directory inside duplicati source panel (3).
   title:
     en_us: Duplicati

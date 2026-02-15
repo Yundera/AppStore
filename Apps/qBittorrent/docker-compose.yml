@@ -35,16 +35,16 @@ x-casaos:
     mkdir -p /DATA/AppData/qbittorrent/config/qBittorrent &&
     docker run --rm \
       -v /DATA/AppData/qbittorrent/config/qBittorrent:/output \
-      -e QB_PASSWORD="${default_pwd:-adminadmin}" \
+      -e QB_PASSWORD="${APP_DEFAULT_PASSWORD:-adminadmin}" \
       -e QB_USERNAME=admin \
       ghcr.io/worph/qbittorrent-config:1.0.2
   tips:
     before_install:
       en_us: |
         Login : `admin`
-        Password : `$default_pwd`
+        Password : `$APP_DEFAULT_PASSWORD`
         The download directory is `/DATA/Downloads`
-        $PCS_DEFAULT_PASSWORD
+        $APP_DEFAULT_PASSWORD
   architectures:
     - amd64
     - arm64
