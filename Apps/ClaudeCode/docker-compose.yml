@@ -32,10 +32,14 @@ services:
       - type: bind
         source: /DATA/AppData/claude/workspace/
         target: /home/claude/workspace
-      # claude config persistence (contains user sessions, settings, and other important data - don't delete this volume or you will lose all your data)
+      # Claude config persistence (contains credentials, settings, and other important data)
       - type: bind
         source: /DATA/AppData/claude/config/
         target: /home/claude/.claude
+      # Claude session state file (required for auth persistence across restarts)
+      - type: bind
+        source: /DATA/AppData/claude/config/.claude.json
+        target: /home/claude/.claude.json
     networks:
       pcs: null
     cpu_shares: 70
@@ -102,7 +106,8 @@ x-casaos:
 
         Default login password: `$APP_DEFAULT_PASSWORD`
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/claude/workspace &&
+    mkdir -p /DATA/AppData/claude/workspace /DATA/AppData/claude/config &&
+    touch /DATA/AppData/claude/config/.claude.json &&
     if [ ! -f /DATA/AppData/claude/workspace/CLAUDE.md ]; then
       wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude/workspace/CLAUDE.md
     fi &&
