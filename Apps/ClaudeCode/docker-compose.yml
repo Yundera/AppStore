@@ -12,7 +12,7 @@ services:
       - "caddy=claude-${APP_DOMAIN}"
       - "caddy.reverse_proxy={{upstreams 80}}"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY-"Please fill you key here"}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
       - PROXY_PORT=80
     volumes:
@@ -94,10 +94,11 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Requirements:
-        - Anthropic API key (get one at https://console.anthropic.com/)
-        or
-        - Anthropic account
+        Authentication options:
+        - Anthropic API key (https://console.anthropic.com/), OR
+        - Claude Pro/Max subscription (authenticate via OAuth on first run)
+
+        Leave API key empty to use subscription auth.
 
         Default login password: `$APP_DEFAULT_PASSWORD`
   pre-install-cmd: |
