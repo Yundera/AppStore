@@ -2,7 +2,7 @@ name: claude
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.6
+    image: ghcr.io/worph/claude-code-container:1.0.7
     container_name: claude
     restart: unless-stopped
     user: 0:0
