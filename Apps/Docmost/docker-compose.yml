@@ -34,6 +34,7 @@ services:
     image: redis:7.2-alpine
     container_name: docmost-redis
     restart: unless-stopped
+    user: "0:0"
     volumes:
       - /DATA/AppData/$AppID/redis/:/data
     deploy:
@@ -51,6 +52,7 @@ services:
     image: docmost/docmost:0.25.3
     container_name: docmost
     restart: unless-stopped
+    user: "0:0"
     depends_on:
       docmost-db:
         condition: service_healthy
@@ -213,7 +215,7 @@ x-casaos:
         - File attachments and image embedding
         - Full-text search
 
-        **Note:** The first user to register becomes the workspace admin. APP_SECRET is automatically generated on first start.
+        **Note:** The first user to register becomes the workspace admin.
       ko_kr: |
         **시작하기:**
 
@@ -228,7 +230,7 @@ x-casaos:
         - 파일 첨부 및 이미지 삽입
         - 전문 검색
 
-        **참고:** 첫 번째 등록 사용자가 워크스페이스 관리자가 됩니다. APP_SECRET은 첫 시작 시 자동으로 생성됩니다.
+        **참고:** 첫 번째 등록 사용자가 워크스페이스 관리자가 됩니다.
       zh_cn: |
         **开始使用：**
 
@@ -243,7 +245,7 @@ x-casaos:
         - 文件附件和图片嵌入
         - 全文搜索
 
-        **注意：** 第一个注册的用户成为工作空间管理员。APP_SECRET 在首次启动时自动生成。
+        **注意：** 第一个注册的用户成为工作空间管理员。
       fr_fr: |
         **Commencer :**
 
@@ -258,7 +260,7 @@ x-casaos:
         - Pièces jointes et intégration d'images
         - Recherche plein texte
 
-        **Note :** Le premier utilisateur à s'inscrire devient l'administrateur de l'espace de travail. APP_SECRET est automatiquement généré au premier démarrage.
+        **Note :** Le premier utilisateur à s'inscrire devient l'administrateur de l'espace de travail.
       es_es: |
         **Comenzar:**
 
@@ -273,5 +275,5 @@ x-casaos:
         - Archivos adjuntos e incrustación de imágenes
         - Búsqueda de texto completo
 
-        **Nota:** El primer usuario en registrarse se convierte en administrador del espacio de trabajo. APP_SECRET se genera automáticamente en el primer inicio.
+        **Nota:** El primer usuario en registrarse se convierte en administrador del espacio de trabajo.
   index: /
