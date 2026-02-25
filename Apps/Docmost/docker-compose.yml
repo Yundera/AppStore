@@ -1,0 +1,277 @@
+name: docmost
+
+services:
+  docmost-db:
+    image: postgres:16-alpine
+    container_name: docmost-db
+    restart: unless-stopped
+    user: "0:0"
+    volumes:
+      - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: docmost
+      POSTGRES_USER: docmost
+      POSTGRES_PASSWORD: $PCS_DEFAULT_PASSWORD
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docmost -d docmost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+    networks:
+      - docmost-network
+    cpu_shares: 50
+
+  docmost-redis:
+    image: redis:7.2-alpine
+    container_name: docmost-redis
+    restart: unless-stopped
+    volumes:
+      - /DATA/AppData/$AppID/redis/:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+    networks:
+      - docmost-network
+    cpu_shares: 30
+
+  docmost:
+    image: docmost/docmost:0.25.3
+    container_name: docmost
+    restart: unless-stopped
+    depends_on:
+      docmost-db:
+        condition: service_healthy
+      docmost-redis:
+        condition: service_started
+    expose:
+      - "80"
+    labels:
+      - "caddy=docmost-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
+    volumes:
+      - /DATA/AppData/$AppID/storage/:/app/data/storage
+    environment:
+      APP_URL: https://docmost-${APP_DOMAIN}
+      APP_SECRET: "${PCS_DEFAULT_PASSWORD}${PCS_DEFAULT_PASSWORD}"
+      PORT: 80
+      DATABASE_URL: postgresql://docmost:$PCS_DEFAULT_PASSWORD@docmost-db:5432/docmost?schema=public
+      REDIS_URL: redis://docmost-redis:6379
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+    networks:
+      - docmost-network
+      - pcs
+    cpu_shares: 70
+
+networks:
+  docmost-network:
+    driver: bridge
+  pcs:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: docmost
+  webui_port: 80
+  author: Yundera Team
+  category: Documents
+  developer: Docmost
+  store_app_id: docmost
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-1.png
+  description:
+    en_us: |
+      **Open-source collaborative wiki and documentation software**
+
+      Docmost is a self-hosted wiki and documentation tool, an open-source alternative to Confluence and Notion. Create, collaborate, and share knowledge with your team in real-time.
+
+      **Key Features:**
+      - Real-time collaborative editing with rich text editor
+      - Spaces and pages for organized documentation
+      - Permissions and roles for team access control
+      - Nested pages with drag-and-drop organization
+      - Full-text search across all documents
+      - File attachments and image embedding
+      - Comments and discussions on pages
+      - Page history and version tracking
+
+      **Perfect for:**
+      Teams that need a self-hosted knowledge base, project documentation, or internal wiki with full data ownership and privacy.
+    ko_kr: |
+      **오픈소스 협업 위키 및 문서 소프트웨어**
+
+      Docmost는 셀프 호스팅 위키 및 문서 도구로, Confluence와 Notion의 오픈소스 대안입니다. 팀과 함께 실시간으로 지식을 생성, 협업, 공유하세요.
+
+      **주요 기능:**
+      - 리치 텍스트 에디터를 통한 실시간 협업 편집
+      - 체계적인 문서 관리를 위한 스페이스와 페이지
+      - 팀 접근 제어를 위한 권한 및 역할
+      - 드래그 앤 드롭으로 구성하는 중첩 페이지
+      - 모든 문서에 걸친 전문 검색
+      - 파일 첨부 및 이미지 삽입
+      - 페이지 내 댓글 및 토론
+      - 페이지 히스토리 및 버전 추적
+
+      **이런 분께 완벽해요:**
+      완전한 데이터 소유권과 프라이버시를 갖춘 셀프 호스팅 지식 베이스, 프로젝트 문서화 또는 내부 위키가 필요한 팀.
+    zh_cn: |
+      **开源协作 Wiki 和文档软件**
+
+      Docmost 是一个自托管的 Wiki 和文档工具，是 Confluence 和 Notion 的开源替代方案。与团队实时创建、协作和分享知识。
+
+      **主要功能：**
+      - 富文本编辑器的实时协作编辑
+      - 用于组织文档的空间和页面
+      - 团队访问控制的权限和角色
+      - 支持拖放组织的嵌套页面
+      - 跨所有文档的全文搜索
+      - 文件附件和图片嵌入
+      - 页面评论和讨论
+      - 页面历史和版本跟踪
+
+      **非常适合：**
+      需要具有完全数据所有权和隐私的自托管知识库、项目文档或内部 Wiki 的团队。
+    fr_fr: |
+      **Logiciel wiki et documentation collaboratif open-source**
+
+      Docmost est un outil wiki et documentation auto-hébergé, une alternative open-source à Confluence et Notion. Créez, collaborez et partagez les connaissances avec votre équipe en temps réel.
+
+      **Fonctionnalités principales :**
+      - Édition collaborative en temps réel avec éditeur de texte riche
+      - Espaces et pages pour une documentation organisée
+      - Permissions et rôles pour le contrôle d'accès de l'équipe
+      - Pages imbriquées avec organisation par glisser-déposer
+      - Recherche plein texte dans tous les documents
+      - Pièces jointes et intégration d'images
+      - Commentaires et discussions sur les pages
+      - Historique des pages et suivi des versions
+
+      **Parfait pour :**
+      Les équipes ayant besoin d'une base de connaissances auto-hébergée, de documentation de projet ou de wiki interne avec propriété et confidentialité complètes des données.
+    es_es: |
+      **Software wiki y documentación colaborativa de código abierto**
+
+      Docmost es una herramienta wiki y de documentación auto-alojada, una alternativa de código abierto a Confluence y Notion. Crea, colabora y comparte conocimiento con tu equipo en tiempo real.
+
+      **Características principales:**
+      - Edición colaborativa en tiempo real con editor de texto enriquecido
+      - Espacios y páginas para documentación organizada
+      - Permisos y roles para control de acceso del equipo
+      - Páginas anidadas con organización de arrastrar y soltar
+      - Búsqueda de texto completo en todos los documentos
+      - Archivos adjuntos e incrustación de imágenes
+      - Comentarios y discusiones en páginas
+      - Historial de páginas y seguimiento de versiones
+
+      **Perfecto para:**
+      Equipos que necesitan una base de conocimiento auto-alojada, documentación de proyectos o wiki interna con propiedad completa de datos y privacidad.
+  tagline:
+    en_us: Open-source collaborative wiki and documentation platform
+    ko_kr: 오픈소스 협업 위키 및 문서 플랫폼
+    zh_cn: 开源协作 Wiki 和文档平台
+    fr_fr: Plateforme wiki et documentation collaborative open-source
+    es_es: Plataforma wiki y documentación colaborativa de código abierto
+  title:
+    en_us: Docmost
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started:**
+
+        1. After installation, visit your Docmost instance
+        2. Create your first admin account
+        3. Set up your first workspace and start creating pages
+
+        **Features:**
+        - Real-time collaborative editing
+        - Spaces for organizing documentation
+        - Rich text editor with markdown support
+        - File attachments and image embedding
+        - Full-text search
+
+        **Note:** The first user to register becomes the workspace admin. APP_SECRET is automatically generated on first start.
+      ko_kr: |
+        **시작하기:**
+
+        1. 설치 후 Docmost 인스턴스를 방문하세요
+        2. 첫 번째 관리자 계정을 생성하세요
+        3. 첫 번째 워크스페이스를 설정하고 페이지 작성을 시작하세요
+
+        **기능:**
+        - 실시간 협업 편집
+        - 문서 정리를 위한 스페이스
+        - 마크다운 지원 리치 텍스트 에디터
+        - 파일 첨부 및 이미지 삽입
+        - 전문 검색
+
+        **참고:** 첫 번째 등록 사용자가 워크스페이스 관리자가 됩니다. APP_SECRET은 첫 시작 시 자동으로 생성됩니다.
+      zh_cn: |
+        **开始使用：**
+
+        1. 安装后，访问您的 Docmost 实例
+        2. 创建您的第一个管理员账户
+        3. 设置您的第一个工作空间并开始创建页面
+
+        **功能：**
+        - 实时协作编辑
+        - 用于组织文档的空间
+        - 支持 Markdown 的富文本编辑器
+        - 文件附件和图片嵌入
+        - 全文搜索
+
+        **注意：** 第一个注册的用户成为工作空间管理员。APP_SECRET 在首次启动时自动生成。
+      fr_fr: |
+        **Commencer :**
+
+        1. Après l'installation, visitez votre instance Docmost
+        2. Créez votre premier compte administrateur
+        3. Configurez votre premier espace de travail et commencez à créer des pages
+
+        **Fonctionnalités :**
+        - Édition collaborative en temps réel
+        - Espaces pour organiser la documentation
+        - Éditeur de texte riche avec support Markdown
+        - Pièces jointes et intégration d'images
+        - Recherche plein texte
+
+        **Note :** Le premier utilisateur à s'inscrire devient l'administrateur de l'espace de travail. APP_SECRET est automatiquement généré au premier démarrage.
+      es_es: |
+        **Comenzar:**
+
+        1. Después de la instalación, visite su instancia de Docmost
+        2. Cree su primera cuenta de administrador
+        3. Configure su primer espacio de trabajo y comience a crear páginas
+
+        **Características:**
+        - Edición colaborativa en tiempo real
+        - Espacios para organizar documentación
+        - Editor de texto enriquecido con soporte Markdown
+        - Archivos adjuntos e incrustación de imágenes
+        - Búsqueda de texto completo
+
+        **Nota:** El primer usuario en registrarse se convierte en administrador del espacio de trabajo. APP_SECRET se genera automáticamente en el primer inicio.
+  index: /
