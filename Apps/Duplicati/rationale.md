@@ -1,2 +1,0 @@
-## Root Access
-Root access is required to function properly as a backup solution. Duplicati needs to access system files, user directories, and preserve file permissions across the entire filesystem during backup and restore operations. Using PUID/PGID would prevent access to system directories and break the ability to maintain proper file ownership during restores.
