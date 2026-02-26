@@ -2,81 +2,76 @@ name: wordpress
 
 services:
   wordpress:
-    image: wordpress:6.9.0-apache
+    image: wordpress:6.9.1-apache
     container_name: wordpress_app
     restart: unless-stopped
-    user: 0:0
+    user: "0:0"
+    networks:
+      - wordpress-network
+      - pcs
     expose:
-      - 80                              # Web UI port for NSL router
+      - "80"
+    labels:
+      - "caddy=wordpress-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
     volumes:
-      - /DATA/AppData/$AppID/html:/var/www/html  # WordPress files and uploads 
+      - /DATA/AppData/$AppID/html/:/var/www/html
     environment:
-      PUID: $PUID
-      PGID: $PGID
-      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_HOST: wordpress_db:3306
       WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: $default_pwd
+      WORDPRESS_DB_PASSWORD: $PCS_DEFAULT_PASSWORD
       WORDPRESS_DB_NAME: wordpress
-      APACHE_HTTP_PORT_NUMBER: 80
-      APACHE_HTTPS_PORT_NUMBER: 443
       WORDPRESS_CONFIG_EXTRA: |
-        /* Force HTTPS Detection for NSL Router */
-        if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-            $$_SERVER['HTTPS'] = 'on';
-        }
-        
-        /* Always set HTTPS for NSL Router environment */
-        $$_SERVER['HTTPS'] = 'on';
-        
-        /* Dynamic Site URLs with HTTPS */
-        define('WP_HOME', 'https://' . getenv('DOMAIN'));
-        define('WP_SITEURL', 'https://' . getenv('DOMAIN'));
-        
-        /* Force SSL for Admin Panel */
-        define('FORCE_SSL_ADMIN', true);
-        
-        /* File System Method for Updates */
         define('FS_METHOD', 'direct');
-        
-        /* Memory Limit */
         define('WP_MEMORY_LIMIT', '256M');
-        
-        /* Allow file editing from dashboard */
-        define('DISALLOW_FILE_EDIT', false);
-      DOMAIN: wordpress-$domain
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     deploy:
       resources:
         limits:
-          memory: 1G                    # Memory limit for WordPress
+          memory: 1G
     cpu_shares: 70
 
   db:
-    image: mariadb:11.8
+    image: mariadb:11.8.6
     container_name: wordpress_db
     restart: unless-stopped
-    user: 0:0
+    user: "0:0"
+    networks:
+      - wordpress-network
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/mysql   # Database files storage
+      - /DATA/AppData/$AppID/db/:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: $PCS_DEFAULT_PASSWORD  # MySQL root password (auto-generated)
-      MYSQL_DATABASE: wordpress          # Database to create on startup
-      MYSQL_USER: wordpress              # MySQL user to create
-      MYSQL_PASSWORD: $PCS_DEFAULT_PASSWORD       # Password for MySQL user
-      MARIADB_AUTO_UPGRADE: 1            # Enable automatic database upgrades
-      MARIADB_DISABLE_UPGRADE_BACKUP: 1  # Disable backup during upgrades
+      MYSQL_ROOT_PASSWORD: $PCS_DEFAULT_PASSWORD
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: $PCS_DEFAULT_PASSWORD
+      MARIADB_AUTO_UPGRADE: 1
+      MARIADB_DISABLE_UPGRADE_BACKUP: 1
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       resources:
         limits:
-          memory: 1G                    # Memory limit for database
+          memory: 1G
     cpu_shares: 50
+
+networks:
+  wordpress-network:
+    driver: bridge
+  pcs:
+    external: true
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  author: CasaOS Team
+  author: Yundera Team
   category: Web
   developer: WordPress Foundation
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Wordpress/icon.png
@@ -97,85 +92,76 @@ x-casaos:
   store_app_id: wordpress
   main: wordpress
   webui_port: 80
-  pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/$AppID:/fix-permissions --user $PUID:$PGID ubuntu:22.04 sh -c "
-    mkdir -p /fix-permissions/html /fix-permissions/db &&
-    chown -R $PUID:$PGID /fix-permissions
-    " &&
-    docker run --rm -v /DATA/AppData/$AppID:/fix-permissions ubuntu:22.04 sh -c "
-    chmod -R 755 /fix-permissions/html &&
-    chmod -R 777 /fix-permissions/db
-    "
   description:
     en_us: |
       **The world's #1 website builder - from blogs to online stores**
-      
+
       WordPress powers 43% of all websites on the internet. Whether you're starting a personal blog, building a business website, or launching an online store, WordPress makes it simple with no coding required.
-      
+
       **What you can do:**
-      • Create beautiful websites with drag-and-drop blocks
-      • Choose from 10,000+ free themes to match your style
-      • Add features instantly with 60,000+ plugins (contact forms, SEO, social media, shops)
-      • Sell products with built-in e-commerce tools
-      • Write blog posts with a powerful editor
-      • Upload unlimited photos and videos
-      
+      - Create beautiful websites with drag-and-drop blocks
+      - Choose from 10,000+ free themes to match your style
+      - Add features instantly with 60,000+ plugins (contact forms, SEO, social media, shops)
+      - Sell products with built-in e-commerce tools
+      - Write blog posts with a powerful editor
+      - Upload unlimited photos and videos
+
       **Perfect for:** Bloggers, small businesses, photographers, restaurants, online stores, portfolios, and anyone who wants a professional website without the complexity.
     ko_kr: |
       **세계 1위 웹사이트 빌더 - 블로그부터 온라인 스토어까지**
-      
+
       WordPress는 인터넷 전체 웹사이트의 43%를 구동합니다. 개인 블로그, 비즈니스 웹사이트, 온라인 스토어 등 코딩 없이 간단하게 만들 수 있습니다.
-      
+
       **할 수 있는 것:**
-      • 드래그 앤 드롭 블록으로 아름다운 웹사이트 제작
-      • 10,000개 이상의 무료 테마 중 선택
-      • 60,000개 이상의 플러그인으로 즉시 기능 추가 (문의 양식, SEO, 소셜 미디어, 쇼핑몰)
-      • 내장된 전자상거래 도구로 제품 판매
-      • 강력한 편집기로 블로그 글 작성
-      • 무제한 사진과 비디오 업로드
-      
+      - 드래그 앤 드롭 블록으로 아름다운 웹사이트 제작
+      - 10,000개 이상의 무료 테마 중 선택
+      - 60,000개 이상의 플러그인으로 즉시 기능 추가 (문의 양식, SEO, 소셜 미디어, 쇼핑몰)
+      - 내장된 전자상거래 도구로 제품 판매
+      - 강력한 편집기로 블로그 글 작성
+      - 무제한 사진과 비디오 업로드
+
       **이런 분께 완벽해요:** 블로거, 소상공인, 사진작가, 레스토랑, 온라인 스토어, 포트폴리오, 복잡함 없이 전문적인 웹사이트를 원하는 모든 분.
     zh_cn: |
       **世界第一的网站构建器 - 从博客到在线商店**
-      
+
       WordPress 为互联网上 43% 的网站提供支持。无论您是开始个人博客、建立商业网站还是开设在线商店，WordPress 都能让一切变得简单，无需编码。
-      
+
       **您可以做的事:**
-      • 使用拖放块创建漂亮的网站
-      • 从 10,000+ 免费主题中选择符合您风格的
-      • 使用 60,000+ 插件即时添加功能（联系表单、SEO、社交媒体、商店）
-      • 使用内置电子商务工具销售产品
-      • 使用强大的编辑器撰写博客文章
-      • 上传无限照片和视频
-      
+      - 使用拖放块创建漂亮的网站
+      - 从 10,000+ 免费主题中选择符合您风格的
+      - 使用 60,000+ 插件即时添加功能（联系表单、SEO、社交媒体、商店）
+      - 使用内置电子商务工具销售产品
+      - 使用强大的编辑器撰写博客文章
+      - 上传无限照片和视频
+
       **完美适合:** 博主、小企业、摄影师、餐厅、在线商店、作品集，以及任何想要专业网站而不需要复杂性的人。
     es_es: |
       **El constructor de sitios web #1 del mundo - desde blogs hasta tiendas online**
-      
+
       WordPress impulsa el 43% de todos los sitios web en Internet. Ya sea que estés comenzando un blog personal, construyendo un sitio web empresarial o lanzando una tienda online, WordPress lo hace simple sin necesidad de programar.
-      
+
       **Lo que puedes hacer:**
-      • Crear sitios web hermosos con bloques de arrastrar y soltar
-      • Elegir entre más de 10,000 temas gratuitos para tu estilo
-      • Añadir funciones al instante con más de 60,000 plugins (formularios, SEO, redes sociales, tiendas)
-      • Vender productos con herramientas de comercio electrónico integradas
-      • Escribir entradas de blog con un editor potente
-      • Subir fotos y videos ilimitados
-      
+      - Crear sitios web hermosos con bloques de arrastrar y soltar
+      - Elegir entre más de 10,000 temas gratuitos para tu estilo
+      - Añadir funciones al instante con más de 60,000 plugins (formularios, SEO, redes sociales, tiendas)
+      - Vender productos con herramientas de comercio electrónico integradas
+      - Escribir entradas de blog con un editor potente
+      - Subir fotos y videos ilimitados
+
       **Perfecto para:** Bloggers, pequeñas empresas, fotógrafos, restaurantes, tiendas online, portafolios y cualquiera que quiera un sitio web profesional sin complejidad.
     fr_fr: |
       **Le constructeur de sites web n°1 mondial - des blogs aux boutiques en ligne**
-      
+
       WordPress alimente 43% de tous les sites web sur Internet. Que vous lanciez un blog personnel, créiez un site d'entreprise ou ouvriez une boutique en ligne, WordPress rend tout simple sans codage requis.
-      
+
       **Ce que vous pouvez faire:**
-      • Créer de beaux sites avec des blocs glisser-déposer
-      • Choisir parmi plus de 10 000 thèmes gratuits
-      • Ajouter des fonctions instantanément avec plus de 60 000 plugins (formulaires, SEO, réseaux sociaux, boutiques)
-      • Vendre des produits avec des outils e-commerce intégrés
-      • Écrire des articles de blog avec un éditeur puissant
-      • Télécharger photos et vidéos illimitées
-      
+      - Créer de beaux sites avec des blocs glisser-déposer
+      - Choisir parmi plus de 10 000 thèmes gratuits
+      - Ajouter des fonctions instantanément avec plus de 60 000 plugins (formulaires, SEO, réseaux sociaux, boutiques)
+      - Vendre des produits avec des outils e-commerce intégrés
+      - Écrire des articles de blog avec un éditeur puissant
+      - Télécharger photos et vidéos illimitées
+
       **Parfait pour:** Blogueurs, petites entreprises, photographes, restaurants, boutiques en ligne, portfolios et toute personne voulant un site professionnel sans complexité.
   tips:
     before_install:
@@ -186,12 +172,12 @@ x-casaos:
         3. Fill in: Site Title, Username, Password, Email
         4. Click "Install WordPress"
         5. Done! Start building your website
-        
+
         **First things to do:**
-        • Pick a theme (Appearance → Themes)
-        • Create your first page or post
-        • Install useful plugins like Yoast SEO or Contact Form 7
-        
+        - Pick a theme (Appearance → Themes)
+        - Create your first page or post
+        - Install useful plugins like Yoast SEO or Contact Form 7
+
         The database is already configured automatically.
       ko_kr: |
         **빠른 설정 (5분):**
@@ -200,12 +186,12 @@ x-casaos:
         3. 입력: 사이트 제목, 사용자명, 비밀번호, 이메일
         4. "WordPress 설치" 클릭
         5. 완료! 웹사이트 만들기 시작
-        
+
         **처음 할 일:**
-        • 테마 선택 (외모 → 테마)
-        • 첫 페이지나 글 작성
-        • Yoast SEO나 Contact Form 7 같은 유용한 플러그인 설치
-        
+        - 테마 선택 (외모 → 테마)
+        - 첫 페이지나 글 작성
+        - Yoast SEO나 Contact Form 7 같은 유용한 플러그인 설치
+
         데이터베이스는 이미 자동으로 구성되어 있습니다.
       zh_cn: |
         **快速设置（5分钟）：**
@@ -214,12 +200,12 @@ x-casaos:
         3. 填写：站点标题、用户名、密码、电子邮件
         4. 点击"安装 WordPress"
         5. 完成！开始建立您的网站
-        
+
         **首先要做的事：**
-        • 选择主题（外观 → 主题）
-        • 创建您的第一个页面或文章
-        • 安装有用的插件，如 Yoast SEO 或 Contact Form 7
-        
+        - 选择主题（外观 → 主题）
+        - 创建您的第一个页面或文章
+        - 安装有用的插件，如 Yoast SEO 或 Contact Form 7
+
         数据库已自动配置。
       es_es: |
         **Configuración rápida (5 minutos):**
@@ -228,12 +214,12 @@ x-casaos:
         3. Completa: Título del sitio, Usuario, Contraseña, Email
         4. Haz clic en "Instalar WordPress"
         5. ¡Listo! Empieza a construir tu sitio
-        
+
         **Primeras cosas por hacer:**
-        • Elige un tema (Apariencia → Temas)
-        • Crea tu primera página o entrada
-        • Instala plugins útiles como Yoast SEO o Contact Form 7
-        
+        - Elige un tema (Apariencia → Temas)
+        - Crea tu primera página o entrada
+        - Instala plugins útiles como Yoast SEO o Contact Form 7
+
         La base de datos ya está configurada automáticamente.
       fr_fr: |
         **Configuration rapide (5 minutes):**
@@ -242,10 +228,10 @@ x-casaos:
         3. Remplissez: Titre du site, Nom d'utilisateur, Mot de passe, Email
         4. Cliquez sur "Installer WordPress"
         5. Terminé! Commencez à construire votre site
-        
+
         **Premières choses à faire:**
-        • Choisir un thème (Apparence → Thèmes)
-        • Créer votre première page ou article
-        • Installer des plugins utiles comme Yoast SEO ou Contact Form 7
-        
+        - Choisir un thème (Apparence → Thèmes)
+        - Créer votre première page ou article
+        - Installer des plugins utiles comme Yoast SEO ou Contact Form 7
+
         La base de données est déjà configurée automatiquement.
