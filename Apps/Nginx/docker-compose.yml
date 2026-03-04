@@ -6,14 +6,21 @@ services:
     container_name: nginx
     user: "0:0"
     restart: unless-stopped
-    network_mode: bridge
     ports:
       - 80:80
     expose:
       - 80
     labels:
-      - "caddy=nginx-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: nginx-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: nginx-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: nginx-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     volumes:
       - type: bind
         source: /DATA/AppData/Nginx/www/
@@ -35,6 +42,11 @@ services:
           memory: 64M
           cpus: '0.25'
     cpu_shares: 50
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:

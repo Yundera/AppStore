@@ -8,8 +8,16 @@ services:
     expose:
       - 80
     labels:
-      - "caddy=stirlingpdf-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: stirlingpdf-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: stirlingpdf-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: stirlingpdf-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     volumes:
       - /DATA/AppData/$AppID/tessdata/:/usr/share/tessdata
       - /DATA/AppData/$AppID/configs/:/configs
@@ -40,6 +48,11 @@ services:
         reservations:
           memory: 2G  # Reserve minimum memory
     cpu_shares: 50  # Standard application priority
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:

@@ -16,8 +16,16 @@ services:
     expose:
       - 80
     labels:
-      - "caddy=psitransfer-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: psitransfer-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: psitransfer-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: psitransfer-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
 
     environment:
       - PUID=0
@@ -33,6 +41,11 @@ services:
     volumes:
       - /DATA/AppData/$AppID/data/:/data
       - /DATA/AppData/$AppID/config/:/app/config
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:

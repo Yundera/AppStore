@@ -8,8 +8,14 @@ services:
     expose:
       - 80
     labels:
-      - "caddy=convertx-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: convertx-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: convertx-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: convertx-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
@@ -60,6 +66,7 @@ services:
 
 networks:
   pcs:
+    name: pcs
     external: true
 
 x-casaos:

@@ -9,8 +9,14 @@ services:
     expose:
       - "80"
     labels:
-      - "caddy=segmentplayer-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: segmentplayer-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: segmentplayer-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: segmentplayer-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       AUTH_HASH: $AUTH_HASH
       USER: "segment"
@@ -22,6 +28,7 @@ services:
       - segmentplayer-backend
     networks:
       - segment-internal
+      - pcs
     cpu_shares: 50
 
   segmentplayer-backend:
@@ -46,6 +53,9 @@ services:
 networks:
   segment-internal:
     driver: bridge
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   index: /?hash=$AUTH_HASH

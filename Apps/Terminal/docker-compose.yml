@@ -8,8 +8,14 @@ services:
     expose:
       - "80"
     labels:
-      - "caddy=terminal-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: terminal-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: terminal-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: terminal-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "0:0"
     environment:
       AUTH_HASH: $AUTH_HASH
@@ -46,6 +52,7 @@ services:
 
 networks:
   pcs:
+    name: pcs
     external: true
 
 x-casaos:

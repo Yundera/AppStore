@@ -13,8 +13,14 @@ services:
     expose:
       - 80
     labels:
-      - "caddy=nextcloud-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: nextcloud-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: nextcloud-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: nextcloud-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     logging:
       driver: "json-file"
       options:
@@ -45,6 +51,7 @@ services:
       - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
     networks:
       - nextcloud-network
+      - pcs
 
   db:
     image: mariadb:11.8
@@ -100,6 +107,9 @@ services:
 networks:
   nextcloud-network:
     driver: bridge
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   main: nextcloud

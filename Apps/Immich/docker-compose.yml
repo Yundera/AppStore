@@ -22,8 +22,14 @@ services:
     expose:
       - 80
     labels:
-      - "caddy=immich-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: immich-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: immich-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: immich-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
       - redis
       - database
@@ -32,6 +38,7 @@ services:
       disable: false
     networks:
       - immich
+      - pcs
 
   immich-machine-learning:
     image: ghcr.io/immich-app/immich-machine-learning:v2.4.1
@@ -97,6 +104,9 @@ services:
 networks:
   immich:
     name: immich
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   main: immich

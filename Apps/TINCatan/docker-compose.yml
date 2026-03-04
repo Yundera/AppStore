@@ -11,8 +11,16 @@ services:
     expose:
       - 4567
     labels:
-      - "caddy=tincatan-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 4567}}"
+      caddy_0: tincatan-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 4567}}"
+      caddy_1: tincatan-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 4567}}"
+      caddy_2: tincatan-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 4567}}"
+    networks:
+      - pcs
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -38,6 +46,11 @@ services:
       java -cp \"target/classes:\$(cat .mvn-classpath)\" edu.brown.cs.catan.Main 4567
       "
     restart: unless-stopped
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:

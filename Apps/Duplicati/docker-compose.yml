@@ -13,8 +13,16 @@ services:
     expose:
       - 8200
     labels:
-      - "caddy=duplicati-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 8200}}"
+      caddy_0: duplicati-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8200}}"
+      caddy_1: duplicati-${PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8200}}"
+      caddy_2: duplicati-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8200}}"
+    networks:
+      - pcs
     cpu_shares: 10
     deploy:
       resources:
@@ -30,6 +38,11 @@ services:
       - type: bind
         source: /DATA/
         target: /source/DATA
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:
