@@ -14,10 +14,10 @@ services:
       caddy_0: tincatan-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 4567}}"
-      caddy_1: tincatan-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: tincatan-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 4567}}"
-      caddy_2: tincatan-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: tincatan-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 4567}}"
     networks:
       - pcs

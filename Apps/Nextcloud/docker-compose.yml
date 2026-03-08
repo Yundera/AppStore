@@ -16,10 +16,10 @@ services:
       caddy_0: nextcloud-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: nextcloud-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: nextcloud-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: nextcloud-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: nextcloud-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     logging:
       driver: "json-file"

@@ -461,12 +461,12 @@ labels:
   caddy_0.reverse_proxy: "{{upstreams 80}}"
 
   # 2. Direct access via nip.io - Custom CA
-  caddy_1: appname-${PUBLIC_IP_DASH}.nip.io
+  caddy_1: appname-\${APP_PUBLIC_IP_DASH}.nip.io
   caddy_1.import: gateway_tls
   caddy_1.reverse_proxy: "{{upstreams 80}}"
 
   # 3. Direct access via sslip.io - Let's Encrypt (public cert)
-  caddy_2: appname-${PUBLIC_IP_DASH}.sslip.io
+  caddy_2: appname-\${APP_PUBLIC_IP_DASH}.sslip.io
   caddy_2.reverse_proxy: "{{upstreams 80}}"
 ```
 
@@ -480,7 +480,7 @@ labels:
 - Use `expose` to expose the web UI port (required for Caddy discovery)
 - Add Caddy labels to the main web UI service only
 - Connect the main service to the `pcs` network
-- Use `${APP_DOMAIN}` and `${PUBLIC_IP_DASH}` variables
+- Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` variables
 
 **Example - Complete Caddy Configuration:**
 ```yaml
@@ -493,10 +493,10 @@ services:
       caddy_0: immich-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: immich-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: immich-\${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: immich-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: immich-\${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
@@ -529,10 +529,10 @@ services:
       caddy_0: duplicati-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 8200}}"
-      caddy_1: duplicati-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: duplicati-\${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 8200}}"
-      caddy_2: duplicati-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: duplicati-\${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 8200}}"
     networks:
       - pcs
@@ -568,7 +568,7 @@ Caddy handles:
 **Important Notes:**
 - Add Caddy labels only to the main web UI service (not to database or backend services)
 - The app name in the Caddy labels should be simple without spaces or special characters
-- Use `${APP_DOMAIN}` and `${PUBLIC_IP_DASH}` for portability
+- Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` for portability
 - Always include the `pcs` network definition with `external: true`
 
 **Example Multi-Service Configuration:**
