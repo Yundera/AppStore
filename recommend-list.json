@@ -3,6 +3,9 @@
     "appid": "filebrowser"
   },
   {
+    "appid": "vaultwarden"
+  },
+  {
     "appid": "immich"
   }
 ]
