@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samba SMB File Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: #2196F3;
+            margin-right: 12px;
+            border-radius: 2px;
+        }
+        
+        .credentials {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .credentials table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .credentials th, .credentials td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .credentials th {
+            background: #4caf50;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .credentials code {
+            background: #f5f5f5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        
+        .platform-instructions {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .platform {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .platform h3 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .platform code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            display: block;
+            font-family: 'Courier New', monospace;
+            color: #495057;
+            margin: 8px 0;
+            word-break: break-all;
+        }
+        
+        .security-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .security-warning h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .vpn-section {
+            background: #e7f3ff;
+            border: 1px solid #2196F3;
+        }
+        
+        .vpn-section h2::before {
+            background: #2196F3;
+        }
+        
+        .tailscale-logo {
+            display: inline-block;
+            background: #000;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-right: 8px;
+        }
+        
+        .note {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .note strong {
+            color: #0c5460;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗂️ Samba SMB File Server</h1>
+            <p>Universal network file sharing for all your devices</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>📋 Default Credentials</h2>
+                <div class="credentials">
+                    <table>
+                        <tr>
+                            <th>Username</th>
+                            <th>Password</th>
+                            <th>Share Name</th>
+                        </tr>
+                        <tr>
+                            <td><code>admin</code></td>
+                            <td><code>$default_pwd</code></td>
+                            <td><code>DATA</code></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🖥️ Local Network Access</h2>
+                <div class="platform-instructions">
+                    <div class="platform">
+                        <h3>🪟 Windows</h3>
+                        <p>Open File Explorer and navigate to:</p>
+                        <code>\\YOUR_SERVER_IP\DATA</code>
+                        <p>Or type in the address bar: <code>\\192.168.1.XXX\DATA</code></p>
+                    </div>
+                    
+                    <div class="platform">
+                        <h3>🍎 macOS</h3>
+                        <p>In Finder, press <kbd>Cmd+K</kbd> or go to <strong>Go → Connect to Server</strong>:</p>
+                        <code>smb://YOUR_SERVER_IP/DATA</code>
+                        <p>Example: <code>smb://192.168.1.100/DATA</code></p>
+                    </div>
+                    
+                    <div class="platform">
+                        <h3>🐧 Linux</h3>
+                        <p>In your file manager, go to <strong>Other Locations</strong> or <strong>Network</strong>:</p>
+                        <code>smb://YOUR_SERVER_IP/DATA</code>
+                        <p>Command line: <code>smbclient //YOUR_SERVER_IP/DATA -U admin</code></p>
+                    </div>
+                    
+                    <div class="platform">
+                        <h3>📱 Mobile Devices</h3>
+                        <p><strong>iOS:</strong> Use apps like "FileBrowser" or "FE File Explorer"</p>
+                        <p><strong>Android:</strong> Use "X-plore File Manager" or "Solid Explorer"</p>
+                        <p>Connect to: <code>smb://YOUR_SERVER_IP/DATA</code></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section vpn-section">
+                <h2>🔒 Tailscale VPN Access</h2>
+                <div class="security-warning">
+                    <h3>🛡️ Enhanced Security Recommendation</h3>
+                    <p>For maximum security, especially when accessing from outside your home network, use Tailscale VPN and bind SMB to your Tailscale IP address.</p>
+                </div>
+                
+                <div class="platform-instructions">
+                    <div class="platform">
+                        <h3><span class="tailscale-logo">Tailscale</span>Setup Instructions</h3>
+                        <ol>
+                            <li><strong>Install Tailscale</strong> on your server and client devices</li>
+                            <li><strong>Find your Tailscale IP:</strong> Run <code>tailscale ip -4</code> on your server</li>
+                            <li><strong>Secure Configuration:</strong> Edit the SMB docker-compose.yml to bind only to Tailscale IP</li>
+                        </ol>
+                        
+                        <h4>🔧 Docker Compose Modification</h4>
+                        <p>Change the ports section in your docker-compose.yml from:</p>
+                        <code>ports:
+  - 445:445</code>
+                        <p>To bind only to your Tailscale IP (example):</p>
+                        <code>ports:
+  - 100.64.1.100:445:445</code>
+                        
+                        <div class="note">
+                            <strong>Security Benefit:</strong> This prevents SMB access from your local network and only allows connections through Tailscale VPN, providing encrypted access from anywhere.
+                        </div>
+                    </div>
+                    
+                    <div class="platform">
+                        <h3>🌐 Accessing via Tailscale</h3>
+                        <p>Once configured, access your SMB share using your Tailscale IP:</p>
+                        
+                        <p><strong>Windows:</strong></p>
+                        <code>\\100.64.1.100\DATA</code>
+                        
+                        <p><strong>macOS:</strong></p>
+                        <code>smb://100.64.1.100/DATA</code>
+                        
+                        <p><strong>Linux:</strong></p>
+                        <code>smb://100.64.1.100/DATA</code>
+                        
+                        <div class="note">
+                            <strong>Replace 100.64.1.100</strong> with your actual Tailscale IP address. This provides secure, encrypted access to your files from anywhere in the world.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>⚙️ Port Information</h2>
+                <p><strong>SMB Protocol:</strong> Port 445 (standard SMB port)</p>
+                <div class="note">
+                    <strong>Important:</strong> SMB operates as a native network protocol and integrates directly with your operating system's file manager. No web browser interface is needed or provided.
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🔍 Troubleshooting</h2>
+                <ul style="line-height: 1.8;">
+                    <li><strong>Connection Issues:</strong> Verify the server IP address and ensure port 445 is accessible</li>
+                    <li><strong>Permission Denied:</strong> Use the correct username (<code>admin</code>) and password</li>
+                    <li><strong>Network Discovery:</strong> On Windows, SMB shares may appear automatically in Network locations</li>
+                    <li><strong>Firewall:</strong> Ensure your firewall allows SMB traffic on port 445</li>
+                    <li><strong>Tailscale Issues:</strong> Verify both devices are connected to the same Tailscale network</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

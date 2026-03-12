@@ -1,0 +1,464 @@
+name: nextcloud
+
+services:
+  nextcloud:
+    image: nextcloud:32.0.3
+    container_name: nextcloud
+    restart: unless-stopped
+    user: $PUID:$PGID
+    cpu_shares: 70
+    depends_on:
+      - db
+      - redis
+    expose:
+      - 80
+    labels:
+      caddy_0: nextcloud-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: nextcloud-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: nextcloud-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN
+      - OVERWRITEPROTOCOL=https
+      - OVERWRITEHOST=nextcloud-$APP_DOMAIN
+      - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
+      # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
+      - NC_maintenance_window_start=4
+    volumes:
+      # nextcloud root directory, Contains the core application files
+      - /DATA/AppData/nextcloud/root/:/var/www/html:z
+      # Stores all user files, uploads, and app data
+      - /DATA/AppData/nextcloud/data/:/var/www/html/data/
+      # Essential for maintaining settings between container updates
+      - /DATA/AppData/nextcloud/config/:/var/www/html/config/
+      # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
+      - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
+    networks:
+      - nextcloud-network
+      - pcs
+
+  db:
+    image: mariadb:11.8
+    container_name: nextcloud_db
+    user: $PUID:$PGID
+    cpu_shares: 70
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+    environment:
+      - TZ=$TZ
+      - MYSQL_ROOT_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MARIADB_AUTO_UPGRADE=1
+    volumes:
+      - /DATA/AppData/nextcloud/db/:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: nextcloud_redis
+    cpu_shares: 10
+    command: redis-server --requirepass $APP_DEFAULT_PASSWORD
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    environment:
+      - TZ=$TZ
+    volumes:
+      - /DATA/AppData/nextcloud/redis/:/data
+    restart: unless-stopped
+    networks:
+      - nextcloud-network
+
+  cron:
+    image: nextcloud:32.0.3
+    restart: unless-stopped
+    volumes:
+      - /DATA/AppData/nextcloud/root/:/var/www/html:z
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis
+
+networks:
+  nextcloud-network:
+    driver: bridge
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: nextcloud
+  webui_port: 80
+  index: /
+
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/thumbnail.png
+
+  category: Utilities
+  architectures: [amd64, arm64]
+  author: Yundera Team
+  developer: Nextcloud GmbH
+  description:
+    en_us: |
+      **☁️ What is Nextcloud?**
+
+      **Nextcloud** is your own personal cloud : like **Google Drive, Dropbox, Microsoft Teams, and WhatsApp all-in-one**, but fully under your control.
+
+      If you want to sync your files across devices, you'll need to use the Nextcloud Files app --- it's like your own private version of Google Drive or Dropbox.
+
+      You can **store files, share them, collaborate, chat, and even manage calendars and tasks**, all from a single private space.
+
+      Think of it as your **own private workspace**, with apps you choose, running on your own server.
+
+      **🔧 What Can You Do with Nextcloud?**
+
+      Nextcloud is modular : you can **add features like apps on a phone**. Here are some of the most popular ones:
+
+      • 📁 **Nextcloud Files**: Upload, access, and share files --- like your own Google Drive
+      • 🗓️ **Calendar**: Manage events and sync with your phone or laptop
+      • 📇 **Contacts**: Store and sync all your contacts privately
+      • 🗣️ **Talk**: Chat and video call with your team or family --- like a private WhatsApp or Zoom
+      • ✅ **Deck**: Organize tasks and projects like Trello or Notion
+      • 📝 **Nextcloud Office**: Open and edit Word, Excel, and PowerPoint files in your browser --- just like Google Docs
+      • 📦 **More Apps**: Over 100+ apps available to customize your workspace
+
+      **🚀 Why Use Nextcloud?**
+
+      • **No more Google or Microsoft** --- keep your files and data private
+      • **Fully customizable** --- add only the tools you need
+      • **Accessible anywhere** --- use the official Nextcloud mobile app or desktop app
+      • **Share with others** --- send files, create shared folders, or chat securely
+      • **Control your data** --- your files, your server, your rules
+
+      **🛠️ Example Use Cases**
+
+      • Use **Nextcloud Files** like Google Drive
+      • Use **Talk** to message and call like WhatsApp or Zoom
+      • Use **Office + Calendar + Deck** to replace Microsoft Teams
+      • Invite your team or family and manage everything from one place
+    en_gb: |
+      **☁️ What is Nextcloud?**
+
+      **Nextcloud** is your own personal cloud : like **Google Drive, Dropbox, Microsoft Teams, and WhatsApp all-in-one**, but fully under your control.
+
+      If you want to sync your files across devices, you'll need to use the Nextcloud Files app --- it's like your own private version of Google Drive or Dropbox.
+
+      You can **store files, share them, collaborate, chat, and even manage calendars and tasks**, all from a single private space.
+
+      Think of it as your **own private workspace**, with apps you choose, running on your own server.
+
+      **🔧 What Can You Do with Nextcloud?**
+
+      Nextcloud is modular : you can **add features like apps on a phone**. Here are some of the most popular ones:
+
+      • 📁 **Nextcloud Files**: Upload, access, and share files --- like your own Google Drive
+      • 🗓️ **Calendar**: Manage events and sync with your phone or laptop
+      • 📇 **Contacts**: Store and sync all your contacts privately
+      • 🗣️ **Talk**: Chat and video call with your team or family --- like a private WhatsApp or Zoom
+      • ✅ **Deck**: Organise tasks and projects like Trello or Notion
+      • 📝 **Nextcloud Office**: Open and edit Word, Excel, and PowerPoint files in your browser --- just like Google Docs
+      • 📦 **More Apps**: Over 100+ apps available to customise your workspace
+
+      **🚀 Why Use Nextcloud?**
+
+      • **No more Google or Microsoft** --- keep your files and data private
+      • **Fully customisable** --- add only the tools you need
+      • **Accessible anywhere** --- use the official Nextcloud mobile app or desktop app
+      • **Share with others** --- send files, create shared folders, or chat securely
+      • **Control your data** --- your files, your server, your rules
+
+      **🛠️ Example Use Cases**
+
+      • Use **Nextcloud Files** like Google Drive
+      • Use **Talk** to message and call like WhatsApp or Zoom
+      • Use **Office + Calendar + Deck** to replace Microsoft Teams
+      • Invite your team or family and manage everything from one place
+    ko_kr: |
+      **☁️ Nextcloud란 무엇인가요?**
+
+      **Nextcloud**는 **Google Drive, Dropbox, Microsoft Teams, WhatsApp을 하나로 합친** 것과 같은 개인 클라우드이지만, 완전히 당신의 통제 하에 있습니다.
+
+      여러 기기에서 파일을 동기화하려면 Nextcloud Files 앱을 사용해야 합니다 --- 이는 Google Drive나 Dropbox의 개인 버전과 같습니다.
+
+      단일 개인 공간에서 **파일 저장, 공유, 협업, 채팅, 심지어 일정과 작업 관리**까지 모든 것을 할 수 있습니다.
+
+      자신의 서버에서 실행되는, 원하는 앱으로 구성된 **개인 워크스페이스**라고 생각하세요.
+
+      **🔧 Nextcloud로 무엇을 할 수 있나요?**
+
+      Nextcloud는 모듈식입니다 : **휴대폰의 앱처럼 기능을 추가**할 수 있습니다. 가장 인기 있는 것들은 다음과 같습니다:
+
+      • 📁 **Nextcloud Files**: 파일 업로드, 접근, 공유 --- 자신만의 Google Drive
+      • 🗓️ **Calendar**: 이벤트 관리 및 휴대폰이나 노트북과 동기화
+      • 📇 **Contacts**: 모든 연락처를 개인적으로 저장하고 동기화
+      • 🗣️ **Talk**: 팀이나 가족과 채팅 및 화상 통화 --- 개인 WhatsApp이나 Zoom
+      • ✅ **Deck**: Trello나 Notion처럼 작업과 프로젝트 정리
+      • 📝 **Nextcloud Office**: 브라우저에서 Word, Excel, PowerPoint 파일 열기 및 편집 --- Google Docs와 동일
+      • 📦 **더 많은 앱**: 워크스페이스를 사용자 정의할 수 있는 100개 이상의 앱
+
+      **🚀 왜 Nextcloud를 사용해야 하나요?**
+
+      • **더 이상 Google이나 Microsoft 없음** --- 파일과 데이터를 개인적으로 유지
+      • **완전히 사용자 정의 가능** --- 필요한 도구만 추가
+      • **어디서나 접근 가능** --- 공식 Nextcloud 모바일 앱이나 데스크톱 앱 사용
+      • **다른 사람과 공유** --- 파일 전송, 공유 폴더 생성, 안전한 채팅
+      • **데이터 통제** --- 당신의 파일, 당신의 서버, 당신의 규칙
+
+      **🛠️ 사용 사례 예시**
+
+      • **Nextcloud Files**를 Google Drive처럼 사용
+      • **Talk**를 WhatsApp이나 Zoom처럼 메시지 및 통화에 사용
+      • **Office + Calendar + Deck**를 Microsoft Teams 대체로 사용
+      • 팀이나 가족을 초대하고 한 곳에서 모든 것을 관리
+    zh_cn: |
+      **☁️ 什么是Nextcloud？**
+
+      **Nextcloud**是您自己的个人云：就像**Google Drive、Dropbox、Microsoft Teams和WhatsApp的集合体**，但完全在您的控制之下。
+
+      如果您想跨设备同步文件，需要使用Nextcloud Files应用程序 --- 这就像您自己的私人版Google Drive或Dropbox。
+
+      您可以在单一私人空间中**存储文件、共享文件、协作、聊天，甚至管理日历和任务**。
+
+      可以将其视为您**自己的私人工作空间**，使用您选择的应用程序，在您自己的服务器上运行。
+
+      **🔧 Nextcloud能做什么？**
+
+      Nextcloud是模块化的：您可以**像在手机上添加应用程序一样添加功能**。以下是一些最受欢迎的功能：
+
+      • 📁 **Nextcloud Files**: 上传、访问和共享文件 --- 就像您自己的Google Drive
+      • 🗓️ **Calendar**: 管理事件并与您的手机或笔记本电脑同步
+      • 📇 **Contacts**: 私下存储和同步所有联系人
+      • 🗣️ **Talk**: 与您的团队或家人聊天和视频通话 --- 就像私人WhatsApp或Zoom
+      • ✅ **Deck**: 像Trello或Notion一样组织任务和项目
+      • 📝 **Nextcloud Office**: 在浏览器中打开和编辑Word、Excel和PowerPoint文件 --- 就像Google Docs
+      • 📦 **更多应用**: 超过100个应用程序可用于自定义您的工作空间
+
+      **🚀 为什么使用Nextcloud？**
+
+      • **不再依赖Google或Microsoft** --- 保持文件和数据私密
+      • **完全可定制** --- 只添加您需要的工具
+      • **随处可访问** --- 使用官方Nextcloud移动应用或桌面应用
+      • **与他人共享** --- 发送文件、创建共享文件夹或安全聊天
+      • **控制您的数据** --- 您的文件、您的服务器、您的规则
+
+      **🛠️ 使用案例示例**
+
+      • 像使用Google Drive一样使用**Nextcloud Files**
+      • 像WhatsApp或Zoom一样使用**Talk**进行消息传递和通话
+      • 使用**Office + Calendar + Deck**替代Microsoft Teams
+      • 邀请您的团队或家人，在一个地方管理一切
+    fr_fr: |
+      **☁️ Qu'est-ce que Nextcloud ?**
+
+      **Nextcloud** est votre cloud personnel : comme **Google Drive, Dropbox, Microsoft Teams et WhatsApp tout-en-un**, mais entièrement sous votre contrôle.
+
+      Si vous voulez synchroniser vos fichiers entre appareils, vous devrez utiliser l'application Nextcloud Files --- c'est comme votre propre version privée de Google Drive ou Dropbox.
+
+      Vous pouvez **stocker des fichiers, les partager, collaborer, chatter et même gérer les calendriers et tâches**, tout depuis un seul espace privé.
+
+      Pensez-y comme votre **propre espace de travail privé**, avec les applications que vous choisissez, fonctionnant sur votre propre serveur.
+
+      **🔧 Que pouvez-vous faire avec Nextcloud ?**
+
+      Nextcloud est modulaire : vous pouvez **ajouter des fonctionnalités comme des applications sur un téléphone**. Voici quelques-unes des plus populaires :
+
+      • 📁 **Nextcloud Files** : Téléchargez, accédez et partagez des fichiers --- comme votre propre Google Drive
+      • 🗓️ **Calendar** : Gérez les événements et synchronisez avec votre téléphone ou ordinateur portable
+      • 📇 **Contacts** : Stockez et synchronisez tous vos contacts en privé
+      • 🗣️ **Talk** : Chattez et passez des appels vidéo avec votre équipe ou famille --- comme un WhatsApp ou Zoom privé
+      • ✅ **Deck** : Organisez les tâches et projets comme Trello ou Notion
+      • 📝 **Nextcloud Office** : Ouvrez et modifiez les fichiers Word, Excel et PowerPoint dans votre navigateur --- comme Google Docs
+      • 📦 **Plus d'applications** : Plus de 100 applications disponibles pour personnaliser votre espace de travail
+
+      **🚀 Pourquoi utiliser Nextcloud ?**
+
+      • **Fini Google ou Microsoft** --- gardez vos fichiers et données privés
+      • **Entièrement personnalisable** --- ajoutez seulement les outils dont vous avez besoin
+      • **Accessible partout** --- utilisez l'application mobile ou desktop officielle Nextcloud
+      • **Partagez avec d'autres** --- envoyez des fichiers, créez des dossiers partagés ou chattez en sécurité
+      • **Contrôlez vos données** --- vos fichiers, votre serveur, vos règles
+
+      **🛠️ Exemples d'utilisation**
+
+      • Utilisez **Nextcloud Files** comme Google Drive
+      • Utilisez **Talk** pour messagerie et appels comme WhatsApp ou Zoom
+      • Utilisez **Office + Calendar + Deck** pour remplacer Microsoft Teams
+      • Invitez votre équipe ou famille et gérez tout depuis un seul endroit
+    de_de: |
+      **☁️ Was ist Nextcloud?**
+
+      **Nextcloud** ist Ihre eigene persönliche Cloud: wie **Google Drive, Dropbox, Microsoft Teams und WhatsApp in einem**, aber vollständig unter Ihrer Kontrolle.
+
+      Wenn Sie Ihre Dateien geräteübergreifend synchronisieren möchten, müssen Sie die Nextcloud Files App verwenden --- es ist wie Ihre eigene private Version von Google Drive oder Dropbox.
+
+      Sie können **Dateien speichern, teilen, zusammenarbeiten, chatten und sogar Kalender und Aufgaben verwalten**, alles von einem einzigen privaten Raum aus.
+
+      Denken Sie daran als Ihren **eigenen privaten Arbeitsbereich**, mit Apps Ihrer Wahl, die auf Ihrem eigenen Server laufen.
+
+      **🔧 Was können Sie mit Nextcloud machen?**
+
+      Nextcloud ist modular: Sie können **Funktionen wie Apps auf einem Telefon hinzufügen**. Hier sind einige der beliebtesten:
+
+      • 📁 **Nextcloud Files**: Dateien hochladen, zugreifen und teilen --- wie Ihr eigenes Google Drive
+      • 🗓️ **Calendar**: Ereignisse verwalten und mit Ihrem Telefon oder Laptop synchronisieren
+      • 📇 **Contacts**: Alle Ihre Kontakte privat speichern und synchronisieren
+      • 🗣️ **Talk**: Mit Ihrem Team oder Familie chatten und Videoanrufe führen --- wie ein privates WhatsApp oder Zoom
+      • ✅ **Deck**: Aufgaben und Projekte wie Trello oder Notion organisieren
+      • 📝 **Nextcloud Office**: Word-, Excel- und PowerPoint-Dateien in Ihrem Browser öffnen und bearbeiten --- genau wie Google Docs
+      • 📦 **Weitere Apps**: Über 100 Apps verfügbar, um Ihren Arbeitsbereich anzupassen
+
+      **🚀 Warum Nextcloud verwenden?**
+
+      • **Schluss mit Google oder Microsoft** --- halten Sie Ihre Dateien und Daten privat
+      • **Vollständig anpassbar** --- fügen Sie nur die Tools hinzu, die Sie benötigen
+      • **Überall zugänglich** --- verwenden Sie die offizielle Nextcloud Mobile- oder Desktop-App
+      • **Mit anderen teilen** --- Dateien senden, gemeinsame Ordner erstellen oder sicher chatten
+      • **Ihre Daten kontrollieren** --- Ihre Dateien, Ihr Server, Ihre Regeln
+
+      **🛠️ Beispiel-Anwendungsfälle**
+
+      • Verwenden Sie **Nextcloud Files** wie Google Drive
+      • Verwenden Sie **Talk** für Nachrichten und Anrufe wie WhatsApp oder Zoom
+      • Verwenden Sie **Office + Calendar + Deck** als Microsoft Teams Ersatz
+      • Laden Sie Ihr Team oder Familie ein und verwalten Sie alles von einem Ort aus
+    es_es: |
+      **☁️ ¿Qué es Nextcloud?**
+
+      **Nextcloud** es tu propia nube personal: como **Google Drive, Dropbox, Microsoft Teams y WhatsApp todo en uno**, pero completamente bajo tu control.
+
+      Si quieres sincronizar tus archivos entre dispositivos, necesitarás usar la aplicación Nextcloud Files --- es como tu propia versión privada de Google Drive o Dropbox.
+
+      Puedes **almacenar archivos, compartirlos, colaborar, chatear e incluso gestionar calendarios y tareas**, todo desde un único espacio privado.
+
+      Piénsalo como tu **propio espacio de trabajo privado**, con las aplicaciones que elijas, ejecutándose en tu propio servidor.
+
+      **🔧 ¿Qué puedes hacer con Nextcloud?**
+
+      Nextcloud es modular: puedes **añadir funciones como aplicaciones en un teléfono**. Aquí tienes algunas de las más populares:
+
+      • 📁 **Nextcloud Files**: Sube, accede y comparte archivos --- como tu propio Google Drive
+      • 🗓️ **Calendar**: Gestiona eventos y sincroniza con tu teléfono o portátil
+      • 📇 **Contacts**: Almacena y sincroniza todos tus contactos de forma privada
+      • 🗣️ **Talk**: Chatea y haz videollamadas con tu equipo o familia --- como un WhatsApp o Zoom privado
+      • ✅ **Deck**: Organiza tareas y proyectos como Trello o Notion
+      • 📝 **Nextcloud Office**: Abre y edita archivos de Word, Excel y PowerPoint en tu navegador --- como Google Docs
+      • 📦 **Más aplicaciones**: Más de 100 aplicaciones disponibles para personalizar tu espacio de trabajo
+
+      **🚀 ¿Por qué usar Nextcloud?**
+
+      • **Adiós a Google o Microsoft** --- mantén tus archivos y datos privados
+      • **Totalmente personalizable** --- añade solo las herramientas que necesitas
+      • **Accesible desde cualquier lugar** --- usa la aplicación móvil o de escritorio oficial de Nextcloud
+      • **Comparte con otros** --- envía archivos, crea carpetas compartidas o chatea de forma segura
+      • **Controla tus datos** --- tus archivos, tu servidor, tus reglas
+
+      **🛠️ Ejemplos de casos de uso**
+
+      • Usa **Nextcloud Files** como Google Drive
+      • Usa **Talk** para mensajes y llamadas como WhatsApp o Zoom
+      • Usa **Office + Calendar + Deck** para reemplazar Microsoft Teams
+      • Invita a tu equipo o familia y gestiona todo desde un solo lugar
+  title:
+    en_us: Nextcloud
+  tagline:
+    en_us: Build your Teams alternative with guided app installation
+    ko_kr: 가이드된 앱 설치로 Teams 대안 구축
+    zh_cn: 通过引导式应用安装构建您的Teams替代方案
+    fr_fr: Construisez votre alternative Teams avec l'installation guidée d'applications
+    de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
+    es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
+
+  # IMPORTANT: Keep these commands idempotent - safe to run multiple times
+  # Security & setup warnings fixes : "Some headers are not set correctly on your instance - The `Strict-Transport-Security` HTTP header is not set (should be at least `15552000` seconds). For enhanced security, it is recommended to enable HSTS"
+  post-install-cmd: |
+    # Wait for NextCloud to be ready by checking HTTP status
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+      echo "Waiting for NextCloud to respond..."
+      if curl -s -o /dev/null -w "%{http_code}" http://localhost:80 | grep -q "200\|302\|301"; then
+        echo "NextCloud is ready!"
+        break
+      fi
+      sleep 2
+      timeout=$((timeout-2))
+    done &&
+    sleep 60 &&
+    docker exec nextcloud bash -c '
+      # Enable headers module if available (ignore if not supported)
+      a2enmod headers 2>/dev/null || true
+
+      # Add HSTS header if not present
+      if [ -f /var/www/html/.htaccess ] && ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then
+        echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess
+        echo "HSTS header added to .htaccess"
+      else
+        echo "HSTS header already present or .htaccess not found"
+      fi
+
+      # Configure Redis memcache via occ commands
+      echo "Configuring Redis memcache..."
+
+      # Only configure memcache if not already set to Redis
+      if ! php occ config:system:get memcache.locking | grep -q "Redis" 2>/dev/null; then
+        php occ config:system:set memcache.local --value="\\OC\\Memcache\\APCu"
+        php occ config:system:set memcache.distributed --value="\\OC\\Memcache\\Redis"
+        php occ config:system:set memcache.locking --value="\\OC\\Memcache\\Redis"
+        php occ config:system:set redis host --value="redis"
+        php occ config:system:set redis port --value=6379 --type=integer
+        php occ config:system:set redis password --value="$APP_DEFAULT_PASSWORD"
+        echo "Redis memcache configuration completed"
+      else
+        echo "Redis memcache already configured, skipping"
+      fi
+
+      # Configure background jobs to use cron
+      echo "Configuring background jobs to use cron..."
+      php occ background:cron
+      echo "Background jobs configured to use cron"
+    '
+  tips:
+    before_install:
+      en_us: |
+        **Quick Setup Guide**
+        - Create your account and complete the setup
+        - When asked about storage options, choose the **recommended setting** (already configured for you)
+
+        **Note:** After clicking "Install", the page may show a "Gateway time-out" error. This is normal - the installation takes longer than expected. Simply **refresh the page** after a minute and you'll see the login screen.
+        
+        
+        **Security and setup tips:**
+        If you got this warning after setup:
+        One or more mimetype migrations are available. Occasionally new mimetypes are added to better handle certain file types. Migrating the mimetypes take a long time on larger instances so this is not done automatically during upgrades. 
+        Please run the following command from the command line to update the mimetypes:
+        `docker exec nextcloud php occ maintenance:repair --include-expensive`
+        or
+        `php occ maintenance:repair --include-expensive` in the settings terminal of Nextcloud web interface.

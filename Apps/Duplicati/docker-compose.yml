@@ -8,10 +8,21 @@ services:
       PGID: 0
       PUID: 0
       TZ: $TZ
-      SETTINGS_ENCRYPTION_KEY: '$default_pwd'
-      DUPLICATI__WEBSERVICE_PASSWORD: '$default_pwd'
+      SETTINGS_ENCRYPTION_KEY: '$APP_DEFAULT_PASSWORD'
+      DUPLICATI__WEBSERVICE_PASSWORD: '$APP_DEFAULT_PASSWORD'
     expose:
       - 8200
+    labels:
+      caddy_0: duplicati-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8200}}"
+      caddy_1: duplicati-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8200}}"
+      caddy_2: duplicati-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8200}}"
+    networks:
+      - pcs
     cpu_shares: 10
     deploy:
       resources:
@@ -22,11 +33,16 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/duplicati/config
+        source: /DATA/AppData/duplicati/config/
         target: /config
       - type: bind
         source: /DATA/
         target: /source/DATA
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:
@@ -74,7 +90,7 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Default Password : `$default_pwd`
+        Default Password : `$APP_DEFAULT_PASSWORD`
         Your Files will appear in the `Computer/source/DATA` directory inside duplicati source panel (3).
   title:
     en_us: Duplicati

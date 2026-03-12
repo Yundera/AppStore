@@ -1,0 +1,96 @@
+name: jellyfin
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:10.10.7
+    container_name: jellyfin
+    restart: unless-stopped
+    #ports:
+    # Port mappings can be uncommented when the ip feature is available
+    #  - "8920:8920"
+    #  - "7359:7359/udp"
+    #  - "1900:1900/udp"
+    expose:
+      - 8096                            # Web UI port for NSL router / NSL 라우터용 웹 UI 포트
+    volumes:
+      - /DATA/AppData/jellyfin/config:/config     # Jellyfin configuration files / Jellyfin 설정 파일
+      - /DATA/AppData/jellyfin/cache:/cache       # Jellyfin cache data / Jellyfin 캐시 데이터
+      - /DATA/Media/Movies:/media/movies          # Movies library / 영화 라이브러리
+      - /DATA/Media/TV Shows:/media/tvshows       # TV Shows library / TV 쇼 라이브러리
+      - /DATA/Media/Music:/media/music            # Music library / 음악 라이브러리
+      - /DATA/Downloads:/media/downloads          # Downloads folder / 다운로드 폴더
+    user: $PUID:$PGID                   # Run as user for file permissions / 파일 권한을 위한 사용자로 실행
+    environment:
+      PGID: $PGID                       # Process Group ID / 프로세스 그룹 ID
+      PUID: $PUID                       # Process User ID / 프로세스 사용자 ID
+      TZ: $TZ                           # System timezone / 시스템 시간대
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 256M                  # Memory limit for Jellyfin / Jellyfin 메모리 제한
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Media
+  developer: Jellyfin Project
+  description:
+    en_us: Jellyfin - The Free Software Media System that puts you in control of managing and streaming your media. Stream to any device from your own server.
+    fr_fr: Jellyfin - Le système multimédia libre qui vous donne le contrôle total de la gestion et du streaming de vos médias. Diffusez vers n'importe quel appareil depuis votre propre serveur.
+    es_es: Jellyfin - El sistema multimedia de software libre que te da control total sobre la gestión y transmisión de tus medios. Transmite a cualquier dispositivo desde tu propio servidor.
+    zh_cn: Jellyfin - 免费开源媒体系统，让您完全控制媒体的管理和流媒体播放。从您自己的服务器流式传输到任何设备。
+    ko_kr: Jellyfin - 미디어 관리 및 스트리밍을 완전히 제어할 수 있는 무료 오픈소스 미디어 시스템입니다. 자체 서버에서 모든 기기로 스트리밍하세요.
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/thumbnail.png
+  index: /
+  tagline:
+    en_us: This is your Movie Hub. Watch your own movies, shows, and live TV - just like a streaming app, but fully hosted by you.
+    fr_fr: Votre serveur de streaming multimédia personnel sans contraintes
+    es_es: Tu servidor personal de transmisión multimedia sin ataduras
+    zh_cn: 您的个人媒体流媒体服务器，完全自由
+    ko_kr: 완전히 자유로운 개인 미디어 스트리밍 서버
+  title:
+    en_us: Jellyfin
+  store_app_id: jellyfin
+  main: jellyfin
+  is_uncontrolled: false
+  webui_port: 8096
+  tips:
+    before_install:
+      en_us: |
+        💡 **Tips**: Jellyfin gives you a Netflix-style interface for the TV shows and movies stored on your computer or server.
+        
+        📖 **Setup guide**: [Set up your own streaming service](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **Enjoy!** ❓ Questions? Contact us at help@yundera.com
+      ko_kr: |
+        💡 **팁**: Jellyfin은 컴퓨터나 서버에 저장된 TV 프로그램과 영화를 위한 Netflix 스타일 인터페이스를 제공합니다.
+        
+        📖 **설정 가이드**: [나만의 스트리밍 서비스 설정하기](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **즐기세요!** ❓ 궁금한 점이 있으신가요? help@yundera.com으로 연락주세요
+      zh_cn: |
+        💡 **提示**: Jellyfin 为存储在您计算机或服务器上的电视节目和电影提供 Netflix 风格的界面。
+        
+        📖 **设置指南**: [设置您自己的流媒体服务](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **尽情享受！** ❓ 有问题？请联系 help@yundera.com
+      es_es: |
+        💡 **Consejos**: Jellyfin te ofrece una interfaz estilo Netflix para los programas de TV y películas almacenados en tu computadora o servidor.
+        
+        📖 **Guía de configuración**: [Configura tu propio servicio de streaming](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **¡Disfruta!** ❓ ¿Preguntas? Contáctanos en help@yundera.com
+      fr_fr: |
+        💡 **Conseils**: Jellyfin vous offre une interface de style Netflix pour les émissions TV et films stockés sur votre ordinateur ou serveur.
+        
+        📖 **Guide de configuration**: [Configurez votre propre service de streaming](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)
+        
+        🎬 **Profitez-en !** ❓ Des questions ? Contactez-nous à help@yundera.com

@@ -441,45 +441,82 @@ x-casaos:
 
 #### Caddy Integration (Web UI Access)
 
-The Yundera AppStore uses Caddy reverse proxy with Docker labels for automatic HTTPS routing. Apps are accessible via free nsl.sh subdomains (e.g., `https://appname-username.nsl.sh`).
+The Yundera AppStore uses Caddy reverse proxy with Docker labels for automatic HTTPS routing. Apps are accessible via three methods:
+- **Gateway-routed domain**: `https://appname-username.nsl.sh` (custom CA)
+- **Direct access via nip.io**: `https://appname-192-168-1-1.nip.io` (custom CA)
+- **Direct access via sslip.io**: `https://appname-192-168-1-1.sslip.io` (Let's Encrypt)
 
 **How It Works:**
 - Caddy watches Docker containers for specific labels
 - Labels define the subdomain prefix and backend port
-- Caddy automatically handles HTTPS certificates and routing
+- Three access methods provide flexibility for different network scenarios
 - nsl.sh provides free subdomains for all Yundera users
 
-**Label Format:**
+**Label Format (Required for all Web UI apps):**
 ```yaml
 labels:
-  - "caddy=<service-name>-${APP_DOMAIN}"
-  - "caddy.reverse_proxy={{upstreams <port>}}"
+  # 1. Gateway-routed domain (mesh router) - Custom CA
+  caddy_0: appname-${APP_DOMAIN}
+  caddy_0.import: gateway_tls
+  caddy_0.reverse_proxy: "{{upstreams 80}}"
+
+  # 2. Direct access via nip.io - Custom CA
+  caddy_1: appname-\${APP_PUBLIC_IP_DASH}.nip.io
+  caddy_1.import: gateway_tls
+  caddy_1.reverse_proxy: "{{upstreams 80}}"
+
+  # 3. Direct access via sslip.io - Let's Encrypt (public cert)
+  caddy_2: appname-\${APP_PUBLIC_IP_DASH}.sslip.io
+  caddy_2.reverse_proxy: "{{upstreams 80}}"
 ```
+
+**Notes:**
+- `caddy_2` does NOT have `import: gateway_tls` - uses Let's Encrypt
+- Replace `80` with your app's actual web UI port
+- Add labels only to the main web UI service
+- Ensure the `pcs` network is configured
 
 **Compose File Requirements:**
 - Use `expose` to expose the web UI port (required for Caddy discovery)
 - Add Caddy labels to the main web UI service only
-- Use `${APP_DOMAIN}` variable (resolves to `username.nsl.sh` in production)
+- Connect the main service to the `pcs` network
+- Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` variables
 
-**Example - Basic Caddy Configuration:**
+**Example - Complete Caddy Configuration:**
 ```yaml
 services:
   immich:
     image: altran1502/immich-server:v1.135.3
     expose:
-      - 80                    # Expose port for Caddy discovery
+      - 80
     labels:
-      - "caddy=immich-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: immich-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: immich-\${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: immich-\${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     environment:
       IMMICH_PORT: 80
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   main: immich
   webui_port: 80
 ```
 
-**Result:** `https://immich-username.nsl.sh/`
+**Result URLs:**
+- `https://immich-username.nsl.sh/` (via gateway)
+- `https://immich-192-168-1-1.nip.io/` (direct, custom CA)
+- `https://immich-192-168-1-1.sslip.io/` (direct, Let's Encrypt)
 
 **Example - Non-Port-80 Service:**
 ```yaml
@@ -487,17 +524,28 @@ services:
   duplicati:
     image: linuxserver/duplicati:latest
     expose:
-      - 8200                  # Expose the service port
+      - 8200
     labels:
-      - "caddy=duplicati-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 8200}}"
+      caddy_0: duplicati-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8200}}"
+      caddy_1: duplicati-\${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8200}}"
+      caddy_2: duplicati-\${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8200}}"
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   main: duplicati
   webui_port: 8200
 ```
-
-**Result:** `https://duplicati-username.nsl.sh/`
 
 **Port Selection Guidelines:**
 - Configure applications to use port 80 when possible
@@ -505,22 +553,23 @@ x-casaos:
 - The URL remains clean regardless of the backend port
 
 Caddy handles:
-- Automatic HTTPS certificate management (Let's Encrypt)
+- Automatic HTTPS certificate management
 - Subdomain routing to the correct container
 - Load balancing and health checks
 - WebSocket proxying
 
 **Web UI Requirements (all must be configured together):**
 - The main service must `expose` the web UI port
-- Add Caddy labels to the service with `caddy=<name>-${APP_DOMAIN}` and `caddy.reverse_proxy`
+- Add all three Caddy label blocks (caddy_0, caddy_1, caddy_2)
+- Connect the service to the `pcs` network
 - The `webui_port` field must match the exposed port number
 - The `main` field must reference the service with Caddy labels
 
 **Important Notes:**
 - Add Caddy labels only to the main web UI service (not to database or backend services)
-- The service name in the `caddy=` label should match the `main` field in x-casaos
-- Use `${APP_DOMAIN}` for portability across different deployments
-- The app name should be simple without spaces or special characters
+- The app name in the Caddy labels should be simple without spaces or special characters
+- Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` for portability
+- Always include the `pcs` network definition with `external: true`
 
 **Example Multi-Service Configuration:**
 
