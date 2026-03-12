@@ -6,8 +6,6 @@ services:
     container_name: nginx
     user: "0:0"
     restart: unless-stopped
-    ports:
-      - 80:80
     expose:
       - 80
     labels:
@@ -146,7 +144,9 @@ x-casaos:
         **Quick Start:**
         1. Install the app
         2. Upload your website files to the www directory
-        3. Access your site at: `https://nginx-$APP_DOMAIN/`
+        3. Access your site at:
+           - Via domain: `https://nginx-$APP_DOMAIN/`
+           - Direct IP: `https://nginx-$APP_PUBLIC_IP_DASH.sslip.io/`
 
         **File Structure:**
         ```
@@ -155,9 +155,6 @@ x-casaos:
         │   └── index.html   # Main page
         └── nginx.conf       # nginx configuration
         ```
-        
-        **IPv6 Direct Access:**
-        Then access your site at: `http://[$APP_PUBLIC_IPV6]`
   title:
     en_us: Nginx
   index: /

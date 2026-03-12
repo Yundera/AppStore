@@ -6,11 +6,19 @@ services:
     container_name: caddy
     user: $PUID:$PGID
     restart: unless-stopped
-    network_mode: bridge
-    ports:
-      - 443:443
     expose:
       - 80
+    labels:
+      caddy_0: caddy-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: caddy-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: caddy-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     volumes:
       - type: bind
         source: /DATA/AppData/caddy/www/
@@ -36,6 +44,11 @@ services:
           memory: 128M
           cpus: '0.25'
     cpu_shares: 50
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:
@@ -152,16 +165,9 @@ x-casaos:
         └── config/          # Caddy config storage
         ```
 
-        **Access Methods:**
-        - **Via Caddy:** `https://caddy-$APP_DOMAIN/`
-        - **Custom domain (external):** Point your domain to port 443 for direct TLS
-        
-        **IPv6 Direct Access:**
-        Then access your site at: `https://[$APP_PUBLIC_IPV6]`
-
-        **Custom Domain Access:**
-        Port 443 is exposed for external access with self-signed TLS.
-        Your browser may show a security warning - click "Advanced" and "Proceed".
+        **Access:**
+        - Via domain: `https://caddy-$APP_DOMAIN/`
+        - Direct IP: `https://caddy-$APP_PUBLIC_IP_DASH.sslip.io/`
   title:
     en_us: Caddy
   index: /
