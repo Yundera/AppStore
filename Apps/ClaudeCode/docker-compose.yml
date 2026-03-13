@@ -2,7 +2,7 @@ name: claude
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.8
+    image: ghcr.io/worph/claude-code-container:1.0.10
     container_name: claude
     restart: unless-stopped
     user: 0:0
@@ -112,6 +112,49 @@ x-casaos:
         Leave API key empty to use subscription auth.
 
         Default login password: `$APP_DEFAULT_PASSWORD`
+
+        **MCP Integration (for AI/LLMs):**
+
+        Claude Code includes a Model Context Protocol (MCP) server that allows other AI assistants to send prompts and interact with this instance programmatically.
+
+        **Option 1: Public URL (with Bearer auth)**
+        ```json
+        {
+          "mcpServers": {
+            "claude-code": {
+              "type": "http",
+              "url": "https://claude-${APP_DOMAIN}/mcp",
+              "headers": {
+                "Authorization": "Bearer ${AUTH_PASSWORD}"
+              }
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "claude-code": {
+              "type": "http",
+              "url": "http://claude:80/mcp",
+              "headers": {
+                "Authorization": "Bearer ${AUTH_PASSWORD}"
+              }
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `query_claude` | Send a prompt and get a response |
+        | `check_status` | Check if Claude is available |
   pre-install-cmd: |
     mkdir -p /DATA/AppData/claude/workspace /DATA/AppData/claude/config &&
     touch /DATA/AppData/claude/config/.claude.json &&
