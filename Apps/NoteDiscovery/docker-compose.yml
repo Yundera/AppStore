@@ -14,10 +14,10 @@ services:
       caddy_0: notediscovery-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: notediscovery-${PUBLIC_IP_DASH}.nip.io
+      caddy_1: notediscovery-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: notediscovery-${PUBLIC_IP_DASH}.sslip.io
+      caddy_2: notediscovery-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
       - /DATA/AppData/$AppID/data/:/app/data
@@ -40,7 +40,6 @@ services:
 
 networks:
   pcs:
-    name: pcs
     external: true
 
 x-casaos:
@@ -53,12 +52,12 @@ x-casaos:
   category: Documents
   developer: gamosoft
   store_app_id: notediscovery
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/NoteDiscovery/icon.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/NoteDiscovery/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/NoteDiscovery/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/NoteDiscovery/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStoreLab@main/Apps/NoteDiscovery/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-1.png
   description:
     en_us: |
       **Your private, self-hosted knowledge base**
