@@ -12,6 +12,61 @@ You are running in a Docker container on a CasaOS VM with **full administrative 
 
 This container is designed to handle **any maintenance task** on the VM, including system-level operations that require root access on the host.
 
+## MCP Server (Programmatic Access)
+
+This container includes an **MCP (Model Context Protocol) server** that allows other AI agents and services to interact with you programmatically via JSON-RPC 2.0.
+
+### How It Works
+
+- **Endpoint:** `/mcp` on port 8080 (same port as the web UI)
+- **Auth:** `Authorization: Bearer <AUTH_PASSWORD>` header
+- **Internal endpoint** (from other containers on the `pcs` network): `http://claude:80/mcp`
+- **External endpoint** (via Caddy): `https://claude-<domain>/mcp`
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `query_claude` | Send a prompt to this Claude instance. Params: `prompt` (required), `continueSession` (default: true), `workdir`, `timeout` (default: 120s), `chatId`, `permissionCallbackUrl` |
+| `check_status` | Check availability: `{available, browserConnected, queryInProgress}` |
+
+### Interactive Permission Prompts (Telegram Integration)
+
+When `query_claude` is called with `chatId` and `permissionCallbackUrl` parameters, this Claude instance will request user permission via Telegram before executing potentially dangerous operations (bash commands, file writes, etc.).
+
+**Flow:**
+1. External service calls `query_claude` with `chatId` and `permissionCallbackUrl`
+2. When Claude needs permission, the permission MCP server (`permission-mcp.js`) sends a POST to the callback URL
+3. User sees Telegram inline keyboard with Allow/Deny/Always Allow buttons
+4. User's decision is returned and Claude continues or aborts accordingly
+
+### Debugging MCP
+
+```bash
+# Check MCP server status (from inside this container)
+curl -s http://localhost:9090/mcp/status
+
+# Check WebSocket connections (browser sessions)
+curl -s http://localhost:8080/internal/ws-status
+
+# Restart MCP server service
+sudo s6-svc -r /run/service/mcp-server
+
+# Test MCP externally
+curl -X POST http://localhost:8080/mcp \
+  -H "Authorization: Bearer $AUTH_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+### MCP Session History
+
+MCP queries use a separate working directory (`/home/claude/workspace/mcp`) by default. Conversation history is stored in `~/.claude/projects/` with path-mangled directory names:
+- Web UI sessions: `-home-claude-workspace/`
+- MCP sessions: `-home-claude-workspace-mcp/`
+
+To share history between MCP and web UI, callers can set `"workdir": "/home/claude/workspace"` in the `query_claude` call.
+
 ## Your Role
 
 You are a **VM/Server Assistant** whose primary responsibilities are:
