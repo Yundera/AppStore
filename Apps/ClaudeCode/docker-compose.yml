@@ -2,21 +2,63 @@ name: claude
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.12
+    image: ghcr.io/worph/claude-code-container:1.0.17
     container_name: claude
     restart: unless-stopped
     user: 0:0
     expose:
       - 8080
+      - 9090
     labels:
       caddy_0: claude-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8080}}"
+      # /login, /logout — no forward_auth, served by MCP server
+      caddy_0.0_handle: "/login*"
+      caddy_0.0_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_0.1_handle: "/logout"
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 9090}}"
+      # /mcp — no forward_auth, MCP server has its own Bearer auth
+      caddy_0.2_handle_path: "/mcp*"
+      caddy_0.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      # Everything else — forward_auth via MCP, then proxy to ttyd
+      caddy_0.3_handle: ""
+      caddy_0.3_handle.forward_auth: "{{upstreams 9090}}"
+      caddy_0.3_handle.forward_auth.uri: /auth
+      caddy_0.3_handle.forward_auth.@unauthorized.status: "401"
+      caddy_0.3_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_0.3_handle.forward_auth.handle_response.redir: "* /login"
+      caddy_0.3_handle.reverse_proxy: "{{upstreams 8080}}"
+
       caddy_1: claude-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8080}}"
+      caddy_1.0_handle: "/login*"
+      caddy_1.0_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_1.1_handle: "/logout"
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_1.2_handle_path: "/mcp*"
+      caddy_1.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      caddy_1.3_handle: ""
+      caddy_1.3_handle.forward_auth: "{{upstreams 9090}}"
+      caddy_1.3_handle.forward_auth.uri: /auth
+      caddy_1.3_handle.forward_auth.@unauthorized.status: "401"
+      caddy_1.3_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_1.3_handle.forward_auth.handle_response.redir: "* /login"
+      caddy_1.3_handle.reverse_proxy: "{{upstreams 8080}}"
+
       caddy_2: claude-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8080}}"
+      caddy_2.0_handle: "/login*"
+      caddy_2.0_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_2.1_handle: "/logout"
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_2.2_handle_path: "/mcp*"
+      caddy_2.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      caddy_2.3_handle: ""
+      caddy_2.3_handle.forward_auth: "{{upstreams 9090}}"
+      caddy_2.3_handle.forward_auth.uri: /auth
+      caddy_2.3_handle.forward_auth.@unauthorized.status: "401"
+      caddy_2.3_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_2.3_handle.forward_auth.handle_response.redir: "* /login"
+      caddy_2.3_handle.reverse_proxy: "{{upstreams 8080}}"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
@@ -139,7 +181,7 @@ x-casaos:
           "mcpServers": {
             "claude-code": {
               "type": "http",
-              "url": "http://claude:80/mcp",
+              "url": "http://claude:9090/mcp",
               "headers": {
                 "Authorization": "Bearer ${AUTH_PASSWORD}"
               }
