@@ -2,7 +2,7 @@ name: immich
 
 services:
   immich:
-    image: ghcr.io/immich-app/immich-server:v2.4.1
+    image: ghcr.io/immich-app/immich-server:v2.6.3
     container_name: immich
     user: $PUID:$PGID
     cpu_shares: 70
@@ -41,7 +41,7 @@ services:
       - pcs
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v2.4.1
+    image: ghcr.io/immich-app/immich-machine-learning:v2.6.3
     container_name: immich_machine_learning
     cpu_shares: 5
     deploy:
@@ -63,7 +63,7 @@ services:
       - immich
 
   redis:
-    image: docker.io/valkey/valkey:8@sha256:81db6d39e1bba3b3ff32bd3a1b19a6d69690f94a3954ec131277b9a26b95b3aa
+    image: docker.io/valkey/valkey:9@sha256:3eeb09785cd61ec8e3be35f8804c8892080f3ca21934d628abc24ee4ed1698f6
     container_name: immich-redis
     cpu_shares: 10
     user: 0:0 # no volume mount so can run as root
