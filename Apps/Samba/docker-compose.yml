@@ -2,7 +2,7 @@ name: samba
 services:
   samba:
     container_name: samba
-    image: dockurr/samba:4.22
+    image: dockurr/samba:4.23.5
     network_mode: bridge
     restart: unless-stopped
     user: 0:0  # Run as root for full permissions
