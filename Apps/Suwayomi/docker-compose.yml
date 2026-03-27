@@ -1,0 +1,201 @@
+name: suwayomi
+
+services:
+  suwayomi:
+    image: ghcr.io/suwayomi/tachidesk:v2.1.2087
+    user: $PUID:$PGID
+    container_name: suwayomi
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      caddy_0: suwayomi-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: suwayomi-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: suwayomi-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      BIND_IP: 0.0.0.0
+      BIND_PORT: 80
+      AUTH_MODE: simple_login
+      AUTH_USERNAME: admin
+      AUTH_PASSWORD: $APP_DEFAULT_PASSWORD
+      DOWNLOAD_AS_CBZ: true
+      AUTO_DOWNLOAD_CHAPTERS: false
+      WEB_UI_CHANNEL: bundled
+      WEB_UI_UPDATE_INTERVAL: 0.0
+      EXTENSION_REPOS: >-
+        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]
+      FLARESOLVERR_ENABLED: true
+      FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
+    volumes:
+      - /DATA/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
+      - /DATA/AppData/$AppID/data/:/home/suwayomi/.local/share/Tachidesk
+    depends_on:
+      - flaresolverr
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
+    container_name: suwayomi-flaresolverr
+    user: 0:0
+    restart: unless-stopped
+    environment:
+      TZ: $TZ
+    cpu_shares: 20
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: suwayomi
+  index: /
+  store_app_id: suwayomi
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/suwayomi/data &&
+    mkdir -p /DATA/Media/Mangas
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Media
+  developer: Suwayomi Project
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
+  title:
+    en_us: Suwayomi
+  tagline:
+    en_us: Personal manga library with 1200+ sources
+    fr_fr: Bibliothèque manga personnelle avec plus de 1200 sources
+    es_es: Biblioteca personal de manga con más de 1200 fuentes
+    zh_cn: 拥有1200+源的个人漫画图书馆
+    ko_kr: 1200개 이상의 소스를 가진 개인 만화 라이브러리
+  description:
+    en_us: |
+      Suwayomi lets you read thousands of manga from around the world, all in one place. Instead of visiting dozens of different websites, everything is organized in one app that tracks your reading progress automatically.
+
+      **Key features:**
+      • Browse 1200+ manga sources worldwide
+      • Automatic reading progress tracking
+      • Download chapters for offline reading
+      • FlareSolverr built-in for protected sources
+      • Compatible with Tachiyomi/Mihon extensions
+
+      **Perfect for:** Manga readers who want a self-hosted library that keeps track of multiple series across different sources.
+    fr_fr: |
+      Suwayomi vous permet de lire des milliers de mangas du monde entier, tout en un seul endroit. Au lieu de visiter des dizaines de sites différents, tout est organisé dans une application qui suit automatiquement votre progression.
+
+      **Fonctionnalités clés :**
+      • Parcourez plus de 1200 sources de manga
+      • Suivi automatique de la progression de lecture
+      • Téléchargez des chapitres pour lire hors ligne
+      • FlareSolverr intégré pour les sources protégées
+      • Compatible avec les extensions Tachiyomi/Mihon
+    es_es: |
+      Suwayomi te permite leer miles de mangas de todo el mundo, todo en un solo lugar. En lugar de visitar docenas de sitios web diferentes, todo está organizado en una app que rastrea tu progreso de lectura automáticamente.
+
+      **Características clave:**
+      • Navega por más de 1200 fuentes de manga
+      • Seguimiento automático del progreso de lectura
+      • Descarga capítulos para leer sin conexión
+      • FlareSolverr integrado para fuentes protegidas
+      • Compatible con extensiones Tachiyomi/Mihon
+    zh_cn: |
+      Suwayomi让您在一个地方阅读来自世界各地的数千部漫画。不再需要访问数十个不同的网站，所有内容都在一个自动跟踪阅读进度的应用中整理。
+
+      **主要功能：**
+      • 浏览全球1200+漫画源
+      • 自动跟踪阅读进度
+      • 下载章节离线阅读
+      • 内置FlareSolverr应对受保护源
+      • 兼容Tachiyomi/Mihon扩展
+    ko_kr: |
+      스와요미는 전 세계 수천 개의 만화를 한 곳에서 읽을 수 있게 해줍니다. 수십 개의 다른 웹사이트를 방문하는 대신, 모든 것이 자동으로 읽기 진행 상황을 추적하는 하나의 앱에서 정리됩니다.
+
+      **주요 기능:**
+      • 전 세계 1200개 이상의 만화 소스 탐색
+      • 자동 읽기 진행 상황 추적
+      • 오프라인 읽기를 위한 챕터 다운로드
+      • 보호된 소스를 위한 FlareSolverr 내장
+      • Tachiyomi/Mihon 확장 호환
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+        | Username | Password               |
+        | -------- | ---------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        **How to use:**
+        1. Open the app and log in
+        2. Click "Browse" to find manga sources
+        3. Search for your favorite manga titles
+        4. Start reading — your progress saves automatically
+
+        **Tip:** Download chapters on WiFi, then read offline during commutes!
+      fr_fr: |
+        **Pour commencer**
+        | Utilisateur | Mot de passe           |
+        | ----------- | ---------------------- |
+        | `admin`     | `$APP_DEFAULT_PASSWORD` |
+
+        **Comment utiliser :**
+        1. Ouvrez l'app et connectez-vous
+        2. Cliquez sur "Parcourir" pour trouver des sources
+        3. Recherchez vos mangas favoris
+        4. Commencez à lire — votre progression se sauvegarde automatiquement
+      es_es: |
+        **Para empezar**
+        | Usuario  | Contraseña             |
+        | -------- | ---------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        **Cómo usar:**
+        1. Abre la app e inicia sesión
+        2. Haz clic en "Explorar" para encontrar fuentes
+        3. Busca tus mangas favoritos
+        4. Comienza a leer — tu progreso se guarda automáticamente
+      zh_cn: |
+        **开始使用**
+        | 用户名   | 密码                   |
+        | -------- | ---------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        **使用方法：**
+        1. 打开应用并登录
+        2. 点击"浏览"查找漫画源
+        3. 搜索您喜爱的漫画
+        4. 开始阅读 — 进度自动保存
+      ko_kr: |
+        **시작하기**
+        | 사용자명 | 비밀번호               |
+        | -------- | ---------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        **사용 방법:**
+        1. 앱을 열고 로그인
+        2. "찾아보기"를 클릭하여 소스 찾기
+        3. 좋아하는 만화 검색
+        4. 읽기 시작 — 진행 상황이 자동 저장됩니다
