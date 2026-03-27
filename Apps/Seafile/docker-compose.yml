@@ -115,14 +115,8 @@ services:
       caddy_0.2_handle_path: "/sdoc-server/*"
       caddy_0.2_handle_path.0_rewrite: "* {uri}"
       caddy_0.2_handle_path.1_reverse_proxy: "seadoc:80"
-      # Default: main seafile app with CSRF header workaround
+      # Default: main seafile app
       caddy_0.3_reverse_proxy: "{{upstreams 80}}"
-      caddy_0.3_reverse_proxy.0_header_up: "Host localhost"
-      caddy_0.3_reverse_proxy.1_header_up: "Origin http://localhost"
-      caddy_0.3_reverse_proxy.2_header_up: "Referer http://localhost/"
-      caddy_0.3_reverse_proxy.3_header_up: "X-Real-IP {http.request.remote.host}"
-      caddy_0.3_reverse_proxy.4_header_up: "X-Forwarded-For {http.request.remote.host}"
-      caddy_0.3_reverse_proxy.5_header_up: "X-Forwarded-Proto http"
 
       # --- caddy_1: nip.io fallback ---
       caddy_1: seafile-${APP_PUBLIC_IP_DASH}.nip.io
@@ -136,12 +130,6 @@ services:
       caddy_1.2_handle_path.0_rewrite: "* {uri}"
       caddy_1.2_handle_path.1_reverse_proxy: "seadoc:80"
       caddy_1.3_reverse_proxy: "{{upstreams 80}}"
-      caddy_1.3_reverse_proxy.0_header_up: "Host localhost"
-      caddy_1.3_reverse_proxy.1_header_up: "Origin http://localhost"
-      caddy_1.3_reverse_proxy.2_header_up: "Referer http://localhost/"
-      caddy_1.3_reverse_proxy.3_header_up: "X-Real-IP {http.request.remote.host}"
-      caddy_1.3_reverse_proxy.4_header_up: "X-Forwarded-For {http.request.remote.host}"
-      caddy_1.3_reverse_proxy.5_header_up: "X-Forwarded-Proto http"
 
       # --- caddy_2: sslip.io fallback (no gateway_tls) ---
       caddy_2: seafile-${APP_PUBLIC_IP_DASH}.sslip.io
@@ -154,19 +142,11 @@ services:
       caddy_2.2_handle_path.0_rewrite: "* {uri}"
       caddy_2.2_handle_path.1_reverse_proxy: "seadoc:80"
       caddy_2.3_reverse_proxy: "{{upstreams 80}}"
-      caddy_2.3_reverse_proxy.0_header_up: "Host localhost"
-      caddy_2.3_reverse_proxy.1_header_up: "Origin http://localhost"
-      caddy_2.3_reverse_proxy.2_header_up: "Referer http://localhost/"
-      caddy_2.3_reverse_proxy.3_header_up: "X-Real-IP {http.request.remote.host}"
-      caddy_2.3_reverse_proxy.4_header_up: "X-Forwarded-For {http.request.remote.host}"
-      caddy_2.3_reverse_proxy.5_header_up: "X-Forwarded-Proto http"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-      notification-server:
-        condition: service_started
     networks:
       - seafile-net
       - pcs
@@ -206,6 +186,12 @@ services:
     networks:
       - seafile-net
       - pcs
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8083'"]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 5
 
   seadoc:
     image: seafileltd/sdoc-server:2.0.9
@@ -315,25 +301,55 @@ x-casaos:
     chown $PUID:$PGID /DATA/AppData/seafile/rclone/rclone.conf 2>/dev/null || true &&
     chown $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
   post-install-cmd: |
-    echo "Waiting for Seafile to initialize and create configuration files..."
-    sleep 30
-    echo "Enabling WebDAV in seafdav.conf..."
+    echo "Waiting for Seafile to finish initialization (up to 25 minutes)..."
+    SEAHUB_SETTINGS="/DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py"
+    for i in $(seq 1 150); do
+      if [ -f "$SEAHUB_SETTINGS" ] && grep -q "SECRET_KEY" "$SEAHUB_SETTINGS" 2>/dev/null; then
+        echo "Seafile initialization detected after $((i * 10)) seconds"
+        break
+      fi
+      sleep 10
+    done
+    # Ensure WebDAV is enabled (in case Seafile overwrote our pre-created config)
     if [ -f /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf ]; then
       if grep -q "enabled = false" /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf; then
         sed -i 's/enabled = false/enabled = true/' /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf
-        echo "WebDAV enabled successfully"
-        echo "Restarting Seafile container to apply WebDAV configuration..."
-        docker restart seafile
-        echo "WebDAV configuration complete"
-      elif grep -q "enabled = true" /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf; then
-        echo "WebDAV already enabled, no changes needed"
-      else
-        echo "WebDAV configuration not found in seafdav.conf, may need manual configuration"
+        echo "WebDAV re-enabled"
       fi
-    else
-      echo "seafdav.conf not found after timeout, WebDAV may not be available"
-      echo "This is normal on first install - WebDAV will be configured on next restart"
     fi
+    # Ensure SMTP config is present (in case Seafile overwrote our pre-created config)
+    if [ -f "$SEAHUB_SETTINGS" ] && ! grep -q "EMAIL_HOST" "$SEAHUB_SETTINGS"; then
+      echo "Re-adding SMTP configuration..."
+      cat >> "$SEAHUB_SETTINGS" << EOF
+
+    # SMTP configuration (Yundera built-in SMTP service)
+    EMAIL_USE_TLS = False
+    EMAIL_HOST = 'smtp'
+    EMAIL_HOST_USER = 'casaos'
+    EMAIL_HOST_PASSWORD = '$APP_DEFAULT_PASSWORD'
+    EMAIL_PORT = 587
+    DEFAULT_FROM_EMAIL = 'seafile@$APP_DOMAIN'
+    SERVER_EMAIL = 'seafile@$APP_DOMAIN'
+    EOF
+      echo "SMTP configuration added"
+    fi
+    # Single restart to apply all config changes
+    echo "Restarting Seafile to apply configuration..."
+    docker restart seafile
+    # Ensure admin account exists (fallback if INIT_SEAFILE_ADMIN_* failed on first boot)
+    echo "Waiting for Seafile to be ready after restart..."
+    for i in $(seq 1 30); do
+      if docker exec seafile curl -sf http://localhost/ > /dev/null 2>&1; then
+        echo "Seafile is ready"
+        break
+      fi
+      sleep 10
+    done
+    echo "Ensuring admin account exists..."
+    printf 'admin@%s\n%s\n%s\n' "$APP_DOMAIN" "$APP_DEFAULT_PASSWORD" "$APP_DEFAULT_PASSWORD" | \
+      docker exec -i seafile /opt/seafile/seafile-server-latest/reset-admin.sh 2>&1 || \
+      echo "Warning: admin account setup returned an error (may already exist)"
+    echo "Post-install complete"
   webui_port: 80
   main: seafile
 

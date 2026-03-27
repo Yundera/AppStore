@@ -24,6 +24,7 @@ services:
       BACKEND_HOST: "ssa-backend"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
+      ALLOWED_PATHS: "manifest.json"
     depends_on:
       - ssa-backend
     networks:
