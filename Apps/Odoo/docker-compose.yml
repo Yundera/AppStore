@@ -2,7 +2,7 @@ name: odoo
 
 services:
   postgres:
-    image: postgres:15.15
+    image: postgres:18.3
     user: "0:0"
     environment:
       POSTGRES_DB: postgres
@@ -28,7 +28,7 @@ services:
       - odoo-internal
 
   odoo:
-    image: odoo:18.0
+    image: odoo:19.0
     user: "0:0"
     command: odoo --http-port=80
     depends_on:
