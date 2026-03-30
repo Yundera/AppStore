@@ -45,7 +45,7 @@ services:
       - JWT_SECRET=$APP_DEFAULT_PASSWORD
       - ACCOUNT_REGISTRATION=false
       - HTTP_ALLOWED=true
-      - ALLOW_UNAUTHENTICATED=false
+      - ALLOW_UNAUTHENTICATED=true
       - AUTO_DELETE_EVERY_N_HOURS=24
       - HOME=/tmp/convertx-home
     volumes:
