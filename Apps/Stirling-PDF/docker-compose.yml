@@ -2,22 +2,30 @@ name: stirlingpdf
 
 services:
   stirlingpdf:
-    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.5.2
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.8.0
     container_name: stirling-pdf
     restart: unless-stopped
     expose:
       - 80
     labels:
-      - "caddy=stirlingpdf-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
+      caddy_0: stirlingpdf-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: stirlingpdf-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: stirlingpdf-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     volumes:
-      - /DATA/AppData/$AppID/tessdata/:/usr/share/tessdata
-      - /DATA/AppData/$AppID/configs/:/configs
-      - /DATA/AppData/$AppID/logs/:/logs
-      - /DATA/AppData/$AppID/customFiles/:/customFiles
-      - /DATA/AppData/$AppID/pipeline/:/pipeline
-      - /DATA/Downloads/:/downloads
-      - /DATA/AppData/$AppID/tmp/:/tmp
+      - /DATA/AppData/$AppID/tessdata/:/usr/share/tessdata/
+      - /DATA/AppData/$AppID/configs/:/configs/
+      - /DATA/AppData/$AppID/logs/:/logs/
+      - /DATA/AppData/$AppID/customFiles/:/customFiles/
+      - /DATA/AppData/$AppID/pipeline/:/pipeline/
+      - /DATA/Downloads/:/downloads/
+      - /DATA/AppData/$AppID/tmp/:/tmp/
     user: "0:0"  # Root user required for Java runtime and PDF tools - see rationale.md
     environment:
       PGID: 0
@@ -26,7 +34,7 @@ services:
       DOCKER_ENABLE_SECURITY: true
       SECURITY_ENABLELOGIN: true
       SECURITY_INITIALLOGIN_USERNAME: admin
-      SECURITY_INITIALLOGIN_PASSWORD: $PCS_DEFAULT_PASSWORD
+      SECURITY_INITIALLOGIN_PASSWORD: $APP_DEFAULT_PASSWORD
       DISABLE_ADDITIONAL_FEATURES: true
       SYSTEM_DEFAULTLOCALE: en_US
       INSTALL_BOOK_AND_ADVANCED_HTML_OPS: false
@@ -43,6 +51,11 @@ services:
           memory: 2G  # Reserve minimum memory
     cpu_shares: 50  # Standard application priority
 
+networks:
+  pcs:
+    name: pcs
+    external: true
+
 x-casaos:
   architectures:
     - amd64
@@ -52,12 +65,6 @@ x-casaos:
   author: Yundera Team
   category: Office
   developer: Stirling Tools
-  pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/$AppID:/data ubuntu:22.04 sh -c '
-      mkdir -p /data/tessdata /data/configs /data/logs /data/customFiles /data/pipeline /data/tmp &&
-      chmod -R 777 /data &&
-      echo "Directories created and permissions set successfully"
-    '
   description:
     en_us: |
       **Your complete PDF toolkit - everything you need to work with PDF files, right from your web browser.**
@@ -192,7 +199,7 @@ x-casaos:
         **🔒 Login Required:**
         | Username | Password |
         | -------- | -------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
 
         **✨ Features Available:**
         • Split, merge, and organize PDFs
@@ -205,13 +212,13 @@ x-casaos:
         **🌐 Access:**
         Once ready, your app will be available at `https://stirlingpdf-username.nsl.sh`
 
-        **💡 New in V2.4.3:**
-        • Stateful Processing - Upload once, use across multiple tools
-        • Undo & Redo with full version history
-        • 2FA support and enhanced security
-        • Improved page editor performance and UI
-        • PDF/X format support and better conversion tools
-        • Enhanced memory management (5GB limit with 2GB reservation)
+        **💡 New in V2.8.0:**
+        • PDF Commenting - View and add comments to PDFs
+        • RFC 3161 PDF Timestamps - Cryptographic timestamping for documents
+        • Enhanced PDF Rendering - Improved performance with Pdfium engine
+        • Advanced Multi-Page Layout - Expanded customization for page arrangements
+        • Desktop login removal - Authentication now optional
+        • Improved text selection and form handling
 
         **How to use:**
         Upload PDF files through your web browser and start editing them right away!
@@ -222,7 +229,7 @@ x-casaos:
         **🔒 로그인 필요:**
         | 사용자명 | 비밀번호 |
         | -------- | -------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
 
         **✨ 사용 가능한 기능:**
         • PDF 분할, 병합, 정리
@@ -235,13 +242,13 @@ x-casaos:
         **🌐 접근:**
         준비가 되면 `https://stirlingpdf-username.nsl.sh`로 앱에 접근할 수 있습니다!
 
-        **💡 V2.4.3 새로운 기능:**
-        • Stateful Processing - 한 번 업로드로 여러 도구에서 사용
-        • 실행 취소 및 다시 실행 (전체 버전 히스토리)
-        • 2FA 지원 및 향상된 보안
-        • 페이지 에디터 성능 및 UI 개선
-        • PDF/X 형식 지원 및 향상된 변환 도구
-        • 향상된 메모리 관리 (5GB 제한, 2GB 예약)
+        **💡 V2.8.0 새로운 기능:**
+        • PDF 댓글 - PDF에 댓글 보기 및 추가
+        • RFC 3161 PDF 타임스탬프 - 문서에 대한 암호화 타임스탬프
+        • 향상된 PDF 렌더링 - Pdfium 엔진으로 성능 개선
+        • 고급 다중 페이지 레이아웃 - 페이지 배열 사용자 정의 확장
+        • 데스크톱 로그인 제거 - 인증이 이제 선택 사항
+        • 향상된 텍스트 선택 및 양식 처리
 
         **사용 방법:**
         웹 브라우저를 통해 PDF 파일을 업로드하고 바로 편집을 시작할 수 있습니다!
@@ -252,7 +259,7 @@ x-casaos:
         **🔒 需要登录:**
         | 用户名 | 密码 |
         | ------ | ---- |
-        | `admin` | `$PCS_DEFAULT_PASSWORD` |
+        | `admin` | `$APP_DEFAULT_PASSWORD` |
 
         **✨ 可用功能:**
         • PDF拆分、合并和整理
@@ -265,13 +272,13 @@ x-casaos:
         **🌐 访问:**
         准备就绪后,您的应用将通过`https://stirlingpdf-username.nsl.sh`可用!
 
-        **💡 V2.4.3 新功能:**
-        • 状态处理 - 上传一次,跨多个工具使用
-        • 撤销和重做(完整版本历史)
-        • 2FA支持和增强安全性
-        • 页面编辑器性能和UI改进
-        • PDF/X格式支持和更好的转换工具
-        • 增强的内存管理(5GB限制,2GB保留)
+        **💡 V2.8.0 新功能:**
+        • PDF评论 - 查看和添加PDF评论
+        • RFC 3161 PDF时间戳 - 文档加密时间戳
+        • 增强PDF渲染 - 使用Pdfium引擎提升性能
+        • 高级多页面布局 - 扩展页面排列自定义选项
+        • 桌面登录移除 - 身份验证现在可选
+        • 改进的文本选择和表单处理
 
         **如何使用:**
         通过网页浏览器上传PDF文件并立即开始编辑!
@@ -282,7 +289,7 @@ x-casaos:
         **🔒 Connexion requise :**
         | Nom d'utilisateur | Mot de passe |
         | ----------------- | ------------ |
-        | `admin` | `$PCS_DEFAULT_PASSWORD` |
+        | `admin` | `$APP_DEFAULT_PASSWORD` |
 
         **✨ Fonctionnalités disponibles :**
         • Diviser, fusionner et organiser les PDF
@@ -295,13 +302,13 @@ x-casaos:
         **🌐 Accès :**
         Une fois prêt, votre application sera disponible à `https://stirlingpdf-username.nsl.sh` !
 
-        **💡 Nouveautés V2.4.3 :**
-        • Traitement avec état - Téléchargez une fois, utilisez sur plusieurs outils
-        • Annuler et rétablir (historique complet des versions)
-        • Support 2FA et sécurité améliorée
-        • Performance et UI de l'éditeur de pages améliorées
-        • Support du format PDF/X et meilleurs outils de conversion
-        • Gestion mémoire améliorée (limite 5GB avec réservation 2GB)
+        **💡 Nouveautés V2.8.0 :**
+        • Commentaires PDF - Afficher et ajouter des commentaires aux PDF
+        • Horodatage PDF RFC 3161 - Horodatage cryptographique des documents
+        • Rendu PDF amélioré - Performance accrue avec le moteur Pdfium
+        • Mise en page multi-pages avancée - Options de personnalisation étendues
+        • Suppression de la connexion bureau - Authentification désormais optionnelle
+        • Sélection de texte et gestion des formulaires améliorées
 
         **Comment utiliser :**
         Téléchargez des fichiers PDF via votre navigateur web et commencez à les éditer immédiatement !
@@ -312,7 +319,7 @@ x-casaos:
         **🔒 Inicio de sesión requerido:**
         | Usuario | Contraseña |
         | ------- | ---------- |
-        | `admin` | `$PCS_DEFAULT_PASSWORD` |
+        | `admin` | `$APP_DEFAULT_PASSWORD` |
 
         **✨ Características disponibles:**
         • Dividir, combinar y organizar PDFs
@@ -325,13 +332,13 @@ x-casaos:
         **🌐 Acceso:**
         Una vez listo, tu aplicación estará disponible en `https://stirlingpdf-username.nsl.sh`!
 
-        **💡 Novedades V2.4.3:**
-        • Procesamiento con estado - Sube una vez, usa en múltiples herramientas
-        • Deshacer y rehacer (historial completo de versiones)
-        • Soporte 2FA y seguridad mejorada
-        • Rendimiento y UI del editor de páginas mejorados
-        • Soporte de formato PDF/X y mejores herramientas de conversión
-        • Gestión de memoria mejorada (límite 5GB con reserva 2GB)
+        **💡 Novedades V2.8.0:**
+        • Comentarios PDF - Ver y agregar comentarios a PDFs
+        • Marcas de tiempo PDF RFC 3161 - Sellado criptográfico de documentos
+        • Renderizado PDF mejorado - Mayor rendimiento con el motor Pdfium
+        • Diseño multi-página avanzado - Opciones de personalización ampliadas
+        • Eliminación de inicio de sesión de escritorio - Autenticación ahora opcional
+        • Selección de texto y manejo de formularios mejorados
 
         **Cómo usar:**
         ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!
