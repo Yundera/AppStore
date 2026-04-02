@@ -31,6 +31,9 @@ services:
 
 x-casaos:
   pre-install-cmd: |
+    snap stop tailscale 2>/dev/null; snap disable tailscale 2>/dev/null;
+    systemctl stop tailscaled 2>/dev/null; systemctl disable tailscaled 2>/dev/null;
+    ip link delete tailscale0 2>/dev/null;
     mkdir -p /DATA/AppData/tailscale/state &&
     chown -R $PUID:$PGID /DATA/AppData/tailscale
 
