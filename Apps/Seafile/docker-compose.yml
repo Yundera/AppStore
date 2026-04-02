@@ -115,8 +115,11 @@ services:
       caddy_0.2_handle_path: "/sdoc-server/*"
       caddy_0.2_handle_path.0_rewrite: "* {uri}"
       caddy_0.2_handle_path.1_reverse_proxy: "seadoc:80"
+      # Rewrite bare / to /accounts/login/ to avoid 302 redirect (CF worker drops body on redirects)
+      caddy_0.@root.path: "/"
+      caddy_0.3_rewrite: "@root /accounts/login/"
       # Default: main seafile app
-      caddy_0.3_reverse_proxy: "{{upstreams 80}}"
+      caddy_0.4_reverse_proxy: "{{upstreams 80}}"
 
       # --- caddy_1: nip.io fallback ---
       caddy_1: seafile-${APP_PUBLIC_IP_DASH}.nip.io
@@ -129,7 +132,9 @@ services:
       caddy_1.2_handle_path: "/sdoc-server/*"
       caddy_1.2_handle_path.0_rewrite: "* {uri}"
       caddy_1.2_handle_path.1_reverse_proxy: "seadoc:80"
-      caddy_1.3_reverse_proxy: "{{upstreams 80}}"
+      caddy_1.@root.path: "/"
+      caddy_1.3_rewrite: "@root /accounts/login/"
+      caddy_1.4_reverse_proxy: "{{upstreams 80}}"
 
       # --- caddy_2: sslip.io fallback (no gateway_tls) ---
       caddy_2: seafile-${APP_PUBLIC_IP_DASH}.sslip.io
@@ -141,7 +146,9 @@ services:
       caddy_2.2_handle_path: "/sdoc-server/*"
       caddy_2.2_handle_path.0_rewrite: "* {uri}"
       caddy_2.2_handle_path.1_reverse_proxy: "seadoc:80"
-      caddy_2.3_reverse_proxy: "{{upstreams 80}}"
+      caddy_2.@root.path: "/"
+      caddy_2.3_rewrite: "@root /accounts/login/"
+      caddy_2.4_reverse_proxy: "{{upstreams 80}}"
     depends_on:
       db:
         condition: service_healthy
