@@ -1,0 +1,132 @@
+name: stremio
+
+services:
+  stremio:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    container_name: stremio
+    restart: unless-stopped
+    user: "root"
+    expose:
+      - 80
+    labels:
+      caddy_0: stremio-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: stremio-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: stremio-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      BACKEND_HOST: "stremiocommunity"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+    tmpfs:
+      - /var/cache/nginx:size=50M
+    depends_on:
+      - stremiocommunity
+    networks:
+      - pcs
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+
+  stremiocommunity:
+    image: tsaridas/stremio-docker:v1.2.12
+    container_name: stremiocommunity
+    restart: unless-stopped
+    user: "0:0"
+    environment:
+      NO_CORS: "1"
+      AUTO_SERVER_URL: "1"
+      USERNAME: "admin"
+      PASSWORD: "stremio"
+    volumes:
+      - type: bind
+        source: /DATA/AppData/stremio/server/
+        target: /root/.stremio-server/
+    networks:
+      - pcs
+    x-casaos:
+      envs:
+        - container: USERNAME
+          description:
+            en_us: "Username for HTTP basic auth"
+        - container: PASSWORD
+          description:
+            en_us: "Password for HTTP basic auth"
+      volumes:
+        - container: /root/.stremio-server
+          description:
+            en_us: "Stremio server data and configuration"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm/v7
+  main: stremio
+  author: Yundera
+  developer: Yundera
+  icon: https://www.stremio.com/website/stremio-logo-small.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-2.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/thumbnail.png
+  tagline:
+    en_us: "Stream movies & series (Community Edition)"
+  category: Entertainment
+  description:
+    en_us: |
+      Stremio Community Edition with HTTP basic authentication.
+
+      Features:
+      - Clean subdomain (no port prefix)
+      - All-in-one streaming server with FFmpeg transcoding
+      - HTTP basic auth (USERNAME/PASSWORD)
+
+      Default credentials: admin / stremio
+      Change via environment variables on "stremiocommunity" service.
+
+      This setup uses the tsaridas/stremio-docker community image
+      which bundles Stremio Server, Web UI, and FFmpeg in a single
+      optimized container.
+  title:
+    en_us: "Stremio"
+  store_app_id: stremio
+  is_uncontrolled: false
+  index: /
+  webui_port: 80
+  tips:
+    before_install:
+      en_us: |
+        Access: `https://${REF_DOMAIN}/`
+        Default credentials: `admin` / `stremio`
+
+        Change via USERNAME/PASSWORD environment variables on "stremiocommunity" service.
+
+        You can find Stremio addons in the Stremio Addon Catalog: https://addons.strem.io/
+        Or search for "Stremio addons" online for more options.

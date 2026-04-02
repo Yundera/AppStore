@@ -77,6 +77,3 @@ x-casaos:
   # nginxhashlock handles the hash validation automatically
   index: /?hash=$AUTH_HASH
   webui_port: 80
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/terminal 2>/dev/null || true
-    chmod -R 755 /DATA/AppData/terminal/ 2>/dev/null || true

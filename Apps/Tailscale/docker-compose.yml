@@ -82,12 +82,12 @@ x-casaos:
         
            In the field:
            ```
-           TS_AUTHKEY=
+           TS_AUTHKEY
            ```
         
-           👉 Paste **only the key after the `=`**, like this:
+           👉 Paste in front **only the key after the `=`**, like this:
            ```
-           TS_AUTHKEY=tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+           tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
            ```
         
            ⚠️ Do not include spaces or extra characters

@@ -1,9 +1,8 @@
 name: ssa
 
 services:
-  ssa:
+  ssa-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    container_name: ssa
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -21,20 +20,20 @@ services:
       AUTH_HASH: $AUTH_HASH
       USER: "segment"
       PASSWORD: $APP_DEFAULT_PASSWORD
-      BACKEND_HOST: "ssa-backend"
+      BACKEND_HOST: "ssa"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
-      ALLOWED_PATHS: "manifest.json"
+      ALLOWED_PATHS: "/api/"
     depends_on:
-      - ssa-backend
+      - ssa
     networks:
       - ssa-internal
       - pcs
     cpu_shares: 50
 
-  ssa-backend:
-    image: ghcr.io/worph/segment-stremio-addon:1.2
-    container_name: ssa-backend
+  ssa:
+    image: ghcr.io/worph/segment-stremio-addon:1.3.0
+    container_name: ssa
     deploy:
       resources:
         limits:
@@ -45,6 +44,7 @@ services:
     environment:
       - PORT=80
       - SCHEME=https
+      - HASH_API_SEED=$APP_DEFAULT_PASSWORD
     restart: unless-stopped
     cpu_shares: 70
     user: 0:0
@@ -71,67 +71,71 @@ x-casaos:
   category: Media
   description:
     en_us: |
-      Stremio Addon for SegmentPlayer - Browse and stream your local media library directly in Stremio.
+      Stremio Addon - Browse and stream your local media library directly in Stremio with on-the-fly HLS transcoding.
 
       Features:
       - Browse your media files in Stremio's catalog
-      - Search and filter by folder/genre
+      - Search and filter your library
       - Multiple stream options per video:
         - Direct Play (original codec)
-        - HLS Original (source resolution)
+        - HLS Original (source resolution, transcoded)
         - HLS Auto (adaptive bitrate)
-        - Open in SegmentPlayer web player
+        - Quality-specific streams (720p, 480p, 360p)
+      - Adaptive quality encoding based on CPU performance
       - Series detection (S##E## pattern)
       - Multi-audio track support
-      - Embedded subtitle extraction
+      - Embedded subtitle extraction (WebVTT)
+      - API key protection via URL prefix
+      - Live transcoding metrics dashboard
 
-      Requires SegmentPlayer to be installed for transcoding.
-      Install in Stremio using the manifest URL shown on the addon page.
+      Install in Stremio or at https://web.strem.io/ using the manifest URL shown on the addon page.
     fr_fr: |
-      Addon Stremio pour SegmentPlayer - Parcourez et diffusez votre bibliothèque multimédia locale directement dans Stremio.
+      Addon Stremio - Parcourez et diffusez votre bibliothèque multimédia locale directement dans Stremio avec transcodage HLS à la volée.
 
       Fonctionnalités:
       - Parcourez vos fichiers multimédia dans le catalogue Stremio
-      - Recherche et filtrage par dossier/genre
+      - Recherche et filtrage de votre bibliothèque
       - Plusieurs options de stream par vidéo:
         - Lecture directe (codec original)
-        - HLS Original (résolution source)
+        - HLS Original (résolution source, transcodé)
         - HLS Auto (débit adaptatif)
-        - Ouvrir dans le lecteur web SegmentPlayer
+        - Streams par qualité (720p, 480p, 360p)
+      - Qualité d'encodage adaptative selon les performances CPU
       - Détection de séries (motif S##E##)
       - Support multi-pistes audio
-      - Extraction des sous-titres embarqués
+      - Extraction des sous-titres embarqués (WebVTT)
+      - Protection par clé API via préfixe URL
+      - Tableau de bord des métriques de transcodage en direct
 
-      Nécessite SegmentPlayer installé pour le transcodage.
-      Installez dans Stremio en utilisant l'URL du manifest affichée sur la page de l'addon.
+      Installez dans Stremio ou sur https://web.strem.io/ en utilisant l'URL du manifest affichée sur la page de l'addon.
   developer: Worph
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/screenshot-1.png
   tagline:
-    en_us: Stremio addon to browse and stream your local media via SegmentPlayer
-    fr_fr: Addon Stremio pour parcourir et diffuser vos médias locaux via SegmentPlayer
+    en_us: Stremio addon to browse and stream your local media with built-in HLS transcoding
+    fr_fr: Addon Stremio pour parcourir et diffuser vos médias locaux avec transcodage HLS intégré
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/icon.png
   tips:
     before_install:
       en_us: |
-        This addon requires SegmentPlayer to be installed for video transcoding.
-
         After installation:
         1. Open the addon page at https://ssa-username.nsl.sh
         2. Copy the manifest URL or click "Install in Stremio"
-        3. Your media library will appear in Stremio's catalog
+        3. You can also install from Stremio Web at https://web.strem.io/
+        4. Your media library will appear as "SSA" in Stremio's catalog
 
-        The addon scans the same media folders as SegmentPlayer (/DATA/Downloads and /DATA/Media).
+        The addon scans /DATA/Downloads and /DATA/Media for video files.
+        API key protection is enabled by default using your app password.
       fr_fr: |
-        Cet addon nécessite SegmentPlayer installé pour le transcodage vidéo.
-
         Après l'installation:
         1. Ouvrez la page de l'addon à https://ssa-username.nsl.sh
         2. Copiez l'URL du manifest ou cliquez sur "Installer dans Stremio"
-        3. Votre bibliothèque multimédia apparaîtra dans le catalogue Stremio
+        3. Vous pouvez aussi installer depuis Stremio Web à https://web.strem.io/
+        4. Votre bibliothèque multimédia apparaîtra comme "SSA" dans le catalogue Stremio
 
-        L'addon scanne les mêmes dossiers que SegmentPlayer (/DATA/Downloads et /DATA/Media).
+        L'addon scanne /DATA/Downloads et /DATA/Media pour les fichiers vidéo.
+        La protection par clé API est activée par défaut avec votre mot de passe d'application.
   title:
     en_us: Segment Stremio Addon
     fr_fr: Addon Stremio Segment
