@@ -2,7 +2,7 @@ name: claude
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.21
+    image: ghcr.io/worph/claude-code-container:1.0.23
     container_name: claude
     restart: unless-stopped
     user: 0:0
@@ -60,7 +60,6 @@ services:
       caddy_2.3_handle.forward_auth.handle_response.redir: "* /login"
       caddy_2.3_handle.reverse_proxy: "{{upstreams 8080}}"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
     volumes:
       # Docker socket for container management
