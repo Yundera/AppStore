@@ -1,0 +1,210 @@
+name: beacon
+
+services:
+  beacon:
+    image: ghcr.io/worph/beacon:1.0.8
+    container_name: beacon
+    hostname: beacon
+    restart: unless-stopped
+    environment:
+      DISCOVERY_INTERVAL: "60"
+      DISCOVERY_PORT: "9099"
+      MCP_CLIENT_TIMEOUT : 300
+      WEB_PORT: "9300"
+      LOG_LEVEL: info
+      TZ: $TZ
+    expose:
+      - 9300
+      - 9099
+    networks:
+      - pcs
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  beacon-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    container_name: beacon-proxy
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      caddy_0: beacon-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: beacon-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: beacon-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    user: 0:0
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "beacon"
+      BACKEND_PORT: "9300"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      - beacon
+    networks:
+      - pcs
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: beacon
+  index: /
+
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/screenshot-1.png
+
+  architectures:
+    - amd64
+  author: Yundera
+  category: Developer
+  developer: Worph
+  title:
+    en_us: Beacon
+  tagline:
+    en_us: Discover and unify MCP servers behind a single endpoint
+    fr_fr: Decouvrez et unifiez vos serveurs MCP derriere un seul endpoint
+  description:
+    en_us: |
+      **A local service that discovers and aggregates multiple MCP servers into one endpoint**
+
+      Beacon discovers MCP server containers on your Docker network via UDP broadcast, collects their tool manifests, and exposes them as namespaced tools through a single MCP streamable HTTP endpoint.
+
+      **What you can do:**
+      - Automatically discover MCP servers on the same Docker network
+      - Access all MCP tools through a single unified endpoint
+      - View discovered servers and their tools via the web dashboard
+      - Trigger manual discovery scans
+      - Tools are namespaced as `{server}__{tool}` to avoid conflicts
+
+      **Think of it like:** A reverse proxy for MCP servers — one endpoint to rule them all.
+
+      **Perfect if you:** Run multiple MCP-enabled apps and want your AI assistant to access all their tools from a single connection.
+    fr_fr: |
+      **Un service local qui decouvre et agrege plusieurs serveurs MCP en un seul endpoint**
+
+      Beacon decouvre les conteneurs serveurs MCP sur votre reseau Docker via broadcast UDP, collecte leurs manifestes d'outils et les expose comme outils namespaces a travers un seul endpoint HTTP MCP streamable.
+
+      **Ce que vous pouvez faire:**
+      - Decouvrir automatiquement les serveurs MCP sur le meme reseau Docker
+      - Acceder a tous les outils MCP via un seul endpoint unifie
+      - Visualiser les serveurs decouverts et leurs outils via le tableau de bord web
+      - Declencher des scans de decouverte manuels
+      - Les outils sont namespaces en `{serveur}__{outil}` pour eviter les conflits
+
+      **Parfait si vous:** Executez plusieurs applications MCP et souhaitez que votre assistant IA accede a tous leurs outils depuis une seule connexion.
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        Beacon automatically discovers MCP servers on the `pcs` Docker network.
+
+        **Authentication:**
+        - **Username:** `ADMIN`
+        - **Password:** `$APP_DEFAULT_PASSWORD`
+
+        **How it works:**
+        1. The aggregator broadcasts UDP discovery packets on port 9099
+        2. MCP servers using the `mcp-announce` SDK respond with their manifests
+        3. Tools are collected and exposed through a single endpoint
+        4. The web dashboard shows all discovered servers and tools
+
+        **MCP Integration (for AI/LLMs):**
+
+        Connect your AI assistant to the aggregated endpoint to access all discovered MCP tools at once.
+
+        **Option 1: Public URL (with hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "beacon": {
+              "type": "http",
+              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "beacon": {
+              "type": "http",
+              "url": "http://beacon:9099/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Web Dashboard:**
+        - View all discovered MCP servers at the main URL
+        - See available tools per server
+        - Trigger manual discovery via the UI
+
+        **Compatible MCP servers:**
+        Any MCP server using the `mcp-announce` SDK on the `pcs` network will be automatically discovered. Apps like Lystik, OpenKeep, BrowserMCP, and others are compatible.
+      fr_fr: |
+        **Pour commencer**
+
+        Beacon decouvre automatiquement les serveurs MCP sur le reseau Docker `pcs`.
+
+        **Authentification:**
+        - **Utilisateur:** `ADMIN`
+        - **Mot de passe:** `$APP_DEFAULT_PASSWORD`
+
+        **Comment ca marche:**
+        1. L'aggregateur envoie des paquets de decouverte UDP sur le port 9099
+        2. Les serveurs MCP utilisant le SDK `mcp-announce` repondent avec leurs manifestes
+        3. Les outils sont collectes et exposes via un seul endpoint
+        4. Le tableau de bord web affiche tous les serveurs et outils decouverts
+
+        **Integration MCP (pour IA/LLMs):**
+
+        Connectez votre assistant IA a l'endpoint agrege pour acceder a tous les outils MCP decouverts.
+
+        **Option 1: URL publique (avec hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "beacon": {
+              "type": "http",
+              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Connexion Docker locale (sans auth)**
+        ```json
+        {
+          "mcpServers": {
+            "beacon": {
+              "type": "http",
+              "url": "http://beacon:9099/mcp"
+            }
+          }
+        }
+        ```
+        *Note: L'assistant IA doit etre sur le reseau Docker `pcs`.*

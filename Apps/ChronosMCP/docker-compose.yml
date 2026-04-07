@@ -1,0 +1,232 @@
+name: chronosmcp
+services:
+  # Main server — reachable at chronosmcp:9054 on the pcs network
+  chronosmcp:
+    image: ghcr.io/worph/chronos-mcp:1.0.7
+    container_name: chronosmcp
+    hostname: chronosmcp
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9054
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - CONFIG_PATH=/app/data/config.json
+    volumes:
+      - type: bind
+        source: /DATA/AppData/chronosmcp/
+        target: /app/data
+    networks:
+      - pcs
+
+  # Nginx-hash-lock provides perimeter authentication for the web UI
+  chronosmcp-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: chronosmcp
+      BACKEND_PORT: "9054"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      - chronosmcp
+    networks:
+      - pcs
+    labels:
+      caddy_0: chronosmcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: chronosmcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: chronosmcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: chronosmcp
+  index: /?hash=$AUTH_HASH
+  author: Yundera
+  category: Utilities
+  description:
+    en_us: |
+      **Schedule MCP tool calls with cron expressions**
+
+      Chronos MCP is a cron-based scheduler that triggers MCP (Model Context Protocol) tool calls at configured times. It connects to any MCP-compatible server via stdio or HTTP transports and invokes tools on a schedule.
+
+      **What you can do:**
+      - Define cron rules to call any tool on any MCP server on a schedule
+      - Use dynamic parameter templates with date/time variables (e.g. `{{date}}`, `{{now}}`)
+      - Monitor execution history and results from the web dashboard
+      - Manage rules via the Web UI or directly from an AI assistant via its built-in MCP server
+
+      **Think of it like:** A cron scheduler, but instead of running shell commands, it calls MCP tools.
+
+      **Perfect if you:** Want to automate recurring tasks across your MCP-enabled services — daily reports, periodic health checks, scheduled notifications, and more.
+    zh_cn: |
+      **使用 cron 表达式调度 MCP 工具调用**
+
+      Chronos MCP 是一个基于 cron 的调度器，可在配置的时间触发 MCP（模型上下文协议）工具调用。它通过 stdio 或 HTTP 传输连接到任何兼容 MCP 的服务器，并按计划调用工具。
+
+      **功能：**
+      - 定义 cron 规则，按计划调用任何 MCP 服务器上的任何工具
+      - 使用日期/时间变量的动态参数模板（例如 `{{date}}`、`{{now}}`）
+      - 从 Web 仪表板监控执行历史和结果
+      - 通过 Web UI 或内置 MCP 服务器直接从 AI 助手管理规则
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/screenshot-3.png
+  tagline:
+    en_us: Cron-based scheduler for MCP tool calls
+    zh_cn: 基于 cron 的 MCP 工具调用调度器
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/thumbnail.png
+  title:
+    en_us: Chronos MCP
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        Chronos MCP is ready to use immediately after installation.
+
+        **How to use:**
+        1. Open the Web UI and create a new cron rule
+        2. Set a cron schedule (e.g. `0 9 * * 1-5` for weekdays at 9am)
+        3. Configure the target MCP server (stdio command or HTTP URL)
+        4. Choose the tool to call and set parameters
+        5. Enable the rule — Chronos will call the tool on schedule
+
+        **Parameter Templates:**
+        Use dynamic values in your parameters that resolve at trigger time:
+        - `{{date}}` → `2025-01-15`
+        - `{{now}}` → ISO 8601 timestamp
+        - `{{time}}` → `09:00:00`
+        - `{{timestamp}}` → Unix timestamp
+
+        **MCP Integration (for AI/LLMs):**
+
+        Chronos itself exposes an MCP server, allowing AI assistants to create, update, and manage cron rules.
+
+        **Option 1: Public URL (with hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "chronos-mcp": {
+              "type": "http",
+              "url": "https://chronosmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "chronos-mcp": {
+              "type": "http",
+              "url": "http://chronosmcp:9054/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `list_rules` | List all cron rules |
+        | `create_rule` | Create a new scheduled rule |
+        | `update_rule` | Update an existing rule |
+        | `delete_rule` | Delete a rule |
+        | `toggle_rule` | Enable or disable a rule |
+        | `trigger_rule` | Manually trigger a rule now |
+        | `get_logs` | View execution logs |
+        | `clear_logs` | Clear logs for a rule |
+        | `get_status` | Get scheduler status |
+      zh_cn: |
+        **快速开始**
+
+        Chronos MCP 安装后即可立即使用。
+
+        **使用方法：**
+        1. 打开 Web UI 并创建新的 cron 规则
+        2. 设置 cron 计划（例如 `0 9 * * 1-5` 表示工作日上午9点）
+        3. 配置目标 MCP 服务器（stdio 命令或 HTTP URL）
+        4. 选择要调用的工具并设置参数
+        5. 启用规则 — Chronos 将按计划调用工具
+
+        **参数模板：**
+        在参数中使用在触发时解析的动态值：
+        - `{{date}}` → `2025-01-15`
+        - `{{now}}` → ISO 8601 时间戳
+        - `{{time}}` → `09:00:00`
+        - `{{timestamp}}` → Unix 时间戳
+
+        **MCP 集成（用于 AI/LLM）：**
+
+        Chronos 本身暴露一个 MCP 服务器，允许 AI 助手创建、更新和管理 cron 规则。
+
+        **选项 1：公共 URL（使用 hash 认证）**
+        ```json
+        {
+          "mcpServers": {
+            "chronos-mcp": {
+              "type": "http",
+              "url": "https://chronosmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **选项 2：本地 Docker 连接（无需认证）**
+
+        对于在同一服务器上运行的 AI 助手，通过 Docker 网络直接连接：
+        ```json
+        {
+          "mcpServers": {
+            "chronos-mcp": {
+              "type": "http",
+              "url": "http://chronosmcp:9054/mcp"
+            }
+          }
+        }
+        ```
+        *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+
+        **可用 MCP 工具：**
+        | 工具 | 描述 |
+        |------|------|
+        | `list_rules` | 列出所有 cron 规则 |
+        | `create_rule` | 创建新的定时规则 |
+        | `update_rule` | 更新现有规则 |
+        | `delete_rule` | 删除规则 |
+        | `toggle_rule` | 启用或禁用规则 |
+        | `trigger_rule` | 立即手动触发规则 |
+        | `get_logs` | 查看执行日志 |
+        | `clear_logs` | 清除规则的日志 |
+        | `get_status` | 获取调度器状态 |
