@@ -1,0 +1,177 @@
+name: ntfy
+services:
+  # ntfy server + nginx auth proxy + MCP sidecar
+  # nginx on :80 (web UI with login page + API passthrough)
+  # ntfy on :8080 internal (native auth)
+  # MCP sidecar on :9099 (Beacon discovery)
+  ntfy:
+    image: ghcr.io/worph/ntfy:1.1.0
+    container_name: ntfy
+    hostname: ntfy
+    user: "0:0"
+    restart: unless-stopped
+    expose:
+      - 80
+      - 9099
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - NTFY_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
+      - NTFY_DEFAULT_TOPIC=general
+      - PUBLIC_URL=https://ntfy-${APP_DOMAIN}
+    volumes:
+      - type: bind
+        source: /DATA/AppData/ntfy/cache/
+        target: /var/cache/ntfy
+    networks:
+      - pcs
+    labels:
+      caddy_0: ntfy-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: ntfy-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: ntfy-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: ntfy
+  index: /
+  author: Yundera
+  category: Utilities
+  description:
+    en_us: |
+      **Push notifications for AI assistants via ntfy + MCP**
+
+      ntfy bundles the self-hosted [ntfy](https://ntfy.sh) push notification server with an integrated MCP (Model Context Protocol) sidecar. This lets AI assistants send push notifications to your phone, desktop, or browser — just by calling an MCP tool.
+
+      **What you can do:**
+      - Send push notifications from any MCP-connected AI assistant (Claude, etc.)
+      - Receive notifications on the ntfy phone app (Android/iOS), browser, or desktop
+      - Attach images, set priorities, add action buttons and click URLs
+      - Read cached messages from topics
+
+      **Think of it like:** A notification channel between your AI assistant and your devices.
+
+      **Perfect if you:** Want Claude or other AI tools to proactively notify you about events, task completions, alerts, or anything else.
+    zh_cn: |
+      **通过 ntfy + MCP 为 AI 助手提供推送通知**
+
+      ntfy 将自托管的 [ntfy](https://ntfy.sh) 推送通知服务器与集成的 MCP（模型上下文协议）边车捆绑在一起。这让 AI 助手只需调用 MCP 工具就能向您的手机、桌面或浏览器发送推送通知。
+
+      **功能：**
+      - 从任何连接 MCP 的 AI 助手发送推送通知
+      - 在 ntfy 手机应用（Android/iOS）、浏览器或桌面接收通知
+      - 附加图片、设置优先级、添加操作按钮和点击 URL
+      - 从主题读取缓存消息
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/screenshot-2.png
+  tagline:
+    en_us: Push notifications for AI assistants via ntfy
+    zh_cn: 通过 ntfy 为 AI 助手提供推送通知
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/thumbnail.png
+  title:
+    en_us: Ntfy
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        ntfy is ready to use immediately after installation.
+
+        **Web & Mobile App Login:**
+        Use these credentials for both the web UI and the ntfy mobile app:
+        - **Username:** `admin`
+        - **Password:** `${APP_DEFAULT_PASSWORD}`
+        - **Server URL:** `https://ntfy-${APP_DOMAIN}`
+
+        **How to receive notifications:**
+        1. Open the ntfy web UI from the app dashboard and sign in
+        2. Subscribe to a topic (e.g. `general`, `alerts`)
+        3. Or install the [ntfy phone app](https://ntfy.sh), add this server with the credentials above, and subscribe to the same topic
+
+        **MCP Integration (for AI/LLMs):**
+
+        The MCP sidecar exposes tools that AI assistants can use to send notifications.
+
+        **Local Docker connection (no auth required):**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "ntfy-mcp": {
+              "type": "http",
+              "url": "http://ntfy:9099/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `send_message` | Send a push notification (with title, priority, tags, click URL, actions) |
+        | `send_photo` | Send a notification with an image attachment |
+        | `list_messages` | Read cached messages from a topic |
+        | `server_info` | Get server health and version info |
+      zh_cn: |
+        **快速开始**
+
+        ntfy 安装后即可立即使用。
+
+        **网页和手机应用登录：**
+        网页界面和 ntfy 手机应用使用相同的凭据：
+        - **用户名：** `admin`
+        - **密码：** `${APP_DEFAULT_PASSWORD}`
+        - **服务器 URL：** `https://ntfy-${APP_DOMAIN}`
+
+        **如何接收通知：**
+        1. 从应用仪表板打开 ntfy 网页界面并登录
+        2. 订阅一个主题（例如 `general`、`alerts`）
+        3. 或安装 [ntfy 手机应用](https://ntfy.sh)，使用上述凭据添加此服务器，并订阅相同的主题
+
+        **MCP 集成（用于 AI/LLM）：**
+
+        MCP 边车暴露工具，AI 助手可以使用这些工具发送通知。
+
+        **本地 Docker 连接（无需认证）：**
+
+        对于在同一服务器上运行的 AI 助手，通过 Docker 网络直接连接：
+        ```json
+        {
+          "mcpServers": {
+            "ntfy-mcp": {
+              "type": "http",
+              "url": "http://ntfy:9099/mcp"
+            }
+          }
+        }
+        ```
+        *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+
+        **可用 MCP 工具：**
+        | 工具 | 描述 |
+        |------|------|
+        | `send_message` | 发送推送通知（支持标题、优先级、标签、点击 URL、操作按钮）|
+        | `send_photo` | 发送带图片附件的通知 |
+        | `list_messages` | 从主题读取缓存消息 |
+        | `server_info` | 获取服务器健康状态和版本信息 |
