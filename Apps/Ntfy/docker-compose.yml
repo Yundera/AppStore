@@ -5,7 +5,7 @@ services:
   # ntfy on :8080 internal (native auth)
   # MCP sidecar on :9099 (Beacon discovery)
   ntfy:
-    image: ghcr.io/worph/ntfy:1.1.0
+    image: ghcr.io/worph/ntfy:1.1.1
     container_name: ntfy
     hostname: ntfy
     user: "0:0"
@@ -20,6 +20,12 @@ services:
       - NTFY_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
       - NTFY_DEFAULT_TOPIC=general
       - PUBLIC_URL=https://ntfy-${APP_DOMAIN}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     volumes:
       - type: bind
         source: /DATA/AppData/ntfy/cache/
