@@ -59,6 +59,8 @@ services:
       resources:
         limits:
           memory: 512M
+    networks:
+      - pcs
 
 networks:
   pcs:
@@ -67,6 +69,7 @@ networks:
 
 x-casaos:
   main: suwayomi
+  webui_port: 80
   index: /
   store_app_id: suwayomi
   pre-install-cmd: |
