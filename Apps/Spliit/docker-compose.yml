@@ -37,9 +37,10 @@ services:
       - NET_ADMIN
 
   db:
-    image: postgres:16-alpine
+    image: postgres:16.13-alpine
     container_name: spliit-db
     user: 0:0
+    cpu_shares: 50
     environment:
       POSTGRES_DB: spliit
       POSTGRES_USER: postgres
@@ -56,9 +57,11 @@ services:
           memory: 512M
 
   spliit:
-    image: ghcr.io/spliit-app/spliit:1.19.0
+    image: ghcr.io/spliit-app/spliit:1.19.1
     container_name: spliit
     restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 50
     environment:
       TZ: $TZ
       POSTGRES_PRISMA_URL: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
