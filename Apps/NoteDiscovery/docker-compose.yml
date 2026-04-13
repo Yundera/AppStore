@@ -1,0 +1,222 @@
+name: notediscovery
+
+services:
+  notediscovery:
+    image: ghcr.io/gamosoft/notediscovery:0.19.2
+    container_name: notediscovery
+    restart: unless-stopped
+    user: "0:0"
+    networks:
+      - pcs
+    expose:
+      - "80"
+    labels:
+      caddy_0: notediscovery-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: notediscovery-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: notediscovery-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    volumes:
+      - /DATA/AppData/$AppID/data/:/app/data
+    environment:
+      TZ: $TZ
+      PORT: 80
+      AUTHENTICATION_ENABLED: true
+      AUTHENTICATION_PASSWORD: $PCS_DEFAULT_PASSWORD
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:80/health')"]
+      interval: 60s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 50
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: notediscovery
+  webui_port: 80
+  author: Yundera Team
+  category: Documents
+  developer: gamosoft
+  store_app_id: notediscovery
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-1.png
+  description:
+    en_us: |
+      **Your private, self-hosted knowledge base**
+
+      NoteDiscovery is a lightweight, privacy-first note-taking app. Your notes are stored as plain markdown files — no vendor lock-in, no data sent to external services.
+
+      **Key Features:**
+      - Plain markdown files with no vendor lock-in
+      - Graph view for visualizing connected notes
+      - Instant full-text search across all notes
+      - LaTeX/MathJax mathematical equation support
+      - Mermaid diagram creation
+      - HTML export functionality
+      - Built-in password protection
+      - Dark and light mode
+
+      **Perfect for:** Anyone who wants a private, fast, and simple knowledge base with full data ownership.
+    ko_kr: |
+      **프라이빗 셀프 호스팅 지식 베이스**
+
+      NoteDiscovery는 가볍고 프라이버시 우선의 노트 앱입니다. 노트는 일반 마크다운 파일로 저장되어 벤더 종속 없이, 외부 서비스로 데이터가 전송되지 않습니다.
+
+      **주요 기능:**
+      - 벤더 종속 없는 일반 마크다운 파일 저장
+      - 연결된 노트를 시각화하는 그래프 뷰
+      - 모든 노트에 걸친 즉각 전문 검색
+      - LaTeX/MathJax 수학 수식 지원
+      - Mermaid 다이어그램 생성
+      - HTML 내보내기 기능
+      - 내장 비밀번호 보호
+      - 다크 및 라이트 모드
+
+      **이런 분께 완벽해요:** 완전한 데이터 소유권을 가진 프라이빗하고 빠르며 심플한 지식 베이스를 원하는 모든 분.
+    zh_cn: |
+      **您的私有自托管知识库**
+
+      NoteDiscovery 是一个轻量级、隐私优先的笔记应用。您的笔记以纯 Markdown 文件存储——无供应商锁定，无数据发送到外部服务。
+
+      **主要功能：**
+      - 纯 Markdown 文件存储，无供应商锁定
+      - 图形视图可视化连接的笔记
+      - 跨所有笔记的即时全文搜索
+      - LaTeX/MathJax 数学公式支持
+      - Mermaid 图表创建
+      - HTML 导出功能
+      - 内置密码保护
+      - 深色和浅色模式
+
+      **非常适合：** 任何想要拥有完全数据所有权的私有、快速、简单知识库的人。
+    fr_fr: |
+      **Votre base de connaissances privée et auto-hébergée**
+
+      NoteDiscovery est une application de prise de notes légère et axée sur la confidentialité. Vos notes sont stockées sous forme de fichiers Markdown — sans verrouillage fournisseur, sans envoi de données à des services externes.
+
+      **Fonctionnalités principales :**
+      - Fichiers Markdown sans verrouillage fournisseur
+      - Vue graphique pour visualiser les notes connectées
+      - Recherche plein texte instantanée dans toutes les notes
+      - Support des équations mathématiques LaTeX/MathJax
+      - Création de diagrammes Mermaid
+      - Fonctionnalité d'export HTML
+      - Protection par mot de passe intégrée
+      - Mode sombre et clair
+
+      **Parfait pour :** Toute personne souhaitant une base de connaissances privée, rapide et simple avec une propriété complète des données.
+    es_es: |
+      **Tu base de conocimiento privada y auto-alojada**
+
+      NoteDiscovery es una aplicación de notas ligera y centrada en la privacidad. Tus notas se almacenan como archivos Markdown — sin bloqueo de proveedor, sin envío de datos a servicios externos.
+
+      **Características principales:**
+      - Archivos Markdown sin bloqueo de proveedor
+      - Vista de grafo para visualizar notas conectadas
+      - Búsqueda de texto completo instantánea en todas las notas
+      - Soporte de ecuaciones matemáticas LaTeX/MathJax
+      - Creación de diagramas Mermaid
+      - Funcionalidad de exportación HTML
+      - Protección por contraseña integrada
+      - Modo oscuro y claro
+
+      **Perfecto para:** Cualquiera que quiera una base de conocimiento privada, rápida y simple con propiedad completa de los datos.
+  tagline:
+    en_us: Private self-hosted knowledge base with markdown notes
+    ko_kr: 마크다운 노트 기반 프라이빗 셀프 호스팅 지식 베이스
+    zh_cn: 基于 Markdown 笔记的私有自托管知识库
+    fr_fr: Base de connaissances privée auto-hébergée avec notes Markdown
+    es_es: Base de conocimiento privada auto-alojada con notas Markdown
+  title:
+    en_us: NoteDiscovery
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started:**
+
+        1. After installation, visit your NoteDiscovery instance
+        2. Log in with password: `$PCS_DEFAULT_PASSWORD`
+        3. Start creating your first note
+
+        **Features:**
+        - Notes are stored as plain markdown files
+        - Graph view to visualize note connections
+        - Full-text search across all notes
+        - LaTeX, Mermaid diagrams supported
+
+        **Note:** Password protection is enabled by default.
+      ko_kr: |
+        **시작하기:**
+
+        1. 설치 후 NoteDiscovery 인스턴스를 방문하세요
+        2. 비밀번호로 로그인: `$PCS_DEFAULT_PASSWORD`
+        3. 첫 번째 노트 작성을 시작하세요
+
+        **기능:**
+        - 노트는 일반 마크다운 파일로 저장
+        - 노트 연결을 시각화하는 그래프 뷰
+        - 모든 노트에 걸친 전문 검색
+        - LaTeX, Mermaid 다이어그램 지원
+
+        **참고:** 비밀번호 보호가 기본으로 활성화되어 있습니다.
+      zh_cn: |
+        **开始使用：**
+
+        1. 安装后，访问您的 NoteDiscovery 实例
+        2. 使用密码登录：`$PCS_DEFAULT_PASSWORD`
+        3. 开始创建您的第一个笔记
+
+        **功能：**
+        - 笔记以纯 Markdown 文件存储
+        - 图形视图可视化笔记连接
+        - 跨所有笔记的全文搜索
+        - 支持 LaTeX、Mermaid 图表
+
+        **注意：** 密码保护默认已启用。
+      fr_fr: |
+        **Commencer :**
+
+        1. Après l'installation, visitez votre instance NoteDiscovery
+        2. Connectez-vous avec le mot de passe : `$PCS_DEFAULT_PASSWORD`
+        3. Commencez à créer votre première note
+
+        **Fonctionnalités :**
+        - Notes stockées sous forme de fichiers Markdown
+        - Vue graphique pour visualiser les connexions
+        - Recherche plein texte dans toutes les notes
+        - Support LaTeX, diagrammes Mermaid
+
+        **Note :** La protection par mot de passe est activée par défaut.
+      es_es: |
+        **Comenzar:**
+
+        1. Después de la instalación, visite su instancia de NoteDiscovery
+        2. Inicie sesión con la contraseña: `$PCS_DEFAULT_PASSWORD`
+        3. Comience a crear su primera nota
+
+        **Características:**
+        - Notas almacenadas como archivos Markdown
+        - Vista de grafo para visualizar conexiones
+        - Búsqueda de texto completo en todas las notas
+        - Soporte para LaTeX, diagramas Mermaid
+
+        **Nota:** La protección por contraseña está activada por defecto.
+  index: /
