@@ -36,7 +36,7 @@ services:
       - SYS_ADMIN
       - NET_ADMIN
   netdata:
-    image: netdata/netdata:v2.8.5
+    image: netdata/netdata:v2.9.0
     hostname: netdata
     user: 0:0
     environment:
@@ -59,6 +59,7 @@ services:
       - /var/log:/host/var/log/:ro
       - /var/run/docker.sock:/var/run/docker.sock/:ro
     restart: unless-stopped
+    cpu_shares: 90
     deploy:
       resources:
         limits:
