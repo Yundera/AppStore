@@ -13,7 +13,7 @@ services:
       outline-redis:
         condition: service_started
       outline-dex:
-        condition: service_started
+        condition: service_healthy
     expose:
       - "80"
     labels:
@@ -31,7 +31,7 @@ services:
       URL: https://outline-${APP_DOMAIN}
       SECRET_KEY: ${OUTLINE_SECRET_KEY}
       UTILS_SECRET: ${OUTLINE_UTILS_SECRET}
-      DATABASE_URL: postgres://outline:${PCS_DEFAULT_PASSWORD}@outline-postgres:5432/outline
+      DATABASE_URL: postgres://outline:${APP_DEFAULT_PASSWORD}@outline-postgres:5432/outline
       REDIS_URL: redis://outline-redis:6379
       PGSSLMODE: disable
       FILE_STORAGE: local
@@ -48,7 +48,7 @@ services:
       OIDC_DISPLAY_NAME: Login
       OIDC_SCOPES: "openid profile email"
     volumes:
-      - /DATA/AppData/$AppID/data:/var/lib/outline/data
+      - /DATA/AppData/outline/data/:/var/lib/outline/data/
     deploy:
       resources:
         limits:
@@ -82,7 +82,7 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 5556}}"
     command: ["dex", "serve", "/data/config.yaml"]
     volumes:
-      - /DATA/AppData/$AppID/dex:/data
+      - /DATA/AppData/outline/dex/:/data/
     deploy:
       resources:
         limits:
@@ -106,10 +106,10 @@ services:
     environment:
       POSTGRES_DB: outline
       POSTGRES_USER: outline
-      POSTGRES_PASSWORD: $PCS_DEFAULT_PASSWORD
+      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
     volumes:
-      - /DATA/AppData/$AppID/pgdata:/var/lib/postgresql/data
+      - /DATA/AppData/outline/pgdata/:/var/lib/postgresql/data/
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U outline -d outline"]
       interval: 30s
@@ -130,7 +130,7 @@ services:
     user: "0:0"
     cpu_shares: 30
     volumes:
-      - /DATA/AppData/$AppID/redis:/data
+      - /DATA/AppData/outline/redis/:/data/
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -169,6 +169,10 @@ x-casaos:
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Outline/screenshot-1.png
   title:
     en_us: Outline
+    ko_kr: Outline
+    zh_cn: Outline
+    fr_fr: Outline
+    es_es: Outline
   tagline:
     en_us: Fast, collaborative knowledge base for your team
     ko_kr: 팀을 위한 빠르고 협업 가능한 지식 베이스
@@ -276,8 +280,8 @@ x-casaos:
 
         | Field | Value |
         |-------|-------|
-        | Email | `$PCS_EMAIL` |
-        | Password | `$PCS_DEFAULT_PASSWORD` |
+        | Email | `$APP_EMAIL` |
+        | Password | `$APP_DEFAULT_PASSWORD` |
 
         **Getting Started:**
 
@@ -314,8 +318,8 @@ x-casaos:
 
         | 항목 | 값 |
         |------|-----|
-        | 이메일 | `$PCS_EMAIL` |
-        | 비밀번호 | `$PCS_DEFAULT_PASSWORD` |
+        | 이메일 | `$APP_EMAIL` |
+        | 비밀번호 | `$APP_DEFAULT_PASSWORD` |
 
         **시작하기:**
 
@@ -352,8 +356,8 @@ x-casaos:
 
         | 字段 | 值 |
         |------|-----|
-        | 邮箱 | `$PCS_EMAIL` |
-        | 密码 | `$PCS_DEFAULT_PASSWORD` |
+        | 邮箱 | `$APP_EMAIL` |
+        | 密码 | `$APP_DEFAULT_PASSWORD` |
 
         **开始使用：**
 
@@ -375,8 +379,8 @@ x-casaos:
 
         | Champ | Valeur |
         |-------|--------|
-        | Email | `$PCS_EMAIL` |
-        | Mot de passe | `$PCS_DEFAULT_PASSWORD` |
+        | Email | `$APP_EMAIL` |
+        | Mot de passe | `$APP_DEFAULT_PASSWORD` |
 
         **Pour commencer :**
 
@@ -396,8 +400,8 @@ x-casaos:
 
         | Campo | Valor |
         |-------|-------|
-        | Email | `$PCS_EMAIL` |
-        | Contrasena | `$PCS_DEFAULT_PASSWORD` |
+        | Email | `$APP_EMAIL` |
+        | Contrasena | `$APP_DEFAULT_PASSWORD` |
 
         **Para comenzar:**
 
@@ -413,9 +417,8 @@ x-casaos:
 
         **Documentacion:** [https://docs.getoutline.com](https://docs.getoutline.com)
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/data /DATA/AppData/$AppID/pgdata /DATA/AppData/$AppID/redis /DATA/AppData/$AppID/dex &&
-    chown -R $PUID:$PGID /DATA/AppData/$AppID || true &&
-    ENV_FILE="/DATA/AppData/casaos/apps/$AppID/.env" &&
+    mkdir -p /DATA/AppData/outline/dex &&
+    ENV_FILE="/DATA/AppData/casaos/apps/outline/.env" &&
     if [ ! -s "$ENV_FILE" ]; then
       OUTLINE_SECRET_KEY=$(openssl rand -hex 32) &&
       OUTLINE_UTILS_SECRET=$(openssl rand -hex 32) &&
@@ -424,13 +427,13 @@ x-casaos:
         "$OUTLINE_SECRET_KEY" "$OUTLINE_UTILS_SECRET" "$OUTLINE_OIDC_SECRET" > "$ENV_FILE"
     fi &&
     . "$ENV_FILE" &&
-    DEX_CONFIG="/DATA/AppData/$AppID/dex/config.yaml" &&
+    DEX_CONFIG="/DATA/AppData/outline/dex/config.yaml" &&
     if [ ! -f "$DEX_CONFIG" ]; then
-      BCRYPT_HASH=$(docker run --rm ghcr.io/dexidp/dex:v2.45.1 dex hash "$PCS_DEFAULT_PASSWORD" 2>/dev/null || true) &&
+      BCRYPT_HASH=$(docker run --rm ghcr.io/dexidp/dex:v2.45.1 dex hash "$APP_DEFAULT_PASSWORD" 2>/dev/null || true) &&
       if [ -z "$BCRYPT_HASH" ]; then
-        BCRYPT_HASH=$(docker run --rm python:3.12-alpine sh -c "pip install -q bcrypt && python3 -c \"import bcrypt; print(bcrypt.hashpw(b'$PCS_DEFAULT_PASSWORD', bcrypt.gensalt(10)).decode())\"" 2>/dev/null)
+        BCRYPT_HASH=$(docker run --rm python:3.12-alpine sh -c "pip install -q bcrypt && python3 -c \"import bcrypt; print(bcrypt.hashpw(b'$APP_DEFAULT_PASSWORD', bcrypt.gensalt(10)).decode())\"" 2>/dev/null)
       fi &&
-      PCS_EMAIL="${PCS_EMAIL:-admin@$PCS_DOMAIN}" &&
+      PCS_EMAIL="${APP_EMAIL:-admin@$APP_DOMAIN}" &&
       cat > "$DEX_CONFIG" << 'DEXEOF'
     issuer: https://outline-auth-__APP_DOMAIN__
     storage:
