@@ -2,7 +2,7 @@ name: docmost
 
 services:
   docmost-db:
-    image: postgres:16-alpine
+    image: postgres:16.13-alpine
     container_name: docmost-db
     restart: unless-stopped
     user: "0:0"
@@ -31,7 +31,7 @@ services:
     cpu_shares: 50
 
   docmost-redis:
-    image: redis:7.2-alpine
+    image: redis:7.2.13-alpine
     container_name: docmost-redis
     restart: unless-stopped
     user: "0:0"
