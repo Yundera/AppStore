@@ -40,8 +40,8 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/plex:/config
-      - /DATA/AppData/plex/transcode:/transcode
+      - /DATA/AppData/$AppID:/config
+      - /DATA/AppData/$AppID/transcode:/transcode
       - /DATA/Media/Movies:/data/movies
       - /DATA/Media/TV Shows:/data/tvshows
       - /DATA/Media/Music:/data/music
