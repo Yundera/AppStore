@@ -73,7 +73,7 @@ x-casaos:
   index: /
   store_app_id: suwayomi
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/suwayomi/data &&
+    mkdir -p /DATA/AppData/$AppID/data &&
     mkdir -p /DATA/Media/Mangas
   architectures:
     - amd64
