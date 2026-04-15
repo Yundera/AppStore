@@ -20,7 +20,7 @@ services:
     networks:
       - pcs
     volumes:
-      - /DATA/AppData/navidrome/data/:/data        # Navidrome database and configuration directory
+      - /DATA/AppData/$AppID/data/:/data        # Navidrome database and configuration directory
       - /DATA/Media/Music/:/music:ro            # Music library directory (read-only)
     environment:
       TZ: $TZ                                  # Timezone for the Navidrome service
@@ -150,5 +150,29 @@ x-casaos:
         지원 형식: MP3, FLAC, OGG, M4A, WAV
         
         **인증:** Navidrome은 첫 실행 시 관리자 계정 생성이 필요합니다.
+      zh_cn: |
+        **首次设置：** 首次访问网页界面时创建管理员账户。
+
+        **音乐位置：** 将音乐文件放入 `/DATA/Media/Music/`
+        Navidrome 将自动扫描和整理您的收藏。
+        支持格式：MP3、FLAC、OGG、M4A、WAV
+
+        **认证：** Navidrome 需要在首次启动时创建管理员账户。
+      fr_fr: |
+        **Première configuration :** Créez votre compte administrateur lors de votre première visite de l'interface web.
+
+        **Emplacement de la musique :** Placez vos fichiers musicaux dans `/DATA/Media/Music/`
+        Navidrome analysera et organisera automatiquement votre collection.
+        Formats supportés : MP3, FLAC, OGG, M4A, WAV
+
+        **Authentification :** Navidrome nécessite la création d'un compte administrateur lors du premier lancement.
+      es_es: |
+        **Primera configuración:** Crea tu cuenta de administrador en la primera visita a la interfaz web.
+
+        **Ubicación de la música:** Coloca tus archivos de música en `/DATA/Media/Music/`
+        Navidrome escaneará y organizará automáticamente tu colección.
+        Formatos soportados: MP3, FLAC, OGG, M4A, WAV
+
+        **Autenticación:** Navidrome requiere crear una cuenta de administrador durante el primer inicio.
   store_app_id: navidrome
   webui_port: 80
