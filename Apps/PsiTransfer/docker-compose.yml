@@ -177,3 +177,42 @@ x-casaos:
         **중요 사항:**
         - 파일은 `/DATA/AppData/psitransfer/data/`에 저장됩니다
         - 기본 파일 보관 기간은 24시간(86400초)입니다
+      zh_cn: |
+        ## 默认凭据
+
+        | 字段               | 值             |
+        |--------------------|----------------|
+        | 管理员密码          | `$APP_DEFAULT_PASSWORD` |
+        | 上传密码            | `$APP_DEFAULT_PASSWORD` |
+
+        **访问管理面板：** 导航到 `$APP_DOMAIN/admin` 并输入管理员密码。
+
+        **重要说明：**
+        - 文件存储在 `/DATA/AppData/psitransfer/data/`
+        - 默认文件保留时间为 24 小时（86400 秒）
+      fr_fr: |
+        ## Identifiants par défaut
+
+        | Champ                | Valeur         |
+        |----------------------|----------------|
+        | Mot de passe admin   | `$APP_DEFAULT_PASSWORD` |
+        | Mot de passe upload  | `$APP_DEFAULT_PASSWORD` |
+
+        **Accès au panneau admin :** Naviguez vers `$APP_DOMAIN/admin` et entrez le mot de passe administrateur.
+
+        **Notes importantes :**
+        - Les fichiers sont stockés dans `/DATA/AppData/psitransfer/data/`
+        - La rétention par défaut est de 24 heures (86400 secondes)
+      es_es: |
+        ## Credenciales predeterminadas
+
+        | Campo                | Valor          |
+        |----------------------|----------------|
+        | Contraseña admin     | `$APP_DEFAULT_PASSWORD` |
+        | Contraseña upload    | `$APP_DEFAULT_PASSWORD` |
+
+        **Acceso al panel admin:** Navega a `$APP_DOMAIN/admin` e ingresa la contraseña de administrador.
+
+        **Notas importantes:**
+        - Los archivos se almacenan en `/DATA/AppData/psitransfer/data/`
+        - La retención predeterminada es de 24 horas (86400 segundos)
