@@ -136,6 +136,48 @@ x-casaos:
         **접속**: 설치 후 `https://netdata-username.nsl.sh`에서 접속하세요
         
         **참고**: Netdata는 시스템 리소스 모니터링을 위해 상승된 권한이 필요합니다.
+      zh_cn: |
+        ## 系统性能监控
+
+        Netdata 提供以下实时监控：
+        - 每核 CPU 使用率
+        - 内存和交换空间使用情况
+        - 磁盘 I/O 和空间
+        - 网络流量
+        - Docker 容器
+        - 系统进程
+
+        **访问**：安装后，通过 `https://netdata-username.nsl.sh` 访问
+
+        **注意**：Netdata 需要提升的权限来监控系统资源。
+      fr_fr: |
+        ## Surveillance des performances système
+
+        Netdata fournit une surveillance en temps réel de :
+        - Utilisation CPU par cœur
+        - Utilisation mémoire et swap
+        - E/S et espace disque
+        - Trafic réseau
+        - Conteneurs Docker
+        - Processus système
+
+        **Accès** : Après l'installation, accédez à `https://netdata-username.nsl.sh`
+
+        **Note** : Netdata nécessite des privilèges élevés pour surveiller les ressources système.
+      es_es: |
+        ## Monitoreo de rendimiento del sistema
+
+        Netdata proporciona monitoreo en tiempo real de:
+        - Uso de CPU por núcleo
+        - Uso de memoria y swap
+        - E/S de disco y espacio
+        - Tráfico de red
+        - Contenedores Docker
+        - Procesos del sistema
+
+        **Acceso**: Después de la instalación, accede en `https://netdata-username.nsl.sh`
+
+        **Nota**: Netdata requiere privilegios elevados para monitorear recursos del sistema.
   index: /?hash=$AUTH_HASH
   webui_port: 80
   scheme: https
