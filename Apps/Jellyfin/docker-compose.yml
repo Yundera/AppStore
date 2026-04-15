@@ -32,8 +32,8 @@ services:
     container_name: jellyfin
     restart: unless-stopped
     volumes:
-      - /DATA/AppData/jellyfin/config/:/config
-      - /DATA/AppData/jellyfin/cache/:/cache
+      - /DATA/AppData/$AppID/config/:/config
+      - /DATA/AppData/$AppID/cache/:/cache
       - /DATA/Media/Movies/:/media/movies
       - /DATA/Media/TV Shows/:/media/tvshows
       - /DATA/Media/Music/:/media/music
@@ -88,3 +88,65 @@ x-casaos:
   main: jellyfin-proxy
   is_uncontrolled: false
   webui_port: 80
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started:**
+        1. Open Jellyfin after installation
+        2. Follow the setup wizard to create your admin account
+        3. Add your media libraries (Movies, TV Shows, Music)
+
+        **Media Location:**
+        - Movies: `/DATA/Media/Movies/`
+        - TV Shows: `/DATA/Media/TV Shows/`
+        - Music: `/DATA/Media/Music/`
+
+        **Tip:** Jellyfin is completely free with no subscriptions or limitations.
+      ko_kr: |
+        **시작하기:**
+        1. 설치 후 Jellyfin 열기
+        2. 설정 마법사를 따라 관리자 계정 생성
+        3. 미디어 라이브러리 추가 (영화, TV 프로그램, 음악)
+
+        **미디어 위치:**
+        - 영화: `/DATA/Media/Movies/`
+        - TV 프로그램: `/DATA/Media/TV Shows/`
+        - 음악: `/DATA/Media/Music/`
+
+        **팁:** Jellyfin은 구독이나 제한 없이 완전히 무료입니다.
+      zh_cn: |
+        **开始使用：**
+        1. 安装后打开 Jellyfin
+        2. 按照设置向导创建管理员账户
+        3. 添加您的媒体库（电影、电视节目、音乐）
+
+        **媒体位置：**
+        - 电影：`/DATA/Media/Movies/`
+        - 电视节目：`/DATA/Media/TV Shows/`
+        - 音乐：`/DATA/Media/Music/`
+
+        **提示：** Jellyfin 完全免费，没有订阅或限制。
+      fr_fr: |
+        **Pour commencer :**
+        1. Ouvrez Jellyfin après l'installation
+        2. Suivez l'assistant de configuration pour créer votre compte administrateur
+        3. Ajoutez vos bibliothèques multimédia (Films, Séries TV, Musique)
+
+        **Emplacement des médias :**
+        - Films : `/DATA/Media/Movies/`
+        - Séries TV : `/DATA/Media/TV Shows/`
+        - Musique : `/DATA/Media/Music/`
+
+        **Astuce :** Jellyfin est entièrement gratuit sans abonnement ni limitation.
+      es_es: |
+        **Para empezar:**
+        1. Abre Jellyfin después de la instalación
+        2. Sigue el asistente de configuración para crear tu cuenta de administrador
+        3. Añade tus bibliotecas multimedia (Películas, Series, Música)
+
+        **Ubicación de medios:**
+        - Películas: `/DATA/Media/Movies/`
+        - Series: `/DATA/Media/TV Shows/`
+        - Música: `/DATA/Media/Music/`
+
+        **Consejo:** Jellyfin es completamente gratuito sin suscripciones ni limitaciones.
