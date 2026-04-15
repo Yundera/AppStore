@@ -8,11 +8,11 @@ services:
       PUID: $PUID
       TZ: $TZ
       FB_DATABASE: /db/database.db
-    image: filebrowser/filebrowser:v2.32.0
+    image: filebrowser/filebrowser:v2.63.1
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/filebrowser/db/
+        source: /DATA/AppData/$AppID/db/
         target: /db/
       - type: bind
         source: /DATA/
@@ -43,9 +43,9 @@ networks:
 
 x-casaos:
   pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/$AppID/db/:/db filebrowser/filebrowser:v2.63.1 config init --database /db/database.db &&
+    docker run --rm -v /DATA/AppData/$AppID/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
+    docker run --rm -v /DATA/AppData/$AppID/db/:/db filebrowser/filebrowser:v2.63.1 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
@@ -131,6 +131,26 @@ x-casaos:
       en_us: |
         Default Account
         | Username   | Password       |
+        | --------   | ------------   |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+      ko_kr: |
+        기본 계정
+        | 사용자명   | 비밀번호       |
+        | --------   | ------------   |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+      zh_cn: |
+        默认账户
+        | 用户名     | 密码           |
+        | --------   | ------------   |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+      fr_fr: |
+        Compte par défaut
+        | Nom d'utilisateur | Mot de passe   |
+        | --------          | ------------   |
+        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+      es_es: |
+        Cuenta predeterminada
+        | Usuario    | Contraseña     |
         | --------   | ------------   |
         | `admin`    | `$APP_DEFAULT_PASSWORD` |
   title:
