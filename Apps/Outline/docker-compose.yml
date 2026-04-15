@@ -98,7 +98,7 @@ services:
       - pcs
 
   outline-postgres:
-    image: postgres:16-alpine
+    image: postgres:16.13-alpine
     container_name: outline-postgres
     restart: unless-stopped
     user: "0:0"
@@ -124,7 +124,7 @@ services:
       - outline-internal
 
   outline-redis:
-    image: redis:7.2-alpine
+    image: redis:7.2.13-alpine
     container_name: outline-redis
     restart: unless-stopped
     user: "0:0"
@@ -413,9 +413,9 @@ x-casaos:
 
         **Documentacion:** [https://docs.getoutline.com](https://docs.getoutline.com)
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/outline/data /DATA/AppData/outline/pgdata /DATA/AppData/outline/redis /DATA/AppData/outline/dex &&
-    chown -R $PUID:$PGID /DATA/AppData/outline || true &&
-    ENV_FILE="/DATA/AppData/casaos/apps/outline/.env" &&
+    mkdir -p /DATA/AppData/$AppID/data /DATA/AppData/$AppID/pgdata /DATA/AppData/$AppID/redis /DATA/AppData/$AppID/dex &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID || true &&
+    ENV_FILE="/DATA/AppData/casaos/apps/$AppID/.env" &&
     if [ ! -s "$ENV_FILE" ]; then
       OUTLINE_SECRET_KEY=$(openssl rand -hex 32) &&
       OUTLINE_UTILS_SECRET=$(openssl rand -hex 32) &&
@@ -424,7 +424,7 @@ x-casaos:
         "$OUTLINE_SECRET_KEY" "$OUTLINE_UTILS_SECRET" "$OUTLINE_OIDC_SECRET" > "$ENV_FILE"
     fi &&
     . "$ENV_FILE" &&
-    DEX_CONFIG="/DATA/AppData/outline/dex/config.yaml" &&
+    DEX_CONFIG="/DATA/AppData/$AppID/dex/config.yaml" &&
     if [ ! -f "$DEX_CONFIG" ]; then
       BCRYPT_HASH=$(docker run --rm ghcr.io/dexidp/dex:v2.45.1 dex hash "$PCS_DEFAULT_PASSWORD" 2>/dev/null || true) &&
       if [ -z "$BCRYPT_HASH" ]; then
