@@ -2,17 +2,18 @@ name: psitransfer
 
 services:
   psitransfer:
-    image: psitrax/psitransfer:v2.4.0
+    image: psitrax/psitransfer:v2.4.1
     container_name: psitransfer
     user: 0:0
     restart: unless-stopped
     
+    cpu_shares: 50
     deploy:
       resources:
         limits:
           memory: 512M
           cpus: '0.5'
-    
+
     expose:
       - 80
     labels:
@@ -85,6 +86,51 @@ x-casaos:
       - **가벼움** - 100KB 미만의 Gzip 압축 프론트엔드
       
       클라우드 서비스에 의존하지 않고 동료, 고객 또는 친구와 대용량 파일을 공유하는 데 완벽합니다.
+    zh_cn: |
+      PsiTransfer 是一个简单、开源、自托管的文件共享解决方案。它是 WeTransfer 的轻量级替代方案，具有强大的功能：
+
+      - **无需账户** - 无需注册即可立即共享文件
+      - **可断点续传** - 使用 tus.io 协议实现可靠传输
+      - **移动端友好** - 响应式界面适用于所有设备
+      - **密码保护** - 用密码保护您的文件共享
+      - **灵活的保留期** - 为上传设置自定义过期时间
+      - **一次性下载** - 文件可在首次下载后删除
+      - **管理面板** - 监控和管理所有上传
+      - **ZIP/TAR.GZ 导出** - 将多个文件作为压缩包下载
+      - **大文件支持** - 无文件大小限制，仅受磁盘空间限制
+      - **轻量级** - 前端压缩后不到 100KB
+
+      非常适合与同事、客户或朋友共享大文件，无需依赖云服务。
+    fr_fr: |
+      PsiTransfer est une solution de partage de fichiers simple, open-source et auto-hébergée. C'est une alternative légère à WeTransfer avec des fonctionnalités puissantes :
+
+      - **Aucun compte requis** - Partagez des fichiers instantanément sans inscription
+      - **Téléchargements reprenables** - Protocole tus.io pour des transferts fiables
+      - **Adapté aux mobiles** - Interface responsive sur tous les appareils
+      - **Protection par mot de passe** - Sécurisez vos partages avec des mots de passe
+      - **Rétention flexible** - Définissez des temps d'expiration personnalisés
+      - **Téléchargements uniques** - Les fichiers peuvent être supprimés après le premier téléchargement
+      - **Tableau de bord admin** - Surveillez et gérez tous les téléversements
+      - **Export ZIP/TAR.GZ** - Téléchargez plusieurs fichiers en archives
+      - **Support grands fichiers** - Aucune limite de taille, seulement l'espace disque
+      - **Léger** - Frontend de moins de 100 Ko compressé
+
+      Parfait pour partager de gros fichiers avec des collègues, clients ou amis sans dépendre de services cloud.
+    es_es: |
+      PsiTransfer es una solución de compartición de archivos simple, de código abierto y autoalojada. Es una alternativa ligera a WeTransfer con características poderosas:
+
+      - **Sin cuentas necesarias** - Comparte archivos al instante sin registro
+      - **Cargas/descargas reanudables** - Protocolo tus.io para transferencias confiables
+      - **Compatible con móviles** - Interfaz responsiva en todos los dispositivos
+      - **Protección con contraseña** - Asegura tus archivos compartidos con contraseñas
+      - **Retención flexible** - Establece tiempos de expiración personalizados
+      - **Descargas únicas** - Los archivos pueden eliminarse después de la primera descarga
+      - **Panel de administración** - Monitorea y gestiona todas las cargas
+      - **Exportación ZIP/TAR.GZ** - Descarga múltiples archivos como archivos comprimidos
+      - **Soporte de archivos grandes** - Sin límites de tamaño, solo espacio en disco
+      - **Ligero** - Frontend de menos de 100KB comprimido
+
+      Perfecto para compartir archivos grandes con colegas, clientes o amigos sin depender de servicios en la nube.
   developer: psi-4ward
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/icon.png
   screenshot_link:
@@ -94,6 +140,9 @@ x-casaos:
   tagline:
     en_us: Simple, lightweight file sharing - WeTransfer alternative
     ko_kr: 간단하고 가벼운 파일 공유 - WeTransfer 대안
+    zh_cn: 简单、轻量的文件共享 - WeTransfer 替代方案
+    fr_fr: Partage de fichiers simple et léger - Alternative à WeTransfer
+    es_es: Compartición de archivos simple y ligera - Alternativa a WeTransfer
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/PsiTransfer/thumbnail.png
   title:
     en_us: PsiTransfer
@@ -128,3 +177,42 @@ x-casaos:
         **중요 사항:**
         - 파일은 `/DATA/AppData/psitransfer/data/`에 저장됩니다
         - 기본 파일 보관 기간은 24시간(86400초)입니다
+      zh_cn: |
+        ## 默认凭据
+
+        | 字段               | 值             |
+        |--------------------|----------------|
+        | 管理员密码          | `$APP_DEFAULT_PASSWORD` |
+        | 上传密码            | `$APP_DEFAULT_PASSWORD` |
+
+        **访问管理面板：** 导航到 `$APP_DOMAIN/admin` 并输入管理员密码。
+
+        **重要说明：**
+        - 文件存储在 `/DATA/AppData/psitransfer/data/`
+        - 默认文件保留时间为 24 小时（86400 秒）
+      fr_fr: |
+        ## Identifiants par défaut
+
+        | Champ                | Valeur         |
+        |----------------------|----------------|
+        | Mot de passe admin   | `$APP_DEFAULT_PASSWORD` |
+        | Mot de passe upload  | `$APP_DEFAULT_PASSWORD` |
+
+        **Accès au panneau admin :** Naviguez vers `$APP_DOMAIN/admin` et entrez le mot de passe administrateur.
+
+        **Notes importantes :**
+        - Les fichiers sont stockés dans `/DATA/AppData/psitransfer/data/`
+        - La rétention par défaut est de 24 heures (86400 secondes)
+      es_es: |
+        ## Credenciales predeterminadas
+
+        | Campo                | Valor          |
+        |----------------------|----------------|
+        | Contraseña admin     | `$APP_DEFAULT_PASSWORD` |
+        | Contraseña upload    | `$APP_DEFAULT_PASSWORD` |
+
+        **Acceso al panel admin:** Navega a `$APP_DOMAIN/admin` e ingresa la contraseña de administrador.
+
+        **Notas importantes:**
+        - Los archivos se almacenan en `/DATA/AppData/psitransfer/data/`
+        - La retención predeterminada es de 24 horas (86400 segundos)
