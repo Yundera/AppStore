@@ -7,11 +7,11 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
+      - /DATA/AppData/docmost/pgdata/:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: docmost
       POSTGRES_USER: docmost
-      POSTGRES_PASSWORD: $PCS_DEFAULT_PASSWORD
+      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U docmost -d docmost"]
@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/$AppID/redis/:/data
+      - /DATA/AppData/docmost/redis/:/data
     deploy:
       resources:
         limits:
@@ -70,12 +70,12 @@ services:
       caddy_2: docmost-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
-      - /DATA/AppData/$AppID/storage/:/app/data/storage
+      - /DATA/AppData/docmost/storage/:/app/data/storage
     environment:
       APP_URL: https://docmost-${APP_DOMAIN}
-      APP_SECRET: "${PCS_DEFAULT_PASSWORD}${PCS_DEFAULT_PASSWORD}"
+      APP_SECRET: ${DOCMOST_APP_SECRET}
       PORT: 80
-      DATABASE_URL: postgresql://docmost:$PCS_DEFAULT_PASSWORD@docmost-db:5432/docmost?schema=public
+      DATABASE_URL: postgresql://docmost:$APP_DEFAULT_PASSWORD@docmost-db:5432/docmost?schema=public
       REDIS_URL: redis://docmost-redis:6379
     deploy:
       resources:
@@ -93,6 +93,7 @@ networks:
   docmost-network:
     driver: bridge
   pcs:
+    name: pcs
     external: true
 
 x-casaos:
@@ -205,6 +206,10 @@ x-casaos:
     es_es: Plataforma wiki y documentación colaborativa de código abierto
   title:
     en_us: Docmost
+    ko_kr: Docmost
+    zh_cn: Docmost
+    fr_fr: Docmost
+    es_es: Docmost
   tips:
     before_install:
       en_us: |
@@ -283,3 +288,9 @@ x-casaos:
 
         **Nota:** El primer usuario en registrarse se convierte en administrador del espacio de trabajo.
   index: /
+  pre-install-cmd: |
+    ENV_FILE="/DATA/AppData/casaos/apps/docmost/.env" &&
+    if [ ! -s "$ENV_FILE" ]; then
+      DOCMOST_APP_SECRET=$(openssl rand -hex 32) &&
+      printf 'DOCMOST_APP_SECRET=%s\n' "$DOCMOST_APP_SECRET" > "$ENV_FILE"
+    fi
