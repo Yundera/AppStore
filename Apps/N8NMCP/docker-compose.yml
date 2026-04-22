@@ -2,7 +2,7 @@ name: n8nmcp
 services:
   # Main MCP server — reachable at n8nmcp:9640 on the pcs network
   n8nmcp:
-    image: ghcr.io/worph/n8nmcp:1.0.0
+    image: ghcr.io/worph/n8nmcp:1.0.1
     container_name: n8nmcp
     hostname: n8nmcp
     # supervisord is PID 1 and MUST start as root so it can drop privileges for

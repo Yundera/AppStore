@@ -5,7 +5,7 @@ services:
   # network so Beacon and other MCP clients can call it directly (no hash
   # auth needed for container-to-container traffic).
   nextcloudmcp:
-    image: ghcr.io/worph/nextcloud-mcp:1.0.0
+    image: ghcr.io/worph/nextcloud-mcp:1.0.2
     container_name: nextcloudmcp
     hostname: nextcloudmcp
     # supervisord is PID 1 and MUST start as root so it can drop privileges for
