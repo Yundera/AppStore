@@ -4,7 +4,6 @@ services:
   psitransfer:
     image: psitrax/psitransfer:v2.4.3
     container_name: psitransfer
-    user: 0:0
     restart: unless-stopped
     
     cpu_shares: 50
@@ -29,8 +28,6 @@ services:
       - pcs
 
     environment:
-      - PUID=0
-      - PGID=0
       - TZ=$TZ
       - PSITRANSFER_ADMIN_PASS=$APP_DEFAULT_PASSWORD
       - PSITRANSFER_UPLOAD_PASS=$APP_DEFAULT_PASSWORD
