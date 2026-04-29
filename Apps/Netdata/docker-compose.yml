@@ -36,7 +36,7 @@ services:
       - SYS_ADMIN
       - NET_ADMIN
   netdata:
-    image: netdata/netdata:v2.9.0
+    image: netdata/netdata:v2.10.3
     hostname: netdata
     user: 0:0
     environment:
@@ -47,17 +47,17 @@ services:
     security_opt:
       - apparmor:unconfined
     volumes:
-      - /DATA/AppData/$AppID/config/:/etc/netdata
-      - /DATA/AppData/$AppID/lib/:/var/lib/netdata
-      - /DATA/AppData/$AppID/cache/:/var/cache/netdata
-      - /etc/passwd:/host/etc/passwd/:ro
-      - /etc/group:/host/etc/group/:ro
-      - /etc/localtime:/etc/localtime/:ro
-      - /etc/os-release:/host/etc/os-release/:ro
-      - /proc:/host/proc/:ro
-      - /sys:/host/sys/:ro
-      - /var/log:/host/var/log/:ro
-      - /var/run/docker.sock:/var/run/docker.sock/:ro
+      - /DATA/AppData/$AppID/config/:/etc/netdata/
+      - /DATA/AppData/$AppID/lib/:/var/lib/netdata/
+      - /DATA/AppData/$AppID/cache/:/var/cache/netdata/
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /proc/:/host/proc/:ro
+      - /sys/:/host/sys/:ro
+      - /var/log/:/host/var/log/:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     cpu_shares: 90
     deploy:
@@ -110,7 +110,7 @@ x-casaos:
     before_install:
       en_us: |
         ## System Performance Monitoring
-        
+
         Netdata provides real-time monitoring of:
         - CPU usage per core
         - Memory and swap usage
@@ -118,13 +118,13 @@ x-casaos:
         - Network traffic
         - Docker containers
         - System processes
-        
-        **Access**: After installation, access at `https://netdata-username.nsl.sh`
-        
+
+        **Access**: After installation, access at `https://netdata-${APP_DOMAIN}`
+
         **Note**: Netdata requires elevated privileges to monitor system resources.
       ko_kr: |
         ## 시스템 성능 모니터링
-        
+
         Netdata는 다음을 실시간으로 모니터링합니다:
         - 코어별 CPU 사용량
         - 메모리 및 스왑 사용량
@@ -132,9 +132,9 @@ x-casaos:
         - 네트워크 트래픽
         - Docker 컨테이너
         - 시스템 프로세스
-        
-        **접속**: 설치 후 `https://netdata-username.nsl.sh`에서 접속하세요
-        
+
+        **접속**: 설치 후 `https://netdata-${APP_DOMAIN}`에서 접속하세요
+
         **참고**: Netdata는 시스템 리소스 모니터링을 위해 상승된 권한이 필요합니다.
       zh_cn: |
         ## 系统性能监控
@@ -147,7 +147,7 @@ x-casaos:
         - Docker 容器
         - 系统进程
 
-        **访问**：安装后，通过 `https://netdata-username.nsl.sh` 访问
+        **访问**：安装后，通过 `https://netdata-${APP_DOMAIN}` 访问
 
         **注意**：Netdata 需要提升的权限来监控系统资源。
       fr_fr: |
@@ -161,7 +161,7 @@ x-casaos:
         - Conteneurs Docker
         - Processus système
 
-        **Accès** : Après l'installation, accédez à `https://netdata-username.nsl.sh`
+        **Accès** : Après l'installation, accédez à `https://netdata-${APP_DOMAIN}`
 
         **Note** : Netdata nécessite des privilèges élevés pour surveiller les ressources système.
       es_es: |
@@ -175,7 +175,7 @@ x-casaos:
         - Contenedores Docker
         - Procesos del sistema
 
-        **Acceso**: Después de la instalación, accede en `https://netdata-username.nsl.sh`
+        **Acceso**: Después de la instalación, accede en `https://netdata-${APP_DOMAIN}`
 
         **Nota**: Netdata requiere privilegios elevados para monitorear recursos del sistema.
   index: /?hash=$AUTH_HASH
