@@ -2,7 +2,7 @@ name: stirlingpdf
 
 services:
   stirlingpdf:
-    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.9.2
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.10.0
     container_name: stirling-pdf
     restart: unless-stopped
     expose:
