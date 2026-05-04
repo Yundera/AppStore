@@ -2,7 +2,7 @@ name: tailscale
 
 services:
   tailscale:
-    image: ghcr.io/tailscale/tailscale:v1.92.5
+    image: ghcr.io/tailscale/tailscale:v1.94.2
     container_name: tailscale
     hostname: tailscale
     user: 0:0
@@ -13,13 +13,13 @@ services:
     environment:
       - TZ=$TZ
       # if you want to use headscale instead of tailscale.com, add the next line and set your domain
-      # - TS_EXTRA_ARGS=--login-server=https://headscale-$domain
-      - TS_ACCEPT_DNS= "true"
-      - TS_EXTRA_ARGS= "--accept-routes"
+      # - TS_EXTRA_ARGS=--login-server=https://headscale-$APP_DOMAIN
+      - TS_ACCEPT_DNS="true"
+      - TS_EXTRA_ARGS="--accept-routes"
       - TS_AUTHKEY_INFO="Connect to the Tailscale Admin Console to generate an auth key and set it in the app settings before starting."
       - TS_AUTHKEY=  # Set this in CasaOS before starting for automatic auth, or leave blank for manual setup
-      - TS_HOSTNAME=$domain
-      - TS_USERSPACE= "false"
+      - TS_HOSTNAME=$APP_DOMAIN
+      - TS_USERSPACE="false"
       - TS_STATE_DIR=/var/lib/tailscale
     cap_add:
       - NET_ADMIN
@@ -31,6 +31,9 @@ services:
 
 x-casaos:
   pre-install-cmd: |
+    snap stop tailscale 2>/dev/null; snap disable tailscale 2>/dev/null;
+    systemctl stop tailscaled 2>/dev/null; systemctl disable tailscaled 2>/dev/null;
+    ip link delete tailscale0 2>/dev/null;
     mkdir -p /DATA/AppData/tailscale/state &&
     chown -R $PUID:$PGID /DATA/AppData/tailscale
 
@@ -64,9 +67,35 @@ x-casaos:
         
         **For Tailscale.com (Default):**
         1. Go to [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)
-        2. Generate an auth key with desired settings
-        3. Set the `TS_AUTHKEY` in the app settings
-        4. Your server will appear in your Tailscale network
+        2. Generate an auth key with your desired settings
+           - Click **"Add device" → "Linux server" → "Generate install script"**
+        3. Copy the key from the generated install script
+        
+           Example script:
+           ```
+           curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up --auth-key=tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+           ```
+        
+           👉 You only need the **auth key**, which is the last part:
+           ```
+           tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+           ```
+        4. Go to your PCS, click on the **3 dots** on the Tailscale app, then click **Settings**
+        5. Set the auth key in the app settings
+        
+           In the field:
+           ```
+           TS_AUTHKEY
+           ```
+        
+           👉 Paste in front **only the key after the `=`**, like this:
+           ```
+           tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+           ```
+        
+           ⚠️ Do not include spaces or extra characters
+        6. Start or restart the app
+        7. Your server will appear in your Tailscale network
         
         **For Headscale (Self-hosted):**
         1. Generate an auth key from your Headscale server

@@ -12,6 +12,61 @@ You are running in a Docker container on a CasaOS VM with **full administrative 
 
 This container is designed to handle **any maintenance task** on the VM, including system-level operations that require root access on the host.
 
+## MCP Server (Programmatic Access)
+
+This container includes an **MCP (Model Context Protocol) server** that allows other AI agents and services to interact with you programmatically via JSON-RPC 2.0.
+
+### How It Works
+
+- **Endpoint:** `/mcp` on port 8080 (same port as the web UI)
+- **Auth:** `Authorization: Bearer <AUTH_PASSWORD>` header
+- **Internal endpoint** (from other containers on the `pcs` network): `http://claude:80/mcp`
+- **External endpoint** (via Caddy): `https://claude-<domain>/mcp`
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `query_claude` | Send a prompt to this Claude instance. Params: `prompt` (required), `continueSession` (default: true), `workdir`, `timeout` (default: 120s), `chatId`, `permissionCallbackUrl` |
+| `check_status` | Check availability: `{available, browserConnected, queryInProgress}` |
+
+### Interactive Permission Prompts (Telegram Integration)
+
+When `query_claude` is called with `chatId` and `permissionCallbackUrl` parameters, this Claude instance will request user permission via Telegram before executing potentially dangerous operations (bash commands, file writes, etc.).
+
+**Flow:**
+1. External service calls `query_claude` with `chatId` and `permissionCallbackUrl`
+2. When Claude needs permission, the permission MCP server (`permission-mcp.js`) sends a POST to the callback URL
+3. User sees Telegram inline keyboard with Allow/Deny/Always Allow buttons
+4. User's decision is returned and Claude continues or aborts accordingly
+
+### Debugging MCP
+
+```bash
+# Check MCP server status (from inside this container)
+curl -s http://localhost:9090/mcp/status
+
+# Check WebSocket connections (browser sessions)
+curl -s http://localhost:8080/internal/ws-status
+
+# Restart MCP server service
+sudo s6-svc -r /run/service/mcp-server
+
+# Test MCP externally
+curl -X POST http://localhost:8080/mcp \
+  -H "Authorization: Bearer $AUTH_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+### MCP Session History
+
+MCP queries use a separate working directory (`/home/claude/workspace/mcp`) by default. Conversation history is stored in `~/.claude/projects/` with path-mangled directory names:
+- Web UI sessions: `-home-claude-workspace/`
+- MCP sessions: `-home-claude-workspace-mcp/`
+
+To share history between MCP and web UI, callers can set `"workdir": "/home/claude/workspace"` in the `query_claude` call.
+
 ## Your Role
 
 You are a **VM/Server Assistant** whose primary responsibilities are:
@@ -195,28 +250,30 @@ This CasaOS instance is based on [Yundera/casa-img](https://github.com/Yundera/c
 - Docker socket access for container management
 - Proper volume and permission handling
 
-## NSL.SH Routing
+## Caddy Integration with nsl.sh
 
-Apps get secure HTTPS access via the NSL.SH mesh routing system.
+Apps get secure HTTPS access via Caddy reverse proxy with Docker labels. Free subdomains are provided by nsl.sh.
 
 ### How It Works
 
-The [mesh-router](https://github.com/Yundera/mesh-router-root) system provides:
-- **Wildcard domain routing**: `*.nsl.sh` directs traffic to appropriate backends
-- **Automatic HTTPS**: All apps get valid SSL certificates
-- **NAT traversal**: Works behind firewalls via WireGuard tunneling
+Caddy automatically discovers containers and routes traffic based on labels:
+- **Docker label discovery**: Containers with `caddy=` labels are automatically routed
+- **Automatic HTTPS**: All apps get valid SSL certificates via Let's Encrypt
+- **Clean URLs**: Apps accessible at `https://appname-username.nsl.sh/`
+- **Free subdomains**: nsl.sh provides free `*.nsl.sh` subdomains for all Yundera users
 
 ### URL Patterns
 
 Apps are accessible via clean HTTPS URLs:
 - **Clean URL**: `https://appname-username.nsl.sh/`
-- **With port**: `https://8080-appname-username.nsl.sh/`
 
-### Components
+### Label Format
 
-- **mesh-router-gateway**: HTTP reverse proxy for wildcard routing
-- **mesh-router-agent**: Registers direct IP addresses
-- **mesh-router-tunnel**: WireGuard VPN for NAT traversal
+```yaml
+labels:
+  - "caddy=appname-${APP_DOMAIN}"
+  - "caddy.reverse_proxy={{upstreams 80}}"
+```
 
 ## Common Maintenance Tasks
 

@@ -2,12 +2,12 @@ name: odoo
 
 services:
   postgres:
-    image: postgres:15.15
+    image: postgres:18.3
     user: "0:0"
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: odoo
-      POSTGRES_PASSWORD: $PCS_DEFAULT_PASSWORD
+      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
       PGDATA: /var/lib/postgresql/data/pgdata/
       PUID: "0"
       PGID: "0"
@@ -24,9 +24,11 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - odoo-internal
 
   odoo:
-    image: odoo:18.0
+    image: odoo:19.0
     user: "0:0"
     command: odoo --http-port=80
     depends_on:
@@ -34,10 +36,22 @@ services:
         condition: service_healthy
     expose:
       - 80
+    labels:
+      caddy_0: odoo-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: odoo-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: odoo-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - odoo-internal
+      - pcs
     environment:
       HOST: postgres
       USER: odoo
-      PASSWORD: $PCS_DEFAULT_PASSWORD
+      PASSWORD: $APP_DEFAULT_PASSWORD
       PUID: "0"
       PGID: "0"
       TZ: $TZ
@@ -51,6 +65,13 @@ services:
         limits:
           memory: 1G
     restart: unless-stopped
+
+networks:
+  odoo-internal:
+    driver: bridge
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:
@@ -109,7 +130,7 @@ x-casaos:
         
         | Item | Value |
         | --- | --- |
-        | Master Password | `$PCS_DEFAULT_PASSWORD` |
+        | Master Password | `$APP_DEFAULT_PASSWORD` |
         | Database Name | `odoo` |
         | Email | Admin email address |
         | Password | Admin account password |
@@ -126,7 +147,7 @@ x-casaos:
         
         | 항목 | 값 |
         | --- | --- |
-        | 마스터 비밀번호 | `$PCS_DEFAULT_PASSWORD` |
+        | 마스터 비밀번호 | `$APP_DEFAULT_PASSWORD` |
         | 데이터베이스 이름 | `odoo` |
         | 이메일 | 관리자 이메일 주소 |
         | 비밀번호 | 관리자 계정 비밀번호 |
@@ -143,7 +164,7 @@ x-casaos:
         
         | 项目 | 值 |
         | --- | --- |
-        | 主密码 | `$PCS_DEFAULT_PASSWORD` |
+        | 主密码 | `$APP_DEFAULT_PASSWORD` |
         | 数据库名称 | `odoo` |
         | 电子邮件 | 管理员电子邮件地址 |
         | 密码 | 管理员帐户密码 |
@@ -160,7 +181,7 @@ x-casaos:
         
         | Elemento | Valor |
         | --- | --- |
-        | Contraseña maestra | `$PCS_DEFAULT_PASSWORD` |
+        | Contraseña maestra | `$APP_DEFAULT_PASSWORD` |
         | Nombre de la base de datos | `odoo` |
         | Correo electrónico | Dirección de correo electrónico del administrador |
         | Contraseña | Contraseña de la cuenta de administrador |
@@ -177,7 +198,7 @@ x-casaos:
         
         | Élément | Valeur |
         | --- | --- |
-        | Mot de passe principal | `$PCS_DEFAULT_PASSWORD` |
+        | Mot de passe principal | `$APP_DEFAULT_PASSWORD` |
         | Nom de la base de données | `odoo` |
         | Email | Adresse e-mail de l'administrateur |
         | Mot de passe | Mot de passe du compte administrateur |

@@ -2,16 +2,65 @@ name: claude
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.3
+    image: ghcr.io/worph/claude-code-container:1.0.23
     container_name: claude
     restart: unless-stopped
     user: 0:0
     expose:
-      - 80
+      - 8080
+      - 9090
+    labels:
+      caddy_0: claude-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      # /login, /logout — no forward_auth, served by MCP server
+      caddy_0.0_handle: "/login*"
+      caddy_0.0_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_0.1_handle: "/logout"
+      caddy_0.1_handle.reverse_proxy: "{{upstreams 9090}}"
+      # /mcp — no forward_auth, MCP server has its own Bearer auth
+      caddy_0.2_handle_path: "/mcp*"
+      caddy_0.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      # Everything else — forward_auth via MCP, then proxy to ttyd
+      caddy_0.3_handle: ""
+      caddy_0.3_handle.forward_auth: "{{upstreams 9090}}"
+      caddy_0.3_handle.forward_auth.uri: /auth
+      caddy_0.3_handle.forward_auth.@unauthorized.status: "401"
+      caddy_0.3_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_0.3_handle.forward_auth.handle_response.redir: "* /login"
+      caddy_0.3_handle.reverse_proxy: "{{upstreams 8080}}"
+
+      caddy_1: claude-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.0_handle: "/login*"
+      caddy_1.0_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_1.1_handle: "/logout"
+      caddy_1.1_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_1.2_handle_path: "/mcp*"
+      caddy_1.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      caddy_1.3_handle: ""
+      caddy_1.3_handle.forward_auth: "{{upstreams 9090}}"
+      caddy_1.3_handle.forward_auth.uri: /auth
+      caddy_1.3_handle.forward_auth.@unauthorized.status: "401"
+      caddy_1.3_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_1.3_handle.forward_auth.handle_response.redir: "* /login"
+      caddy_1.3_handle.reverse_proxy: "{{upstreams 8080}}"
+
+      caddy_2: claude-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.0_handle: "/login*"
+      caddy_2.0_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_2.1_handle: "/logout"
+      caddy_2.1_handle.reverse_proxy: "{{upstreams 9090}}"
+      caddy_2.2_handle_path: "/mcp*"
+      caddy_2.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      caddy_2.3_handle: ""
+      caddy_2.3_handle.forward_auth: "{{upstreams 9090}}"
+      caddy_2.3_handle.forward_auth.uri: /auth
+      caddy_2.3_handle.forward_auth.@unauthorized.status: "401"
+      caddy_2.3_handle.forward_auth.handle_response: "@unauthorized"
+      caddy_2.3_handle.forward_auth.handle_response.redir: "* /login"
+      caddy_2.3_handle.reverse_proxy: "{{upstreams 8080}}"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY-"Please fill you key here"}
-      - AUTH_PASSWORD=$default_pwd
-      - PROXY_PORT=80
+      - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
     volumes:
       # Docker socket for container management
       - type: bind
@@ -29,10 +78,14 @@ services:
       - type: bind
         source: /DATA/AppData/claude/workspace/
         target: /home/claude/workspace
-      # claude config persistence (contains user sessions, settings, and other important data - don't delete this volume or you will lose all your data)
+      # Claude config persistence (contains credentials, settings, and other important data)
       - type: bind
         source: /DATA/AppData/claude/config/
         target: /home/claude/.claude
+      # Claude session state file (required for auth persistence across restarts)
+      - type: bind
+        source: /DATA/AppData/claude/config/.claude.json
+        target: /home/claude/.claude.json
     networks:
       pcs: null
     cpu_shares: 70
@@ -44,8 +97,11 @@ services:
 networks:
   pcs:
     name: pcs
+    external: true
 
 x-casaos:
+  index: /
+
   architectures:
     - amd64
     - arm64
@@ -86,19 +142,62 @@ x-casaos:
   title:
     en_us: Claude Code
     zh_cn: Claude Code
-  index: /
-  webui_port: 80
   tips:
     before_install:
       en_us: |
-        Requirements:
-        - Anthropic API key (get one at https://console.anthropic.com/)
-        or
-        - Anthropic account
+        Authentication options:
+        - Anthropic API key (https://console.anthropic.com/), OR
+        - Claude Pro/Max subscription (authenticate via OAuth on first run)
 
-        Default login password: `$default_pwd`
+        Leave API key empty to use subscription auth.
+
+        Default login password: `$APP_DEFAULT_PASSWORD`
+
+        **MCP Integration (for AI/LLMs):**
+
+        Claude Code includes a Model Context Protocol (MCP) server that allows other AI assistants to send prompts and interact with this instance programmatically.
+
+        **Option 1: Public URL (with Bearer auth)**
+        ```json
+        {
+          "mcpServers": {
+            "claude-code": {
+              "type": "http",
+              "url": "https://claude-${APP_DOMAIN}/mcp",
+              "headers": {
+                "Authorization": "Bearer ${AUTH_PASSWORD}"
+              }
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "claude-code": {
+              "type": "http",
+              "url": "http://claude:9090/mcp",
+              "headers": {
+                "Authorization": "Bearer ${AUTH_PASSWORD}"
+              }
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `query_claude` | Send a prompt and get a response |
+        | `check_status` | Check if Claude is available |
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/claude/workspace &&
+    mkdir -p /DATA/AppData/claude/workspace /DATA/AppData/claude/config &&
+    touch /DATA/AppData/claude/config/.claude.json &&
     if [ ! -f /DATA/AppData/claude/workspace/CLAUDE.md ]; then
       wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude/workspace/CLAUDE.md
     fi &&

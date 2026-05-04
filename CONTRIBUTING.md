@@ -8,16 +8,19 @@ This document describes how to contribute an app to the Yundera Compose AppStore
 
 Before submitting your PR, ensure your app meets these requirements:
 
-### Security Checklist
-- [ ] Default authentication (Basic Auth, OAuth, etc.) is enabled and documented - exceptions must be explained in rationale.md (e.g., public websites)
-  - Example of valid exception: 
-    - A public website that does not require authentication
-    - The app handle authentication configuration on first launch via an onboarding process (eg Jellyfin, Immich, etc.)
-- [ ] No hardcoded credentials in the compose file - use environment variables or secrets
+### Tech Checklist
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
-- [ ] Specific version tag (no `:latest`)
 - [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
-- [ ] Migration path from previous versions is tested - only incremental migration is supported (if a user wants to go from v1.1 to v1.4, they must execute v1.2 and v1.3 first)
+
+### Security Checklist
+- [ ] An authentication method is enabled and documented - this is **mandatory**. Exceptions must be explained in rationale.md (e.g., public websites).
+  - **Recommended**: OIDC via the `nginx-hash-lock` sidecar, which auto-registers with the PCS's `auth-registrar` and protects the app with the built-in Authelia SSO. See [OIDC Authentication](#oidc-authentication-recommended) for the minimal setup and [HashLockDemo](https://github.com/Yundera/AppStoreLab/tree/main/Apps/HashLockDemo) for a reference deployment.
+  - Acceptable alternatives: Basic Auth, the app's own built-in auth (e.g. Jellyfin, Immich onboarding), or any other login gate that is enabled by default.
+  - Example of valid exception:
+    - A public website that does not require authentication
+    - The app handles authentication configuration on first launch via an onboarding process (e.g. Jellyfin, Immich)
+- [ ] No hardcoded credentials in the compose file - use environment variables or secrets
+- [ ] Specific version tag (no `:latest`)
 
 ### Functionality Checklist
 - [ ] Works immediately after installation - no need to check logs or run commands - pre-install scripts create sensible defaults
@@ -27,6 +30,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] CPU field cpu_shares is set appropriately (on all services)
 - [ ] fresh installation tested
 - [ ] uninstall/reinstall tested - An application should be able to be uninstalled and reinstalled without losing user data or configuration (See the keep user data option when uninstalling)
+- [ ] Upgrade from previous version tested - installing the new version on top of existing `/DATA/AppData/[AppName]/` data from a previous version must not corrupt, erase, or downgrade user data or configuration. Only incremental migration is supported (to go from v1.1 to v1.4, the user must pass through v1.2 and v1.3 first).
 
 
 ### Documentation Checklist
@@ -60,6 +64,39 @@ To ensure easy testing, please follow these steps:
 6. Once approved, your app will be directly available in the app listing.
 
 ## Guidelines
+
+### Rationale (`rationale.md`)
+
+When an app deviates from the default requirements, it must ship a `rationale.md` file **alongside its `docker-compose.yml`** (i.e. `Apps/[AppName]/rationale.md`). Reviewers read this file first when the compose file raises a flag.
+
+**When a `rationale.md` is required:**
+- The app runs as `user: 0:0` or exposes volumes outside `/DATA/AppData/[AppName]/` and `/DATA/[user-dir]/`.
+- The app ships with authentication disabled, or relies on the app's own first-launch onboarding instead of an enabled default.
+- The app uses a root container with mixed access to user directories and AppData (see [Mixed Usage Applications](#permission-strategy)).
+- Any other explicit deviation from this document.
+
+**Recommended structure** (see `Apps/Stirling-PDF/rationale.md` for a full worked example):
+
+```markdown
+# [AppName] — Rationale
+
+## What deviation / exception is being requested
+<Concrete, e.g. "runs as root", "auth disabled", "mounts /DATA/Downloads as rw">
+
+## Why it is necessary
+<Technical reason — upstream constraints, runtime requirements, etc.>
+
+## Security mitigations in place
+<Resource limits, container isolation, disabled features, read-only mounts, etc.>
+
+## Alternatives considered and rejected
+<Each alternative + why it didn't work>
+
+## Data protection
+<What protects user data given this exception>
+```
+
+Keep it factual and short — reviewers should be able to decide in a minute.
 
 ### Data Persistence
 
@@ -226,7 +263,15 @@ It is mandatory to set CPU shares for all services in your compose file. This he
 
 CPU shares determine relative CPU priority between containers. Higher values get more CPU time when the system is under load.
 
-**Formula:** `cpu_shares: [value]` (relative weight, not percentage)
+**Placement:** `cpu_shares` is a **top-level service field**, not part of `deploy:`. The value is a relative weight, not a percentage.
+
+```yaml
+services:
+  myapp:
+    image: myapp:1.2.3
+    cpu_shares: 70          # ← top level of the service
+    # deploy.resources is for memory/cpu limits, not cpu_shares
+```
 
 #### CPU Share Allocation:
 ```
@@ -295,7 +340,8 @@ App-Name
 ├─ screenshot-1.png     # (Required) At least one screenshot is needed to demonstrate the app runs on CasaOS successfully
 ├─ screenshot-2.png     # (Optional) More screenshots to demonstrate different functionalities are highly recommended
 ├─ screenshot-3.png     # (Optional) ...
-└─ thumbnail.png        # (Required) A thumbnail file is needed if you want it to be featured in AppStore front (see specification at bottom)
+├─ thumbnail.png        # (Required) Tile image shown in the AppStore listing (see specification at bottom)
+└─ rationale.md         # (Conditional) Required when the app needs a documented exception — see "Rationale" below
 ```
 
 #### An App is a Docker Compose app, or a *compose app*
@@ -337,24 +383,28 @@ Each directory under [Apps](Apps) corresponds to a Compose App. The directory sh
         source: /DATA/AppData/$AppID/config # $AppID = app name, e.g. syncthing
     ```
 
-- **System Variables**: CasaOS provides additional system-wide variables for enhanced functionality. These environment variables are automatically injected by CasaOS at container creation:
+- **System Variables**: Yundera injects the following variables at container creation. Reference them in `environment:`, `volumes:`, `labels:`, and `pre-install-cmd`:
 
     ```yaml
     environment:
-      # Standard system variables
-      PGID: $PGID                                    # Preset Group ID
-      PUID: $PUID                                    # Preset User ID
-      TZ: $TZ                                        # Current system timezone
+      # User / system
+      PGID: $PGID                           # Preset Group ID
+      PUID: $PUID                           # Preset User ID
+      TZ: $TZ                               # Current system timezone
 
-      # V2 system variables (recommended)
-      PCS_DEFAULT_PASSWORD: $PCS_DEFAULT_PASSWORD    # Secure default password generated by CasaOS
-      PCS_DOMAIN: $PCS_DOMAIN                        # Domain without https:// (e.g., example.com)
-      PCS_DATA_ROOT: $PCS_DATA_ROOT                  # Data root directory (/DATA)
-      PCS_PUBLIC_IP: $PCS_PUBLIC_IP                  # Public IP for port binding and announcements
-      PCS_EMAIL: $PCS_EMAIL                          # Admin email (admin@DOMAIN)
+      # App identity & networking
+      APP_DOMAIN: $APP_DOMAIN               # Domain root for this app (e.g. user.nsl.sh)
+      APP_PUBLIC_IP_DASH: $APP_PUBLIC_IP_DASH  # Public IPv4 with dashes, for nip.io / sslip.io
+      APP_DEFAULT_PASSWORD: $APP_DEFAULT_PASSWORD  # Secure default password generated by Yundera
+      APP_EMAIL: $APP_EMAIL                 # Admin email (admin@DOMAIN)
     ```
 
-    **Note:** The V2 variable names (prefixed with `PCS_`) are the current standard. Use these in new applications for consistency across the CasaOS ecosystem.
+    Typical usage — publishing the app's own URL back to itself (e.g. for OAuth callbacks, email links, CORS):
+
+    ```yaml
+    environment:
+      BASE_URL: https://myapp-${APP_DOMAIN}
+    ```
 
 - CasaOS specific metadata, also called *store info*, are stored under the [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos`.
 
@@ -397,7 +447,7 @@ x-casaos:
         Default Account
         | Username   | Password                |
         | --------   | ----------------------- |
-        | `admin`    | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
 ```
 
 ### Features
@@ -406,30 +456,40 @@ CasaOS supports additional configuration options for enhanced app management:
 
 #### Pre-Installation Commands
 
-You can specify commands to run before container startup using `pre-install-cmd`. This command executes before all other containers are started:
+You can specify commands to run before container startup using `pre-install-cmd`. It executes on the host before any of the app's services start. Two styles are acceptable — pick whichever is simpler for your needs:
+
+**Style A — plain shell on the host.** Good for creating directories, downloading static assets, or setting permissions with tools that already exist on the host.
 
 ```yaml
 x-casaos:
-    pre-install-cmd: docker run --rm -v /DATA/AppData/$AppID/:/data/ -e PASSWORD=$default_pwd nasselle/pre-install-toolbox:1.0.0 https://example.com/init.sh
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/config
+    # Idempotency: guard work behind a sentinel file so reruns are no-ops
+    if [ ! -f /DATA/AppData/$AppID/.initialized ]; then
+      wget -O /DATA/AppData/$AppID/config/init.sql \
+        https://raw.githubusercontent.com/Yundera/AppStore/main/Apps/MyApp/pre-install/init.sql
+      touch /DATA/AppData/$AppID/.initialized
+    fi
 ```
 
-When using `pre-install-cmd`, ensure the command is idempotent and does not require user interaction.
-Also ensure that versions are specified for any images used in the command to avoid unexpected changes.
+Static assets the script needs can live under `Apps/[AppName]/pre-install/` in this repo and be fetched via jsDelivr or `raw.githubusercontent.com` (see `Apps/Guacamole/pre-install/` for a real example).
 
-**SECURITY REQUIREMENTS for pre-install-cmd:**
-- [ ] **Specific version tags**: Never use `:latest` - always specify exact versions (e.g., `alpine:3.19`, `ubuntu:22.04`)
-- [ ] **User specification**: Use `--user $PUID:$PGID` when creating files in user directories to ensure proper permissions
-- [ ] **Idempotent operations**: Commands should be safe to run multiple times
-- [ ] **No hardcoded credentials**: Use system variables like `$PCS_DEFAULT_PASSWORD`
+**Style B — one-shot `docker run` containers.** Good when the setup needs a binary that isn't on the host (for example, the app's own CLI to initialise its database).
 
-Example:
 ```yaml
 x-casaos:
   pre-install-cmd: |
     docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
     docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $PCS_DEFAULT_PASSWORD --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
 ```
+
+**Requirements (apply to both styles):**
+- [ ] **Specific version tags**: Never use `:latest` — always pin exact versions (e.g. `alpine:3.19`, `ubuntu:22.04`).
+- [ ] **Idempotent**: Safe to rerun. Guard destructive / one-shot work behind a sentinel file (`touch /DATA/AppData/$AppID/.initialized`) or an existence check.
+- [ ] **Non-interactive**: Must not prompt.
+- [ ] **No hardcoded credentials**: Use `$APP_DEFAULT_PASSWORD` and friends.
+- [ ] **User permissions when touching user directories**: Use `--user $PUID:$PGID` (Style B) or `chown -R $PUID:$PGID` (either style) whenever files will live under `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, or `/DATA/Gallery`.
 
 **Common use cases:**
 - Create default configuration files
@@ -437,134 +497,256 @@ x-casaos:
 - Generate certificates or keys
 - Prepare the environment with sensible defaults
 
-#### NSL Router Integration (Web UI Access)
+#### Caddy Integration (Web UI Access)
 
-The Yundera AppStore uses the NSL Router (mesh-router) system to provide clean HTTPS URLs for your applications. The mesh router automatically generates subdomains based on your compose configuration.
+The Yundera AppStore uses Caddy reverse proxy with Docker labels for automatic HTTPS routing. Apps are accessible via three methods:
+- **Gateway-routed domain**: `https://appname-username.nsl.sh` (custom CA)
+- **Direct access via nip.io**: `https://appname-192-168-1-1.nip.io` (custom CA)
+- **Direct access via sslip.io**: `https://appname-192-168-1-1.sslip.io` (Let's Encrypt)
 
-**How NSL Router Works:**
-- The mesh router runs on nsl.sh domains and provides subdomain routing to Yundera users
-- Each user gets a subdomain like `username.nsl.sh`
-- Applications are accessible via clean URLs without port numbers
+**How It Works:**
+- Caddy watches Docker containers for specific labels
+- Labels define the subdomain prefix and backend port
+- Three access methods provide flexibility for different network scenarios
+- nsl.sh provides free subdomains for all Yundera users
 
-**URL Generation Pattern:**
+**Label Format (Required for all Web UI apps):**
+```yaml
+labels:
+  # 1. Gateway-routed domain - Custom CA
+  caddy_0: appname-${APP_DOMAIN}
+  caddy_0.import: gateway_tls
+  caddy_0.reverse_proxy: "{{upstreams 80}}"
+
+  # 2. Direct access via nip.io - Custom CA
+  caddy_1: appname-\${APP_PUBLIC_IP_DASH}.nip.io
+  caddy_1.import: gateway_tls
+  caddy_1.reverse_proxy: "{{upstreams 80}}"
+
+  # 3. Direct access via sslip.io - Let's Encrypt (public cert)
+  caddy_2: appname-\${APP_PUBLIC_IP_DASH}.sslip.io
+  caddy_2.reverse_proxy: "{{upstreams 80}}"
 ```
-https://[port]-appname-username.nsl.sh/
-```
 
-**Compose File Requirements for NSL Router:**
-- Use `expose` instead of `ports` for web UI services
-- Set `webui_port` to port 80 when possible (recommended for clean URLs)
-- Other ports are supported but will include the port in the URL
-- The router automatically handles HTTPS termination and routing
+**Notes:**
+- `caddy_2` does NOT have `import: gateway_tls` - uses Let's Encrypt
+- Replace `80` with your app's actual web UI port
+- Add labels only to the main web UI service
+- Ensure the `pcs` network is configured
 
-**Example - Before NSL Router:**
-```
-http://server-ip:2283/  # Direct port access
-```
+**Compose File Requirements:**
+- Use `expose` to expose the web UI port (required for Caddy discovery)
+- Add Caddy labels to the main web UI service only
+- Connect the main service to the `pcs` network
+- Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` variables
+- Set `container_name` explicitly on the main service. Caddy resolves each label's upstream via container DNS on the `pcs` network, so the container must have a stable, predictable name. Constraints:
+  - lowercase alphanumerics and `-` only (no underscores, dots, or other special characters)
+  - must **not** start with a digit
+  - should match the top-level `name:` and service name for consistency
 
-**Example - With NSL Router:**
+**Example - Complete Caddy Configuration:**
 ```yaml
 services:
   immich:
     image: altran1502/immich-server:v1.135.3
     expose:
-      - 80                    # Expose port 80 internally
+      - 80
+    labels:
+      caddy_0: immich-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: immich-\${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: immich-\${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     environment:
-      IMMICH_PORT: 80        # Configure app to use port 80
-      
+      IMMICH_PORT: 80
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
 x-casaos:
   main: immich
-  webui_port: 80            # Must match exposed port
+  webui_port: 80
 ```
 
-**Result:** `https://immich-username.nsl.sh/` (clean URL, no port numbers)
+**Result URLs:**
+- `https://immich-username.nsl.sh/` (via gateway)
+- `https://immich-192-168-1-1.nip.io/` (direct, custom CA)
+- `https://immich-192-168-1-1.sslip.io/` (direct, Let's Encrypt)
 
-**Alternative - Non-80 Port Example:**
+**Example - Non-Port-80 Service:**
 ```yaml
 services:
-  grafana:
-    image: grafana/grafana:latest
+  duplicati:
+    image: linuxserver/duplicati:latest
     expose:
-      - 3000                  # Expose port 3000 internally
-    environment:
-      GF_SERVER_HTTP_PORT: 3000
-      
+      - 8200
+    labels:
+      caddy_0: duplicati-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8200}}"
+      caddy_1: duplicati-\${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8200}}"
+      caddy_2: duplicati-\${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8200}}"
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
 x-casaos:
-  main: grafana
-  webui_port: 3000          # Must match exposed port
+  main: duplicati
+  webui_port: 8200
 ```
 
-**Result:** `https://3000-grafana-username.nsl.sh/` (includes port in URL)
-
 **Port Selection Guidelines:**
-- **Port 80**: Clean URLs without port numbers (recommended)
-- **Other ports**: Accessible but URL includes port prefix
-- **Standard ports**: Use application defaults when port 80 conflicts with app requirements
+- Configure applications to use port 80 when possible
+- Any port works with Caddy - just match the `expose` and label port values
+- The URL remains clean regardless of the backend port
 
-The mesh router handles:
-- HTTPS certificate management
+Caddy handles:
+- Automatic HTTPS certificate management
 - Subdomain routing to the correct container
-- VPN-secured communication between router and containers
-- Port-based subdomain generation for non-80 ports
+- Load balancing and health checks
+- WebSocket proxying
 
-**Web UI Requirements (all three must be configured together):**
-- The main service must `expose` the web UI port (using `expose`, not necessarily `ports`)
+**Web UI Requirements (all must be configured together):**
+- The main service must `expose` the web UI port
+- Add all three Caddy label blocks (caddy_0, caddy_1, caddy_2)
+- Connect the service to the `pcs` network
 - The `webui_port` field must match the exposed port number
-- The `main` field must reference a valid service name under `services`
+- The `main` field must reference the service with Caddy labels
 
 **Important Notes:**
-- Only one web UI domain is supported per app (even with multiple containers)
-- HTTPS unwrapping is handled automatically by nsl.sh mesh router - no certificate management needed at container level
-- Other ports can still be bound directly to the public IP for non-web services
-- the main app name and hostname should be a simple name without spaces or special characters, as it will be used in the URL.
+- Add Caddy labels only to the main web UI service (not to database or backend services)
+- The app name in the Caddy labels should be simple without spaces or special characters
+- Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` for portability
+- Always include the `pcs` network definition with `external: true`
 
-**Example Configuration:**
+**Example Multi-Service Configuration:**
 
 ```yaml
 services:
   database:
     image: postgres:13
-    # Database service - no web UI
-    
+    # Database service - no Caddy labels needed
+
   webui-service:
     image: myapp:latest
     expose:
       - 8080                        # Must expose the web UI port
+    labels:
+      - "caddy=myapp-${APP_DOMAIN}"
+      - "caddy.reverse_proxy={{upstreams 8080}}"
     ports:
       - "9000:9000"                 # Direct port binding for API or other services
     depends_on:
       - database
 
 x-casaos:
-    main: webui-service             # References the service with web UI
-    webui_port: 8080               # Must match the exposed port above
+    main: webui-service             # References the service with Caddy labels
+    webui_port: 8080               # Must match the exposed port
 ```
+
+#### OIDC Authentication (Recommended)
+
+The recommended way to satisfy the authentication requirement is to front your app with the `nginx-hash-lock` sidecar, which plugs into the PCS's built-in Authelia SSO. The sidecar self-registers as an OIDC client with the PCS's `auth-registrar` on first login — there are **no client IDs, no secrets, and no issuer URL to configure**.
+
+Reference deployment: [AppStoreLab/Apps/HashLockDemo](https://github.com/Yundera/AppStoreLab/tree/main/Apps/HashLockDemo). Fork it, swap `whoami` for your backend, ship.
+
+**Pattern:** put the hash-lock container in front of your backend, point Caddy at hash-lock instead of the backend, and keep the backend reachable only on the internal `pcs` network.
+
+```yaml
+services:
+  myapp-auth:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    container_name: myapp-auth
+    restart: unless-stopped
+    expose:
+      - "80"
+    labels:
+      caddy_0: myapp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: myapp-\${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: myapp-\${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      # Presence of OIDC_REGISTRAR_URL enables OIDC mode.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      BACKEND_HOST: "myapp-backend"   # internal DNS name of the protected container
+      BACKEND_PORT: "80"              # port the backend listens on
+      LISTEN_PORT: "80"               # port hash-lock listens on (matches `expose` + Caddy)
+    depends_on:
+      - myapp-backend
+    networks:
+      - pcs
+
+  myapp-backend:
+    image: myapp:1.2.3
+    # No Caddy labels — only the hash-lock sidecar is publicly reachable
+    expose:
+      - "80"
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: myapp-auth                  # Caddy labels live on the sidecar
+  webui_port: 80
+```
+
+**Checklist for OIDC apps:**
+- [ ] Caddy labels are attached **only to the hash-lock sidecar**, never to the backend — otherwise the backend is exposed unauthenticated.
+- [ ] `x-casaos.main` points at the sidecar service.
+- [ ] Backend service has no `ports:` and no public Caddy labels; it is reachable only via the `pcs` network.
+- [ ] The top-level `name:`, the sidecar service name, and its `container_name` all match (lowercase alnum + `-`, not starting with a digit). `auth-registrar` derives the OIDC `client_id` from the container name via PTR lookup on the `pcs` network, so the `container_name` is load-bearing — it must be stable across reinstalls.
+- [ ] Do not claim `auth-${APP_DOMAIN}` in any Caddy label — it collides with the PCS's Authelia and causes intermittent `invalid_client` errors.
+- [ ] Pin `nginx-hash-lock` to a specific version tag (currently `1.0.7`).
+
+**Requirements on the host PCS:** the `authelia` and `auth-registrar` containers must be running on the `pcs` network (provisioned automatically by the current `template-root`). If they are missing, the app fails at first login with `ENOTFOUND auth-registrar` in the sidecar logs.
 
 #### System Variables
 
-CasaOS automatically provides several system variables for your compose files:
+Yundera injects the following variables into every app at container creation. Reference them in `environment:`, `volumes:`, `labels:`, and `pre-install-cmd`.
 
-**Available Variables:**
-- `$PCS_DEFAULT_PASSWORD`: A secure default password generated by CasaOS for applications requiring authentication
-- `$PCS_DOMAIN`: The domain (without https://) mapped to this container for web UI access
-- `$PCS_PUBLIC_IP`: The public IP address used for port binding announcements and external access
-- `$PCS_DATA_ROOT`: The data root directory (always `/DATA`)
-- `$PCS_EMAIL`: Admin email in the format `admin@DOMAIN`
-- `$AppID`: The application name/ID
-- `$PUID/$PGID`: User/Group IDs for proper file permissions
-- `$TZ`: System timezone
+**Available variables:**
+- `$APP_DOMAIN`: Domain root for this app (e.g. `user.nsl.sh`). Compose a full URL as `https://<prefix>-${APP_DOMAIN}`.
+- `$APP_PUBLIC_IP_DASH`: The server's public IPv4 with dots converted to dashes — used for `nip.io` / `sslip.io` Caddy labels.
+- `$APP_DEFAULT_PASSWORD`: A secure default password generated by Yundera. Use it for first-boot admin credentials instead of hard-coding.
+- `$APP_EMAIL`: Admin email in the format `admin@DOMAIN`.
+- `$AppID`: The application name (equal to the compose top-level `name:`). Use in volume paths: `/DATA/AppData/$AppID/…`.
+- `$PUID` / `$PGID`: User / group IDs for proper file permissions (typically `1000:1000`).
+- `$TZ`: System timezone.
 
-**Example Usage:**
+**Example usage:**
 ```yaml
 environment:
-  - PASSWORD=$PCS_DEFAULT_PASSWORD
-  - DOMAIN=$PCS_DOMAIN
-  - PUBLIC_IP=$PCS_PUBLIC_IP
-  - EMAIL=$PCS_EMAIL
-  - DATA_ROOT=$PCS_DATA_ROOT
+  - BASE_URL=https://myapp-${APP_DOMAIN}
+  - PUBLIC_URL=https://myapp-${APP_PUBLIC_IP_DASH}.sslip.io
+  - ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
+  - ADMIN_EMAIL=$APP_EMAIL
   - PUID=$PUID
   - PGID=$PGID
   - TZ=$TZ
+volumes:
+  - /DATA/AppData/$AppID/data:/app/data
 ```
 
 #### Environment Variables
@@ -587,9 +769,9 @@ We occasionally select certain apps as featured apps to display at the AppStore 
 
 Please use the prepared [PSD template files](psd-source) to quickly create these images.
 
-**Language Requirement:**  
-All apps submitted for validation must include *descriptions* and *tagline* in at least the following languages: **English, French, Korean, Chinese, and Spanish**.
-For the title, only English is required.
+**Language Requirement:**
+- **Mandatory:** English (`en_us`) — required for *title*, *tagline*, and *description*.
+- **Recommended:** French (`fr_fr`), Korean (`ko_kr`), Chinese (`zh_cn`), and Spanish (`es_es`) — provide *tagline* and *description* in these whenever possible. These are the five languages the store fully supports and translations help reach the full user base.
 
 ## Feedback
 

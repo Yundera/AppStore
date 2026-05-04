@@ -8,7 +8,6 @@ services:
       PGID: $PGID
       TZ: $TZ
     image: sigoden/dufs:v0.45.0
-    network_mode: bridge
     restart: unless-stopped
     command: [
       "/srv",
@@ -23,7 +22,7 @@ services:
       "--allow-search",
       "--allow-symlink",
       "--allow-archive",
-      "--auth", "admin:$default_pwd@/:rw"
+      "--auth", "admin:$APP_DEFAULT_PASSWORD@/:rw"
     ]
     volumes:
       - type: bind
@@ -31,11 +30,27 @@ services:
         target: /srv
     expose:
       - 80
+    labels:
+      caddy_0: dufs-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: dufs-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: dufs-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     deploy:
       resources:
         limits:
           memory: 128M
           cpus: '0.5'
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:
@@ -104,14 +119,14 @@ x-casaos:
         Default WebDAV Access
         | Username   | Password       | Access |
         | --------   | ------------   | ------ |
-        | `admin`    | `$default_pwd` | Read/Write |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` | Read/Write |
         
-        WebDAV URL: https://dufs-$domain/
+        WebDAV URL: https://dufs-$APP_DOMAIN/
         
         Mount Instructions:
-        • Windows: Map Network Drive → https://dufs-$domain/
-        • macOS: Finder → Go → Connect to Server → https://dufs-$domain/
-        • Linux: Files → Other Locations → Connect to Server → dav://dufs-$domain/
+        • Windows: Map Network Drive → https://dufs-$APP_DOMAIN/
+        • macOS: Finder → Go → Connect to Server → https://dufs-$APP_DOMAIN/
+        • Linux: Files → Other Locations → Connect to Server → dav://dufs-$APP_DOMAIN/
         
         For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
         ```

@@ -8,32 +8,47 @@ services:
       PUID: $PUID
       TZ: $TZ
       FB_DATABASE: /db/database.db
-    image: filebrowser/filebrowser:v2.32.0
-    network_mode: bridge
+    image: filebrowser/filebrowser:v2.63.2
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/filebrowser/db/
+        source: /DATA/AppData/$AppID/db/
         target: /db/
       - type: bind
         source: /DATA/
-        target: /srv
+        target: /srv/
     expose:
       - 80
+    labels:
+      caddy_0: filebrowser-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: filebrowser-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: filebrowser-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
     cpu_shares: 10
     deploy:
       resources:
         limits:
           memory: 256M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
 x-casaos:
   pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $default_pwd --perm.admin --database /db/database.db
+    docker run --rm -v /DATA/AppData/filebrowser:/data alpine sh -c "mkdir -p /data/db && chown -R $PUID:$PGID /data" &&
+    docker run --rm --user $PUID:$PGID -v /DATA/AppData/filebrowser/db/:/db/ filebrowser/filebrowser:v2.63.2 config init --database /db/database.db &&
+    docker run --rm --user $PUID:$PGID -v /DATA/AppData/filebrowser/db/:/db/ filebrowser/filebrowser:v2.63.2 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
   architectures:
     - amd64
     - arm64
-    - arm
   main: filebrowser
   author: Yundera Team
   category: Cloud
@@ -116,7 +131,27 @@ x-casaos:
         Default Account
         | Username   | Password       |
         | --------   | ------------   |
-        | `admin`    | `$default_pwd` |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+      ko_kr: |
+        기본 계정
+        | 사용자명   | 비밀번호       |
+        | --------   | ------------   |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+      zh_cn: |
+        默认账户
+        | 用户名     | 密码           |
+        | --------   | ------------   |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+      fr_fr: |
+        Compte par défaut
+        | Nom d'utilisateur | Mot de passe   |
+        | --------          | ------------   |
+        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+      es_es: |
+        Cuenta predeterminada
+        | Usuario    | Contraseña     |
+        | --------   | ------------   |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` |
   title:
     en_us: FileBrowser
   index: /

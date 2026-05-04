@@ -1,0 +1,213 @@
+name: tincatan
+services:
+  tincatan:
+    image: maven:3.8-openjdk-8
+    user: $PUID:$PGID
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '1.0'
+    expose:
+      - 4567
+    labels:
+      caddy_0: tincatan-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 4567}}"
+      caddy_1: tincatan-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 4567}}"
+      caddy_2: tincatan-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 4567}}"
+    networks:
+      - pcs
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      MAVEN_OPTS: "-Xmx1024m"
+    volumes:
+      - /DATA/AppData/tincatan/app/:/app
+      - /DATA/AppData/tincatan/m2/:/root/.m2
+    working_dir: /app
+    command: >
+      sh -c "
+      if [ ! -f /app/pom.xml ]; then
+        echo 'Cloning TINC repository...';
+        apt-get update && apt-get install -y git;
+        git clone https://github.com/seansegal/tincisnotcatan.git /tmp/tinc;
+        cp -r /tmp/tinc/* /app/;
+      fi;
+      echo 'Building with Maven...';
+      mvn clean compile;
+      echo 'Generating classpath...';
+      mvn dependency:build-classpath -Dmdep.outputFile=.mvn-classpath;
+      echo 'Starting TINC server...';
+      java -cp \"target/classes:\$(cat .mvn-classpath)\" edu.brown.cs.catan.Main 4567
+      "
+    restart: unless-stopped
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: tincatan
+  webui_port: 4567
+  category: Games
+  author: CasaOS Team
+  developer: Sean Segal & Contributors
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/icon.png
+  screenshot_1: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-1.png
+  screenshot_2: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-2.png
+  screenshot_3: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/thumbnail.png
+  title:
+    en_us: TINC - Settlers of Catan
+  tagline:
+    en_us: Web-based Settlers of Catan game with advanced features
+    fr_fr: Jeu Colons de Catane en ligne avec fonctionnalités avancées
+    ko_kr: 고급 기능이 포함된 웹 기반 카탄 게임
+    zh_cn: 具有高级功能的基于网络的卡坦岛游戏
+    es_es: Juego Colonos de Catán basado en web con características avanzadas
+  description:
+    en_us: |
+      TINC (This Is Not Catan) is a full-featured web implementation of Settlers of Catan.
+      Play directly in your browser with no downloads required!
+      
+      Features:
+      - 🌐 100% browser-based gameplay
+      - 👥 2-4 player multiplayer support
+      - 🎮 Complete Catan game mechanics
+      - 💰 Advanced economic features (optional)
+      - 📱 Mobile-friendly interface
+      - 🎯 AI bots for practice games
+      - ⚡ Real-time gameplay with WebSockets
+      
+      Game Modes:
+      - Standard Catan (10 victory points)
+      - Custom victory point goals
+      - Advanced economy with decimal resources
+      - Dynamic exchange rates
+    fr_fr: |
+      TINC (This Is Not Catan) est une implémentation web complète de Colons de Catane.
+      Jouez directement dans votre navigateur sans téléchargement!
+      
+      Caractéristiques:
+      - Gameplay 100% basé sur navigateur
+      - Support multijoueur 2-4 joueurs
+      - Mécaniques de jeu Catan complètes
+      - Fonctionnalités économiques avancées (optionnel)
+    ko_kr: |
+      TINC (This Is Not Catan)는 카탄의 완전한 웹 구현입니다.
+      다운로드 없이 브라우저에서 바로 플레이하세요!
+      
+      특징:
+      - 100% 브라우저 기반 게임플레이
+      - 2-4명 멀티플레이어 지원
+      - 완전한 카탄 게임 메커니즘
+      - 고급 경제 기능 (선택 사항)
+      - 모바일 친화적 인터페이스
+    zh_cn: |
+      TINC（This Is Not Catan）是卡坦岛的完整网络实现。
+      无需下载，直接在浏览器中游戏！
+      
+      特点：
+      - 100%基于浏览器的游戏
+      - 2-4人多人游戏支持
+      - 完整的卡坦游戏机制
+      - 高级经济功能（可选）
+    es_es: |
+      TINC (This Is Not Catan) es una implementación web completa de Colonos de Catán.
+      ¡Juega directamente en tu navegador sin descargas!
+      
+      Características:
+      - Juego 100% basado en navegador
+      - Soporte multijugador para 2-4 jugadores
+      - Mecánicas completas del juego Catán
+      - Características económicas avanzadas (opcional)
+  tips:
+    before_install:
+      en_us: |
+        ## 🎮 How to Access
+        
+        Open your browser and navigate to:
+        - **Clean URL**: `https://tincatan-username.nsl.sh/`
+        - **Local Access**: `http://[server-ip]:4567/`
+        
+        ## ⚠️ First Run Setup
+        
+        **IMPORTANT**: The first run will take 5-10 minutes to:
+        1. Download the source code
+        2. Download Maven dependencies
+        3. Compile the Java project
+        4. Start the server
+        
+        Subsequent starts will be much faster (under 1 minute).
+        
+        ## 🚀 Quick Start Guide
+        
+        1. **Enter Username**: Type your name on the home screen
+        2. **Create or Join**: 
+           - Click "Create Game" for a new room
+           - Click "Join Game" to enter an existing room
+        3. **Game Setup**:
+           - Choose number of players (2-4)
+           - Select victory points (default: 10)
+           - Optional: Enable advanced economic features
+        4. **Start Playing**: Game begins when all players are ready
+        
+        ## 🎯 Game Features
+        
+        ### Standard Game
+        - Classic Settlers of Catan rules
+        - Build settlements, cities, and roads
+        - Trade resources with players and bank
+        - Development cards (Knight, Victory Point, etc.)
+        - Longest Road and Largest Army bonuses
+        - Robber mechanics on rolling 7
+        
+        ### Advanced Economic Mode
+        - Decimal resource values
+        - Dynamic exchange rates
+        - Market-based trading
+        - Enhanced strategic depth
+        
+        ## 📱 Device Support
+        
+        - **Desktop**: Chrome, Firefox, Safari, Edge
+        - **Mobile**: iOS Safari, Chrome Mobile
+        - **Tablet**: Full touch support
+        
+        ## 🔧 Troubleshooting
+        
+        If you see Maven errors:
+        1. Wait for the full build to complete (5-10 minutes first time)
+        2. Check logs: `docker logs tincatan-tincatan-1`
+        3. If build fails, try restarting: `docker-compose restart`
+        4. Maven dependencies are cached in `/DATA/AppData/tincatan/m2`
+        
+        ## 💡 Pro Tips
+        
+        - First run is slow due to Maven downloads - be patient!
+        - Dependencies are cached, so restarts are fast
+        - Use Chrome for best performance
+        - The game saves state between sessions
+      fr_fr: |
+        Accédez au jeu: `https://tincatan-username.nsl.sh/`
+        Premier démarrage: 5-10 minutes pour compiler avec Maven.
+      ko_kr: |
+        게임 접속: `https://tincatan-username.nsl.sh/`
+        첫 실행: Maven 컴파일에 5-10분 소요.
+      zh_cn: |
+        访问游戏：`https://tincatan-username.nsl.sh/`
+        首次运行：Maven编译需要5-10分钟。
+      es_es: |
+        Accede al juego: `https://tincatan-username.nsl.sh/`
+        Primera ejecución: 5-10 minutos para compilar con Maven.
+  index: /home

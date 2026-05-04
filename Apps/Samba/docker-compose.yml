@@ -2,7 +2,7 @@ name: samba
 services:
   samba:
     container_name: samba
-    image: dockurr/samba:4.22
+    image: dockurr/samba:4.23.5
     network_mode: bridge
     restart: unless-stopped
     user: 0:0  # Run as root for full permissions
@@ -19,7 +19,7 @@ services:
       TZ: $TZ
       NAME: "DATA"
       USER: "admin"
-      PASS: $default_pwd
+      PASS: $APP_DEFAULT_PASSWORD
       UID: $PUID
       GID: $PGID
       RW: "true"
@@ -110,7 +110,7 @@ x-casaos:
         Default SMB Access
         | Username   | Password       | Share Name    |
         | --------   | ------------   | ----------    |
-        | `admin`    | `$default_pwd` | DATA  |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` | DATA  |
         
         Network Access Instructions:
         • Windows: File Explorer → Network → \\ip_or_host\DATA

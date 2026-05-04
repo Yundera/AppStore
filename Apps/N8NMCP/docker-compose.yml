@@ -1,0 +1,193 @@
+name: n8nmcp
+services:
+  # Main MCP server — reachable at n8nmcp:9640 on the pcs network
+  n8nmcp:
+    image: ghcr.io/worph/n8nmcp:1.0.1
+    container_name: n8nmcp
+    hostname: n8nmcp
+    # supervisord is PID 1 and MUST start as root so it can drop privileges for
+    # each child program. Running as a non-root uid fails with "Can't drop
+    # privilege as nonroot user". Child processes drop to their own uid as
+    # configured in /etc/supervisord.conf.
+    user: "0:0"
+    restart: unless-stopped
+    expose:
+      - 9640
+      - 9099
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - PORT=9640
+      - UPSTREAM_PORT=3000
+      - DISCOVERY_PORT=9099
+      # Pre-seed the companion n8n app's in-network hostname.
+      # The API key is left blank — paste it in the Web UI on first launch.
+      - N8N_BASE_URL=http://n8n:80
+    volumes:
+      # The image's supervisord.conf hard-codes CONFIG_PATH=/app/wrapper-data/config.json
+      # for the wrapper program, so the persistent bind MUST land there — a container-
+      # level CONFIG_PATH env is ignored because supervisord's program `environment=`
+      # block wins.
+      - type: bind
+        source: /DATA/AppData/n8nmcp/
+        target: /app/wrapper-data
+    networks:
+      - pcs
+
+  # Nginx-hash-lock provides perimeter authentication for the web UI
+  n8nmcp-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      ALLOWED_PATHS: "mcp"
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: n8nmcp
+      BACKEND_PORT: "9640"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      - n8nmcp
+    networks:
+      - pcs
+    labels:
+      caddy_0: n8nmcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: n8nmcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: n8nmcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: n8nmcp
+  index: /?hash=$AUTH_HASH
+  author: Aptero
+  category: Developer
+  description:
+    en_us: |
+      **n8n workflow control for AI assistants via MCP**
+
+      n8n MCP exposes the [n8n](https://n8n.io) REST API as an MCP (Model Context Protocol) server, letting LLMs and AI assistants list, read, create, edit, activate, and execute n8n workflows — plus browse the full n8n node catalog. Wraps the upstream [`czlonkowski/n8n-mcp`](https://github.com/czlonkowski/n8n-mcp) server and adds a Web UI for API-key setup and Beacon auto-discovery.
+
+      **What you can do:**
+      - Manage workflows (create, update, delete, activate, execute) from any MCP-compatible AI assistant
+      - List and inspect executions including per-node output
+      - Search the n8n node catalog and fetch per-node schemas
+      - Validate workflows before deployment
+      - Configure the n8n connection via the built-in Web UI — no hand-editing files
+
+      **Think of it like:** A programmable remote control for your n8n instance, driven by natural language.
+
+      **Perfect if you:** Want Claude / Cursor / any MCP client to build and operate n8n automations for you, or to pair with other MCP apps (Beacon, Ntfy, Chronos) for end-to-end AI-driven workflows.
+    fr_fr: |
+      **Controle des workflows n8n pour les assistants IA via MCP**
+
+      n8n MCP expose l'API REST de [n8n](https://n8n.io) en tant que serveur MCP (Model Context Protocol), permettant aux LLMs et assistants IA de lister, lire, creer, modifier, activer et executer des workflows n8n — et de parcourir le catalogue complet des nodes n8n. Enveloppe le serveur amont [`czlonkowski/n8n-mcp`](https://github.com/czlonkowski/n8n-mcp) et ajoute une interface Web pour la configuration de la cle API et la decouverte automatique via Beacon.
+
+      **Ce que vous pouvez faire:**
+      - Gerer les workflows (creer, modifier, supprimer, activer, executer) depuis tout assistant IA compatible MCP
+      - Lister et inspecter les executions, y compris la sortie par node
+      - Rechercher dans le catalogue des nodes n8n et consulter le schema de chaque node
+      - Valider les workflows avant deploiement
+      - Configurer la connexion n8n via l'interface Web integree — sans editer de fichiers
+
+      **Parfait si vous:** Voulez que Claude / Cursor / tout client MCP construise et pilote vos automatisations n8n, ou combiner avec d'autres apps MCP (Beacon, Ntfy, Chronos) pour des workflows pilotes par IA de bout en bout.
+  developer: Aptero
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-4.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-5.png
+  tagline:
+    en_us: Expose your n8n workflows to LLMs via MCP
+    fr_fr: Exposez vos workflows n8n aux LLMs via MCP
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/thumbnail.png
+  title:
+    en_us: n8n MCP
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        n8n MCP needs a running n8n instance and an API key.
+
+        **Prerequisites:**
+        1. Install the **n8n** app first (or have another reachable n8n instance)
+        2. In n8n: **Settings → n8n API → Create an API key**
+
+        **Setup (2 steps):**
+        1. Open this app's Web UI (you'll be prompted for the `ADMIN` password `$APP_DEFAULT_PASSWORD`)
+        2. Paste the **n8n Base URL** (`http://n8n:80` is pre-filled for the companion app) and the **API key**, click **Test connection** → **Save**
+
+        **MCP Integration (for AI/LLMs):**
+
+        **Option 1: Public URL (with hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "n8n-mcp": {
+              "type": "http",
+              "url": "https://n8nmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "n8n-mcp": {
+              "type": "http",
+              "url": "http://n8nmcp:9640/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Option 3: Via Beacon (aggregated)**
+
+        If you have **Beacon** installed, n8n MCP auto-registers there and its tools show up under the `n8n-mcp__*` namespace — no extra config.
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `n8n_list_workflows` | List workflows (optionally filter by tag/active) |
+        | `n8n_get_workflow` | Fetch a workflow by ID including nodes and connections |
+        | `n8n_create_workflow` | Create a workflow from a JSON definition |
+        | `n8n_update_full_workflow` | Replace a workflow's nodes/connections/settings |
+        | `n8n_update_partial_workflow` | Apply diff operations (add/remove nodes, connections, activate, etc.) |
+        | `n8n_delete_workflow` | Remove a workflow |
+        | `n8n_test_workflow` | Trigger a webhook/form/chat workflow for testing |
+        | `n8n_executions` | List, get, or delete executions |
+        | `search_nodes` / `get_node` | Browse and inspect the n8n node catalog |
+        | `validate_node` / `validate_workflow` | Validate configs before deployment |
+        | `n8n_health_check` | Verify n8n API connectivity |
+
+        **Security:**
+        - The API key is stored only in `/DATA/AppData/n8nmcp/config.json` and is never logged or returned via the API
+        - The Web UI sits behind the Yundera hash-lock — you'll need the admin password to access it

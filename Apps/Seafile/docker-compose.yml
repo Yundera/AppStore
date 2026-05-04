@@ -1,0 +1,414 @@
+name: seafile
+
+services:
+  db:
+    image: mariadb:11.8-noble
+    user: 0:0
+    container_name: seafile-mysql
+    restart: unless-stopped
+    cpu_shares: 70
+    environment:
+      - MYSQL_ROOT_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_LOG_CONSOLE=true
+      - MARIADB_AUTO_UPGRADE=1
+      - TZ=$TZ
+    volumes:
+      - /DATA/AppData/seafile/mysql/:/var/lib/mysql
+    networks:
+      - seafile-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/usr/local/bin/healthcheck.sh",
+          "--connect",
+          "--mariadbupgrade",
+          "--innodb_initialized",
+        ]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    user: 0:0
+    container_name: seafile-redis
+    restart: unless-stopped
+    cpu_shares: 30
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "$APP_DEFAULT_PASSWORD"
+    environment:
+      - REDIS_PASSWORD=$APP_DEFAULT_PASSWORD
+    networks:
+      - seafile-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "$APP_DEFAULT_PASSWORD", "ping"]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 5
+
+  seafile:
+    image: seafileltd/seafile-mc:13.0.19
+    container_name: seafile
+    restart: unless-stopped
+    user: 0:0
+    cpu_shares: 80
+    expose:
+      - 80
+      - 8080
+    volumes:
+      - /DATA/AppData/seafile/shared/:/shared
+    environment:
+      - INIT_SEAFILE_ADMIN_EMAIL=admin@$APP_DOMAIN
+      - INIT_SEAFILE_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
+
+      - SEAFILE_SERVER_HOSTNAME=seafile-$APP_DOMAIN
+      - SEAFILE_SERVER_PROTOCOL=https
+
+      - SITE_ROOT=/
+      - NON_ROOT=false
+      - JWT_PRIVATE_KEY=$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD
+      - SEAFILE_LOG_TO_STDOUT=true
+      - MD_FILE_COUNT_LIMIT=100000
+      - TIME_ZONE=UTC # seafile is very sensitive to timezone
+
+      - SEAFILE_MYSQL_DB_HOST=db
+      - SEAFILE_MYSQL_DB_PORT=3306
+      - SEAFILE_MYSQL_DB_USER=seafile
+      - SEAFILE_MYSQL_DB_PASSWORD=$APP_DEFAULT_PASSWORD
+      - INIT_SEAFILE_MYSQL_ROOT_PASSWORD=$APP_DEFAULT_PASSWORD
+      - SEAFILE_MYSQL_DB_CCNET_DB_NAME=ccnet_db
+      - SEAFILE_MYSQL_DB_SEAFILE_DB_NAME=seafile_db
+      - SEAFILE_MYSQL_DB_SEAHUB_DB_NAME=seahub_db
+
+      - CACHE_PROVIDER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=$APP_DEFAULT_PASSWORD
+
+      - ENABLE_SEADOC=true
+      - SEADOC_SERVER_URL=https://seafile-$APP_DOMAIN/sdoc-server
+
+      - ENABLE_NOTIFICATION_SERVER=true
+      - INNER_NOTIFICATION_SERVER_URL=http://notification-server:8083
+      - NOTIFICATION_SERVER_URL=https://seafile-$APP_DOMAIN/notification
+
+      - ENABLE_SEAFILE_AI=false
+      - SEAFILE_AI_SERVER_URL=http://seafile-ai:8888
+      - SEAFILE_AI_SECRET_KEY=$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD
+    labels:
+      # --- caddy_0: gateway via APP_DOMAIN ---
+      caddy_0: seafile-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      # Notification server
+      caddy_0.0_handle_path: "/notification/*"
+      caddy_0.0_handle_path.reverse_proxy: "notification-server:8083"
+      # SeaDoc WebSocket
+      caddy_0.1_handle_path: "/socket.io/*"
+      caddy_0.1_handle_path.0_rewrite: "* /socket.io{uri}"
+      caddy_0.1_handle_path.1_reverse_proxy: "seadoc:80"
+      # SeaDoc server
+      caddy_0.2_handle_path: "/sdoc-server/*"
+      caddy_0.2_handle_path.0_rewrite: "* {uri}"
+      caddy_0.2_handle_path.1_reverse_proxy: "seadoc:80"
+      # Rewrite bare / to /accounts/login/ to avoid 302 redirect (CF worker drops body on redirects)
+      caddy_0.@root.path: "/"
+      caddy_0.3_rewrite: "@root /accounts/login/"
+      # Default: main seafile app
+      caddy_0.4_reverse_proxy: "{{upstreams 80}}"
+
+      # --- caddy_1: nip.io fallback ---
+      caddy_1: seafile-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.0_handle_path: "/notification/*"
+      caddy_1.0_handle_path.reverse_proxy: "notification-server:8083"
+      caddy_1.1_handle_path: "/socket.io/*"
+      caddy_1.1_handle_path.0_rewrite: "* /socket.io{uri}"
+      caddy_1.1_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_1.2_handle_path: "/sdoc-server/*"
+      caddy_1.2_handle_path.0_rewrite: "* {uri}"
+      caddy_1.2_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_1.@root.path: "/"
+      caddy_1.3_rewrite: "@root /accounts/login/"
+      caddy_1.4_reverse_proxy: "{{upstreams 80}}"
+
+      # --- caddy_2: sslip.io fallback (no gateway_tls) ---
+      caddy_2: seafile-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.0_handle_path: "/notification/*"
+      caddy_2.0_handle_path.reverse_proxy: "notification-server:8083"
+      caddy_2.1_handle_path: "/socket.io/*"
+      caddy_2.1_handle_path.0_rewrite: "* /socket.io{uri}"
+      caddy_2.1_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_2.2_handle_path: "/sdoc-server/*"
+      caddy_2.2_handle_path.0_rewrite: "* {uri}"
+      caddy_2.2_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_2.@root.path: "/"
+      caddy_2.3_rewrite: "@root /accounts/login/"
+      caddy_2.4_reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - seafile-net
+      - pcs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s -L -o /dev/null -w '%{http_code}' http://localhost/ | grep -q '^200$' || exit 1"]
+      interval: 30s
+      start_period: 60s
+      timeout: 10s
+      retries: 5
+
+  notification-server:
+    image: seafileltd/notification-server:13.0.10
+    container_name: notification-server
+    restart: unless-stopped
+    user: 0:0
+    cpu_shares: 30
+    expose:
+      - 8083
+    volumes:
+      - /DATA/AppData/seafile/shared/seafile/logs/:/shared/seafile/logs
+    environment:
+      - SEAFILE_SERVER_HOSTNAME=seafile-$APP_DOMAIN
+      - SEAFILE_SERVER_PROTOCOL=https
+      - SEAFILE_MYSQL_DB_HOST=db
+      - SEAFILE_MYSQL_DB_PORT=3306
+      - SEAFILE_MYSQL_DB_USER=seafile
+      - SEAFILE_MYSQL_DB_PASSWORD=$APP_DEFAULT_PASSWORD
+      - SEAFILE_MYSQL_DB_CCNET_DB_NAME=ccnet_db
+      - SEAFILE_MYSQL_DB_SEAFILE_DB_NAME=seafile_db
+      - TIME_ZONE=UTC # seafile is very sensitive to timezone
+      - JWT_PRIVATE_KEY=$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD
+      - SEAFILE_LOG_TO_STDOUT=true
+      - NOTIFICATION_SERVER_LOG_LEVEL=info
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - seafile-net
+      - pcs
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8083'"]
+      interval: 20s
+      start_period: 30s
+      timeout: 5s
+      retries: 5
+
+  seadoc:
+    image: seafileltd/sdoc-server:2.0.9
+    container_name: seafile-seadoc
+    hostname: seadoc
+    restart: unless-stopped
+    user: 0:0
+    cpu_shares: 70
+    expose:
+      - 80
+    volumes:
+      - /DATA/AppData/seafile/seadoc-data/:/shared
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=seafile
+      - DB_PASSWORD=$APP_DEFAULT_PASSWORD
+      - DB_NAME=seahub_db
+      - TIME_ZONE=UTC
+      - JWT_PRIVATE_KEY=$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD$APP_DEFAULT_PASSWORD
+      - NON_ROOT=false
+      - SEAHUB_SERVICE_URL=https://seafile-$APP_DOMAIN
+      - SEAFILE_SERVER_HOSTNAME=seafile-$APP_DOMAIN
+      - SEAFILE_SERVER_PROTOCOL=https
+    depends_on:
+      db:
+        condition: service_healthy
+      seafile:
+        condition: service_healthy
+    networks:
+      - seafile-net
+      - pcs
+
+  rclone:
+    image: rclone/rclone:1.73.3
+    container_name: seafile-rclone
+    restart: unless-stopped
+    user: 0:0
+    privileged: true
+    cpu_shares: 30
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    command: >
+      mount seafile-webdav:
+      /data/seafile
+      --config /config/rclone.conf
+      --allow-other
+      --allow-non-empty
+      --vfs-cache-mode off
+      --vfs-cache-poll-interval 5s
+      --dir-cache-time 5s
+      --vfs-read-ahead 0
+      --buffer-size 0
+      --log-level INFO
+      --stats 30s
+      --uid $PUID
+      --gid $PGID
+    volumes:
+      - /DATA/Seafile/:/data/seafile:shared
+      - /DATA/AppData/seafile/rclone/:/config
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+    depends_on:
+      seafile:
+        condition: service_healthy
+    networks:
+      - seafile-net
+
+networks:
+  seafile-net:
+    name: seafile-net
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  store_app_id: seafile
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/seafile/ &&
+    mkdir -p /DATA/AppData/seafile/seadoc-data &&
+    mkdir -p /DATA/AppData/seafile/shared/seafile/conf &&
+    mkdir -p /DATA/AppData/seafile/rclone &&
+    mkdir -p /DATA/Seafile &&
+    # Create rclone config with obscured password for WebDAV (only if not exists)
+    if [ ! -f /DATA/AppData/seafile/rclone/rclone.conf ]; then
+      echo "Creating rclone configuration..."
+      OBSCURED_PASS=$(docker run --rm rclone/rclone:1.73.3 obscure "$APP_DEFAULT_PASSWORD") &&
+      cat > /DATA/AppData/seafile/rclone/rclone.conf << EOF
+    [seafile-webdav]
+    type = webdav
+    url = http://seafile:8080/seafdav
+    vendor = other
+    user = admin@$APP_DOMAIN
+    pass = $OBSCURED_PASS
+    EOF
+      echo "rclone configuration created"
+    else
+      echo "rclone configuration already exists, skipping"
+    fi &&
+    chown $PUID:$PGID /DATA/AppData/seafile/ 2>/dev/null || true &&
+    chown $PUID:$PGID /DATA/AppData/seafile/rclone/ 2>/dev/null || true &&
+    chown $PUID:$PGID /DATA/AppData/seafile/rclone/rclone.conf 2>/dev/null || true &&
+    chown $PUID:$PGID /DATA/Seafile/ 2>/dev/null || true
+  post-install-cmd: |
+    echo "Waiting for Seafile to finish initialization (up to 25 minutes)..."
+    SEAHUB_SETTINGS="/DATA/AppData/seafile/shared/seafile/conf/seahub_settings.py"
+    for i in $(seq 1 150); do
+      if [ -f "$SEAHUB_SETTINGS" ] && grep -q "SECRET_KEY" "$SEAHUB_SETTINGS" 2>/dev/null; then
+        echo "Seafile initialization detected after $((i * 10)) seconds"
+        break
+      fi
+      sleep 10
+    done
+    # Ensure WebDAV is enabled (in case Seafile overwrote our pre-created config)
+    if [ -f /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf ]; then
+      if grep -q "enabled = false" /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf; then
+        sed -i 's/enabled = false/enabled = true/' /DATA/AppData/seafile/shared/seafile/conf/seafdav.conf
+        echo "WebDAV re-enabled"
+      fi
+    fi
+    # Ensure SMTP config is present (in case Seafile overwrote our pre-created config)
+    if [ -f "$SEAHUB_SETTINGS" ] && ! grep -q "EMAIL_HOST" "$SEAHUB_SETTINGS"; then
+      echo "Re-adding SMTP configuration..."
+      cat >> "$SEAHUB_SETTINGS" << EOF
+
+    # SMTP configuration (Yundera built-in SMTP service)
+    EMAIL_USE_TLS = False
+    EMAIL_HOST = 'smtp'
+    EMAIL_HOST_USER = 'casaos'
+    EMAIL_HOST_PASSWORD = '$APP_DEFAULT_PASSWORD'
+    EMAIL_PORT = 587
+    DEFAULT_FROM_EMAIL = 'seafile@$APP_DOMAIN'
+    SERVER_EMAIL = 'seafile@$APP_DOMAIN'
+    EOF
+      echo "SMTP configuration added"
+    fi
+    # Single restart to apply all config changes
+    echo "Restarting Seafile to apply configuration..."
+    docker restart seafile
+    # Ensure admin account exists (fallback if INIT_SEAFILE_ADMIN_* failed on first boot)
+    echo "Waiting for Seafile to be ready after restart..."
+    for i in $(seq 1 30); do
+      if docker exec seafile curl -sf http://localhost/ > /dev/null 2>&1; then
+        echo "Seafile is ready"
+        break
+      fi
+      sleep 10
+    done
+    echo "Ensuring admin account exists..."
+    printf 'admin@%s\n%s\n%s\n' "$APP_DOMAIN" "$APP_DEFAULT_PASSWORD" "$APP_DEFAULT_PASSWORD" | \
+      docker exec -i seafile /opt/seafile/seafile-server-latest/reset-admin.sh 2>&1 || \
+      echo "Warning: admin account setup returned an error (may already exist)"
+    echo "Post-install complete"
+  webui_port: 80
+  main: seafile
+
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/thumbnail.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-3.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-4.png
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Cloud
+  description:
+    en_us: Seafile is a file hosting and collaboration platform with privacy protection and teamwork features. It allows you to create private clouds for file sharing and collaboration, supporting automatic sync across devices, version control, and secure file encryption. Perfect for teams and individuals who need reliable cloud storage with advanced sharing capabilities.
+    es_es: Seafile es una plataforma de alojamiento y colaboración de archivos con protección de privacidad y características de trabajo en equipo. Te permite crear nubes privadas para compartir archivos y colaborar, con sincronización automática entre dispositivos, control de versiones y cifrado seguro de archivos.
+    fr_fr: Seafile est une plateforme d'hébergement et de collaboration de fichiers avec protection de la confidentialité et fonctionnalités de travail d'équipe. Elle vous permet de créer des nuages privés pour le partage et la collaboration de fichiers, prenant en charge la synchronisation automatique entre appareils, le contrôle de version et le chiffrement sécurisé des fichiers.
+    ko_kr: Seafile은 개인정보 보호와 팀워크 기능을 갖춘 파일 호스팅 및 협업 플랫폼입니다. 파일 공유와 협업을 위한 프라이빗 클라우드를 생성할 수 있으며, 기기 간 자동 동기화, 버전 제어, 보안 파일 암호화를 지원합니다.
+    zh_cn: Seafile 是一个文件托管和协作平台，具有隐私保护和团队协作功能。它允许您创建私有云进行文件共享和协作，支持设备间自动同步、版本控制和安全文件加密。
+  developer: Seafile Ltd.
+  tagline:
+    en_us: Professional file sync and collaboration platform
+    es_es: Plataforma profesional de sincronización y colaboración de archivos
+    fr_fr: Plateforme professionnelle de synchronisation et collaboration de fichiers
+    ko_kr: 전문 파일 동기화 및 협업 플랫폼
+    zh_cn: 专业文件同步和协作平台
+  tips:
+    before_install:
+      en_us: |
+        **Default Admin Account**
+
+        | Field    | Value                  |
+        |----------|------------------------|
+        | Email    | admin@$APP_DOMAIN      |
+        | Password | `$APP_DEFAULT_PASSWORD`|
+
+        **Features:**
+        - File sync across devices with desktop and mobile apps
+        - Team libraries with granular permissions
+        - Version control and file history
+        - Online document editing with Seadoc
+        - Secure file sharing with password protection
+        - WebDAV support for third-party app integration
+        - Virtual drive mounted at `/DATA/Seafile` for direct host access
+
+        **Post-Installation:**
+        - Access via your domain to set up additional users
+        - Download desktop/mobile apps for automatic sync
+        - Configure team libraries for collaborative work
+        - Set up two-factor authentication for enhanced security
+        - Virtual Seafile drive available at `/DATA/Seafile` on the host system
+  title:
+    en_us: Seafile

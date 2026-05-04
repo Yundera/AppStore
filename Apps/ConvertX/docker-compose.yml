@@ -7,6 +7,15 @@ services:
     restart: unless-stopped
     expose:
       - 80
+    labels:
+      caddy_0: convertx-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: convertx-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: convertx-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
@@ -33,10 +42,10 @@ services:
           memory: 2G
           cpus: '1.0'
     environment:
-      - JWT_SECRET=$default_pwd
+      - JWT_SECRET=$APP_DEFAULT_PASSWORD
       - ACCOUNT_REGISTRATION=false
       - HTTP_ALLOWED=true
-      - ALLOW_UNAUTHENTICATED=false
+      - ALLOW_UNAUTHENTICATED=true
       - AUTO_DELETE_EVERY_N_HOURS=24
       - HOME=/tmp/convertx-home
     volumes:
@@ -57,6 +66,7 @@ services:
 
 networks:
   pcs:
+    name: pcs
     external: true
 
 x-casaos:
@@ -113,7 +123,7 @@ x-casaos:
         - 3D Models: STL, OBJ, PLY, DAE
         - Archives: ZIP, RAR, 7Z, TAR
 
-        Access via: `https://convertx-[username].nsl.sh`
+        Access via: `https://convertx-username.nsl.sh`
 
         **Note**: This app requires root permissions to function properly with SQLite database.
   index: /?hash=$AUTH_HASH
