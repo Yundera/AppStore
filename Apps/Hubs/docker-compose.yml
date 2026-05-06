@@ -324,24 +324,14 @@ x-casaos:
   description:
     en_us: |
       Hubs is an open-source social VR platform from the Hubs Foundation. Create persistent virtual rooms for meetings, classes, events, or hangouts — accessible from any browser, no install required, with full WebXR support for VR headsets.
-
-      This deployment runs the full Hubs Foundation stable stack: Reticulum (Phoenix backend), Hubs (3D client), Spoke (scene editor), Dialog (Mediasoup WebRTC SFU), Nearspark (thumbnail proxy), Photomnemonic (page screenshotter), PostgreSQL, and PostgREST.
     fr_fr: |
       Hubs est une plateforme de VR sociale open-source de la Hubs Foundation. Créez des salons virtuels persistants pour des réunions, cours, événements ou rencontres — accessibles depuis n'importe quel navigateur, sans installation, avec une prise en charge complète de WebXR pour les casques VR.
-
-      Ce déploiement inclut la pile stable complète : Reticulum (backend Phoenix), Hubs (client 3D), Spoke (éditeur de scène), Dialog (SFU WebRTC Mediasoup), Nearspark (proxy de miniatures), Photomnemonic (capture de pages), PostgreSQL et PostgREST.
     es_es: |
       Hubs es una plataforma de VR social de código abierto de la Hubs Foundation. Crea salas virtuales persistentes para reuniones, clases, eventos o encuentros — accesibles desde cualquier navegador, sin instalación, con soporte completo de WebXR para visores de VR.
-
-      Este despliegue ejecuta la pila estable completa: Reticulum (backend Phoenix), Hubs (cliente 3D), Spoke (editor de escenas), Dialog (SFU WebRTC Mediasoup), Nearspark (proxy de miniaturas), Photomnemonic (capturador de páginas), PostgreSQL y PostgREST.
     zh_cn: |
       Hubs 是 Hubs Foundation 推出的开源社交 VR 平台。创建持久化的虚拟房间，用于会议、课程、活动或聚会 —— 直接通过浏览器访问，无需安装，并完整支持 WebXR VR 头显。
-
-      此部署包含完整的稳定版组件：Reticulum（Phoenix 后端）、Hubs（3D 客户端）、Spoke（场景编辑器）、Dialog（Mediasoup WebRTC SFU）、Nearspark（缩略图代理）、Photomnemonic（页面截图）、PostgreSQL 与 PostgREST。
     ko_kr: |
       Hubs는 Hubs Foundation의 오픈소스 소셜 VR 플랫폼입니다. 회의·수업·이벤트·모임을 위한 영구 가상 룸을 만들 수 있으며, 어떤 브라우저에서도 설치 없이 접속할 수 있고 VR 헤드셋용 WebXR을 완벽 지원합니다.
-
-      이 배포는 안정 버전 풀스택을 실행합니다: Reticulum(Phoenix 백엔드), Hubs(3D 클라이언트), Spoke(씬 에디터), Dialog(Mediasoup WebRTC SFU), Nearspark(썸네일 프록시), Photomnemonic(페이지 스크린샷), PostgreSQL, PostgREST.
 
   pre-install-cmd: |
     mkdir -p /DATA/AppData/hubs/pgdata /DATA/AppData/hubs/retstorage
