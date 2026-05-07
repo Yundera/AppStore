@@ -355,6 +355,12 @@ x-casaos:
 
         🔐 **First Setup**: Create your admin account on first visit to the web interface.
 
+        🌐 **Connection URL (for uploads larger than 100 MB)**: The standard URL `https://immich-YOURPCSNAME.nsl.sh/` works for everyday browsing but caps uploads at 100 MB. To upload large files (4K videos, RAW photos, full albums) from the web app or the mobile app, connect through the sslip.io domain instead:
+        1. Open the **Settings** app from your PCS dashboard. If it asks for credentials, use `admin` as the username. Forgot the password? Click the reset link and you will receive an email with a link to set a new one.
+        2. Once logged in, go to **Domain → sslip.io Domain**.
+        3. Copy the domain shown there (it looks like `213-199-41-230.sslip.io`).
+        4. Connect to Immich by prefixing that domain with `immich-`, for example: `https://immich-213-199-41-230.sslip.io`
+
         🔍 **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.
 
         📁 **Direct Upload from PCS**: To upload files directly from your host (useful for initial import of existing photo libraries or large file imports):
@@ -409,6 +415,19 @@ x-casaos:
         ⏰ **Temps de démarrage** : Immich prend environ 5 minutes pour démarrer complètement. Veuillez patienter avant d'accéder au panneau web.
         
         🔐 **Première configuration** : Créez votre compte administrateur lors de votre première visite de l'interface web.
+
+        🌐 **URL de connexion (pour les téléversements de plus de 100 Mo)** : L'URL standard `https://immich-NOMDEVOTREPCS.nsl.sh/` fonctionne pour la navigation courante mais limite les téléversements à 100 Mo. Pour téléverser des fichiers volumineux (vidéos 4K, photos RAW, albums complets) depuis l'application web ou mobile, connectez-vous via le domaine sslip.io :
+        1. Ouvrez l'application **Settings** depuis le tableau de bord de votre PCS. Si elle demande des identifiants, utilisez `admin` comme nom d'utilisateur. Mot de passe oublié ? Cliquez sur le lien de réinitialisation : vous recevrez un email avec un lien pour en définir un nouveau.
+        2. Une fois connecté, allez dans **Domain → sslip.io Domain**.
+        3. Copiez le domaine affiché (il ressemble à `213-199-41-230.sslip.io`).
+        4. Connectez-vous à Immich en préfixant ce domaine par `immich-`, par exemple : `https://immich-213-199-41-230.sslip.io`
+
+        🔍 **OCR (recherche de texte)** : Immich v2.x inclut l'OCR pour rechercher du texte dans vos photos. Pour activer l'OCR sur les photos existantes, allez dans Administration > Job Settings et lancez le job OCR.
+
+        📁 **Téléversement direct depuis le PCS** : Pour téléverser des fichiers directement depuis votre serveur (utile pour l'import initial de bibliothèques photo existantes ou de fichiers volumineux) :
+        1. Générez une clé API dans Immich (Account Settings > API Keys). Immich étant multi-utilisateurs, vous pouvez créer des clés API distinctes pour chaque utilisateur si besoin.
+        2. Connexion : `docker exec immich immich login-key http://localhost VOTRE_CLE_API`
+        3. Placez vos fichiers dans `/DATA/Gallery/` et lancez : `docker exec immich immich upload --recursive /import`
       de_de: |
         **Setup-Informationen:**
         
