@@ -373,6 +373,7 @@ x-casaos:
         **Voice / video** needs UDP ports 40000-40050 reachable on the server's public IP. HTTPS-only tunnels leave signaling working but audio silent.
 
         **Resources:** ~3 GB RAM, ~2 vCPU. Suitable for rooms up to ~10 concurrent users.
+        **More info:** [Hubs Community on Yundera](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
       fr_fr: |
         **🔑 Administrateur initial : `${APP_EMAIL}`** — seul compte avec les droits admin. Connectez-vous avec cet email sur https://hubs-${APP_DOMAIN} pour recevoir un lien magique.
 
@@ -383,6 +384,7 @@ x-casaos:
         **Voix / vidéo** : les ports UDP 40000-40050 doivent être joignables sur l'IP publique du serveur. Un tunnel HTTPS uniquement laisse la signalisation fonctionnelle mais coupe le média.
 
         **Ressources :** ~3 Go de RAM, ~2 vCPU. Adapté aux salons jusqu'à ~10 utilisateurs simultanés.
+        **More info:** [Hubs Community on Yundera](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
       es_es: |
         **🔑 Administrador inicial: `${APP_EMAIL}`** — la única cuenta con permisos de admin. Inicia sesión con ese correo en https://hubs-${APP_DOMAIN} para recibir un enlace mágico.
 
@@ -393,6 +395,7 @@ x-casaos:
         **Voz / vídeo:** los puertos UDP 40000-40050 deben estar accesibles en la IP pública del servidor. Un túnel solo HTTPS deja la señalización funcionando pero corta el audio.
 
         **Recursos:** ~3 GB de RAM, ~2 vCPU. Adecuado para salas de hasta ~10 usuarios simultáneos.
+        **More info:** [Hubs Community on Yundera](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
       zh_cn: |
         **🔑 初始管理员：`${APP_EMAIL}`** —— 唯一拥有管理员权限的账户。在 https://hubs-${APP_DOMAIN} 使用该邮箱登录以接收魔法链接。
 
@@ -413,3 +416,4 @@ x-casaos:
         **음성 / 영상**: 서버의 공인 IP에서 UDP 40000-40050 포트가 열려 있어야 합니다. HTTPS 전용 터널 환경에서는 시그널링만 동작하고 미디어는 끊깁니다.
 
         **리소스:** RAM 약 3 GB, vCPU 약 2개. 동시 접속 ~10명 이하 룸에 적합합니다.
+        **More info:** [Hubs Community on Yundera](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
