@@ -368,7 +368,7 @@ x-casaos:
 
         **Operator surfaces** (after admin sign-in):
         - [Admin panel](https://hubs-${APP_DOMAIN}/admin)
-        - [Spoke scene editor](hubs-${APP_DOMAIN}/spoke/projects)
+        - [Spoke scene editor](https://hubs-${APP_DOMAIN}/spoke/projects)
 
         **Voice / video** needs UDP ports 40000-40050 reachable on the server's public IP. HTTPS-only tunnels leave signaling working but audio silent.
 
@@ -378,7 +378,7 @@ x-casaos:
 
         **Interfaces d'administration** (après connexion admin) :
         - [Panneau admin](https://hubs-${APP_DOMAIN}/admin)
-        - [Éditeur de scène Spoke](hubs-${APP_DOMAIN}/spoke/projects)
+        - [Éditeur de scène Spoke](https://hubs-${APP_DOMAIN}/spoke/projects)
 
         **Voix / vidéo** : les ports UDP 40000-40050 doivent être joignables sur l'IP publique du serveur. Un tunnel HTTPS uniquement laisse la signalisation fonctionnelle mais coupe le média.
 
@@ -388,7 +388,7 @@ x-casaos:
 
         **Interfaces de administración** (tras iniciar sesión como admin):
         - [Panel de admin](https://hubs-${APP_DOMAIN}/admin)
-        - [Editor de escenas Spoke](hubs-${APP_DOMAIN}/spoke/projects)
+        - [Editor de escenas Spoke](https://hubs-${APP_DOMAIN}/spoke/projects)
 
         **Voz / vídeo:** los puertos UDP 40000-40050 deben estar accesibles en la IP pública del servidor. Un túnel solo HTTPS deja la señalización funcionando pero corta el audio.
 
@@ -398,7 +398,7 @@ x-casaos:
 
         **管理员界面**（管理员登录后）：
         - [管理面板](https://hubs-${APP_DOMAIN}/admin)
-        - [Spoke 场景编辑器](hubs-${APP_DOMAIN}/spoke/projects)
+        - [Spoke 场景编辑器](https://hubs-${APP_DOMAIN}/spoke/projects)
 
         **语音 / 视频**：服务器公网 IP 的 UDP 端口 40000-40050 必须开放。仅 HTTPS 隧道可保持信令但会丢失媒体。
 
@@ -408,7 +408,7 @@ x-casaos:
 
         **운영자 화면** (관리자 로그인 후):
         - [관리 패널](https://hubs-${APP_DOMAIN}/admin)
-        - [Spoke 씬 에디터](hubs-${APP_DOMAIN}/spoke/projects)
+        - [Spoke 씬 에디터](https://hubs-${APP_DOMAIN}/spoke/projects)
 
         **음성 / 영상**: 서버의 공인 IP에서 UDP 40000-40050 포트가 열려 있어야 합니다. HTTPS 전용 터널 환경에서는 시그널링만 동작하고 미디어는 끊깁니다.
 
