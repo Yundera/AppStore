@@ -1,0 +1,226 @@
+name: dolibarr
+
+services:
+  dolibarr:
+    image: dolibarr/dolibarr:22.0.4
+    container_name: dolibarr
+    restart: unless-stopped
+    user: "0:0"
+    networks:
+      - dolibarr-network
+      - pcs
+    expose:
+      - "80"
+    labels:
+      caddy_0: dolibarr-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: dolibarr-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: dolibarr-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    volumes:
+      - /DATA/AppData/$AppID/documents:/var/www/documents
+      - /DATA/AppData/$AppID/custom:/var/www/html/custom
+    environment:
+      DOLI_DB_HOST: dolibarr-db
+      DOLI_DB_NAME: dolibarr
+      DOLI_DB_USER: dolibarr
+      DOLI_DB_PASSWORD: $APP_DEFAULT_PASSWORD
+      DOLI_ADMIN_LOGIN: admin
+      DOLI_ADMIN_PASSWORD: $APP_DEFAULT_PASSWORD
+      DOLI_URL_ROOT: https://dolibarr-${APP_DOMAIN}
+      DOLI_INSTALL_AUTO: 1
+      DOLI_PROD: 1
+      PHP_INI_DATE_TIMEZONE: $TZ
+      PHP_INI_MEMORY_LIMIT: 256M
+      PHP_INI_UPLOAD_MAX_FILESIZE: 128M
+      PHP_INI_POST_MAX_SIZE: 128M
+      WWW_USER_ID: 0
+      WWW_GROUP_ID: 0
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    cpu_shares: 70
+
+  db:
+    image: mariadb:11.8.6
+    container_name: dolibarr-db
+    restart: unless-stopped
+    user: "0:0"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    networks:
+      - dolibarr-network
+    volumes:
+      - /DATA/AppData/$AppID/db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
+      MYSQL_DATABASE: dolibarr
+      MYSQL_USER: dolibarr
+      MYSQL_PASSWORD: $APP_DEFAULT_PASSWORD
+      MARIADB_AUTO_UPGRADE: 1
+      MARIADB_DISABLE_UPGRADE_BACKUP: 1
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    cpu_shares: 50
+
+networks:
+  dolibarr-network:
+    driver: bridge
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Business
+  developer: Dolibarr Foundation
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/thumbnail.png
+  index: /
+  tagline:
+    en_us: Open source ERP & CRM for business management
+    ko_kr: 비즈니스 관리를 위한 오픈소스 ERP & CRM
+    zh_cn: 用于业务管理的开源 ERP 和 CRM
+    fr_fr: ERP et CRM open source pour la gestion d'entreprise
+    es_es: ERP y CRM de codigo abierto para gestion empresarial
+  title:
+    en_us: Dolibarr
+  store_app_id: dolibarr
+  main: dolibarr
+  webui_port: 80
+  description:
+    en_us: |
+      **Open source ERP & CRM to manage your entire business**
+
+      Dolibarr is a modern, all-in-one business management suite. It handles contacts, quotes, invoices, orders, stock, agenda, HR, expense reports, accounting, and more — all from a single web interface.
+
+      **What you can do:**
+      - Manage customers, suppliers, and contacts
+      - Create quotes, invoices, and track payments
+      - Handle inventory and warehouse management
+      - Track projects, tasks, and timesheets
+      - Manage HR, expenses, and leave requests
+      - Generate financial reports and accounting
+
+      **Perfect for:** Small and medium businesses, freelancers, associations, and anyone needing a complete business management tool without expensive licensing.
+    ko_kr: |
+      **비즈니스 전체를 관리하는 오픈소스 ERP & CRM**
+
+      Dolibarr는 현대적인 올인원 비즈니스 관리 솔루션입니다. 연락처, 견적, 송장, 주문, 재고, 일정, HR, 경비 보고서, 회계 등을 하나의 웹 인터페이스에서 처리합니다.
+
+      **할 수 있는 것:**
+      - 고객, 공급업체, 연락처 관리
+      - 견적서, 송장 작성 및 결제 추적
+      - 재고 및 창고 관리
+      - 프로젝트, 작업, 근무시간 추적
+      - HR, 경비, 휴가 신청 관리
+      - 재무 보고서 및 회계 생성
+
+      **이런 분께 완벽해요:** 중소기업, 프리랜서, 협회, 비싼 라이선스 없이 완전한 비즈니스 관리 도구가 필요한 모든 분.
+    zh_cn: |
+      **管理整个业务的开源 ERP 和 CRM**
+
+      Dolibarr 是一个现代化的一站式业务管理套件。它处理联系人、报价、发票、订单、库存、日程、人力资源、费用报告、会计等——全部在一个 Web 界面中完成。
+
+      **您可以做的事:**
+      - 管理客户、供应商和联系人
+      - 创建报价、发票并跟踪付款
+      - 处理库存和仓库管理
+      - 跟踪项目、任务和工时表
+      - 管理人力资源、费用和休假申请
+      - 生成财务报告和会计
+
+      **完美适合:** 中小企业、自由职业者、协会，以及需要完整业务管理工具而无需昂贵许可证的任何人。
+    fr_fr: |
+      **ERP et CRM open source pour gerer toute votre entreprise**
+
+      Dolibarr est une suite de gestion d'entreprise moderne et tout-en-un. Il gere les contacts, devis, factures, commandes, stocks, agenda, RH, notes de frais, comptabilite et plus encore — le tout depuis une seule interface web.
+
+      **Ce que vous pouvez faire:**
+      - Gerer les clients, fournisseurs et contacts
+      - Creer des devis, factures et suivre les paiements
+      - Gerer les stocks et entrepots
+      - Suivre les projets, taches et feuilles de temps
+      - Gerer les RH, frais et demandes de conges
+      - Generer des rapports financiers et comptables
+
+      **Parfait pour:** Les PME, freelances, associations et toute personne ayant besoin d'un outil de gestion complet sans licences couteuses.
+    es_es: |
+      **ERP y CRM de codigo abierto para gestionar todo su negocio**
+
+      Dolibarr es una suite de gestion empresarial moderna y todo en uno. Maneja contactos, presupuestos, facturas, pedidos, inventario, agenda, RRHH, informes de gastos, contabilidad y mas — todo desde una unica interfaz web.
+
+      **Lo que puedes hacer:**
+      - Gestionar clientes, proveedores y contactos
+      - Crear presupuestos, facturas y rastrear pagos
+      - Manejar inventario y gestion de almacenes
+      - Seguir proyectos, tareas y hojas de tiempo
+      - Gestionar RRHH, gastos y solicitudes de vacaciones
+      - Generar informes financieros y contabilidad
+
+      **Perfecto para:** PYMES, freelancers, asociaciones y cualquiera que necesite una herramienta de gestion empresarial completa sin licencias costosas.
+  tips:
+    before_install:
+      en_us: |
+        # Default Account
+
+        | Username | Password                |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        The database and admin account are configured automatically. Just open the app and log in.
+      ko_kr: |
+        # 기본 계정
+
+        | 사용자명 | 비밀번호                |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        데이터베이스와 관리자 계정은 자동으로 설정됩니다. 앱을 열고 로그인하세요.
+      zh_cn: |
+        # 默认账户
+
+        | 用户名   | 密码                    |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        数据库和管理员账户已自动配置。打开应用并登录即可。
+      fr_fr: |
+        # Compte par defaut
+
+        | Nom d'utilisateur | Mot de passe            |
+        | ----------------- | ----------------------- |
+        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+
+        La base de donnees et le compte administrateur sont configures automatiquement. Ouvrez l'application et connectez-vous.
+      es_es: |
+        # Cuenta predeterminada
+
+        | Usuario  | Contrasena              |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        La base de datos y la cuenta de administrador se configuran automaticamente. Abra la aplicacion e inicie sesion.
