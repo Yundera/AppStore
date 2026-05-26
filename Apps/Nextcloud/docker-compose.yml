@@ -2,14 +2,16 @@ name: nextcloud
 
 services:
   nextcloud:
-    image: nextcloud:32.0.3
+    image: nextcloud:33.0.3
     container_name: nextcloud
     restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 70
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     expose:
       - 80
     labels:
@@ -30,19 +32,25 @@ services:
       - PUID=$PUID
       - PGID=$PGID
       - TZ=$TZ
+      # Auto-install: skip the setup wizard, log in directly with admin / $APP_DEFAULT_PASSWORD
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
       - MYSQL_HOST=db
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
       - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN
+      # Setting REDIS_HOST makes the official entrypoint auto-configure memcache.local/distributed/locking
+      - REDIS_HOST=redis
+      - REDIS_HOST_PORT=6379
+      - REDIS_HOST_PASSWORD=$APP_DEFAULT_PASSWORD
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN nextcloud-$APP_PUBLIC_IP_DASH.nip.io nextcloud-$APP_PUBLIC_IP_DASH.sslip.io
       - OVERWRITEPROTOCOL=https
       - OVERWRITEHOST=nextcloud-$APP_DOMAIN
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
-      # Security & setup warnings fixes "Server has no maintenance window start time configured ..." - set to 4am
       - NC_maintenance_window_start=4
     volumes:
       # nextcloud root directory, Contains the core application files
-      - /DATA/AppData/nextcloud/root/:/var/www/html:z
+      - /DATA/AppData/nextcloud/root/:/var/www/html/:z
       # Stores all user files, uploads, and app data
       - /DATA/AppData/nextcloud/data/:/var/www/html/data/
       # Essential for maintaining settings between container updates
@@ -52,12 +60,23 @@ services:
     networks:
       - nextcloud-network
       - pcs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost/status.php >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
 
   db:
-    image: mariadb:11.8
+    image: mariadb:12.2.2
     container_name: nextcloud_db
     user: $PUID:$PGID
     cpu_shares: 70
+    command: >
+      --innodb-buffer-pool-size=256M
+      --transaction-isolation=READ-COMMITTED
+      --binlog-format=ROW
+      --innodb-file-per-table=1
     logging:
       driver: "json-file"
       options:
@@ -71,13 +90,19 @@ services:
       - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
       - MARIADB_AUTO_UPGRADE=1
     volumes:
-      - /DATA/AppData/nextcloud/db/:/var/lib/mysql
+      - /DATA/AppData/nextcloud/db/:/var/lib/mysql/
     restart: unless-stopped
     networks:
       - nextcloud-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:8.6.2-alpine3.23
     container_name: nextcloud_redis
     cpu_shares: 10
     command: redis-server --requirepass $APP_DEFAULT_PASSWORD
@@ -89,20 +114,42 @@ services:
     environment:
       - TZ=$TZ
     volumes:
-      - /DATA/AppData/nextcloud/redis/:/data
+      - /DATA/AppData/nextcloud/redis/:/data/
     restart: unless-stopped
     networks:
       - nextcloud-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $APP_DEFAULT_PASSWORD ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   cron:
-    image: nextcloud:32.0.3
+    image: nextcloud:33.0.3
+    container_name: nextcloud_cron
     restart: unless-stopped
-    volumes:
-      - /DATA/AppData/nextcloud/root/:/var/www/html:z
+    cpu_shares: 10
     entrypoint: /cron.sh
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nextcloud:
+        condition: service_healthy
+    volumes:
+      - /DATA/AppData/nextcloud/root/:/var/www/html/:z
+      - /DATA/AppData/nextcloud/data/:/var/www/html/data/
+      - /DATA/AppData/nextcloud/config/:/var/www/html/config/
+      - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
+    networks:
+      - nextcloud-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
 networks:
   nextcloud-network:
@@ -389,6 +436,10 @@ x-casaos:
       • Invita a tu equipo o familia y gestiona todo desde un solo lugar
   title:
     en_us: Nextcloud
+    ko_kr: Nextcloud
+    zh_cn: Nextcloud
+    fr_fr: Nextcloud
+    es_es: Nextcloud
   tagline:
     en_us: Build your Teams alternative with guided app installation
     ko_kr: 가이드된 앱 설치로 Teams 대안 구축
@@ -397,68 +448,115 @@ x-casaos:
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
 
-  # IMPORTANT: Keep these commands idempotent - safe to run multiple times
-  # Security & setup warnings fixes : "Some headers are not set correctly on your instance - The `Strict-Transport-Security` HTTP header is not set (should be at least `15552000` seconds). For enhanced security, it is recommended to enable HSTS"
+  # Pre-create AppData subdirs as PUID:PGID using a root container, otherwise the
+  # docker daemon (running as root) creates the bind-mount source dirs and the
+  # nextcloud container running as PUID:PGID can't write into them. Uses literal
+  # "nextcloud" because $AppID is NOT exported into the install-cmd shell env.
+  pre-install-cmd: |
+    docker run --rm -v /DATA/AppData/nextcloud:/data alpine sh -c "mkdir -p /data/root /data/config /data/data /data/apps /data/db /data/redis && chown -R $PUID:$PGID /data"
+
+  # IMPORTANT: Keep these commands idempotent - safe to run multiple times.
+  # Bash variables ($timeout, $((...))) are escaped with $$ so compose-go does
+  # not interpolate them at YAML save time. Redis memcache is configured by the
+  # entrypoint via REDIS_HOST env vars, so no occ memcache commands are needed.
+  # Security & setup warnings fixes "Some headers are not set correctly on your
+  # instance - The Strict-Transport-Security HTTP header is not set". Also
+  # switches background jobs to cron (the cron service handles the ticking).
   post-install-cmd: |
-    # Wait for NextCloud to be ready by checking HTTP status
-    timeout=60
-    while [ $timeout -gt 0 ]; do
-      echo "Waiting for NextCloud to respond..."
-      if curl -s -o /dev/null -w "%{http_code}" http://localhost:80 | grep -q "200\|302\|301"; then
-        echo "NextCloud is ready!"
+    timeout=300
+    while [ $$timeout -gt 0 ]; do
+      if docker exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true'; then
+        echo "NextCloud installation complete"
         break
       fi
-      sleep 2
-      timeout=$((timeout-2))
+      echo "Waiting for NextCloud auto-installation... $$timeout s remaining"
+      sleep 5
+      timeout=$$((timeout-5))
     done &&
-    sleep 60 &&
     docker exec nextcloud bash -c '
-      # Enable headers module if available (ignore if not supported)
       a2enmod headers 2>/dev/null || true
-
-      # Add HSTS header if not present
       if [ -f /var/www/html/.htaccess ] && ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then
         echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess
         echo "HSTS header added to .htaccess"
       else
         echo "HSTS header already present or .htaccess not found"
       fi
-
-      # Configure Redis memcache via occ commands
-      echo "Configuring Redis memcache..."
-
-      # Only configure memcache if not already set to Redis
-      if ! php occ config:system:get memcache.locking | grep -q "Redis" 2>/dev/null; then
-        php occ config:system:set memcache.local --value="\\OC\\Memcache\\APCu"
-        php occ config:system:set memcache.distributed --value="\\OC\\Memcache\\Redis"
-        php occ config:system:set memcache.locking --value="\\OC\\Memcache\\Redis"
-        php occ config:system:set redis host --value="redis"
-        php occ config:system:set redis port --value=6379 --type=integer
-        php occ config:system:set redis password --value="$APP_DEFAULT_PASSWORD"
-        echo "Redis memcache configuration completed"
-      else
-        echo "Redis memcache already configured, skipping"
-      fi
-
-      # Configure background jobs to use cron
-      echo "Configuring background jobs to use cron..."
-      php occ background:cron
-      echo "Background jobs configured to use cron"
+      php occ background:cron && echo "Background jobs set to cron mode"
     '
   tips:
     before_install:
       en_us: |
-        **Quick Setup Guide**
-        - Create your account and complete the setup
-        - When asked about storage options, choose the **recommended setting** (already configured for you)
+        **Login**
 
-        **Note:** After clicking "Install", the page may show a "Gateway time-out" error. This is normal - the installation takes longer than expected. Simply **refresh the page** after a minute and you'll see the login screen.
-        
-        
-        **Security and setup tips:**
-        If you got this warning after setup:
-        One or more mimetype migrations are available. Occasionally new mimetypes are added to better handle certain file types. Migrating the mimetypes take a long time on larger instances so this is not done automatically during upgrades. 
-        Please run the following command from the command line to update the mimetypes:
+        After installation, log in with:
+        | Field | Value |
+        |-------|-------|
+        | Username | `admin` |
+        | Password | `$APP_DEFAULT_PASSWORD` |
+
+        First-time install takes 1–3 minutes. If the page shows "Gateway time-out" or appears stuck, **refresh** after a minute and the login screen will appear.
+
+        You can change the admin password from inside NextCloud after logging in (Settings → Personal → Security).
+
+        If you later see a "mimetype migrations available" warning, run from the CasaOS terminal:
         `docker exec nextcloud php occ maintenance:repair --include-expensive`
-        or
-        `php occ maintenance:repair --include-expensive` in the settings terminal of Nextcloud web interface.
+      ko_kr: |
+        **로그인**
+
+        설치 후 다음 정보로 로그인하세요:
+        | 필드 | 값 |
+        |-------|-------|
+        | 사용자명 | `admin` |
+        | 비밀번호 | `$APP_DEFAULT_PASSWORD` |
+
+        최초 설치는 1~3분 소요됩니다. 페이지에 "Gateway time-out"이 표시되거나 멈춘 것처럼 보이면 1분 후 **새로고침**하면 로그인 화면이 나타납니다.
+
+        로그인 후 NextCloud 내부에서 관리자 비밀번호를 변경할 수 있습니다 (Settings → Personal → Security).
+
+        나중에 "mimetype migrations available" 경고가 표시되면 CasaOS 터미널에서 다음을 실행하세요:
+        `docker exec nextcloud php occ maintenance:repair --include-expensive`
+      zh_cn: |
+        **登录**
+
+        安装后使用以下信息登录：
+        | 字段 | 值 |
+        |-------|-------|
+        | 用户名 | `admin` |
+        | 密码 | `$APP_DEFAULT_PASSWORD` |
+
+        首次安装需要 1~3 分钟。如果页面显示 "Gateway time-out" 或看起来卡住，请等待 1 分钟后**刷新页面**即可看到登录界面。
+
+        登录后可以在 NextCloud 内部更改管理员密码 (Settings → Personal → Security)。
+
+        如果以后看到 "mimetype migrations available" 警告，请在 CasaOS 终端运行：
+        `docker exec nextcloud php occ maintenance:repair --include-expensive`
+      fr_fr: |
+        **Connexion**
+
+        Après l'installation, connectez-vous avec :
+        | Champ | Valeur |
+        |-------|-------|
+        | Utilisateur | `admin` |
+        | Mot de passe | `$APP_DEFAULT_PASSWORD` |
+
+        La première installation prend 1 à 3 minutes. Si la page affiche "Gateway time-out" ou semble bloquée, **rafraîchissez** après une minute pour voir l'écran de connexion.
+
+        Vous pouvez changer le mot de passe administrateur depuis NextCloud après vous être connecté (Settings → Personal → Security).
+
+        Si vous voyez plus tard un avertissement "mimetype migrations available", exécutez depuis le terminal CasaOS :
+        `docker exec nextcloud php occ maintenance:repair --include-expensive`
+      es_es: |
+        **Inicio de sesión**
+
+        Después de la instalación, inicia sesión con:
+        | Campo | Valor |
+        |-------|-------|
+        | Usuario | `admin` |
+        | Contraseña | `$APP_DEFAULT_PASSWORD` |
+
+        La primera instalación tarda 1-3 minutos. Si la página muestra "Gateway time-out" o parece bloqueada, **actualiza** después de un minuto para ver la pantalla de inicio de sesión.
+
+        Puedes cambiar la contraseña de administrador desde dentro de NextCloud después de iniciar sesión (Settings → Personal → Security).
+
+        Si más adelante ves una advertencia "mimetype migrations available", ejecuta desde el terminal CasaOS:
+        `docker exec nextcloud php occ maintenance:repair --include-expensive`
