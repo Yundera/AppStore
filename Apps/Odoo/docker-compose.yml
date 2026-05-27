@@ -30,7 +30,7 @@ services:
   odoo:
     image: odoo:19.0
     user: "0:0"
-    command: odoo --http-port=80
+    command: odoo --http-port=80 --data-dir=/var/lib/odoo
     depends_on:
       postgres:
         condition: service_healthy
