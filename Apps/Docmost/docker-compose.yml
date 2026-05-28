@@ -77,6 +77,13 @@ services:
       PORT: 80
       DATABASE_URL: postgresql://docmost:$APP_DEFAULT_PASSWORD@docmost-db:5432/docmost?schema=public
       REDIS_URL: redis://docmost-redis:6379
+      # Email — delivered via the PCS-bundled SMTP relay (no auth, port 587)
+      MAIL_DRIVER: smtp
+      MAIL_FROM_ADDRESS: no-reply@${APP_DOMAIN}
+      MAIL_FROM_NAME: Docmost
+      SMTP_HOST: smtp
+      SMTP_PORT: "587"
+      SMTP_SECURE: "false"
     deploy:
       resources:
         limits:
