@@ -1,0 +1,207 @@
+name: docmostmcp
+services:
+  # Main MCP server — reachable at docmostmcp:8000 on the pcs network
+  docmostmcp:
+    image: ghcr.io/yundera/docmost-mcp:1.0.0
+    container_name: docmostmcp
+    hostname: docmostmcp
+    user: "0:0"
+    restart: unless-stopped
+    expose:
+      - 8000
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - PORT=8000
+      # Docmost connection — the image's entrypoint writes these into
+      # /data/config.json on first start. CasaOS prompts the user for any
+      # field with an empty default at install time.
+      - DOCMOST_BASE_URL=http://docmost
+      - DOCMOST_EMAIL=
+      - DOCMOST_PASSWORD=
+      - DOCMOST_TIMEOUT=30
+    volumes:
+      # config.json (generated from env vars on first start) and token.json
+      # (cached JWT) live here. Once /data/config.json exists, the entrypoint
+      # leaves it alone — manual edits persist.
+      - type: bind
+        source: /DATA/AppData/docmostmcp/
+        target: /data
+    networks:
+      - pcs
+
+  # Beaconify sidecar — makes this MCP discoverable by the Beacon aggregator.
+  # Proxies the upstream MCP and replies to Beacon's UDP discovery on port 9099.
+  docmostmcp-beacon:
+    image: ghcr.io/worph/beaconify@sha256:63ce59fbe15365540cb3d45849a46b68b8132a2c1d605ea8b7b310d010540107
+    container_name: docmostmcp-beacon
+    hostname: docmostmcp-beacon
+    restart: unless-stopped
+    cpu_shares: 20
+    expose:
+      - 9099
+    environment:
+      BEACONIFY_NAME: docmost-mcp
+      BEACONIFY_DESCRIPTION: "Docmost MCP — read, write, search, and move pages in a self-hosted Docmost instance"
+      BEACONIFY_UPSTREAM_URL: http://docmostmcp:8000/mcp
+    depends_on:
+      - docmostmcp
+    networks:
+      - pcs
+
+  # Nginx-hash-lock provides perimeter authentication for the MCP endpoint
+  docmostmcp-proxy:
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      ALLOWED_PATHS: "mcp,sse,messages"
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: docmostmcp
+      BACKEND_PORT: "8000"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      - docmostmcp
+    networks:
+      - pcs
+    labels:
+      caddy_0: docmostmcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: docmostmcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: docmostmcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: docmostmcp
+  hostname: docmostmcp-${APP_DOMAIN}
+  scheme: https
+  port_map: "443"
+  index: /?hash=${AUTH_HASH}
+  envs:
+    - container: DOCMOST_BASE_URL
+      description:
+        en_us: Internal URL to reach Docmost. Default `http://docmost` works for the companion Docmost app on this server.
+        fr_fr: URL interne pour atteindre Docmost. Par defaut `http://docmost` fonctionne pour l'application Docmost compagnon sur ce serveur.
+    - container: DOCMOST_EMAIL
+      description:
+        en_us: Email of the Docmost user the MCP authenticates as. Use a dedicated service account, not your admin.
+        fr_fr: Email de l'utilisateur Docmost que le MCP utilise pour s'authentifier. Utilisez un compte de service dedie, pas votre compte admin.
+    - container: DOCMOST_PASSWORD
+      description:
+        en_us: Password for the Docmost user above. Stored in /DATA/AppData/docmostmcp/config.json.
+        fr_fr: Mot de passe pour l'utilisateur Docmost ci-dessus. Stocke dans /DATA/AppData/docmostmcp/config.json.
+    - container: DOCMOST_TIMEOUT
+      description:
+        en_us: HTTP timeout (seconds) for Docmost API calls. Default 30.
+        fr_fr: Delai d'expiration HTTP (en secondes) pour les appels a l'API Docmost. Par defaut 30.
+  author: Aptero
+  category: Developer
+  description:
+    en_us: |
+      **Docmost knowledge base control for AI assistants via MCP**
+
+      Docmost MCP exposes the [Docmost](https://docmost.com) REST API as an MCP (Model Context Protocol) server, letting LLMs and AI assistants list and search spaces, read pages, create and update content, move and duplicate pages, and manage comments — all against your self-hosted Docmost instance.
+
+      Wraps the community [`aleksvin8888/local-docmost-mcp`](https://github.com/aleksvin8888/local-docmost-mcp) Python server with a streamable-HTTP transport shim so any MCP-compatible client can connect (Claude Desktop, Claude Code, Cursor, VS Code, etc.).
+
+      **Think of it like:** A programmable remote control for your Docmost wiki, driven by natural language.
+
+      **Perfect if you:** Have a self-hosted Docmost and want AI assistants to read from, write to, or maintain it without paying for Docmost's Enterprise plan (which is the only tier with built-in MCP support).
+    fr_fr: |
+      **Controle de base de connaissances Docmost pour les assistants IA via MCP**
+
+      Docmost MCP expose l'API REST de [Docmost](https://docmost.com) en tant que serveur MCP (Model Context Protocol), permettant aux LLMs et assistants IA de lister et rechercher des espaces, lire des pages, creer et mettre a jour du contenu, deplacer et dupliquer des pages, et gerer les commentaires — sur votre instance Docmost auto-hebergee.
+
+      Enveloppe le serveur Python communautaire [`aleksvin8888/local-docmost-mcp`](https://github.com/aleksvin8888/local-docmost-mcp) avec un shim de transport streamable-HTTP pour que tout client compatible MCP puisse se connecter (Claude Desktop, Claude Code, Cursor, VS Code, etc.).
+
+      **Parfait si vous:** Avez un Docmost auto-heberge et voulez que des assistants IA lisent, ecrivent ou maintiennent son contenu sans payer le plan Enterprise de Docmost (le seul niveau avec support MCP integre).
+  developer: Aptero
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocmostMCP/icon.png
+  tagline:
+    en_us: MCP server for Docmost — read, write, search, move pages
+    fr_fr: Serveur MCP pour Docmost — lire, ecrire, rechercher, deplacer des pages
+  title:
+    en_us: Docmost MCP
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Fill the install form with your Docmost credentials**
+
+        On the install screen, you'll see fields for `DOCMOST_EMAIL` and `DOCMOST_PASSWORD`. The first time the container starts it bakes those into `/DATA/AppData/docmostmcp/config.json`. After that, the bundled **config UI** at `/` is the easiest way to update them: click **Open** on the app card to land on the UI, where you can edit credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL with the auth hash baked in.
+
+        **Prerequisites:**
+        1. A running **Docmost** instance reachable from the `pcs` Docker network (typically the companion Docmost app installed from this store)
+        2. A Docmost user account — **strongly recommended** to create a dedicated service account in Docmost rather than reusing admin, since this MCP can read/write/move every page that account can see
+
+        **MCP Integration (for AI/LLMs):**
+
+        **Option 1: Public URL (with hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "docmost-mcp": {
+              "type": "http",
+              "url": "https://docmostmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "docmost-mcp": {
+              "type": "http",
+              "url": "http://docmostmcp:8000/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Option 3: Via Beacon (aggregated)**
+
+        If you have **Beacon** installed, Docmost MCP auto-registers there via the bundled `beaconify` sidecar and its tools show up under the `docmost-mcp__*` namespace — no extra config.
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `list_spaces` | List all workspace spaces |
+        | `search_docs` | Full-text search across pages |
+        | `get_page` | Read page content as Markdown |
+        | `create_space` | Create a new space |
+        | `create_page` | Create a new page from Markdown |
+        | `update_page` | Update title/content (replace / append / prepend) |
+        | `duplicate_page` | Duplicate a page (recursive) |
+        | `move_page` | Move a page within the hierarchy |
+        | `move_page_to_space` | Move a page across spaces |
+        | `create_comment` | Add a comment to a page |
+        | `resolve_comment` | Resolve a comment with a note |
+
+        **Security:**
+        - Docmost credentials are stored only in `/DATA/AppData/docmostmcp/config.json` on this server and never logged or returned via the API
+        - The MCP endpoint sits behind the Yundera hash-lock — clients need the URL hash or the admin password
