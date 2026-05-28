@@ -1,0 +1,189 @@
+name: wgeasy
+
+services:
+  wgeasy:
+    image: ghcr.io/wg-easy/wg-easy:15.3.0
+    container_name: wgeasy
+    restart: unless-stopped
+    user: "0:0"
+    labels:
+      caddy_0: wgeasy-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: wgeasy-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: wgeasy-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
+    environment:
+      PORT: '80'
+      INSECURE: 'true'
+      DISABLE_IPV6: 'true'
+      INIT_ENABLED: 'true'
+      INIT_USERNAME: admin
+      INIT_PASSWORD: $APP_DEFAULT_PASSWORD
+      INIT_HOST: $PCS_PUBLIC_IP
+      INIT_PORT: '51820'
+      INIT_DNS: '9.9.9.9'
+    expose:
+      - 80
+    ports:
+      - target: 51820
+        published: 51820
+        protocol: udp
+    volumes:
+      - /DATA/AppData/$AppID/wireguard:/etc/wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    cpu_shares: 50
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm
+    - arm64
+  main: wgeasy
+  store_app_id: wgeasy
+  webui_port: 80
+  index: /
+  developer: WeejeWel
+  author: Yundera Team
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/screenshot-3.png
+  category: Network
+  title:
+    en_us: WireGuard Easy
+  tagline:
+    en_us: Simple web UI to manage WireGuard VPN (v15)
+    ko_kr: WireGuard VPN을 관리하는 간단한 웹 UI (v15)
+    zh_cn: 管理 WireGuard VPN 的简单 Web UI (v15)
+    fr_fr: Interface web simple pour gerer WireGuard VPN (v15)
+    es_es: Interfaz web simple para gestionar WireGuard VPN (v15)
+  description:
+    en_us: |
+      **The easiest way to install and manage WireGuard on any Linux host**
+
+      WireGuard Easy provides a simple web interface to create and manage WireGuard VPN connections. Add clients with one click, download configurations, and monitor connected devices.
+
+      **What you can do:**
+      - Create and manage VPN clients with one click
+      - Download client configs or scan QR codes
+      - Monitor connected clients and bandwidth
+      - Enable/disable clients instantly
+
+      **Perfect for:** Anyone who wants a personal VPN server without complex command-line setup.
+    ko_kr: |
+      **Linux 호스트에서 WireGuard를 설치하고 관리하는 가장 쉬운 방법**
+
+      WireGuard Easy는 WireGuard VPN 연결을 생성하고 관리하는 간단한 웹 인터페이스를 제공합니다. 한 번의 클릭으로 클라이언트를 추가하고, 설정을 다운로드하고, 연결된 장치를 모니터링할 수 있습니다.
+
+      **할 수 있는 것:**
+      - 한 번의 클릭으로 VPN 클라이언트 생성 및 관리
+      - 클라이언트 설정 다운로드 또는 QR 코드 스캔
+      - 연결된 클라이언트 및 대역폭 모니터링
+      - 클라이언트 즉시 활성화/비활성화
+
+      **이런 분께 완벽해요:** 복잡한 명령줄 설정 없이 개인 VPN 서버를 원하는 모든 분.
+    zh_cn: |
+      **在任何 Linux 主机上安装和管理 WireGuard 的最简单方法**
+
+      WireGuard Easy 提供简单的 Web 界面来创建和管理 WireGuard VPN 连接。一键添加客户端、下载配置并监控已连接的设备。
+
+      **您可以做的事:**
+      - 一键创建和管理 VPN 客户端
+      - 下载客户端配置或扫描二维码
+      - 监控已连接的客户端和带宽
+      - 即时启用/禁用客户端
+
+      **完美适合:** 任何想要个人 VPN 服务器而无需复杂命令行设置的人。
+    fr_fr: |
+      **Le moyen le plus simple d'installer et de gerer WireGuard sur n'importe quel hote Linux**
+
+      WireGuard Easy fournit une interface web simple pour creer et gerer les connexions VPN WireGuard. Ajoutez des clients en un clic, telechargez les configurations et surveillez les appareils connectes.
+
+      **Ce que vous pouvez faire:**
+      - Creer et gerer des clients VPN en un clic
+      - Telecharger les configs ou scanner les QR codes
+      - Surveiller les clients connectes et la bande passante
+      - Activer/desactiver les clients instantanement
+
+      **Parfait pour:** Tous ceux qui veulent un serveur VPN personnel sans configuration complexe en ligne de commande.
+    es_es: |
+      **La forma mas facil de instalar y gestionar WireGuard en cualquier host Linux**
+
+      WireGuard Easy proporciona una interfaz web simple para crear y gestionar conexiones VPN WireGuard. Agregue clientes con un clic, descargue configuraciones y monitoree dispositivos conectados.
+
+      **Lo que puedes hacer:**
+      - Crear y gestionar clientes VPN con un clic
+      - Descargar configs de clientes o escanear codigos QR
+      - Monitorear clientes conectados y ancho de banda
+      - Activar/desactivar clientes al instante
+
+      **Perfecto para:** Cualquiera que quiera un servidor VPN personal sin configuracion compleja por linea de comandos.
+  tips:
+    before_install:
+      en_us: |
+        # Default Account
+
+        | Username | Password                |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        This is **WireGuard Easy v15**. The admin account is auto-configured. VPN settings can be changed from the web UI after login.
+
+        The VPN listens on UDP port 51820. Make sure this port is open on your firewall/router.
+      ko_kr: |
+        # 기본 계정
+
+        | 사용자명 | 비밀번호                |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        **WireGuard Easy v15** 버전입니다. 관리자 계정이 자동 설정됩니다. VPN 설정은 로그인 후 웹 UI에서 변경할 수 있습니다.
+
+        VPN은 UDP 포트 51820에서 수신합니다. 방화벽/라우터에서 이 포트가 열려있는지 확인하세요.
+      zh_cn: |
+        # 默认账户
+
+        | 用户名   | 密码                    |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        这是 **WireGuard Easy v15** 版本。管理员账户已自动配置。登录后可在 Web UI 中更改 VPN 设置。
+
+        VPN 监听 UDP 端口 51820。请确保防火墙/路由器上此端口已开放。
+      fr_fr: |
+        # Compte par defaut
+
+        | Nom d'utilisateur | Mot de passe            |
+        | ----------------- | ----------------------- |
+        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+
+        Ceci est **WireGuard Easy v15**. Le compte administrateur est configure automatiquement. Les parametres VPN peuvent etre modifies depuis l'interface web apres connexion.
+
+        Le VPN ecoute sur le port UDP 51820. Assurez-vous que ce port est ouvert sur votre pare-feu/routeur.
+      es_es: |
+        # Cuenta predeterminada
+
+        | Usuario  | Contrasena              |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        Esta es la version **WireGuard Easy v15**. La cuenta de administrador se configura automaticamente. La configuracion VPN se puede cambiar desde la interfaz web despues de iniciar sesion.
+
+        La VPN escucha en el puerto UDP 51820. Asegurese de que este puerto este abierto en su firewall/router.
