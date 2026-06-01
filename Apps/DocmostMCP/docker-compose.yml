@@ -2,7 +2,7 @@ name: docmostmcp
 services:
   # Main MCP server — reachable at docmostmcp:8000 on the pcs network
   docmostmcp:
-    image: ghcr.io/yundera/docmost-mcp:1.0.0
+    image: ghcr.io/yundera/docmost-mcp:1.1.0
     container_name: docmostmcp
     hostname: docmostmcp
     user: "0:0"
