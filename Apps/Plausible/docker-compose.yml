@@ -20,8 +20,8 @@ services:
       start_period: 40s
     deploy:
       resources:
-        reservations:
-          memory: 256M
+        limits:
+          memory: 512M
     networks:
       - plausible-network
     cpu_shares: 50
@@ -48,8 +48,8 @@ services:
       start_period: 60s
     deploy:
       resources:
-        reservations:
-          memory: 512M
+        limits:
+          memory: 1G
     networks:
       - plausible-network
     cpu_shares: 50
@@ -95,8 +95,8 @@ services:
       PORT: 80
     deploy:
       resources:
-        reservations:
-          memory: 512M
+        limits:
+          memory: 1G
     networks:
       - plausible-network
       - pcs
