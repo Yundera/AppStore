@@ -158,7 +158,7 @@ x-casaos:
 
         After opening the app, the main page will load directly. You **must** manually go to `/install.php` in the URL bar to run the setup wizard.
 
-        1. Go to `https://dokuwiki-yourdomain.nsl.sh/install.php`
+        1. Go to [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
         2. Set your wiki name, superuser account, and password
         3. Choose your ACL policy (recommended: **Public Wiki**)
         4. Click Save — done!
@@ -169,7 +169,7 @@ x-casaos:
 
         앱을 열면 메인 페이지가 바로 표시됩니다. 설정 마법사를 실행하려면 URL 주소창에 **직접** `/install.php`를 입력해야 합니다.
 
-        1. `https://dokuwiki-yourdomain.nsl.sh/install.php` 로 이동
+        1. [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php) 로 이동
         2. 위키 이름, 관리자 계정, 비밀번호 설정
         3. ACL 정책 선택 (권장: **Public Wiki**)
         4. 저장 클릭 — 완료!
@@ -180,7 +180,7 @@ x-casaos:
 
         打开应用后，主页会直接加载。您**必须**在地址栏中手动输入 `/install.php` 来运行设置向导。
 
-        1. 访问 `https://dokuwiki-yourdomain.nsl.sh/install.php`
+        1. 访问 [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
         2. 设置维基名称、超级用户账户和密码
         3. 选择 ACL 策略（推荐：**Public Wiki**）
         4. 点击保存 — 完成！
@@ -191,7 +191,7 @@ x-casaos:
 
         Apres l'ouverture de l'app, la page principale s'affiche directement. Vous **devez** saisir manuellement `/install.php` dans la barre d'adresse pour lancer l'assistant de configuration.
 
-        1. Allez sur `https://dokuwiki-yourdomain.nsl.sh/install.php`
+        1. Allez sur [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
         2. Definissez le nom du wiki, le compte super-utilisateur et le mot de passe
         3. Choisissez votre politique ACL (recommande: **Public Wiki**)
         4. Cliquez sur Enregistrer — termine!
@@ -202,7 +202,7 @@ x-casaos:
 
         Al abrir la app, la pagina principal se carga directamente. **Debe** escribir manualmente `/install.php` en la barra de direcciones para ejecutar el asistente de configuracion.
 
-        1. Vaya a `https://dokuwiki-yourdomain.nsl.sh/install.php`
+        1. Vaya a [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
         2. Configure el nombre del wiki, cuenta de superusuario y contrasena
         3. Elija su politica ACL (recomendado: **Public Wiki**)
         4. Haga clic en Guardar — listo!
