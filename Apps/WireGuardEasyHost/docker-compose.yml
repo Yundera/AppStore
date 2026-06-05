@@ -48,6 +48,10 @@ services:
     image: nginx:alpine
     container_name: wgeasyhost-proxy
     restart: unless-stopped
+    # Must be root: the CasaOS installer injects `user: $PUID:$PGID` into any service
+    # without an explicit user, and nginx:alpine's master can't run as non-root
+    # (fails to create /var/cache/nginx). Declaring it here prevents that injection.
+    user: "0:0"
     depends_on:
       - wgeasyhost
     labels:
