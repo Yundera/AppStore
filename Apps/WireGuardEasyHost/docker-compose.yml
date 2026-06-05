@@ -32,7 +32,7 @@ services:
       # their normal internet stays direct. Comma-separated; seeds on first init only.
       INIT_ALLOWED_IPS: '10.9.0.0/24'
     volumes:
-      - /DATA/AppData/$AppID/wireguard:/etc/wireguard
+      - /DATA/AppData/wgeasyhost/wireguard/:/etc/wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -91,17 +91,13 @@ x-casaos:
   # is deprecated.)
   main: wgeasyhost
   store_app_id: wgeasyhost
-  is_uncontrolled: false
-  scheme: https
-  port_map: "443"
   index: /
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/wireguard &&
-    wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/nginx.conf -O /DATA/AppData/$AppID/nginx.conf &&
-    chmod -R 755 /DATA/AppData/$AppID &&
+    mkdir -p /DATA/AppData/wgeasyhost/wireguard &&
+    wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/nginx.conf -O /DATA/AppData/wgeasyhost/nginx.conf &&
+    chown -R $PUID:$PGID /DATA/AppData/wgeasyhost &&
     sysctl -w net.ipv4.ip_forward=1 &&
-    sysctl -w net.ipv4.conf.all.src_valid_mark=1 &&
-    printf 'net.ipv4.ip_forward=1\nnet.ipv4.conf.all.src_valid_mark=1\n' > /etc/sysctl.d/99-wireguard.conf
+    sysctl -w net.ipv4.conf.all.src_valid_mark=1
   developer: WeejeWel
   author: Yundera Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/icon.png
