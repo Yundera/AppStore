@@ -25,7 +25,7 @@ services:
       TZ: $TZ
       PORT: 80
       AUTHENTICATION_ENABLED: true
-      AUTHENTICATION_PASSWORD: $PCS_DEFAULT_PASSWORD
+      AUTHENTICATION_PASSWORD: $APP_DEFAULT_PASSWORD
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:80/health')"]
       interval: 60s
@@ -40,6 +40,7 @@ services:
 
 networks:
   pcs:
+    name: pcs
     external: true
 
 x-casaos:
@@ -153,7 +154,7 @@ x-casaos:
         **Getting Started:**
 
         1. After installation, visit your NoteDiscovery instance
-        2. Log in with password: `$PCS_DEFAULT_PASSWORD`
+        2. Log in with password: `$APP_DEFAULT_PASSWORD`
         3. Start creating your first note
 
         **Features:**
@@ -167,7 +168,7 @@ x-casaos:
         **시작하기:**
 
         1. 설치 후 NoteDiscovery 인스턴스를 방문하세요
-        2. 비밀번호로 로그인: `$PCS_DEFAULT_PASSWORD`
+        2. 비밀번호로 로그인: `$APP_DEFAULT_PASSWORD`
         3. 첫 번째 노트 작성을 시작하세요
 
         **기능:**
@@ -181,7 +182,7 @@ x-casaos:
         **开始使用：**
 
         1. 安装后，访问您的 NoteDiscovery 实例
-        2. 使用密码登录：`$PCS_DEFAULT_PASSWORD`
+        2. 使用密码登录：`$APP_DEFAULT_PASSWORD`
         3. 开始创建您的第一个笔记
 
         **功能：**
@@ -195,7 +196,7 @@ x-casaos:
         **Commencer :**
 
         1. Après l'installation, visitez votre instance NoteDiscovery
-        2. Connectez-vous avec le mot de passe : `$PCS_DEFAULT_PASSWORD`
+        2. Connectez-vous avec le mot de passe : `$APP_DEFAULT_PASSWORD`
         3. Commencez à créer votre première note
 
         **Fonctionnalités :**
@@ -209,7 +210,7 @@ x-casaos:
         **Comenzar:**
 
         1. Después de la instalación, visite su instancia de NoteDiscovery
-        2. Inicie sesión con la contraseña: `$PCS_DEFAULT_PASSWORD`
+        2. Inicie sesión con la contraseña: `$APP_DEFAULT_PASSWORD`
         3. Comience a crear su primera nota
 
         **Características:**
