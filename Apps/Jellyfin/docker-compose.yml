@@ -2,7 +2,8 @@ name: jellyfin
 
 services:
   jellyfin-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:latest
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    container_name: jellyfin-proxy
     restart: unless-stopped
     expose:
       - 80
@@ -15,13 +16,17 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: jellyfin-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
-    user: "root"
+    user: "0:0"
     cpu_shares: 80
     environment:
       BACKEND_HOST: jellyfin
       BACKEND_PORT: "8096"
       LISTEN_PORT: "80"
       AUTH_DISABLED: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     depends_on:
       - jellyfin
     networks:
