@@ -1,10 +1,10 @@
 name: spliit
 services:
   nginxhashlock:
-    image: ghcr.io/yundera/nginx-hash-lock:latest
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
     container_name: spliit-nginxhashlock
     restart: unless-stopped
-    user: "root"
+    user: "0:0"
     environment:
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "spliit"
@@ -31,15 +31,11 @@ services:
     cpu_shares: 80
     networks:
       - pcs
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
 
   db:
     image: postgres:16.13-alpine
     container_name: spliit-db
-    user: 0:0
+    user: "0:0"
     cpu_shares: 50
     environment:
       POSTGRES_DB: spliit
@@ -57,7 +53,7 @@ services:
           memory: 512M
 
   spliit:
-    image: ghcr.io/spliit-app/spliit:1.19.1
+    image: ghcr.io/spliit-app/spliit:1.19.0
     container_name: spliit
     restart: unless-stopped
     user: "0:0"
@@ -68,9 +64,6 @@ services:
       POSTGRES_URL_NON_POOLING: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
     networks:
       - pcs
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
     deploy:
       resources:
         limits:
