@@ -3,7 +3,7 @@ name: wordpress
 services:
   wordpress:
     image: wordpress:6.9.4-apache
-    container_name: wordpress_app
+    container_name: wordpress
     restart: unless-stopped
     user: "0:0"
     networks:
@@ -23,9 +23,9 @@ services:
     volumes:
       - /DATA/AppData/$AppID/html/:/var/www/html
     environment:
-      WORDPRESS_DB_HOST: wordpress_db:3306
+      WORDPRESS_DB_HOST: wordpress-db:3306
       WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: $PCS_DEFAULT_PASSWORD
+      WORDPRESS_DB_PASSWORD: $APP_DEFAULT_PASSWORD
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_CONFIG_EXTRA: |
         define('FS_METHOD', 'direct');
@@ -41,7 +41,7 @@ services:
 
   db:
     image: mariadb:11.8.6
-    container_name: wordpress_db
+    container_name: wordpress-db
     restart: unless-stopped
     user: "0:0"
     networks:
@@ -49,10 +49,10 @@ services:
     volumes:
       - /DATA/AppData/$AppID/db/:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: $PCS_DEFAULT_PASSWORD
+      MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
-      MYSQL_PASSWORD: $PCS_DEFAULT_PASSWORD
+      MYSQL_PASSWORD: $APP_DEFAULT_PASSWORD
       MARIADB_AUTO_UPGRADE: 1
       MARIADB_DISABLE_UPGRADE_BACKUP: 1
     healthcheck:
