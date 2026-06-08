@@ -2,10 +2,10 @@ name: plex
 
 services:
   nginxhashlock:
-    image: ghcr.io/yundera/nginx-hash-lock:latest
+    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
     container_name: plex-nginxhashlock
     restart: unless-stopped
-    user: "root"
+    user: "0:0"
     environment:
       AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "plex"
@@ -58,7 +58,6 @@ services:
       resources:
         limits:
           memory: 1G
-    privileged: true
     cpu_shares: 50
     networks:
       - pcs
