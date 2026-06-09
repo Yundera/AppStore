@@ -3,6 +3,7 @@ name: vaultwarden
 services:
   vaultwarden:
     image: vaultwarden/server:1.35.3
+    container_name: vaultwarden
     user: $PUID:$PGID
     deploy:
       resources:
@@ -34,7 +35,7 @@ services:
       ROCKET_ADDRESS: 0.0.0.0
       SIGNUPS_ALLOWED: "true"
       ADMIN_TOKEN: $APP_DEFAULT_PASSWORD
-      APP_DOMAIN: https://vaultwarden-$APP_DOMAIN
+      DOMAIN: https://vaultwarden-$APP_DOMAIN
       APP_NET: pcs
       SMTP_HOST: smtp
       SMTP_PORT: 587
@@ -274,14 +275,14 @@ x-casaos:
     before_install:
       en_us: |
         `If you lose your master password, **NOBODY CAN RECOVER YOUR DATA**! Your vault will be permanently inaccessible. Store it in a safe place.`
-        
+
         **Default Admin Access**
 
         | Setting | Value |
         |---------|-------|
         | Admin Panel | [🔗 Admin Panel](https://vaultwarden-$APP_DOMAIN/admin) |
         | Admin Token | `$APP_DEFAULT_PASSWORD` |
-        
+
         Note: The admin token will not give you access to user vaults, only the user master password will.
 
         **First Steps:**
@@ -297,14 +298,14 @@ x-casaos:
         Download the **Bitwarden app** or use the **Bitwarden browser extension** - works perfectly with Vaultwarden!
       ko_kr: |
         `마스터 비밀번호를 분실하면 **아무도 데이터를 복구할 수 없습니다**! 보관함에 영구적으로 접근할 수 없게 됩니다. 안전한 곳에 보관하세요.`
-        
+
         **기본 관리자 접근**
 
         | 설정 | 값 |
         |------|-----|
         | 관리자 패널 | [🔗 관리자 패널](https://vaultwarden-$APP_DOMAIN/admin) |
         | 관리자 토큰 | `$APP_DEFAULT_PASSWORD` |
-        
+
         참고: 관리자 토큰으로는 사용자 보관함에 접근할 수 없으며, 오직 사용자 마스터 비밀번호만으로 가능합니다.
 
         **📧 이메일 통합**
@@ -356,14 +357,14 @@ x-casaos:
         **重要提示**: Yundera的SMTP服务自动连接 - 密码恢复立即可用！
       fr_fr: |
         `Si vous perdez votre mot de passe principal, **PERSONNE NE PEUT RÉCUPÉRER VOS DONNÉES** ! Votre coffre-fort sera définitivement inaccessible. Conservez-le dans un endroit sûr.`
-        
+
         **Accès Admin par Défaut**
 
         | Paramètre | Valeur |
         |-----------|--------|
         | Panneau Admin | [🔗 Panneau Admin](https://vaultwarden-$APP_DOMAIN/admin) |
         | Token Admin | `$APP_DEFAULT_PASSWORD` |
-        
+
         Note : Le token admin ne vous donnera pas accès aux coffres-forts des utilisateurs, seul le mot de passe principal de l'utilisateur le peut.
 
         **📧 Intégration Email**
@@ -387,14 +388,14 @@ x-casaos:
         **Important** : Le service SMTP de Yundera est automatiquement connecté - la récupération de mots de passe fonctionne immédiatement !
       de_de: |
         `Wenn Sie Ihr Master-Passwort verlieren, **KANN NIEMAND IHRE DATEN WIEDERHERSTELLEN**! Ihr Tresor wird dauerhaft unzugänglich. Bewahren Sie es an einem sicheren Ort auf.`
-        
+
         **Standard-Admin-Zugang**
 
         | Einstellung | Wert |
         |-------------|------|
         | Admin-Panel | [🔗 Admin-Panel](https://vaultwarden-$APP_DOMAIN/admin) |
         | Admin-Token | `$APP_DEFAULT_PASSWORD` |
-        
+
         Hinweis: Das Admin-Token gewährt Ihnen keinen Zugang zu Benutzer-Tresoren, nur das Benutzer-Master-Passwort kann das.
 
         **📧 E-Mail-Integration**
@@ -418,14 +419,14 @@ x-casaos:
         **Wichtig**: Der SMTP-Dienst von Yundera ist automatisch verbunden - Passwort-Wiederherstellung funktioniert sofort!
       es_es: |
         `Si pierdes tu contraseña maestra, **NADIE PUEDE RECUPERAR TUS DATOS**! Tu bóveda será permanentemente inaccesible. Guárdala en un lugar seguro.`
-        
+
         **Acceso de Admin por Defecto**
 
         | Configuración | Valor |
         |---------------|-------|
         | Panel de Admin | [🔗 Panel de Admin](https://vaultwarden-$APP_DOMAIN/admin) |
         | Token de Admin | `$APP_DEFAULT_PASSWORD` |
-        
+
         Nota: El token de admin no te dará acceso a las bóvedas de usuarios, solo la contraseña maestra del usuario puede hacerlo.
 
         **📧 Integración de Email**
