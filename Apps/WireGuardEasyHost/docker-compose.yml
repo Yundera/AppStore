@@ -142,7 +142,16 @@ x-casaos:
 
         This is **WireGuard Easy v15 in host-networking mode**. The admin account is auto-configured; VPN settings can be changed from the web UI after login.
 
-        **Reaching host services:** once connected, point your client at the VPN server address `10.9.0.1` (e.g. Samba at `\\10.9.0.1`, port `445`). Make sure the target service listens on all interfaces (`0.0.0.0`), not only on a specific interface.
+        **Reaching your PCS over the VPN — use `10.9.0.1`:** once a client is connected, the whole server is reachable at the VPN address **`10.9.0.1`** (that address *is* your PCS). Point any tool at that IP:
+
+        - **File shares (Samba), port 445:**
+          - Windows: open Explorer and type `\\10.9.0.1`
+          - macOS: Finder -> *Go* -> *Connect to Server* -> `smb://10.9.0.1`
+          - Linux: in your file manager, `smb://10.9.0.1`
+        - **Other host apps (e.g. Guacamole):** `http://10.9.0.1:<port>`
+        - **Ping test:** `ping 10.9.0.1` should reply once connected.
+
+        Notes: the default split-tunnel only routes `10.9.0.0/24`, so your normal internet stays direct (no kill-switch). The target service must listen on all interfaces (`0.0.0.0`), not just one — apps installed from this store already do.
 
         **Firewall:** the VPN listens on **UDP 51820** - it must be open on your firewall/router. The management UI also binds host port `51821` over plain HTTP; access it via the HTTPS gateway link, and firewall `51821` if you don't want it exposed directly.
       fr_fr: |
@@ -154,6 +163,15 @@ x-casaos:
 
         Ceci est **WireGuard Easy v15 en mode reseau hote**. Le compte admin est configure automatiquement ; les parametres VPN sont modifiables depuis l'interface web apres connexion.
 
-        **Acceder aux services de l'hote :** une fois connecte, pointez votre client vers l'adresse du serveur VPN `10.9.0.1` (ex. Samba sur `\\10.9.0.1`, port `445`). Assurez-vous que le service ecoute sur toutes les interfaces (`0.0.0.0`).
+        **Acceder a votre PCS via le VPN — utilisez `10.9.0.1` :** une fois un client connecte, tout le serveur est accessible a l'adresse VPN **`10.9.0.1`** (cette adresse *est* votre PCS). Pointez n'importe quel outil vers cette IP :
+
+        - **Partages de fichiers (Samba), port 445 :**
+          - Windows : ouvrez l'Explorateur et tapez `\\10.9.0.1`
+          - macOS : Finder -> *Aller* -> *Se connecter au serveur* -> `smb://10.9.0.1`
+          - Linux : dans votre gestionnaire de fichiers, `smb://10.9.0.1`
+        - **Autres applis de l'hote (ex. Guacamole) :** `http://10.9.0.1:<port>`
+        - **Test ping :** `ping 10.9.0.1` doit repondre une fois connecte.
+
+        Notes : le split-tunnel par defaut ne route que `10.9.0.0/24`, votre trafic internet normal reste direct (pas de kill-switch). Le service cible doit ecouter sur toutes les interfaces (`0.0.0.0`).
 
         **Pare-feu :** le VPN ecoute sur **UDP 51820** - ce port doit etre ouvert. L'interface de gestion ecoute aussi sur le port hote `51821` en HTTP ; utilisez le lien HTTPS de la passerelle.

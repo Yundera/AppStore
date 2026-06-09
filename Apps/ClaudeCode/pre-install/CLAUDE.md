@@ -7,7 +7,7 @@ You are running as a server assistant inside a CasaOS virtual machine. Your role
 You are running in a Docker container on a CasaOS VM with **full administrative power**:
 - Full access to `/DATA` - the user's entire data directory
 - Access to the Docker socket (`/var/run/docker.sock`) - you can use Docker CLI commands
-- SSH root access to the host VM by generating a keypair and adding your public key to `/host_ssh/authorized_keys` (comment: `claude-code-app`)
+- SSH access to the host VM as the `admin` user (use `sudo` for root operations) by generating a keypair and adding your public key to `/host_ssh/authorized_keys` (comment: `claude-code-app`)
 - A persistent workspace at `/home/claude/workspace`
 
 This container is designed to handle **any maintenance task** on the VM, including system-level operations that require root access on the host.
@@ -137,9 +137,9 @@ sudo docker compose down
 sudo docker compose logs -f
 ```
 
-## SSH Access to Host VM (Root Operations)
+## SSH Access to Host VM (admin + sudo)
 
-You have SSH root access to the host VM for system-level maintenance tasks. The host's `~/.ssh/` directory is mounted at `/host_ssh/`.
+You have SSH access to the host VM as the `admin` user for system-level maintenance tasks. Run privileged commands with `sudo`. The admin user's `~/.ssh/` directory is mounted at `/host_ssh/`.
 
 ### ⚠️ CRITICAL: ALWAYS ASK USER PERMISSION FIRST
 
@@ -163,7 +163,7 @@ if [ ! -f /home/claude/.ssh/id_ed25519 ]; then
 fi
 
 # 2. Add your public key to the host's authorized_keys (with comment "claude-code-app")
-#    The /host_ssh/ directory is mounted from the host's /root/.ssh/
+#    The /host_ssh/ directory is mounted from the host admin user's /home/admin/.ssh/
 if ! grep -q "claude-code-app" /host_ssh/authorized_keys 2>/dev/null; then
   cat /home/claude/.ssh/id_ed25519.pub >> /host_ssh/authorized_keys
 fi
@@ -171,14 +171,14 @@ fi
 
 ### How to SSH into the Host
 
-Once your key is registered, you can SSH into the host:
+Once your key is registered, you can SSH into the host as `admin` and use `sudo` for privileged operations:
 
 ```bash
-# SSH into the host VM for root operations
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1
+# SSH into the host VM as the admin user
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1
 
-# Or if 172.17.0.1 doesn't resolve, use the gateway IP
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1
+# Run privileged commands with sudo
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "sudo <command>"
 ```
 
 ### Common Host-Level Operations
@@ -187,29 +187,29 @@ These operations require SSH access to the host:
 
 ```bash
 # System updates
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "apt update && apt upgrade -y"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "sudo apt update && sudo apt upgrade -y"
 
 # Reboot the VM
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "reboot"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "sudo reboot"
 
 # Check system resources
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "htop" # or "top -bn1"
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "free -h"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "htop" # or "top -bn1"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "free -h"
 
 # View system logs
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "journalctl -xe"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "sudo journalctl -xe"
 
 # Manage systemd services
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "systemctl status docker"
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "systemctl restart docker"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "systemctl status docker"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "sudo systemctl restart docker"
 
 # Network configuration
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "ip addr"
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "netstat -tulpn"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "ip addr"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "sudo netstat -tulpn"
 
 # Disk management
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "lsblk"
-ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@172.17.0.1 "fdisk -l"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "lsblk"
+ssh -i /home/claude/.ssh/id_ed25519 -o StrictHostKeyChecking=no admin@172.17.0.1 "sudo fdisk -l"
 ```
 
 ### When to Use SSH vs Docker
