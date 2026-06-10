@@ -1,0 +1,211 @@
+name: ollama
+
+services:
+  ollama:
+    image: ghcr.io/open-webui/open-webui:0.9.6
+    user: 0:0
+    container_name: ollama
+    restart: unless-stopped
+    expose:
+      - 8080
+    labels:
+      caddy_0: ollama-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8080}}"
+      caddy_1: ollama-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8080}}"
+      caddy_2: ollama-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8080}}"
+    networks:
+      - default
+      - pcs
+    environment:
+      OLLAMA_BASE_URL: http://ollama-api:11434
+      WEBUI_URL: https://ollama-${APP_DOMAIN}
+      WEBUI_SECRET_KEY: $APP_DEFAULT_PASSWORD
+    volumes:
+      - /DATA/AppData/$AppID/webui:/app/backend/data
+    depends_on:
+      - ollama-api
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  ollama-api:
+    image: ollama/ollama:0.30.7
+    user: 0:0
+    container_name: ollama-api
+    restart: unless-stopped
+    expose:
+      - 11434
+    networks:
+      - default
+    volumes:
+      - /DATA/AppData/$AppID/data:/root/.ollama
+    cpu_shares: 20
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+networks:
+  default:
+    name: ollama_default
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: ollama
+  index: /
+  store_app_id: ollama
+  webui_port: 8080
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/ollama/data &&
+    mkdir -p /DATA/AppData/ollama/webui
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Chat
+  developer: Open WebUI
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ollama/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ollama/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ollama/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ollama/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ollama/thumbnail.png
+  title:
+    en_us: Ollama
+  tagline:
+    en_us: Run and chat with private AI models on your own server
+    fr_fr: Exécutez et discutez avec des modèles d'IA privés sur votre propre serveur
+    es_es: Ejecuta y chatea con modelos de IA privados en tu propio servidor
+    zh_cn: 在您自己的服务器上运行并与私有AI模型聊天
+    ko_kr: 자체 서버에서 비공개 AI 모델을 실행하고 대화하세요
+  description:
+    en_us: |
+      Ollama with Open WebUI gives you a private, self-hosted ChatGPT-style assistant that runs entirely on your own server — no data leaves your machine.
+
+      **Key features:**
+      • Chat with open-source models (Llama, Qwen, Gemma, DeepSeek, and more)
+      • Download and manage models from the built-in interface
+      • Multiple conversations with full history, saved locally
+      • Markdown, code highlighting, and document/image chat
+      • Multi-user support with admin controls
+
+      **Perfect for:** Anyone who wants a fully private AI chat assistant without sending prompts to a cloud provider.
+
+      **Note:** Runs on CPU by default — start with small models (1–3B). Larger models need more RAM or a GPU.
+    fr_fr: |
+      Ollama avec Open WebUI vous offre un assistant privé de type ChatGPT, auto-hébergé et fonctionnant entièrement sur votre propre serveur — aucune donnée ne quitte votre machine.
+
+      **Fonctionnalités clés :**
+      • Discutez avec des modèles open source (Llama, Qwen, Gemma, DeepSeek, etc.)
+      • Téléchargez et gérez les modèles depuis l'interface intégrée
+      • Plusieurs conversations avec historique complet, enregistrées localement
+      • Markdown, coloration syntaxique et discussion avec documents/images
+      • Support multi-utilisateurs avec contrôles administrateur
+
+      **Parfait pour :** Toute personne souhaitant un assistant IA totalement privé sans envoyer ses requêtes à un fournisseur cloud.
+
+      **Remarque :** Fonctionne sur CPU par défaut — commencez par de petits modèles (1–3B). Les modèles plus grands nécessitent plus de RAM ou un GPU.
+    es_es: |
+      Ollama con Open WebUI te ofrece un asistente privado tipo ChatGPT, autoalojado y que funciona completamente en tu propio servidor: ningún dato sale de tu máquina.
+
+      **Características clave:**
+      • Chatea con modelos de código abierto (Llama, Qwen, Gemma, DeepSeek y más)
+      • Descarga y gestiona modelos desde la interfaz integrada
+      • Múltiples conversaciones con historial completo, guardadas localmente
+      • Markdown, resaltado de código y chat con documentos/imágenes
+      • Soporte multiusuario con controles de administrador
+
+      **Perfecto para:** Cualquiera que quiera un asistente de IA totalmente privado sin enviar sus mensajes a un proveedor en la nube.
+
+      **Nota:** Funciona en CPU por defecto: empieza con modelos pequeños (1–3B). Los modelos más grandes necesitan más RAM o una GPU.
+    zh_cn: |
+      Ollama 搭配 Open WebUI 为您提供一个私有的、自托管的 ChatGPT 式助手，完全运行在您自己的服务器上——没有任何数据离开您的设备。
+
+      **主要功能：**
+      • 与开源模型聊天（Llama、Qwen、Gemma、DeepSeek 等）
+      • 通过内置界面下载和管理模型
+      • 多个对话，保留完整历史记录，本地保存
+      • 支持 Markdown、代码高亮以及文档/图片对话
+      • 多用户支持及管理员控制
+
+      **适合人群：** 任何想要完全私有的 AI 聊天助手、又不愿将提示词发送给云服务商的人。
+
+      **注意：** 默认使用 CPU 运行——请从小模型（1–3B）开始。更大的模型需要更多内存或 GPU。
+    ko_kr: |
+      Open WebUI와 함께하는 Ollama는 전적으로 자체 서버에서 실행되는 비공개 자체 호스팅 ChatGPT형 어시스턴트를 제공합니다 — 어떤 데이터도 기기를 벗어나지 않습니다.
+
+      **주요 기능:**
+      • 오픈소스 모델과 대화 (Llama, Qwen, Gemma, DeepSeek 등)
+      • 내장 인터페이스에서 모델 다운로드 및 관리
+      • 전체 기록이 로컬에 저장되는 다중 대화
+      • 마크다운, 코드 강조, 문서/이미지 대화
+      • 관리자 제어가 포함된 다중 사용자 지원
+
+      **이런 분께 좋습니다:** 프롬프트를 클라우드 제공업체로 보내지 않고 완전히 비공개로 AI 채팅 어시스턴트를 사용하고 싶은 모든 분.
+
+      **참고:** 기본적으로 CPU에서 실행됩니다 — 작은 모델(1–3B)부터 시작하세요. 더 큰 모델은 더 많은 RAM 또는 GPU가 필요합니다.
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        Open WebUI uses its own account system. **The first account you create becomes the administrator** — open the app, click *Sign up*, and register with your email and a password.
+
+        **How to use:**
+        1. Open the app and create your account (first sign-up = admin)
+        2. Go to **Admin Panel → Settings → Models** and pull a model (e.g. `llama3.2:1b`)
+        3. Start a new chat and select your model
+
+        **Note:** There is no email-based password reset — keep your credentials safe. Runs on CPU by default; start with small models (1–3B).
+      fr_fr: |
+        **Pour commencer**
+
+        Open WebUI utilise son propre système de comptes. **Le premier compte que vous créez devient l'administrateur** — ouvrez l'app, cliquez sur *S'inscrire* et enregistrez-vous avec votre e-mail et un mot de passe.
+
+        **Comment utiliser :**
+        1. Ouvrez l'app et créez votre compte (première inscription = admin)
+        2. Allez dans **Panneau d'administration → Paramètres → Modèles** et téléchargez un modèle (ex. `llama3.2:1b`)
+        3. Démarrez une nouvelle conversation et sélectionnez votre modèle
+
+        **Remarque :** Il n'y a pas de réinitialisation de mot de passe par e-mail — conservez vos identifiants en lieu sûr. Fonctionne sur CPU par défaut ; commencez par de petits modèles (1–3B).
+      es_es: |
+        **Para empezar**
+
+        Open WebUI usa su propio sistema de cuentas. **La primera cuenta que crees se convierte en administrador** — abre la app, haz clic en *Registrarse* y regístrate con tu correo y una contraseña.
+
+        **Cómo usar:**
+        1. Abre la app y crea tu cuenta (primer registro = admin)
+        2. Ve a **Panel de administración → Configuración → Modelos** y descarga un modelo (ej. `llama3.2:1b`)
+        3. Inicia un nuevo chat y selecciona tu modelo
+
+        **Nota:** No hay restablecimiento de contraseña por correo — guarda bien tus credenciales. Funciona en CPU por defecto; empieza con modelos pequeños (1–3B).
+      zh_cn: |
+        **开始使用**
+
+        Open WebUI 使用自己的账户系统。**您创建的第一个账户将成为管理员** — 打开应用，点击 *注册*，使用您的邮箱和密码进行注册。
+
+        **使用方法：**
+        1. 打开应用并创建账户（首次注册 = 管理员）
+        2. 进入 **管理面板 → 设置 → 模型** 并下载一个模型（例如 `llama3.2:1b`）
+        3. 开始新对话并选择您的模型
+
+        **注意：** 没有基于邮箱的密码重置功能——请妥善保管您的凭据。默认使用 CPU 运行；请从小模型（1–3B）开始。
+      ko_kr: |
+        **시작하기**
+
+        Open WebUI는 자체 계정 시스템을 사용합니다. **처음 만든 계정이 관리자가 됩니다** — 앱을 열고 *회원가입*을 클릭한 뒤 이메일과 비밀번호로 등록하세요.
+
+        **사용 방법:**
+        1. 앱을 열고 계정을 생성하세요 (첫 가입 = 관리자)
+        2. **관리자 패널 → 설정 → 모델**로 이동하여 모델을 다운로드하세요 (예: `llama3.2:1b`)
+        3. 새 대화를 시작하고 모델을 선택하세요
+
+        **참고:** 이메일 기반 비밀번호 재설정이 없습니다 — 자격 증명을 안전하게 보관하세요. 기본적으로 CPU에서 실행되며, 작은 모델(1–3B)부터 시작하세요.
