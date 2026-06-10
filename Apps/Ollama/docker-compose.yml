@@ -67,7 +67,7 @@ x-casaos:
     mkdir -p /DATA/AppData/ollama/data &&
     mkdir -p /DATA/AppData/ollama/webui
   post-install-cmd: |
-    timeout 300 sh -c 'until docker exec ollama-api ollama list >/dev/null 2>&1; do sleep 3; done'; docker exec ollama-api ollama pull llama3.2:1b
+    docker exec ollama curl -fsS --retry 90 --retry-delay 2 --retry-connrefused http://ollama-api:11434/api/version && docker exec ollama-api ollama pull llama3.2:1b
   architectures:
     - amd64
     - arm64
