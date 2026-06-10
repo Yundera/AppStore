@@ -63,7 +63,6 @@ x-casaos:
   main: ollama
   index: /
   store_app_id: ollama
-  webui_port: 8080
   pre-install-cmd: |
     mkdir -p /DATA/AppData/ollama/data &&
     mkdir -p /DATA/AppData/ollama/webui
