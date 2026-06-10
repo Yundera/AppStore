@@ -43,13 +43,14 @@ services:
       - 11434
     networks:
       - default
+    environment:
+      OLLAMA_KEEP_ALIVE: "30m"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
     volumes:
       - /DATA/AppData/$AppID/data:/root/.ollama
     cpu_shares: 20
-    deploy:
-      resources:
-        limits:
-          memory: 4G
+    # No memory limit: model size varies and inference needs all available RAM (see rationale.md)
 
 networks:
   default:
@@ -66,6 +67,8 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/ollama/data &&
     mkdir -p /DATA/AppData/ollama/webui
+  post-install-cmd: |
+    timeout 300 sh -c 'until docker exec ollama-api ollama list >/dev/null 2>&1; do sleep 3; done'; docker exec ollama-api ollama pull llama3.2:1b
   architectures:
     - amd64
     - arm64
