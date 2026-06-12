@@ -25,7 +25,7 @@ services:
       WEBUI_URL: https://ollama-${APP_DOMAIN}
       WEBUI_SECRET_KEY: $APP_DEFAULT_PASSWORD
     volumes:
-      - /DATA/AppData/$AppID/webui:/app/backend/data
+      - /DATA/AppData/ollama/webui:/app/backend/data
     depends_on:
       - ollama-api
     cpu_shares: 50
@@ -48,9 +48,17 @@ services:
       OLLAMA_NUM_PARALLEL: "1"
       OLLAMA_MAX_LOADED_MODELS: "1"
     volumes:
-      - /DATA/AppData/$AppID/data:/root/.ollama
+      - /DATA/AppData/ollama/data:/root/.ollama
     cpu_shares: 20
     # No memory limit: model size varies and inference needs all available RAM (see rationale.md)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+                - gpu
 
 networks:
   default:
