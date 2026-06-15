@@ -1,0 +1,78 @@
+name: lidarr
+
+services:
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:3.1.0
+    container_name: lidarr
+    restart: unless-stopped
+    user: $PUID:$PGID
+    expose:
+      - 8686
+    labels:
+      caddy_0: lidarr-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8686}}"
+      caddy_1: lidarr-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8686}}"
+      caddy_2: lidarr-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8686}}"
+    networks:
+      - pcs
+    environment:
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/lidarr/config:/config   # dedicated Lidarr config
+      - /DATA/Media/Music:/music              # shared music library (same folder Jellyfin reads)
+      - /DATA/Downloads:/downloads            # shared downloads folder
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: lidarr
+  webui_port: 8686
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/lidarr/config "/DATA/Media/Music" /DATA/Downloads
+  tips:
+    before_install:
+      en_us: |
+        🎵 **Lidarr** is a music collection manager — it monitors, downloads and organises your music automatically.
+
+        📂 Config lives in `/DATA/AppData/lidarr/`, music in `/DATA/Media/Music` (the same folder Jellyfin/Navidrome read), downloads in `/DATA/Downloads`.
+
+        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
+
+        ❓ Questions? Contact us at help@yundera.com
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Media
+  developer: Servarr (Lidarr)
+  description:
+    en_us: Lidarr is a music collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new tracks from your favourite artists, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Writes to the same music library folder used by Jellyfin and Navidrome.
+    fr_fr: Lidarr est un gestionnaire de collection musicale pour les utilisateurs Usenet et BitTorrent. Il surveille plusieurs flux RSS pour les nouveaux titres de vos artistes favoris, les récupère, les trie et les renomme, et s'intègre aux clients de téléchargement comme qBittorrent et aux indexeurs via Prowlarr. Écrit dans le même dossier de bibliothèque musicale utilisé par Jellyfin et Navidrome.
+    es_es: Lidarr es un gestor de colección musical para usuarios de Usenet y BitTorrent. Monitorea múltiples fuentes RSS de nuevas pistas de tus artistas favoritos, las descarga, ordena y renombra, e se integra con clientes de descarga como qBittorrent e indexadores vía Prowlarr. Escribe en la misma carpeta de biblioteca musical usada por Jellyfin y Navidrome.
+    zh_cn: Lidarr 是面向 Usenet 和 BitTorrent 用户的音乐收藏管理器。它监控多个 RSS 源以获取您喜爱艺术家的新曲目，抓取、整理并重命名，并通过 Prowlarr 与 qBittorrent 等下载客户端和索引器集成。写入与 Jellyfin 和 Navidrome 相同的音乐库文件夹。
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Lidarr/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Lidarr/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Lidarr/thumbnail.png
+  tagline:
+    en_us: Automatically find, download and organise your music collection.
+    fr_fr: Trouvez, téléchargez et organisez automatiquement votre collection musicale.
+    es_es: Encuentra, descarga y organiza automáticamente tu colección musical.
+    zh_cn: 自动查找、下载并整理您的音乐收藏。
+  title:
+    en_us: Lidarr
+  store_app_id: lidarr
+  is_uncontrolled: false
