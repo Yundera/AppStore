@@ -1,0 +1,78 @@
+name: radarr
+
+services:
+  radarr:
+    image: lscr.io/linuxserver/radarr:6.2.1
+    container_name: radarr
+    restart: unless-stopped
+    user: $PUID:$PGID
+    expose:
+      - 7878
+    labels:
+      caddy_0: radarr-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 7878}}"
+      caddy_1: radarr-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 7878}}"
+      caddy_2: radarr-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 7878}}"
+    networks:
+      - pcs
+    environment:
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/radarr/config:/config   # same path as the Servaar stack
+      - /DATA/Media/Movies:/movies            # shared movie library
+      - /DATA/Downloads:/downloads            # shared downloads folder
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: radarr
+  webui_port: 7878
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/radarr/config "/DATA/Media/Movies" /DATA/Downloads
+  tips:
+    before_install:
+      en_us: |
+        🎬 **Radarr** is a movie collection manager — it monitors, downloads and organises your movies automatically.
+
+        📂 Config lives in `/DATA/AppData/radarr/`, movies in `/DATA/Media/Movies`, downloads in `/DATA/Downloads` — the same folders used by the **Servaar (JQPR)** stack and Jellyfin, so they all share one library.
+
+        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
+
+        ❓ Questions? Contact us at help@yundera.com
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Media
+  developer: Servarr (Radarr)
+  description:
+    en_us: Radarr is a movie collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new movies, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Uses the same data folders as the Servaar (JQPR) stack so your library and configuration stay compatible.
+    fr_fr: Radarr est un gestionnaire de collection de films pour les utilisateurs Usenet et BitTorrent. Il surveille plusieurs flux RSS pour les nouveaux films, les récupère, les trie et les renomme, et s'intègre aux clients de téléchargement comme qBittorrent et aux indexeurs via Prowlarr. Utilise les mêmes dossiers de données que la suite Servaar (JQPR).
+    es_es: Radarr es un gestor de colección de películas para usuarios de Usenet y BitTorrent. Monitorea múltiples fuentes RSS de nuevas películas, las descarga, ordena y renombra, e se integra con clientes de descarga como qBittorrent e indexadores vía Prowlarr. Usa las mismas carpetas de datos que el stack Servaar (JQPR).
+    zh_cn: Radarr 是面向 Usenet 和 BitTorrent 用户的电影收藏管理器。它监控多个 RSS 源以获取新电影，抓取、整理并重命名，并通过 Prowlarr 与 qBittorrent 等下载客户端和索引器集成。使用与 Servaar (JQPR) 堆栈相同的数据文件夹。
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Radarr/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Radarr/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Radarr/thumbnail.png
+  tagline:
+    en_us: Automatically find, download and organise your movie collection.
+    fr_fr: Trouvez, téléchargez et organisez automatiquement votre collection de films.
+    es_es: Encuentra, descarga y organiza automáticamente tu colección de películas.
+    zh_cn: 自动查找、下载并整理您的电影收藏。
+  title:
+    en_us: Radarr
+  store_app_id: radarr
+  is_uncontrolled: false
