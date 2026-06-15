@@ -24,8 +24,8 @@ services:
     networks:
       - pcs
     volumes:
-      - /DATA/AppData/jellyfin/config:/config     # Jellyfin configuration files / Jellyfin 설정 파일
-      - /DATA/AppData/jellyfin/cache:/cache       # Jellyfin cache data / Jellyfin 캐시 데이터
+      - /DATA/AppData/jellyfin/config/:/config     # Jellyfin configuration files / Jellyfin 설정 파일
+      - /DATA/AppData/jellyfin/cache/:/cache       # Jellyfin cache data / Jellyfin 캐시 데이터
       - /DATA/Media/Movies:/media/movies          # Movies library / 영화 라이브러리
       - /DATA/Media/TV Shows:/media/tvshows       # TV Shows library / TV 쇼 라이브러리
       - /DATA/Media/Music:/media/music            # Music library / 음악 라이브러리
@@ -76,9 +76,6 @@ x-casaos:
     en_us: Jellyfin
   store_app_id: jellyfin
   main: jellyfin
-  is_uncontrolled: false
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/jellyfin/config /DATA/AppData/jellyfin/cache /DATA/Media/Movies "/DATA/Media/TV Shows" /DATA/Media/Music /DATA/Downloads
   tips:
     before_install:
       en_us: |

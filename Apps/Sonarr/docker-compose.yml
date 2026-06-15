@@ -46,7 +46,7 @@ x-casaos:
       en_us: |
         📺 **Sonarr** is a TV series collection manager — it monitors, downloads and organises your shows automatically as new episodes air.
 
-        📂 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin and the **Servaar (JQPR)** stack use, so everything shares one library.
+        📂 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.
 
         🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
 
@@ -58,10 +58,10 @@ x-casaos:
   category: Media
   developer: Servarr (Sonarr)
   description:
-    en_us: Sonarr is a TV series collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new episodes, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Uses the same TV library folder as Jellyfin and the Servaar (JQPR) stack.
-    fr_fr: Sonarr est un gestionnaire de collection de séries TV pour les utilisateurs Usenet et BitTorrent. Il surveille plusieurs flux RSS pour les nouveaux épisodes, les récupère, les trie et les renomme, et s'intègre aux clients de téléchargement comme qBittorrent et aux indexeurs via Prowlarr. Utilise le même dossier de bibliothèque TV que Jellyfin et la suite Servaar (JQPR).
-    es_es: Sonarr es un gestor de colección de series de TV para usuarios de Usenet y BitTorrent. Monitorea múltiples fuentes RSS de nuevos episodios, los descarga, ordena y renombra, e se integra con clientes de descarga como qBittorrent e indexadores vía Prowlarr. Usa la misma carpeta de biblioteca de TV que Jellyfin y el stack Servaar (JQPR).
-    zh_cn: Sonarr 是面向 Usenet 和 BitTorrent 用户的电视剧收藏管理器。它监控多个 RSS 源以获取新剧集，抓取、整理并重命名，并通过 Prowlarr 与 qBittorrent 等下载客户端和索引器集成。使用与 Jellyfin 和 Servaar (JQPR) 堆栈相同的电视库文件夹。
+    en_us: Sonarr is a TV series collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new episodes, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Uses the same `/DATA/Media/TV Shows` library folder Jellyfin reads.
+    fr_fr: Sonarr est un gestionnaire de collection de séries TV pour les utilisateurs Usenet et BitTorrent. Il surveille plusieurs flux RSS pour les nouveaux épisodes, les récupère, les trie et les renomme, et s'intègre aux clients de téléchargement comme qBittorrent et aux indexeurs via Prowlarr. Utilise le même dossier de bibliothèque TV que Jellyfin lit.
+    es_es: Sonarr es un gestor de colección de series de TV para usuarios de Usenet y BitTorrent. Monitorea múltiples fuentes RSS de nuevos episodios, los descarga, ordena y renombra, e se integra con clientes de descarga como qBittorrent e indexadores vía Prowlarr. Usa la misma carpeta de biblioteca de TV que lee Jellyfin.
+    zh_cn: Sonarr 是面向 Usenet 和 BitTorrent 用户的电视剧收藏管理器。它监控多个 RSS 源以获取新剧集，抓取、整理并重命名，并通过 Prowlarr 与 qBittorrent 等下载客户端和索引器集成。使用与 Jellyfin 相同的电视库文件夹。
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Sonarr/icon.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Sonarr/screenshot-1.png
