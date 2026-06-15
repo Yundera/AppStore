@@ -36,7 +36,6 @@ networks:
 
 x-casaos:
   main: prowlarr
-  webui_port: 9696
   index: /
   pre-install-cmd: |
     mkdir -p /DATA/AppData/prowlarr/config

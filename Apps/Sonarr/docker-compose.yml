@@ -38,7 +38,6 @@ networks:
 
 x-casaos:
   main: sonarr
-  webui_port: 8989
   index: /
   pre-install-cmd: |
     mkdir -p /DATA/AppData/sonarr/config "/DATA/Media/TV Shows" /DATA/Downloads

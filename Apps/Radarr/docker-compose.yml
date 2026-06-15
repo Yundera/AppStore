@@ -38,7 +38,6 @@ networks:
 
 x-casaos:
   main: radarr
-  webui_port: 7878
   index: /
   pre-install-cmd: |
     mkdir -p /DATA/AppData/radarr/config "/DATA/Media/Movies" /DATA/Downloads
