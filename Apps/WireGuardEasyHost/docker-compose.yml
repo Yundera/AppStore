@@ -98,6 +98,18 @@ x-casaos:
     chown -R $PUID:$PGID /DATA/AppData/wgeasyhost &&
     sysctl -w net.ipv4.ip_forward=1 &&
     sysctl -w net.ipv4.conf.all.src_valid_mark=1
+  # New clients inherit the server-wide default PersistentKeepalive from wg-easy's
+  # userConfig row (factory-seeded to 0 = off). v15 dropped the keepalive env/INIT var,
+  # so the only way to seed a default is to write it after the container has built its
+  # SQLite DB. This runs AFTER container startup: it polls until the user_configs_table
+  # row exists, then sets PersistentKeepalive to 25s (standard NAT-traversal value) — but
+  # only while still at the factory default (0), so a later manual change in the UI is
+  # never clobbered. Uses the image's own bundled @libsql driver (no sqlite3 CLI present).
+  post-install-cmd: |
+    for i in $(seq 1 60); do
+      docker exec -w /app/server wgeasyhost node --input-type=module -e 'import {createClient} from "@libsql/client"; const c=createClient({url:"file:/etc/wireguard/wg-easy.db"}); const r=await c.execute("SELECT count(*) AS n FROM user_configs_table"); if(Number(r.rows[0].n)<1) process.exit(3); await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0"); console.log("wgeasyhost: default PersistentKeepalive set to 25s");' && break
+      sleep 2
+    done
   developer: WeejeWel
   author: Yundera Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/icon.png
