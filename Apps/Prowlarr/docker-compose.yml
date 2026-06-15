@@ -44,9 +44,12 @@ x-casaos:
       en_us: |
         🔍 **Prowlarr** is an indexer manager — it manages your trackers/indexers in one place and syncs them to Radarr, Sonarr and other *arr apps automatically.
 
-        📂 Config lives in `/DATA/AppData/prowlarr/` — the same folder used by the **Servaar (JQPR)** stack, so your indexer setup stays compatible.
+        📂 Config lives in `/DATA/AppData/prowlarr/`.
 
-        🔗 Add **Radarr** (`radarr:7878`) and **Sonarr** (`sonarr:8989`) as applications inside Prowlarr, and your indexers push to them automatically.
+        🔗 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):
+        - **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.
+        - **qBittorrent** (`qbittorrent:80`) — add it as a *Download Client* so grabbed releases download automatically.
+        - **Jellyfin** — point it at `/DATA/Media` to stream everything Radarr/Sonarr import.
 
         ❓ Questions? Contact us at help@yundera.com
   architectures:

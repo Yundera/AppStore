@@ -2,7 +2,7 @@ name: jellyfin
 
 services:
   jellyfin:
-    image: jellyfin/jellyfin:10.10.7
+    image: jellyfin/jellyfin:10.11.11
     container_name: jellyfin
     restart: unless-stopped
     #ports:
@@ -11,7 +11,18 @@ services:
     #  - "7359:7359/udp"
     #  - "1900:1900/udp"
     expose:
-      - 8096                            # Web UI port for NSL router / NSL 라우터용 웹 UI 포트
+      - 8096                            # Web UI port / 웹 UI 포트
+    labels:
+      caddy_0: jellyfin-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8096}}"
+      caddy_1: jellyfin-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8096}}"
+      caddy_2: jellyfin-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8096}}"
+    networks:
+      - pcs
     volumes:
       - /DATA/AppData/jellyfin/config:/config     # Jellyfin configuration files / Jellyfin 설정 파일
       - /DATA/AppData/jellyfin/cache:/cache       # Jellyfin cache data / Jellyfin 캐시 데이터
@@ -28,7 +39,12 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M                  # Memory limit for Jellyfin / Jellyfin 메모리 제한
+          memory: 2048M                 # Memory limit for Jellyfin (transcoding headroom) / Jellyfin 메모리 제한
+
+networks:
+  pcs:
+    name: pcs
+    external: true
 
 x-casaos:
   architectures:
@@ -61,7 +77,8 @@ x-casaos:
   store_app_id: jellyfin
   main: jellyfin
   is_uncontrolled: false
-  webui_port: 8096
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/jellyfin/config /DATA/AppData/jellyfin/cache /DATA/Media/Movies "/DATA/Media/TV Shows" /DATA/Media/Music /DATA/Downloads
   tips:
     before_install:
       en_us: |
