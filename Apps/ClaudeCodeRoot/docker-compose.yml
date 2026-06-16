@@ -180,7 +180,14 @@ x-casaos:
     fi
     chown -R 1000:1000 /DATA/AppData/clauderoot || true
     docker run --rm -v /:/host alpine:3.20 chroot /host /bin/sh -c '
-      id claude >/dev/null 2>&1 || useradd -m -s /bin/bash claude || true
+      id claude >/dev/null 2>&1 || useradd -m -s /bin/bash -p "*" claude || true
+      # OpenSSH refuses ALL auth (incl. pubkey) for an account whose shadow
+      # password field is "!" — the default useradd leaves. "*" means "no
+      # password set" without tripping the locked-account check, so key-based
+      # SSH works. Run unconditionally to also repair accounts already
+      # provisioned locked. (passwd -u would NOT fix this: it refuses to
+      # unlock an account with no real hash behind the "!".)
+      usermod -p "*" claude 2>/dev/null || true
       if [ ! -f /etc/sudoers.d/claude ]; then
         echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude && chmod 440 /etc/sudoers.d/claude
       fi
