@@ -2,7 +2,7 @@ name: jellyfin
 
 services:
   jellyfin:
-    image: jellyfin/jellyfin:10.11.11
+    image: lscr.io/linuxserver/jellyfin:10.11.11
     container_name: jellyfin
     restart: unless-stopped
     #ports:
@@ -24,13 +24,13 @@ services:
     networks:
       - pcs
     volumes:
-      - /DATA/AppData/jellyfin/config/:/config     # Jellyfin configuration files / Jellyfin 설정 파일
-      - /DATA/AppData/jellyfin/cache/:/cache       # Jellyfin cache data / Jellyfin 캐시 데이터
+      - /DATA/AppData/jellyfin/config/:/config     # Jellyfin config (linuxserver keeps cache/transcodes under /config) / Jellyfin 설정
       - /DATA/Media/Movies:/media/movies          # Movies library / 영화 라이브러리
       - /DATA/Media/TV Shows:/media/tvshows       # TV Shows library / TV 쇼 라이브러리
       - /DATA/Media/Music:/media/music            # Music library / 음악 라이브러리
       - /DATA/Downloads:/media/downloads          # Downloads folder / 다운로드 폴더
-    user: $PUID:$PGID                   # Run as user for file permissions / 파일 권한을 위한 사용자로 실행
+    # NOTE: no `user:` override — linuxserver images start as root and drop to PUID/PGID
+    # via s6-init, which also fixes /config ownership. Setting `user:` breaks that.
     environment:
       PGID: $PGID                       # Process Group ID / 프로세스 그룹 ID
       PUID: $PUID                       # Process User ID / 프로세스 사용자 ID
@@ -76,6 +76,9 @@ x-casaos:
     en_us: Jellyfin
   store_app_id: jellyfin
   main: jellyfin
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/jellyfin/config &&
+    chown -R $PUID:$PGID /DATA/AppData/jellyfin
   tips:
     before_install:
       en_us: |
