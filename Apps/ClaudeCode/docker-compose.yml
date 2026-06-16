@@ -2,7 +2,7 @@ name: claude
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.24
+    image: ghcr.io/worph/claude-code-container:1.0.25
     container_name: claude
     restart: unless-stopped
     user: 0:0
@@ -61,19 +61,13 @@ services:
       caddy_2.3_handle.reverse_proxy: "{{upstreams 8080}}"
     environment:
       - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
+      # MCP automation enabled — this is the n8n/automation-facing app.
+      - MCP_ENABLED=true
+    # SANDBOXED variant: NO docker.sock, NO host /home/admin/.ssh mount, and NO
+    # full /DATA mount. This container has no path to the host VM — it is meant
+    # to be driven programmatically (e.g. n8n) via the MCP endpoint and is
+    # confined to its own workspace.
     volumes:
-      # Docker socket for container management
-      - type: bind
-        source: /var/run/docker.sock
-        target: /var/run/docker.sock
-      # SSH keys for admin access to host VM (used for system maintenance via sudo)
-      - type: bind
-        source: /home/admin/.ssh/
-        target: /host_ssh/
-      # Used for PCS integration
-      - type: bind
-        source: /DATA/
-        target: /DATA/
       # Claude Code workspace persistence
       - type: bind
         source: /DATA/AppData/claude/workspace/
@@ -112,23 +106,23 @@ x-casaos:
     en_us: |
       Claude Code Container - Web-based terminal interface for Claude Code (Anthropic's CLI for Claude).
 
+      This is the standard, sandboxed Claude Code app. It runs confined to its own workspace with NO Docker socket, NO host SSH access, and NO sudo account — it cannot touch the host VM. If you need full PCS administration and debugging with host control, install "Claude Code (root)" instead.
+
       Features:
       - Web-based terminal access to Claude Code
       - Styled login page with session management
       - Persistent workspace volume
       - Claude starts automatically on connection
-      - Full administrative power: Docker socket access + SSH access (admin + sudo) to host VM
-      - Can perform any maintenance task on the VM
+      - No host access — runs fully sandboxed
+      - Bonus: MCP endpoint for programmatic automation (n8n, other AI agents)
 
       Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
     zh_cn: |
       Claude Code 容器 - Claude Code（Anthropic 的 Claude CLI）的 Web 终端界面。
 
-      功能：
-      - 基于 Web 的 Claude Code 终端访问
-      - 带会话管理的登录页面
-      - 持久化工作区
-      - 连接时自动启动 Claude
+      这是标准的沙盒版 Claude Code 应用，仅限于自己的工作区运行：没有 Docker 套接字、没有主机 SSH 访问、也没有 sudo 账户，无法触及主机虚拟机。如需对 PCS 进行管理和调试（具备主机控制权），请改装 “Claude Code (root)”。
+
+      附加功能：MCP 端点，可用于程序化自动化（n8n 等 AI 代理）。
   developer: Anthropic / Yundera
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/icon.png
   screenshot_link:
@@ -136,8 +130,8 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-3.png
   tagline:
-    en_us: Web terminal for Claude Code - Anthropic's AI coding assistant
-    zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手
+    en_us: Web terminal for Claude Code - Anthropic's AI coding assistant (sandboxed, with bonus MCP)
+    zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手（沙盒化，附带 MCP）
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/thumbnail.png
   title:
     en_us: Claude Code
@@ -153,9 +147,11 @@ x-casaos:
 
         Default login password: `$APP_DEFAULT_PASSWORD`
 
+        **Sandboxed variant:** This app has no Docker socket, no host SSH, and no sudo account. It cannot perform host maintenance — use "Claude Code (root)" for that. This variant is for automation via MCP.
+
         **MCP Integration (for AI/LLMs):**
 
-        Claude Code includes a Model Context Protocol (MCP) server that allows other AI assistants to send prompts and interact with this instance programmatically.
+        Claude Code includes a Model Context Protocol (MCP) server that allows other AI assistants (e.g. n8n) to send prompts and interact with this instance programmatically.
 
         **Option 1: Public URL (with Bearer auth)**
         ```json
