@@ -4,7 +4,7 @@ services:
   # Serves the web UI (/), the MCP endpoint (/mcp) and the Telegram webhook
   # callback (/webhook), and answers Beacon's UDP discovery on port 9099.
   telegrammcp:
-    image: ghcr.io/worph/telegram-mcp:1.1.14
+    image: ghcr.io/worph/telegram-mcp:1.1.21
     container_name: telegrammcp
     hostname: telegrammcp
     user: $PUID:$PGID
