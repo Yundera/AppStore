@@ -7,7 +7,7 @@ services:
     cpu_shares: 50
     restart: unless-stopped
     expose:
-      - 8000                           # plain-HTTP web UI, for Caddy discovery
+      - 8443
     ports:
       - "25500-25600:25500-25600"      # Minecraft Java server port pool (Crafty's default range for new servers)
       - "19132:19132/udp"              # Minecraft Bedrock
@@ -15,12 +15,12 @@ services:
     labels:
       caddy_0: crafty-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8000}}"
+      caddy_0.reverse_proxy: "{{upstreams 8443}}"
       caddy_1: crafty-\${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8000}}"
+      caddy_1.reverse_proxy: "{{upstreams 8443}}"
       caddy_2: crafty-\${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8000}}"
+      caddy_2.reverse_proxy: "{{upstreams 8443}}"
     environment:
       TZ: $TZ
     volumes:
@@ -42,7 +42,7 @@ x-casaos:
     - amd64
     - arm64
   main: crafty
-  webui_port: 8000
+  webui_port: 8443
   index: /
   author: Yundera Team
   developer: Arcadia Technology
