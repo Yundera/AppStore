@@ -1,0 +1,189 @@
+name: wgeasyhost
+
+services:
+  # WireGuard server, running in the HOST network namespace.
+  # Because wg0 lives on the host, the VPN server address (10.9.0.1) IS the host,
+  # so VPN clients can reach host-bound services (Samba :445, Guacamole, ...) at 10.9.0.1.
+  # A host-networked container cannot be a Caddy upstream, so the web UI is exposed
+  # through the wgeasyhost-proxy sidecar below instead of Caddy labels here.
+  wgeasyhost:
+    image: ghcr.io/wg-easy/wg-easy:15.3.0
+    container_name: wgeasyhost
+    restart: unless-stopped
+    user: "0:0"
+    network_mode: host
+    environment:
+      PORT: '51821'            # web UI port on the host (proxied by the sidecar)
+      INSECURE: 'true'         # plain HTTP; TLS is terminated by the Yundera gateway
+      DISABLE_IPV6: 'true'
+      INIT_ENABLED: 'true'
+      INIT_USERNAME: admin
+      INIT_PASSWORD: $PCS_DEFAULT_PASSWORD
+      INIT_HOST: $PCS_PUBLIC_IP   # endpoint written into client configs
+      INIT_PORT: '51820'          # WireGuard UDP port on the host
+      INIT_DNS: '9.9.9.9'
+      # VPN subnet. Uses 10.9.0.0/24 to avoid colliding with the bridge-mode WireGuardEasy
+      # app (10.8.0.0/24). NOTE: wg-easy only applies IPV4_CIDR when BOTH v4+v6 are set,
+      # so INIT_IPV6_CIDR is required even though IPv6 is disabled.
+      INIT_IPV4_CIDR: '10.9.0.0/24'
+      INIT_IPV6_CIDR: 'fdcc:ad94:bacf:61a4::cafe:0/112'
+      # Split-tunnel default for new clients (NOT a 0.0.0.0/0 catch-all / kill switch):
+      # only the VPN subnet is routed, so clients reach host services at 10.9.0.1 while
+      # their normal internet stays direct. Comma-separated; seeds on first init only.
+      INIT_ALLOWED_IPS: '10.9.0.0/24'
+    volumes:
+      - /DATA/AppData/wgeasyhost/wireguard/:/etc/wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    # NOTE: host network mode forbids setting net.ipv4.* sysctls on the container
+    # (they would mutate the host). They are set on the HOST by pre-install-cmd below.
+    cpu_shares: 50
+    mem_limit: 256m
+
+  # Bridged reverse-proxy on the pcs network. Carries the gateway labels and forwards
+  # to the host-mode web UI via the docker host-gateway (host.docker.internal:51821).
+  # nginx.conf is fetched onto the host by pre-install-cmd and bind-mounted read-only.
+  wgeasyhost-proxy:
+    image: nginx:alpine
+    container_name: wgeasyhost-proxy
+    restart: unless-stopped
+    # Must be root: the CasaOS installer injects `user: $PUID:$PGID` into any service
+    # without an explicit user, and nginx:alpine's master can't run as non-root
+    # (fails to create /var/cache/nginx). Declaring it here prevents that injection.
+    user: "0:0"
+    depends_on:
+      - wgeasyhost
+    labels:
+      caddy_0: wgeasyhost-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: wgeasyhost-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: wgeasyhost-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
+    expose:
+      - 80
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /DATA/AppData/$AppID/nginx.conf:/etc/nginx/nginx.conf:ro
+    cpu_shares: 10
+    mem_limit: 64m
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm
+    - arm64
+  # Backend+proxy pattern (cf. lystik): main = the backend service name = subdomain prefix;
+  # the -proxy sidecar carries the caddy labels advertising <main>-user.nsl.sh and forwards
+  # to the host-mode wg-easy. The store installer injects `hostname` (user-specific) at install;
+  # scheme/port_map are static. Health probe follows redirects: / -> /login -> 200. (webui_port
+  # is deprecated.)
+  main: wgeasyhost
+  store_app_id: wgeasyhost
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/wgeasyhost/wireguard &&
+    wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/nginx.conf -O /DATA/AppData/wgeasyhost/nginx.conf &&
+    chown -R $PUID:$PGID /DATA/AppData/wgeasyhost &&
+    sysctl -w net.ipv4.ip_forward=1 &&
+    sysctl -w net.ipv4.conf.all.src_valid_mark=1
+  # New clients inherit the server-wide default PersistentKeepalive from wg-easy's
+  # userConfig row (factory-seeded to 0 = off). v15 dropped the keepalive env/INIT var,
+  # so the only way to seed a default is to write it after the container has built its
+  # SQLite DB. This runs AFTER container startup: it polls until the user_configs_table
+  # row exists, then sets PersistentKeepalive to 25s (standard NAT-traversal value) — but
+  # only while still at the factory default (0), so a later manual change in the UI is
+  # never clobbered. Uses the image's own bundled @libsql driver (no sqlite3 CLI present).
+  post-install-cmd: |
+    for i in $(seq 1 60); do
+      docker exec -w /app/server wgeasyhost node --input-type=module -e 'import {createClient} from "@libsql/client"; const c=createClient({url:"file:/etc/wireguard/wg-easy.db"}); const r=await c.execute("SELECT count(*) AS n FROM user_configs_table"); if(Number(r.rows[0].n)<1) process.exit(3); await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0"); console.log("wgeasyhost: default PersistentKeepalive set to 25s");' && break
+      sleep 2
+    done
+  developer: WeejeWel
+  author: Yundera Team
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/screenshot-3.png
+  category: Network
+  title:
+    en_us: WireGuard Easy - Host
+  tagline:
+    en_us: WireGuard VPN with host networking - reach Samba, Guacamole & other host services (v15)
+    fr_fr: WireGuard VPN en mode hote - accedez a Samba, Guacamole et autres services de l'hote (v15)
+  description:
+    en_us: |
+      **WireGuard VPN that can reach the rest of your PCS** - built on WireGuard Easy v15, but running in **host networking** mode.
+
+      Unlike the standard WireGuard Easy app (which is isolated on a Docker bridge), this version puts the VPN interface directly on the host. That means the VPN server address `10.9.0.1` **is your PCS**, so connected clients can reach host-bound services - Samba file shares, Guacamole, and anything else listening on the host - at `10.9.0.1:<port>`. This is the closest WireGuard equivalent to a Tailscale-style "reach my whole server" setup.
+
+      **What you can do:**
+      - Reach host services (Samba :445, Guacamole, ...) over the VPN at `10.9.0.1`
+      - Create and manage VPN clients with one click
+      - Download client configs or scan QR codes
+      - Monitor connected clients and bandwidth
+
+      **Requires:** inbound **UDP 51820** reachable on your PCS public IP.
+    fr_fr: |
+      **WireGuard VPN capable d'atteindre le reste de votre PCS** - base sur WireGuard Easy v15, mais en mode **reseau hote**.
+
+      Contrairement a l'app WireGuard Easy standard (isolee sur un bridge Docker), cette version place l'interface VPN directement sur l'hote. L'adresse du serveur VPN `10.9.0.1` **est votre PCS**, donc les clients connectes peuvent atteindre les services de l'hote - partages Samba, Guacamole, etc. - a `10.9.0.1:<port>`. C'est l'equivalent WireGuard le plus proche d'une configuration Tailscale.
+
+      **Necessite :** le port **UDP 51820** entrant accessible sur l'IP publique de votre PCS.
+  tips:
+    before_install:
+      en_us: |
+        # Default Account
+
+        | Username | Password                |
+        | -------- | ----------------------- |
+        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+
+        This is **WireGuard Easy v15 in host-networking mode**. The admin account is auto-configured; VPN settings can be changed from the web UI after login.
+
+        **Reaching your PCS over the VPN — use `10.9.0.1`:** once a client is connected, the whole server is reachable at the VPN address **`10.9.0.1`** (that address *is* your PCS). Point any tool at that IP:
+
+        - **File shares (Samba), port 445:**
+          - Windows: open Explorer and type `\\10.9.0.1`
+          - macOS: Finder -> *Go* -> *Connect to Server* -> `smb://10.9.0.1`
+          - Linux: in your file manager, `smb://10.9.0.1`
+        - **Other host apps (e.g. Guacamole):** `http://10.9.0.1:<port>`
+        - **Ping test:** `ping 10.9.0.1` should reply once connected.
+
+        Notes: the default split-tunnel only routes `10.9.0.0/24`, so your normal internet stays direct (no kill-switch). The target service must listen on all interfaces (`0.0.0.0`), not just one — apps installed from this store already do.
+
+        **Firewall:** the VPN listens on **UDP 51820** - it must be open on your firewall/router. The management UI also binds host port `51821` over plain HTTP; access it via the HTTPS gateway link, and firewall `51821` if you don't want it exposed directly.
+      fr_fr: |
+        # Compte par defaut
+
+        | Nom d'utilisateur | Mot de passe            |
+        | ----------------- | ----------------------- |
+        | `admin`           | `$PCS_DEFAULT_PASSWORD` |
+
+        Ceci est **WireGuard Easy v15 en mode reseau hote**. Le compte admin est configure automatiquement ; les parametres VPN sont modifiables depuis l'interface web apres connexion.
+
+        **Acceder a votre PCS via le VPN — utilisez `10.9.0.1` :** une fois un client connecte, tout le serveur est accessible a l'adresse VPN **`10.9.0.1`** (cette adresse *est* votre PCS). Pointez n'importe quel outil vers cette IP :
+
+        - **Partages de fichiers (Samba), port 445 :**
+          - Windows : ouvrez l'Explorateur et tapez `\\10.9.0.1`
+          - macOS : Finder -> *Aller* -> *Se connecter au serveur* -> `smb://10.9.0.1`
+          - Linux : dans votre gestionnaire de fichiers, `smb://10.9.0.1`
+        - **Autres applis de l'hote (ex. Guacamole) :** `http://10.9.0.1:<port>`
+        - **Test ping :** `ping 10.9.0.1` doit repondre une fois connecte.
+
+        Notes : le split-tunnel par defaut ne route que `10.9.0.0/24`, votre trafic internet normal reste direct (pas de kill-switch). Le service cible doit ecouter sur toutes les interfaces (`0.0.0.0`).
+
+        **Pare-feu :** le VPN ecoute sur **UDP 51820** - ce port doit etre ouvert. L'interface de gestion ecoute aussi sur le port hote `51821` en HTTP ; utilisez le lien HTTPS de la passerelle.

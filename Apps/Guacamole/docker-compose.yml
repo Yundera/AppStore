@@ -130,6 +130,10 @@ x-casaos:
         | Username | Password |
         | -------- | -------- |
         | `guacadmin`    | `guacadmin`    |
+
+        For better performance, you can access Guacamole directly at
+        https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io/guacamole/ instead of going
+        through the nsl.sh gateway.
       zh_cn: |
         默认账号
 

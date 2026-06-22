@@ -1,0 +1,298 @@
+name: n8n
+
+services:
+  n8n:
+    image: n8nio/n8n:2.14.2
+    container_name: n8n
+    restart: unless-stopped
+    user: "1000:1000"
+    networks:
+      - pcs
+    expose:
+      - 80
+    labels:
+      caddy_0: n8n-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: n8n-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: n8n-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    volumes:
+      - /DATA/AppData/$AppID/data/:/home/node/.n8n
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      GENERIC_TIMEZONE: $TZ
+      N8N_PORT: 80
+      N8N_PROTOCOL: https
+      N8N_EDITOR_BASE_URL: https://n8n-${APP_DOMAIN}/
+      WEBHOOK_URL: https://n8n-${APP_DOMAIN}/
+      NODE_ENV: production_self_hosted
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+    cpu_shares: 70
+
+  postgres:
+    image: postgres:16.13-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+    user: "0:0"
+    networks:
+      - pcs
+    volumes:
+      - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+    cpu_shares: 50
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: n8n
+  webui_port: 80
+  author: Yundera Team
+  category: Automation
+  developer: n8n GmbH
+  store_app_id: n8n
+  description:
+    en_us: |
+      **Powerful workflow automation for technical people - no coding required for most tasks.**
+
+      n8n lets you connect your apps and services together to automate repetitive tasks. Build complex workflows visually with a simple drag-and-drop interface, or write custom code when you need more power.
+
+      **What you can do:**
+      - **Connect 400+ apps**: Gmail, Slack, Google Sheets, Notion, GitHub, Discord, Telegram, and hundreds more
+      - **Automate workflows**: Trigger actions based on events, schedules, or webhooks
+      - **Transform data**: Filter, merge, split, and transform data between services
+      - **AI workflows**: Build AI-powered automations with OpenAI, Claude, and other AI services
+      - **Custom code**: Add JavaScript or Python code nodes when you need custom logic
+
+      **Why choose n8n:**
+      - **Self-hosted**: Your data stays on your server - full privacy and control
+      - **No vendor lock-in**: Open source with fair-code license
+      - **Visual editor**: Build workflows with drag-and-drop, no coding needed
+      - **Powerful**: Handle complex logic with branching, loops, and error handling
+      - **Community**: Thousands of community-built workflow templates
+
+      Perfect for developers, IT teams, and power users who want to automate their digital workflows without relying on expensive cloud services.
+    ko_kr: |
+      **기술 전문가를 위한 강력한 워크플로우 자동화 - 대부분의 작업에 코딩이 필요 없습니다.**
+
+      n8n을 사용하면 앱과 서비스를 연결하여 반복적인 작업을 자동화할 수 있습니다. 간단한 드래그 앤 드롭 인터페이스로 복잡한 워크플로우를 시각적으로 구축하거나, 더 강력한 기능이 필요할 때 커스텀 코드를 작성할 수 있습니다.
+
+      **할 수 있는 일들:**
+      - **400개 이상의 앱 연결**: Gmail, Slack, Google Sheets, Notion, GitHub, Discord, Telegram 등
+      - **워크플로우 자동화**: 이벤트, 스케줄, 웹훅에 따라 동작 트리거
+      - **데이터 변환**: 서비스 간 데이터 필터링, 병합, 분할, 변환
+      - **AI 워크플로우**: OpenAI, Claude 등 AI 서비스를 활용한 자동화 구축
+      - **커스텀 코드**: JavaScript 또는 Python 코드 노드 추가 가능
+
+      **왜 n8n을 선택해야 할까요:**
+      - **셀프 호스팅**: 데이터가 서버에 남음 - 완전한 프라이버시와 제어
+      - **벤더 종속 없음**: 페어코드 라이선스의 오픈소스
+      - **비주얼 에디터**: 드래그 앤 드롭으로 워크플로우 구축, 코딩 불필요
+      - **강력함**: 분기, 루프, 에러 처리 등 복잡한 로직 처리
+      - **커뮤니티**: 수천 개의 커뮤니티 워크플로우 템플릿
+
+      비싼 클라우드 서비스에 의존하지 않고 디지털 워크플로우를 자동화하려는 개발자, IT 팀, 파워 유저에게 완벽합니다.
+    zh_cn: |
+      **为技术人员打造的强大工作流自动化工具 - 大多数任务无需编码。**
+
+      n8n 让您将应用和服务连接在一起，自动化重复性任务。通过简单的拖放界面可视化地构建复杂的工作流，或在需要更强大功能时编写自定义代码。
+
+      **您可以做什么：**
+      - **连接 400+ 应用**：Gmail、Slack、Google Sheets、Notion、GitHub、Discord、Telegram 等数百种
+      - **自动化工作流**：根据事件、计划或 Webhook 触发操作
+      - **转换数据**：在服务之间过滤、合并、拆分和转换数据
+      - **AI 工作流**：使用 OpenAI、Claude 等 AI 服务构建自动化
+      - **自定义代码**：在需要自定义逻辑时添加 JavaScript 或 Python 代码节点
+
+      **为什么选择 n8n：**
+      - **自托管**：您的数据留在您的服务器上 - 完全的隐私和控制
+      - **无供应商锁定**：公平代码许可的开源项目
+      - **可视化编辑器**：通过拖放构建工作流，无需编码
+      - **强大**：处理分支、循环和错误处理等复杂逻辑
+      - **社区**：数千个社区构建的工作流模板
+
+      非常适合想要自动化数字工作流而不依赖昂贵云服务的开发人员、IT 团队和高级用户。
+    fr_fr: |
+      **Automatisation puissante des flux de travail pour les personnes techniques - pas de codage requis pour la plupart des tâches.**
+
+      n8n vous permet de connecter vos applications et services pour automatiser les tâches répétitives. Construisez visuellement des flux de travail complexes avec une interface glisser-déposer simple, ou écrivez du code personnalisé quand vous avez besoin de plus de puissance.
+
+      **Ce que vous pouvez faire :**
+      - **Connecter 400+ applications** : Gmail, Slack, Google Sheets, Notion, GitHub, Discord, Telegram et des centaines d'autres
+      - **Automatiser les flux de travail** : Déclencher des actions basées sur des événements, des horaires ou des webhooks
+      - **Transformer les données** : Filtrer, fusionner, diviser et transformer les données entre les services
+      - **Flux de travail IA** : Construire des automatisations alimentées par l'IA avec OpenAI, Claude et d'autres services IA
+      - **Code personnalisé** : Ajouter des nœuds de code JavaScript ou Python quand vous avez besoin de logique personnalisée
+
+      **Pourquoi choisir n8n :**
+      - **Auto-hébergé** : Vos données restent sur votre serveur - confidentialité et contrôle complets
+      - **Pas de verrouillage fournisseur** : Open source avec licence fair-code
+      - **Éditeur visuel** : Construisez des flux de travail par glisser-déposer, sans codage
+      - **Puissant** : Gérez la logique complexe avec des branches, boucles et gestion d'erreurs
+      - **Communauté** : Des milliers de modèles de flux de travail créés par la communauté
+
+      Parfait pour les développeurs, les équipes IT et les utilisateurs avancés qui souhaitent automatiser leurs flux de travail numériques sans dépendre de services cloud coûteux.
+    es_es: |
+      **Potente automatización de flujos de trabajo para personas técnicas - sin necesidad de codificación para la mayoría de las tareas.**
+
+      n8n te permite conectar tus aplicaciones y servicios para automatizar tareas repetitivas. Construye flujos de trabajo complejos visualmente con una interfaz simple de arrastrar y soltar, o escribe código personalizado cuando necesites más potencia.
+
+      **Lo que puedes hacer:**
+      - **Conectar 400+ aplicaciones**: Gmail, Slack, Google Sheets, Notion, GitHub, Discord, Telegram y cientos más
+      - **Automatizar flujos de trabajo**: Disparar acciones basadas en eventos, horarios o webhooks
+      - **Transformar datos**: Filtrar, fusionar, dividir y transformar datos entre servicios
+      - **Flujos de trabajo IA**: Construir automatizaciones potenciadas por IA con OpenAI, Claude y otros servicios de IA
+      - **Código personalizado**: Agregar nodos de código JavaScript o Python cuando necesites lógica personalizada
+
+      **Por qué elegir n8n:**
+      - **Auto-alojado**: Tus datos permanecen en tu servidor - privacidad y control completos
+      - **Sin bloqueo de proveedor**: Código abierto con licencia fair-code
+      - **Editor visual**: Construye flujos de trabajo arrastrando y soltando, sin necesidad de codificar
+      - **Potente**: Maneja lógica compleja con ramificaciones, bucles y manejo de errores
+      - **Comunidad**: Miles de plantillas de flujos de trabajo creadas por la comunidad
+
+      Perfecto para desarrolladores, equipos de IT y usuarios avanzados que quieren automatizar sus flujos de trabajo digitales sin depender de costosos servicios en la nube.
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/n8n/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/n8n/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/n8n/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/n8n/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/n8n/thumbnail.png
+  tagline:
+    en_us: Workflow automation for technical people
+    ko_kr: 기술 전문가를 위한 워크플로우 자동화
+    zh_cn: 为技术人员打造的工作流自动化
+    fr_fr: Automatisation des flux de travail pour les personnes techniques
+    es_es: Automatización de flujos de trabajo para personas técnicas
+  title:
+    en_us: n8n
+  tips:
+    before_install:
+      en_us: |
+        **🔒 Account Setup:**
+        On first launch, you'll be asked to create an owner account.
+        Choose your email and password to get started.
+
+        **✨ Features Available:**
+        • Connect 400+ apps and services
+        • Visual drag-and-drop workflow editor
+        • AI-powered automations (OpenAI, Claude, etc.)
+        • Webhook support for external triggers
+        • JavaScript and Python custom code nodes
+        • Scheduled workflow execution
+
+        **🌐 Access:**
+        Once ready, your app will be available at `https://n8n-[username].nsl.sh`
+
+        **How to use:**
+        Create your first workflow by clicking the "+" button and connecting nodes together!
+      ko_kr: |
+        **🔒 계정 설정:**
+        첫 실행 시 소유자 계정을 생성하라는 안내가 표시됩니다.
+        이메일과 비밀번호를 선택하여 시작하세요.
+
+        **✨ 사용 가능한 기능:**
+        • 400개 이상의 앱과 서비스 연결
+        • 비주얼 드래그 앤 드롭 워크플로우 에디터
+        • AI 기반 자동화 (OpenAI, Claude 등)
+        • 외부 트리거를 위한 웹훅 지원
+        • JavaScript 및 Python 커스텀 코드 노드
+        • 예약된 워크플로우 실행
+
+        **🌐 접근:**
+        준비가 되면 `https://n8n-[username].nsl.sh`로 앱에 접근할 수 있습니다!
+
+        **사용 방법:**
+        "+" 버튼을 클릭하고 노드를 연결하여 첫 번째 워크플로우를 만들어 보세요!
+      zh_cn: |
+        **🔒 账户设置:**
+        首次启动时，系统会要求您创建所有者账户。
+        选择您的电子邮件和密码即可开始使用。
+
+        **✨ 可用功能:**
+        • 连接 400+ 应用和服务
+        • 可视化拖放工作流编辑器
+        • AI 驱动的自动化（OpenAI、Claude 等）
+        • 用于外部触发器的 Webhook 支持
+        • JavaScript 和 Python 自定义代码节点
+        • 定时工作流执行
+
+        **🌐 访问:**
+        准备就绪后，您的应用将通过 `https://n8n-[username].nsl.sh` 可用！
+
+        **如何使用:**
+        点击 "+" 按钮并连接节点来创建您的第一个工作流！
+      fr_fr: |
+        **🔒 Configuration du compte :**
+        Au premier lancement, vous serez invité à créer un compte propriétaire.
+        Choisissez votre e-mail et votre mot de passe pour commencer.
+
+        **✨ Fonctionnalités disponibles :**
+        • Connecter 400+ applications et services
+        • Éditeur visuel de flux de travail par glisser-déposer
+        • Automatisations alimentées par l'IA (OpenAI, Claude, etc.)
+        • Support webhook pour les déclencheurs externes
+        • Nœuds de code personnalisé JavaScript et Python
+        • Exécution planifiée des flux de travail
+
+        **🌐 Accès :**
+        Une fois prêt, votre application sera disponible à `https://n8n-[username].nsl.sh` !
+
+        **Comment utiliser :**
+        Créez votre premier flux de travail en cliquant sur le bouton "+" et en connectant les nœuds ensemble !
+      es_es: |
+        **🔒 Configuración de cuenta:**
+        En el primer inicio, se te pedirá crear una cuenta de propietario.
+        Elige tu correo electrónico y contraseña para comenzar.
+
+        **✨ Características disponibles:**
+        • Conectar 400+ aplicaciones y servicios
+        • Editor visual de flujos de trabajo con arrastrar y soltar
+        • Automatizaciones potenciadas por IA (OpenAI, Claude, etc.)
+        • Soporte de webhooks para disparadores externos
+        • Nodos de código personalizado JavaScript y Python
+        • Ejecución programada de flujos de trabajo
+
+        **🌐 Acceso:**
+        Una vez listo, tu aplicación estará disponible en `https://n8n-[username].nsl.sh`!
+
+        **Cómo usar:**
+        ¡Crea tu primer flujo de trabajo haciendo clic en el botón "+" y conectando los nodos!
+  index: /
