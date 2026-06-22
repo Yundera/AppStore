@@ -1,13 +1,13 @@
 name: crafty
 services:
   crafty:
-    image: registry.gitlab.com/crafty-controller/crafty-4:4.10.4
+    image: registry.gitlab.com/crafty-controller/crafty-4:4.10.3
     container_name: crafty
     user: 0:0                          # see rationale.md: Crafty's entrypoint fixes its own perms as root, then drops to its internal non-root user
     cpu_shares: 50
     restart: unless-stopped
     expose:
-      - 8443
+      - 8443                           # Crafty's self-signed HTTPS web UI, for Caddy discovery
     ports:
       - "25500-25600:25500-25600"      # Minecraft Java server port pool (Crafty's default range for new servers)
       - "19132:19132/udp"              # Minecraft Bedrock
@@ -15,12 +15,15 @@ services:
     labels:
       caddy_0: crafty-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8443}}"
+      caddy_0.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_0.reverse_proxy.transport.http.tls_insecure_skip_verify: ""
       caddy_1: crafty-\${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8443}}"
+      caddy_1.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_1.reverse_proxy.transport.http.tls_insecure_skip_verify: ""
       caddy_2: crafty-\${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8443}}"
+      caddy_2.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_2.reverse_proxy.transport.http.tls_insecure_skip_verify: ""
     environment:
       TZ: $TZ
     volumes:
