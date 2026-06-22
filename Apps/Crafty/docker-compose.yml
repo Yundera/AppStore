@@ -1,0 +1,103 @@
+name: crafty
+services:
+  crafty:
+    image: registry.gitlab.com/crafty-controller/crafty-4:4.10.4
+    container_name: crafty
+    user: 0:0                          # see rationale.md: Crafty's entrypoint fixes its own perms as root, then drops to its internal non-root user
+    cpu_shares: 50
+    restart: unless-stopped
+    expose:
+      - 8000                           # plain-HTTP web UI, for Caddy discovery
+    ports:
+      - "25500-25600:25500-25600"      # Minecraft Java server port pool (Crafty's default range for new servers)
+      - "19132:19132/udp"              # Minecraft Bedrock
+      - "8123:8123"                    # Dynmap
+    labels:
+      caddy_0: crafty-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8000}}"
+      caddy_1: crafty-\${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8000}}"
+      caddy_2: crafty-\${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8000}}"
+    environment:
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/$AppID/backups:/crafty/backups
+      - /DATA/AppData/$AppID/logs:/crafty/logs
+      - /DATA/AppData/$AppID/servers:/crafty/servers
+      - /DATA/AppData/$AppID/config:/crafty/app/config
+      - /DATA/AppData/$AppID/import:/crafty/import
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: crafty
+  webui_port: 8000
+  index: /
+  author: Yundera Team
+  developer: Arcadia Technology
+  category: Games
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/thumbnail.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/screenshot-1.png
+  title:
+    en_us: Crafty Controller
+  tagline:
+    en_us: Web-based Minecraft server manager.
+    fr_fr: Gestionnaire de serveurs Minecraft en ligne.
+    ko_kr: 웹 기반 마인크래프트 서버 관리자.
+    es_es: Gestor de servidores de Minecraft basado en web.
+  description:
+    en_us: |
+      Crafty Controller is a web GUI for creating, running and managing
+      Minecraft servers (Java and Bedrock) from your browser. It launches and
+      supervises your server processes, automates backups, builds servers from
+      common loaders, gives you live console access, and supports per-user
+      roles and permissions.
+    fr_fr: |
+      Crafty Controller est une interface web pour creer, lancer et gerer des
+      serveurs Minecraft (Java et Bedrock) depuis votre navigateur. Il lance et
+      supervise les processus serveur, automatise les sauvegardes, cree des
+      serveurs a partir des loaders courants, donne acces a la console en direct
+      et gere les roles et permissions par utilisateur.
+    ko_kr: |
+      Crafty Controller는 브라우저에서 마인크래프트 서버(자바 및 베드락)를
+      생성, 실행, 관리할 수 있는 웹 GUI입니다. 서버 프로세스 실행 및 관리,
+      백업 자동화, 일반 로더 기반 서버 생성, 실시간 콘솔 접근, 사용자별 역할
+      및 권한을 지원합니다.
+  tips:
+    before_install:
+      en_us: |
+        After install, open the app and log in.
+
+        Default account:
+        | Username | Password                |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        Please change this password immediately after your first login.
+
+        If the preset password does not work, Crafty generated its own on first
+        boot. Open the Files app and read the file at
+        `AppData/crafty/config/default-creds.txt`.
+
+        Note: Minecraft servers you create must use a port in the 25500-25600
+        range (the ports this app publishes). Bedrock servers use UDP 19132.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/config /DATA/AppData/$AppID/servers /DATA/AppData/$AppID/backups /DATA/AppData/$AppID/logs /DATA/AppData/$AppID/import
+    chown $PUID:$PGID /DATA/AppData/$AppID
+    if [ ! -f /DATA/AppData/$AppID/.initialized ]; then
+      printf '{"username":"admin","password":"%s"}' "$APP_DEFAULT_PASSWORD" > /DATA/AppData/$AppID/config/default.json
+      touch /DATA/AppData/$AppID/.initialized
+    fi
