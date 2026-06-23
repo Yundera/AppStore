@@ -2,7 +2,7 @@ name: beacon
 
 services:
   beacon:
-    image: ghcr.io/worph/beacon:1.0.11
+    image: ghcr.io/worph/beacon:1.0.14
     container_name: beacon
     hostname: beacon
     restart: unless-stopped
