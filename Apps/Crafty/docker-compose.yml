@@ -2,7 +2,7 @@ name: crafty
 services:
   crafty:
     image: registry.gitlab.com/crafty-controller/crafty-4:4.10.3
-    container_name: crafty
+    container_name: crafty_container
     user: 0:0                          # see rationale.md: Crafty's entrypoint fixes its own perms as root, then drops to its internal non-root user
     cpu_shares: 50
     restart: unless-stopped
@@ -12,6 +12,7 @@ services:
       - "25500-25600:25500-25600"      # Minecraft Java server port pool (Crafty's default range for new servers)
       - "19132:19132/udp"              # Minecraft Bedrock
       - "8123:8123"                    # Dynmap
+      - "8443:8443"                    # Crafty web UI (HTTPS)
     labels:
       caddy_0: crafty-${APP_DOMAIN}
       caddy_0.import: gateway_tls
