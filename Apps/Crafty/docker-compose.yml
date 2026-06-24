@@ -23,21 +23,37 @@ services:
       - /DATA/AppData/$AppID/import:/crafty/import
     labels:
       # Crafty has its own login, so it carries the Caddy labels directly (Docmost pattern, no auth sidecar).
-      # Upstream is the panel's self-signed HTTPS on 8443: use the https upstream form and skip cert verification.
+      # Upstream is the panel's self-signed HTTPS on 8443: https upstream + skip cert verification.
+      # Crafty REQUIRES websockets (WSS): pin HTTP/1.1 and forward the Upgrade/Connection/Proto/Host headers.
       caddy_0: crafty-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams https 8443}}"
       caddy_0.reverse_proxy.transport: http
       caddy_0.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_0.reverse_proxy.transport.versions: "1.1"
+      caddy_0.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_0.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_0.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_0.reverse_proxy.header_up_3: "Host {host}"
       caddy_1: crafty-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams https 8443}}"
       caddy_1.reverse_proxy.transport: http
       caddy_1.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_1.reverse_proxy.transport.versions: "1.1"
+      caddy_1.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_1.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_1.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_1.reverse_proxy.header_up_3: "Host {host}"
       caddy_2: crafty-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams https 8443}}"
       caddy_2.reverse_proxy.transport: http
       caddy_2.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_2.reverse_proxy.transport.versions: "1.1"
+      caddy_2.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_2.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_2.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_2.reverse_proxy.header_up_3: "Host {host}"
     networks:
       - pcs
     deploy:
