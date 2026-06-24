@@ -1,41 +1,18 @@
 name: crafty
 services:
-  nginxhashlock:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
-    container_name: crafty-nginxhashlock
-    user: "root"
-    cpu_shares: 20
-    restart: unless-stopped
-    environment: 
-      BACKEND_HOST: "crafty"               # Required: Backend service hostname
-      BACKEND_PORT: "8443"                   # Required: Backend service port
-      LISTEN_PORT: "80"                      # Required: Port NGINX listens on (80 recommended for clean subdomains)=value
-    expose:
-      - 80
-    labels:
-      caddy_0: crafty-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: crafty-\${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: crafty-\${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
-    depends_on:
-      - crafty
-    networks:
-      - pcs
   crafty:
     image: registry.gitlab.com/crafty-controller/crafty-4:4.10.3
-    container_name: crafty_container
-    user: 0:0                          
+    container_name: crafty
+    hostname: crafty
+    user: "0:0"                          # Crafty requires root; document this in rationale.md
     cpu_shares: 50
-    restart: unless-stopped                    
+    restart: unless-stopped
+    expose:
+      - 8443                             # self-signed HTTPS panel, reached by Caddy over the pcs network only
     ports:
-      - "25500-25600:25500-25600"      # Minecraft Java server port pool (Crafty's default range for new servers)
-      - "19132:19132/udp"              # Minecraft Bedrock
-      - "8123:8123"                    # Dynmap
-      - "8443:8443"                    # Crafty web UI (HTTPS)
+      - "25500-25600:25500-25600"       # Minecraft Java server port pool (Crafty's default range for new servers)
+      - "19132:19132/udp"               # Minecraft Bedrock
+      - "8123:8123"                      # Dynmap
     environment:
       TZ: $TZ
     volumes:
@@ -44,8 +21,29 @@ services:
       - /DATA/AppData/$AppID/servers:/crafty/servers
       - /DATA/AppData/$AppID/config:/crafty/app/config
       - /DATA/AppData/$AppID/import:/crafty/import
+    labels:
+      # Crafty has its own login, so it carries the Caddy labels directly (Docmost pattern, no auth sidecar).
+      # Upstream is the panel's self-signed HTTPS on 8443: use the https upstream form and skip cert verification.
+      caddy_0: crafty-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_0.reverse_proxy.transport: http
+      caddy_0.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_1: crafty-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_1.reverse_proxy.transport: http
+      caddy_1.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_2: crafty-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_2.reverse_proxy.transport: http
+      caddy_2.reverse_proxy.transport.tls_insecure_skip_verify:
     networks:
       - pcs
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
 
 networks:
   pcs:
@@ -57,8 +55,10 @@ x-casaos:
     - amd64
     - arm64
   main: crafty
-  webui_port: 80
+  webui_port: 8443
+  scheme: https
   index: /
+  port_map: "8443"
   author: Yundera Team
   category: Games
   developer: Arcadia Technology
