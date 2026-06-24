@@ -2,49 +2,40 @@ name: crafty
 services:
   crafty:
     image: registry.gitlab.com/crafty-controller/crafty-4:4.10.3
-    container_name: crafty
-    user: 0:0                          # Crafty's wrapper fixes its own perms on first start, then runs as its internal non-root user (see rationale.md)
+    container_name: crafty_container
+    user: 0:0                          
     cpu_shares: 50
     restart: unless-stopped
     expose:
-      - 8443                           # self-signed HTTPS panel, reached only by the sidecar over the internal network
+      - 80                           
     ports:
       - "25500-25600:25500-25600"      # Minecraft Java server port pool (Crafty's default range for new servers)
       - "19132:19132/udp"              # Minecraft Bedrock
       - "8123:8123"                    # Dynmap
+      - "8443:8443"                    # Crafty web UI (HTTPS)
+    labels:
+      caddy_0: crafty-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_0.reverse_proxy.transport.http.tls_insecure_skip_verify: ""
+      caddy_1: crafty-\${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_1.reverse_proxy.transport.http.tls_insecure_skip_verify: ""
+      caddy_2: crafty-\${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_2.reverse_proxy.transport.http.tls_insecure_skip_verify: ""
     environment:
       TZ: $TZ
+      BACKEND_HOST: "crafty"               # Required: Backend service hostname
+      BACKEND_PORT: "8443"                   # Required: Backend service port
+      LISTEN_PORT: "80"                      # Required: Port NGINX listens on (80 recommended for clean subdomains)
     volumes:
       - /DATA/AppData/$AppID/backups:/crafty/backups
       - /DATA/AppData/$AppID/logs:/crafty/logs
       - /DATA/AppData/$AppID/servers:/crafty/servers
       - /DATA/AppData/$AppID/config:/crafty/app/config
       - /DATA/AppData/$AppID/import:/crafty/import
-    networks:
-      - pcs
-
-  crafty-proxy:
-    image: caddy:2.11.3-alpine
-    container_name: crafty-proxy
-    user: 0:0                          # binds port 80 and writes Caddy's own state; stateless, no mounts
-    cpu_shares: 20
-    restart: unless-stopped
-    depends_on:
-      - crafty
-    # Terminate Crafty's self-signed HTTPS and re-serve it as plain HTTP on :80.
-    # X-Forwarded-Proto is forced to https so the WebSocket console works over wss.
-    command: ["reverse-proxy", "--from", ":80", "--to", "https://crafty:8443", "--insecure", "--header-up", "X-Forwarded-Proto: https"]
-    expose:
-      - 80                             # plain HTTP, this is what the gateway proxies to
-    labels:
-      caddy_0: crafty-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: crafty-\${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: crafty-\${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
 
@@ -58,10 +49,12 @@ x-casaos:
     - amd64
     - arm64
   main: crafty
+  webui_port: 80
   index: /
   author: Yundera Team
-  developer: Arcadia Technology
   category: Games
+  developer: Arcadia Technology
+  store_app_id: crafty
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/icon.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/thumbnail.png
   screenshot_link:
