@@ -29,8 +29,9 @@ services:
 
   odoo:
     image: odoo:19.0
+    container_name: odoo
     user: "0:0"
-    command: odoo --http-port=80
+    command: odoo --http-port=80 --data-dir=/var/lib/odoo --proxy-mode
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,5 +209,14 @@ x-casaos:
         **Remarque**: 
         - La configuration initiale peut prendre quelques minutes
         - Après la création de la base de données, vous pouvez vous connecter avec votre compte administrateur
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/odoo/config/ /DATA/AppData/odoo/odoo-data/ /DATA/AppData/odoo/addons/ /DATA/AppData/odoo/postgres-data/
+    if [ ! -f /DATA/AppData/odoo/config/odoo.conf ]; then
+      cat > /DATA/AppData/odoo/config/odoo.conf <<'CONF'
+    [options]
+    addons_path = /mnt/extra-addons/
+    data_dir = /var/lib/odoo/
+    CONF
+    fi
   index: /
   scheme: https
