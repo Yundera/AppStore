@@ -1,0 +1,461 @@
+name: outline
+
+services:
+  outline:
+    image: outlinewiki/outline:1.6.1
+    container_name: outline
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 70
+    depends_on:
+      outline-postgres:
+        condition: service_healthy
+      outline-redis:
+        condition: service_started
+      outline-dex:
+        condition: service_healthy
+    expose:
+      - "80"
+    labels:
+      caddy_0: outline-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: outline-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: outline-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      NODE_ENV: production
+      PORT: "80"
+      URL: https://outline-${APP_DOMAIN}
+      SECRET_KEY: ${OUTLINE_SECRET_KEY}
+      UTILS_SECRET: ${OUTLINE_UTILS_SECRET}
+      DATABASE_URL: postgres://outline:${APP_DEFAULT_PASSWORD}@outline-postgres:5432/outline
+      REDIS_URL: redis://outline-redis:6379
+      PGSSLMODE: disable
+      FILE_STORAGE: local
+      FILE_STORAGE_LOCAL_ROOT_DIR: /var/lib/outline/data
+      FILE_STORAGE_UPLOAD_MAX_SIZE: "262144000"
+      FORCE_HTTPS: "false"
+      DEFAULT_LANGUAGE: en_US
+      # OIDC — Dex authentication
+      OIDC_CLIENT_ID: outline
+      OIDC_CLIENT_SECRET: ${OUTLINE_OIDC_SECRET}
+      OIDC_AUTH_URI: https://outline-auth-${APP_DOMAIN}/auth
+      OIDC_TOKEN_URI: http://outline-dex:5556/token
+      OIDC_USERINFO_URI: http://outline-dex:5556/userinfo
+      OIDC_DISPLAY_NAME: Login
+      OIDC_SCOPES: "openid profile email"
+    volumes:
+      - /DATA/AppData/outline/data/:/var/lib/outline/data/
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/_health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - outline-internal
+      - pcs
+
+  outline-dex:
+    image: ghcr.io/dexidp/dex:v2.45.1
+    container_name: outline-dex
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 50
+    expose:
+      - "5556"
+    labels:
+      caddy_0: outline-auth-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 5556}}"
+      caddy_1: outline-auth-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 5556}}"
+      caddy_2: outline-auth-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 5556}}"
+    command: ["dex", "serve", "/data/config.yaml"]
+    volumes:
+      - /DATA/AppData/outline/dex/:/data/
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5556/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - outline-internal
+      - pcs
+
+  outline-postgres:
+    image: postgres:16.13-alpine
+    container_name: outline-postgres
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 50
+    environment:
+      POSTGRES_DB: outline
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - /DATA/AppData/outline/pgdata/:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline -d outline"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - outline-internal
+
+  outline-redis:
+    image: redis:7.2.13-alpine
+    container_name: outline-redis
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 30
+    volumes:
+      - /DATA/AppData/outline/redis/:/data/
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - outline-internal
+
+networks:
+  outline-internal:
+    driver: bridge
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: outline
+  store_app_id: outline
+  webui_port: 80
+  index: /
+  author: Yundera Team
+  category: Documents
+  developer: Outline
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Outline/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Outline/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Outline/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Outline/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Outline/screenshot-1.png
+  title:
+    en_us: Outline
+    ko_kr: Outline
+    zh_cn: Outline
+    fr_fr: Outline
+    es_es: Outline
+  tagline:
+    en_us: Fast, collaborative knowledge base for your team
+    ko_kr: 팀을 위한 빠르고 협업 가능한 지식 베이스
+    zh_cn: 团队快速协作知识库
+    fr_fr: Base de connaissances rapide et collaborative pour votre equipe
+    es_es: Base de conocimiento rapida y colaborativa para tu equipo
+  description:
+    en_us: |
+      **Outline — Team Knowledge Base**
+
+      A fast, beautiful wiki and knowledge base for your team. Outline is an open-source alternative to Notion and Confluence, fully self-hosted with complete data ownership.
+
+      **Key Features:**
+      - Real-time collaborative editing with rich Markdown editor
+      - Nested documents with drag-and-drop organization
+      - Full-text search across all documents
+      - Collections for organizing knowledge by topic
+      - Comments and @mentions for team discussions
+      - API access for automation and integrations
+      - 20+ language support
+
+      **MCP Integration:**
+      Connect AI assistants (Claude, Cursor) to your knowledge base via the Outline MCP server. Your AI can search and read documents in real time — no more copy-pasting context.
+
+      **Privacy First:**
+      All data stays on your server. Documents, attachments, and user data are stored locally.
+    ko_kr: |
+      **Outline — 팀 지식 베이스**
+
+      팀을 위한 빠르고 아름다운 위키이자 지식 베이스입니다. Notion과 Confluence의 오픈소스 대안으로, 완전한 데이터 소유권을 가진 셀프 호스팅.
+
+      **주요 기능:**
+      - 리치 마크다운 에디터를 통한 실시간 협업 편집
+      - 드래그 앤 드롭으로 구성하는 중첩 문서
+      - 모든 문서에 걸친 전문 검색
+      - 주제별 지식 정리를 위한 컬렉션
+      - 팀 토론을 위한 댓글 및 @멘션
+      - 자동화 및 통합을 위한 API 액세스
+      - 20개 이상 언어 지원
+
+      **MCP 연동:**
+      Outline MCP 서버를 통해 AI 어시스턴트(Claude, Cursor)를 지식 베이스에 연결하세요. AI가 실시간으로 문서를 검색하고 읽을 수 있습니다.
+
+      **개인정보 보호:**
+      모든 데이터는 서버에 보관됩니다. 문서, 첨부파일, 사용자 데이터가 로컬에 저장됩니다.
+    zh_cn: |
+      **Outline — 团队知识库**
+
+      为您的团队打造的快速、美观的Wiki和知识库。Outline是Notion和Confluence的开源替代方案，完全自托管，拥有完整的数据所有权。
+
+      **主要功能：**
+      - 富Markdown编辑器的实时协作编辑
+      - 支持拖放组织的嵌套文档
+      - 跨所有文档的全文搜索
+      - 按主题组织知识的集合
+      - 团队讨论的评论和@提及
+      - 用于自动化和集成的API访问
+      - 支持20+种语言
+
+      **MCP集成：**
+      通过Outline MCP服务器将AI助手（Claude、Cursor）连接到您的知识库。AI可以实时搜索和阅读文档。
+
+      **隐私优先：**
+      所有数据保留在您的服务器上。文档、附件和用户数据本地存储。
+    fr_fr: |
+      **Outline — Base de connaissances pour equipes**
+
+      Un wiki rapide et elegant pour votre equipe. Outline est une alternative open-source a Notion et Confluence, entierement auto-hebergee.
+
+      **Fonctionnalites cles :**
+      - Edition collaborative en temps reel avec editeur Markdown riche
+      - Documents imbriques avec organisation par glisser-deposer
+      - Recherche plein texte dans tous les documents
+      - Collections pour organiser les connaissances par sujet
+      - Commentaires et @mentions pour les discussions d'equipe
+      - Acces API pour l'automatisation et les integrations
+
+      **Integration MCP :**
+      Connectez vos assistants IA (Claude, Cursor) a votre base de connaissances via le serveur MCP Outline.
+
+      **Confidentialite :**
+      Toutes les donnees restent sur votre serveur.
+    es_es: |
+      **Outline — Base de conocimiento para equipos**
+
+      Un wiki rapido y elegante para tu equipo. Outline es una alternativa de codigo abierto a Notion y Confluence, completamente auto-alojada.
+
+      **Caracteristicas principales:**
+      - Edicion colaborativa en tiempo real con editor Markdown enriquecido
+      - Documentos anidados con organizacion de arrastrar y soltar
+      - Busqueda de texto completo en todos los documentos
+      - Colecciones para organizar conocimiento por tema
+      - Comentarios y @menciones para discusiones de equipo
+      - Acceso API para automatizacion e integraciones
+
+      **Integracion MCP:**
+      Conecta tus asistentes de IA (Claude, Cursor) a tu base de conocimiento a traves del servidor MCP de Outline.
+
+      **Privacidad:**
+      Todos los datos permanecen en tu servidor.
+  tips:
+    before_install:
+      en_us: |
+        **Default Login**
+
+        | Field | Value |
+        |-------|-------|
+        | Email | `$APP_EMAIL` |
+        | Password | `$APP_DEFAULT_PASSWORD` |
+
+        **Getting Started:**
+
+        1. Open the app and click "Login"
+        2. You'll be redirected to the login page — enter your credentials
+        3. The first user becomes the workspace admin
+        4. Create Collections to organize your documents
+
+        **MCP Integration (AI Access):**
+
+        After logging in, set up AI access to your knowledge base:
+
+        1. Go to **Settings > API** and create an API Key
+        2. Install mcp-outline: `uvx mcp-outline`
+        3. Add to your Claude Code MCP config:
+        ```json
+        {
+          "mcpServers": {
+            "outline": {
+              "command": "uvx",
+              "args": ["mcp-outline"],
+              "env": {
+                "OUTLINE_API_KEY": "your-api-key",
+                "OUTLINE_API_URL": "https://outline-your-domain/api"
+              }
+            }
+          }
+        }
+        ```
+
+        **Documentation:** [https://docs.getoutline.com](https://docs.getoutline.com)
+      ko_kr: |
+        **기본 로그인**
+
+        | 항목 | 값 |
+        |------|-----|
+        | 이메일 | `$APP_EMAIL` |
+        | 비밀번호 | `$APP_DEFAULT_PASSWORD` |
+
+        **시작하기:**
+
+        1. 앱을 열고 "Login" 클릭
+        2. 로그인 페이지로 리다이렉트 — 자격증명 입력
+        3. 첫 번째 사용자가 워크스페이스 관리자가 됨
+        4. 컬렉션을 만들어 문서를 정리하세요
+
+        **MCP 연동 (AI 액세스):**
+
+        로그인 후 AI가 지식 베이스에 접근할 수 있도록 설정:
+
+        1. **Settings > API**에서 API Key 생성
+        2. mcp-outline 설치: `uvx mcp-outline`
+        3. Claude Code MCP 설정에 추가:
+        ```json
+        {
+          "mcpServers": {
+            "outline": {
+              "command": "uvx",
+              "args": ["mcp-outline"],
+              "env": {
+                "OUTLINE_API_KEY": "your-api-key",
+                "OUTLINE_API_URL": "https://outline-your-domain/api"
+              }
+            }
+          }
+        }
+        ```
+
+        **문서:** [https://docs.getoutline.com](https://docs.getoutline.com)
+      zh_cn: |
+        **默认登录**
+
+        | 字段 | 值 |
+        |------|-----|
+        | 邮箱 | `$APP_EMAIL` |
+        | 密码 | `$APP_DEFAULT_PASSWORD` |
+
+        **开始使用：**
+
+        1. 打开应用并点击"Login"
+        2. 将被重定向到登录页面 — 输入凭据
+        3. 第一个用户成为工作空间管理员
+        4. 创建集合来组织您的文档
+
+        **MCP集成（AI访问）：**
+
+        登录后设置AI访问知识库：
+
+        1. 进入 **Settings > API** 创建API Key
+        2. 安装mcp-outline：`uvx mcp-outline`
+
+        **文档：** [https://docs.getoutline.com](https://docs.getoutline.com)
+      fr_fr: |
+        **Connexion par defaut**
+
+        | Champ | Valeur |
+        |-------|--------|
+        | Email | `$APP_EMAIL` |
+        | Mot de passe | `$APP_DEFAULT_PASSWORD` |
+
+        **Pour commencer :**
+
+        1. Ouvrez l'app et cliquez sur "Login"
+        2. Vous serez redirige vers la page de connexion
+        3. Le premier utilisateur devient l'administrateur
+        4. Creez des Collections pour organiser vos documents
+
+        **Integration MCP :**
+
+        1. Allez dans **Settings > API** et creez une API Key
+        2. Installez mcp-outline : `uvx mcp-outline`
+
+        **Documentation :** [https://docs.getoutline.com](https://docs.getoutline.com)
+      es_es: |
+        **Inicio de sesion predeterminado**
+
+        | Campo | Valor |
+        |-------|-------|
+        | Email | `$APP_EMAIL` |
+        | Contrasena | `$APP_DEFAULT_PASSWORD` |
+
+        **Para comenzar:**
+
+        1. Abre la app y haz clic en "Login"
+        2. Seras redirigido a la pagina de inicio de sesion
+        3. El primer usuario se convierte en administrador
+        4. Crea Colecciones para organizar tus documentos
+
+        **Integracion MCP:**
+
+        1. Ve a **Settings > API** y crea una API Key
+        2. Instala mcp-outline: `uvx mcp-outline`
+
+        **Documentacion:** [https://docs.getoutline.com](https://docs.getoutline.com)
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/outline/dex &&
+    ENV_FILE="/DATA/AppData/casaos/apps/outline/.env" &&
+    if [ ! -s "$ENV_FILE" ]; then
+      OUTLINE_SECRET_KEY=$(openssl rand -hex 32) &&
+      OUTLINE_UTILS_SECRET=$(openssl rand -hex 32) &&
+      OUTLINE_OIDC_SECRET=$(openssl rand -hex 32) &&
+      printf 'OUTLINE_SECRET_KEY=%s\nOUTLINE_UTILS_SECRET=%s\nOUTLINE_OIDC_SECRET=%s\n' \
+        "$OUTLINE_SECRET_KEY" "$OUTLINE_UTILS_SECRET" "$OUTLINE_OIDC_SECRET" > "$ENV_FILE"
+    fi &&
+    . "$ENV_FILE" &&
+    DEX_CONFIG="/DATA/AppData/outline/dex/config.yaml" &&
+    if [ ! -f "$DEX_CONFIG" ]; then
+      BCRYPT_HASH=$(docker run --rm ghcr.io/dexidp/dex:v2.45.1 dex hash "$APP_DEFAULT_PASSWORD" 2>/dev/null || true) &&
+      if [ -z "$BCRYPT_HASH" ]; then
+        BCRYPT_HASH=$(docker run --rm python:3.12-alpine sh -c "pip install -q bcrypt && python3 -c \"import bcrypt; print(bcrypt.hashpw(b'$APP_DEFAULT_PASSWORD', bcrypt.gensalt(10)).decode())\"" 2>/dev/null)
+      fi &&
+      PCS_EMAIL="${APP_EMAIL:-admin@$APP_DOMAIN}" &&
+      cat > "$DEX_CONFIG" << 'DEXEOF'
+    issuer: https://outline-auth-__APP_DOMAIN__
+    storage:
+      type: sqlite3
+      config:
+        file: /data/dex.db
+    web:
+      http: 0.0.0.0:5556
+    staticClients:
+      - id: outline
+        secret: __OIDC_SECRET__
+        name: Outline
+        redirectURIs:
+          - https://outline-__APP_DOMAIN__/auth/oidc.callback
+    enablePasswordDB: true
+    staticPasswords:
+      - email: "__PCS_EMAIL__"
+        hash: "__BCRYPT_HASH__"
+        username: admin
+    DEXEOF
+      sed -i "s|__APP_DOMAIN__|$APP_DOMAIN|g" "$DEX_CONFIG" &&
+      sed -i "s|__OIDC_SECRET__|$OUTLINE_OIDC_SECRET|g" "$DEX_CONFIG" &&
+      sed -i "s|__PCS_EMAIL__|$PCS_EMAIL|g" "$DEX_CONFIG" &&
+      sed -i "s|__BCRYPT_HASH__|$BCRYPT_HASH|g" "$DEX_CONFIG"
+    fi

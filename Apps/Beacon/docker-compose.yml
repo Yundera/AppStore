@@ -2,7 +2,7 @@ name: beacon
 
 services:
   beacon:
-    image: ghcr.io/worph/beacon:1.0.8
+    image: ghcr.io/worph/beacon:1.0.14
     container_name: beacon
     hostname: beacon
     restart: unless-stopped
@@ -12,6 +12,8 @@ services:
       MCP_CLIENT_TIMEOUT : 300
       WEB_PORT: "9300"
       LOG_LEVEL: info
+      PUBLIC_URL: "https://beacon-${APP_DOMAIN}/mcp"
+      AUTH_HASH: $AUTH_HASH
       TZ: $TZ
     expose:
       - 9300
