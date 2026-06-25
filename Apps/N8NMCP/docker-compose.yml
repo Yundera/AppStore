@@ -1,10 +1,10 @@
 name: n8nmcp
 services:
-  # Main MCP server — reachable at n8nmcp:9640 on the pcs network
-  n8nmcp:
+  # Main MCP server — reachable at n8nmcp-backend:9640 on the pcs network
+  n8nmcp-backend:
     image: ghcr.io/worph/n8nmcp:1.0.1
-    container_name: n8nmcp
-    hostname: n8nmcp
+    container_name: n8nmcp-backend
+    hostname: n8nmcp-backend
     # supervisord is PID 1 and MUST start as root so it can drop privileges for
     # each child program. Running as a non-root uid fails with "Can't drop
     # privilege as nonroot user". Child processes drop to their own uid as
@@ -35,9 +35,10 @@ services:
     networks:
       - pcs
 
-  # Nginx-hash-lock provides perimeter authentication for the web UI
+  # AppShield provides perimeter authentication (human SSO + machine hash) for the web UI
   n8nmcp-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: n8nmcp
     restart: unless-stopped
     cpu_shares: 50
     expose:
@@ -46,13 +47,16 @@ services:
     environment:
       ALLOWED_PATHS: "mcp"
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: n8nmcp
+      BACKEND_HOST: n8nmcp-backend
       BACKEND_PORT: "9640"
       LISTEN_PORT: "80"
       USER: "ADMIN"
       PASSWORD: $APP_DEFAULT_PASSWORD
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
-      - n8nmcp
+      - n8nmcp-backend
     networks:
       - pcs
     labels:
@@ -74,7 +78,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: n8nmcp
+  main: n8nmcp-backend
   index: /?hash=$AUTH_HASH
   author: Aptero
   category: Developer

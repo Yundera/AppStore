@@ -1,11 +1,11 @@
 name: browsermcp
 services:
   # Main container — Chromium + Playwright + MCP server + noVNC viewer.
-  # Reachable at browsermcp:9746 on the pcs network. Beacon discovery on UDP 9099.
-  browsermcp:
+  # Reachable at browsermcp-backend:9746 on the pcs network. Beacon discovery on UDP 9099.
+  browsermcp-backend:
     image: ghcr.io/worph/browser-mcp:1.1.4
-    container_name: browsermcp
-    hostname: browsermcp
+    container_name: browsermcp-backend
+    hostname: browsermcp-backend
     restart: unless-stopped
     # Chromium needs a large /dev/shm or it crashes rendering big pages.
     shm_size: "2gb"
@@ -37,10 +37,10 @@ services:
 
   # Nginx-hash-lock provides perimeter authentication for the web UI.
   # The app itself trusts the network (auth is delegated to this sidecar), so the
-  # browsermcp container is never exposed directly — only this proxy gets caddy labels.
+  # browsermcp-backend container is never exposed directly — only this proxy gets caddy labels.
   browsermcp-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
-    container_name: browsermcp-proxy
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: browsermcp
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -50,13 +50,16 @@ services:
       # (web UI, noVNC, /api) sits behind the ADMIN basic-auth prompt.
       ALLOWED_PATHS: "mcp"
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: browsermcp
+      BACKEND_HOST: browsermcp-backend
       BACKEND_PORT: "9746"
       LISTEN_PORT: "80"
       USER: "ADMIN"
       PASSWORD: $APP_DEFAULT_PASSWORD
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
-      - browsermcp
+      - browsermcp-backend
     networks:
       - pcs
     labels:
@@ -82,7 +85,7 @@ networks:
 x-casaos:
   architectures:
     - amd64
-  main: browsermcp
+  main: browsermcp-backend
   index: /?hash=$AUTH_HASH
   author: Yundera
   developer: Worph
@@ -180,7 +183,7 @@ x-casaos:
           "mcpServers": {
             "browser-mcp": {
               "type": "http",
-              "url": "http://browsermcp:9746/mcp"
+              "url": "http://browsermcp-backend:9746/mcp"
             }
           }
         }
@@ -244,7 +247,7 @@ x-casaos:
           "mcpServers": {
             "browser-mcp": {
               "type": "http",
-              "url": "http://browsermcp:9746/mcp"
+              "url": "http://browsermcp-backend:9746/mcp"
             }
           }
         }
