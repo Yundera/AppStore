@@ -1,0 +1,77 @@
+name: sonarr
+
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:4.0.17
+    container_name: sonarr
+    restart: unless-stopped
+    user: $PUID:$PGID
+    expose:
+      - 8989
+    labels:
+      caddy_0: sonarr-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8989}}"
+      caddy_1: sonarr-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8989}}"
+      caddy_2: sonarr-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8989}}"
+    networks:
+      - pcs
+    environment:
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/sonarr/config:/config   # dedicated Sonarr config
+      - /DATA/Media/TV Shows:/tv              # shared TV library (same folder Jellyfin reads)
+      - /DATA/Downloads:/downloads            # shared downloads folder
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: sonarr
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/sonarr/config "/DATA/Media/TV Shows" /DATA/Downloads
+  tips:
+    before_install:
+      en_us: |
+        📺 **Sonarr** is a TV series collection manager — it monitors, downloads and organises your shows automatically as new episodes air.
+
+        📂 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.
+
+        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
+
+        ❓ Questions? Contact us at help@yundera.com
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Media
+  developer: Servarr (Sonarr)
+  description:
+    en_us: Sonarr is a TV series collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new episodes, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Uses the same `/DATA/Media/TV Shows` library folder Jellyfin reads.
+    fr_fr: Sonarr est un gestionnaire de collection de séries TV pour les utilisateurs Usenet et BitTorrent. Il surveille plusieurs flux RSS pour les nouveaux épisodes, les récupère, les trie et les renomme, et s'intègre aux clients de téléchargement comme qBittorrent et aux indexeurs via Prowlarr. Utilise le même dossier de bibliothèque TV que Jellyfin lit.
+    es_es: Sonarr es un gestor de colección de series de TV para usuarios de Usenet y BitTorrent. Monitorea múltiples fuentes RSS de nuevos episodios, los descarga, ordena y renombra, e se integra con clientes de descarga como qBittorrent e indexadores vía Prowlarr. Usa la misma carpeta de biblioteca de TV que lee Jellyfin.
+    zh_cn: Sonarr 是面向 Usenet 和 BitTorrent 用户的电视剧收藏管理器。它监控多个 RSS 源以获取新剧集，抓取、整理并重命名，并通过 Prowlarr 与 qBittorrent 等下载客户端和索引器集成。使用与 Jellyfin 相同的电视库文件夹。
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Sonarr/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Sonarr/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Sonarr/thumbnail.png
+  tagline:
+    en_us: Automatically find, download and organise your TV show collection.
+    fr_fr: Trouvez, téléchargez et organisez automatiquement votre collection de séries TV.
+    es_es: Encuentra, descarga y organiza automáticamente tu colección de series de TV.
+    zh_cn: 自动查找、下载并整理您的电视剧收藏。
+  title:
+    en_us: Sonarr
+  store_app_id: sonarr
+  is_uncontrolled: false

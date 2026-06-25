@@ -1,0 +1,150 @@
+name: tribler
+
+services:
+  # OIDC SSO front-door (Yundera Authelia). Only this container is publicly reachable.
+  tribler:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: tribler
+    restart: unless-stopped
+    user: "root"
+    expose:
+      - 80
+    labels:
+      caddy_0: tribler-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: tribler-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: tribler-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      # Presence of OIDC_REGISTRAR_URL enables OIDC mode (self-registers via container_name).
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      BACKEND_HOST: "tribler-backend"
+      BACKEND_PORT: "8086"
+      LISTEN_PORT: "80"
+    tmpfs:
+      - /var/cache/nginx:size=50M
+    depends_on:
+      - tribler-fwd
+    networks:
+      - pcs
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Tribler v8.4.2 binds its REST/Web UI to 127.0.0.1 only and offers no override
+  # (verified: no env var works and config edits are reset on every boot). This socat
+  # shim shares the backend's network namespace and republishes the UI on 0.0.0.0:8086
+  # so the sidecar can reach it as tribler-backend:8086 over the pcs network.
+  tribler-fwd:
+    image: alpine/socat:1.8.0.0
+    container_name: tribler-fwd
+    restart: unless-stopped
+    network_mode: "service:tribler-backend"
+    command: ["TCP-LISTEN:8086,fork,reuseaddr", "TCP:127.0.0.1:8085"]
+    depends_on:
+      - tribler-backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cpu_shares: 50
+
+  # Tribler core, headless. No Caddy labels — reachable only via the pcs network.
+  tribler-backend:
+    image: ghcr.io/tribler/tribler:v8.4.2
+    container_name: tribler-backend
+    restart: unless-stopped
+    user: $PUID:$PGID
+    command: ["-s"]
+    expose:
+      - 8086
+    environment:
+      # api/key empty => Tribler's own key auth is disabled; access is gated by the OIDC
+      # sidecar. HOME=/state makes Tribler's default save path resolve to /state/Downloads,
+      # which is bind-mounted to the user-visible /DATA/Downloads (the path is reset to this
+      # default on every boot, so we mount the user folder there instead of fighting it).
+      CORE_API_PORT: "8085"
+      CORE_API_KEY: ""
+      TSTATEDIR: /state
+      HOME: /state
+      TMPDIR: /state/.tmp
+      LANG: C.UTF-8
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/$AppID/state:/state
+      - /DATA/Downloads:/state/Downloads
+    networks:
+      - pcs
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+  main: tribler
+  webui_port: 80
+  index: /ui/
+  # Ensure the state dir (and TMPDIR) exist and are owned by the app user before first boot.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/state/.tmp &&
+    docker run --rm -e PUID -e PGID \
+      -v /DATA/AppData/$AppID/state:/state \
+      busybox:1.36 sh -c 'chown -R "$PUID:$PGID" /state'
+  tips:
+    before_install:
+      en_us: |
+        Tribler is protected by your Yundera single sign-on (Authelia) — no extra login.
+        Downloads are saved to `/DATA/Downloads`.
+        By default downloads are anonymized through Tribler's onion network (1 hop); you can
+        change the number of hops or disable anonymity per-download in the UI.
+  author: Yundera Team
+  category: Downloader
+  developer: Tribler
+  description:
+    en_us: Tribler is a decentralized, privacy-focused BitTorrent client. It routes downloads through its own built-in onion network (Tor-like), so you can search for and download torrents anonymously without any central server, VPN, or tracker dependency.
+    fr_fr: Tribler est un client BitTorrent décentralisé et respectueux de la vie privée. Il achemine les téléchargements via son propre réseau onion intégré (similaire à Tor), ce qui vous permet de rechercher et de télécharger des torrents de manière anonyme, sans serveur central, VPN ni tracker.
+    es_es: Tribler es un cliente BitTorrent descentralizado y centrado en la privacidad. Enruta las descargas a través de su propia red onion integrada (similar a Tor), para que puedas buscar y descargar torrents de forma anónima sin servidor central, VPN ni rastreadores.
+    zh_cn: Tribler 是一个去中心化、注重隐私的 BitTorrent 客户端。它通过内置的洋葱网络（类似 Tor）路由下载，让您无需任何中心服务器、VPN 或 Tracker 即可匿名搜索和下载种子。
+    ko_kr: Tribler는 분산형 프라이버시 중심 BitTorrent 클라이언트입니다. 자체 내장 어니언 네트워크(Tor 유사)를 통해 다운로드를 라우팅하여 중앙 서버, VPN, 트래커 없이도 익명으로 토렌트를 검색하고 다운로드할 수 있습니다.
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/thumbnail.png
+  tagline:
+    en_us: Anonymous, decentralized BitTorrent client with a built-in onion network.
+    fr_fr: Client BitTorrent anonyme et décentralisé avec un réseau onion intégré.
+    es_es: Cliente BitTorrent anónimo y descentralizado con red onion integrada.
+    zh_cn: 匿名、去中心化的 BitTorrent 客户端，内置洋葱网络。
+    ko_kr: 내장 어니언 네트워크를 갖춘 익명 분산형 BitTorrent 클라이언트.
+  title:
+    en_us: Tribler
+  store_app_id: tribler
+  is_uncontrolled: false

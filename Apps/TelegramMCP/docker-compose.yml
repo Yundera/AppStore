@@ -1,0 +1,191 @@
+name: telegrammcp
+services:
+  # Main MCP server — reachable at telegrammcp-backend:9634 on the pcs network.
+  # Serves the web UI (/), the MCP endpoint (/mcp) and the Telegram webhook
+  # callback (/webhook), and answers Beacon's UDP discovery on port 9099.
+  telegrammcp-backend:
+    image: ghcr.io/worph/telegram-mcp:1.1.21
+    container_name: telegrammcp-backend
+    hostname: telegrammcp-backend
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9634
+      - 9099
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - PORT=9634
+      - DISCOVERY_PORT=9099
+      # Advertised public base URL. The bot registers its Telegram webhook at
+      # ${PUBLIC_URL}/webhook and hands this out as the public MCP URL.
+      - PUBLIC_URL=https://telegrammcp-${APP_DOMAIN}
+    volumes:
+      # config.json (bot token + MCP target) is created here on first start
+      # — CONFIG_PATH=/app/data/config.json is baked into the image.
+      - type: bind
+        source: /DATA/AppData/telegrammcp/
+        target: /app/data
+    networks:
+      - pcs
+
+  # Nginx-hash-lock provides perimeter authentication for the web UI.
+  # /mcp and /webhook are listed in ALLOWED_PATHS so they bypass the login
+  # flow: MCP clients and Telegram's webhook callers cannot do the cookie
+  # dance. Everything else (the config UI at /) sits behind hash + password.
+  telegrammcp-proxy:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: telegrammcp
+    restart: unless-stopped
+    cpu_shares: 50
+    expose:
+      - 80
+    user: "root"
+    environment:
+      ALLOWED_PATHS: "mcp,webhook"
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: telegrammcp-backend
+      BACKEND_PORT: "9634"
+      LISTEN_PORT: "80"
+      USER: "ADMIN"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+    depends_on:
+      - telegrammcp-backend
+    networks:
+      - pcs
+    labels:
+      caddy_0: telegrammcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: telegrammcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: telegrammcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+  main: telegrammcp-backend
+  hostname: telegrammcp-${APP_DOMAIN}
+  scheme: https
+  port_map: "443"
+  index: /?hash=${AUTH_HASH}
+  author: Aptero
+  category: Chat
+  description:
+    en_us: |
+      **Telegram control for AI assistants via MCP**
+
+      Telegram MCP is a bidirectional bridge between [Telegram](https://telegram.org) and the Model Context Protocol (MCP). It is both an MCP **server** — exposing `send_message` and `send_photo` tools so LLMs can message you on Telegram — and an MCP **client** — forwarding the messages your bot receives to a target MCP server for AI processing.
+
+      Wraps the [`worph/telegram-mcp`](https://github.com/worph/telegram-mcp) server (built on grammY) with a streamable-HTTP transport so any MCP-compatible client can connect (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus a Web UI for entering the bot token and Beacon auto-discovery.
+
+      **What you can do:**
+      - Let an AI assistant send you Telegram messages and photos (alerts, summaries, results)
+      - Route incoming Telegram messages to an LLM and reply automatically
+      - Approve actions from Telegram with an inline-keyboard permission flow
+      - Run the bot in polling or webhook mode — configured from the built-in Web UI
+
+      **Think of it like:** A two-way remote between your Telegram chat and any AI assistant.
+
+      **Perfect if you:** Want Claude / Cursor / any MCP client to reach you on Telegram, or to drive an LLM from a Telegram bot — and pair it with other MCP apps (Beacon, n8n, Chronos) for end-to-end AI workflows.
+    fr_fr: |
+      **Controle de Telegram pour les assistants IA via MCP**
+
+      Telegram MCP est un pont bidirectionnel entre [Telegram](https://telegram.org) et le Model Context Protocol (MCP). Il est a la fois un **serveur** MCP — exposant les outils `send_message` et `send_photo` pour que les LLMs puissent vous ecrire sur Telegram — et un **client** MCP — transferant les messages recus par votre bot vers un serveur MCP cible pour traitement par IA.
+
+      Enveloppe le serveur [`worph/telegram-mcp`](https://github.com/worph/telegram-mcp) (base sur grammY) avec un transport streamable-HTTP pour que tout client compatible MCP puisse se connecter (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus une interface Web pour saisir le token du bot et la decouverte automatique via Beacon.
+
+      **Ce que vous pouvez faire:**
+      - Laisser un assistant IA vous envoyer des messages et photos Telegram (alertes, resumes, resultats)
+      - Router les messages Telegram entrants vers un LLM et repondre automatiquement
+      - Approuver des actions depuis Telegram via un clavier en ligne (permission flow)
+      - Executer le bot en mode polling ou webhook — configure depuis l'interface Web integree
+
+      **Parfait si vous:** Voulez que Claude / Cursor / tout client MCP vous joigne sur Telegram, ou piloter un LLM depuis un bot Telegram — et le combiner avec d'autres apps MCP (Beacon, n8n, Chronos) pour des workflows IA de bout en bout.
+  developer: Worph
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/screenshot-3.png
+  tagline:
+    en_us: Bidirectional Telegram-MCP bridge for AI assistants
+    fr_fr: Pont Telegram-MCP bidirectionnel pour les assistants IA
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/thumbnail.png
+  title:
+    en_us: Telegram MCP
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        Telegram MCP needs a Telegram bot token. You set it in the app's Web UI after install.
+
+        **Prerequisites:**
+        1. In Telegram, open [@BotFather](https://t.me/BotFather), send `/newbot`, follow the prompts, and copy the **bot token** it gives you
+        2. (Optional) An MCP-compatible LLM server to forward incoming messages to — only needed if you want the bot to auto-reply
+
+        **Setup (2 steps):**
+        1. Open this app's Web UI (you'll be prompted for the `ADMIN` password `$APP_DEFAULT_PASSWORD`)
+        2. Paste your **bot token**, pick **polling** or **webhook** mode, and click **Save**. In webhook mode the bot registers `https://telegrammcp-${APP_DOMAIN}/webhook` with Telegram automatically.
+
+        **MCP Integration (for AI/LLMs):**
+
+        **Option 1: Public URL (with hash auth)**
+        ```json
+        {
+          "mcpServers": {
+            "telegram": {
+              "type": "http",
+              "url": "https://telegrammcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+            }
+          }
+        }
+        ```
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "telegram": {
+              "type": "http",
+              "url": "http://telegrammcp-backend:9634/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Option 3: Via Beacon (aggregated)**
+
+        If you have **Beacon** installed, Telegram MCP auto-registers there via its built-in UDP discovery and its tools show up under the `telegram__*` namespace — no extra config.
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `send_message` | Send a text message to the configured Telegram chat |
+        | `send_photo` | Send a photo (by URL or file) to the chat |
+        | `echo` | Echo back input — handy for connectivity tests |
+        | `mcp_info` | Report the server's MCP connection info |
+
+        **Security:**
+        - The bot token is stored only in `/DATA/AppData/telegrammcp/config.json` on this server and is never logged or returned via the API
+        - The Web UI sits behind the Yundera hash-lock — you'll need the admin password to access it
+        - `/mcp` and `/webhook` are intentionally reachable without the login flow (MCP clients and Telegram's servers can't perform it); keep the app domain private and rely on the URL hash for the MCP endpoint

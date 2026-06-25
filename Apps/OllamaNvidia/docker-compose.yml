@@ -1,0 +1,246 @@
+name: ollama-nvidia
+
+services:
+  ollama:
+    image: ghcr.io/open-webui/open-webui:0.9.6
+    user: 0:0
+    container_name: ollama-nvidia
+    restart: unless-stopped
+    expose:
+      - 8080
+    labels:
+      caddy_0: ollama-nvidia-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8080}}"
+      caddy_1: ollama-nvidia-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8080}}"
+      caddy_2: ollama-nvidia-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8080}}"
+    networks:
+      - default
+      - pcs
+    environment:
+      OLLAMA_BASE_URL: http://ollama-api:11434
+      WEBUI_URL: https://ollama-nvidia-${APP_DOMAIN}
+      WEBUI_SECRET_KEY: $APP_DEFAULT_PASSWORD
+    volumes:
+      - /DATA/AppData/ollama-nvidia/webui:/app/backend/data
+    depends_on:
+      - ollama-api
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  ollama-api:
+    image: ollama/ollama:0.30.7
+    user: 0:0
+    container_name: ollama-nvidia-api
+    restart: unless-stopped
+    expose:
+      - 11434
+    networks:
+      - default
+    environment:
+      OLLAMA_KEEP_ALIVE: "30m"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - /DATA/AppData/ollama-nvidia/data:/root/.ollama
+    cpu_shares: 20
+    # No memory limit: model size varies and inference needs all available VRAM/RAM (see rationale.md).
+    # GPU passthrough requires the NVIDIA Container Toolkit on the host (see before_install tip).
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+                - gpu
+
+networks:
+  default:
+    name: ollama-nvidia_default
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: ollama
+  index: /
+  store_app_id: ollama-nvidia
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/ollama-nvidia/data &&
+    mkdir -p /DATA/AppData/ollama-nvidia/webui
+  post-install-cmd: |
+    docker exec ollama-nvidia curl -fsS --retry 90 --retry-delay 2 --retry-connrefused http://ollama-api:11434/api/version && docker exec ollama-nvidia-api ollama pull llama3.2:1b
+  architectures:
+    - amd64
+  author: Yundera Team
+  category: Chat
+  developer: Open WebUI
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OllamaNvidia/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OllamaNvidia/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OllamaNvidia/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OllamaNvidia/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OllamaNvidia/thumbnail.png
+  title:
+    en_us: Ollama (Nvidia GPU)
+  tagline:
+    en_us: GPU-accelerated private AI models on your own server
+    fr_fr: Modèles d'IA privés accélérés par GPU sur votre propre serveur
+    es_es: Modelos de IA privados acelerados por GPU en tu propio servidor
+    zh_cn: 在您自己的服务器上运行 GPU 加速的私有 AI 模型
+    ko_kr: 자체 서버에서 GPU로 가속되는 비공개 AI 모델
+  description:
+    en_us: |
+      Ollama with Open WebUI gives you a private, self-hosted ChatGPT-style assistant that runs entirely on your own server — no data leaves your machine. This edition runs inference on an **Nvidia GPU** for dramatically faster responses and support for larger models.
+
+      **Key features:**
+      • GPU-accelerated inference (Nvidia CUDA)
+      • Chat with open-source models (Llama, Qwen, Gemma, DeepSeek, and more)
+      • Download and manage models from the built-in interface
+      • Multiple conversations with full history, saved locally
+      • Markdown, code highlighting, and document/image chat
+      • Multi-user support with admin controls
+
+      **Perfect for:** Anyone with an Nvidia GPU who wants a fast, fully private AI chat assistant without sending prompts to a cloud provider.
+
+      **Requirements:** An Nvidia GPU plus the **NVIDIA Container Toolkit** installed and configured in Docker on the host. If your server has no GPU, install **Ollama (CPU)** instead.
+    fr_fr: |
+      Ollama avec Open WebUI vous offre un assistant privé de type ChatGPT, auto-hébergé et fonctionnant entièrement sur votre propre serveur — aucune donnée ne quitte votre machine. Cette édition exécute l'inférence sur un **GPU Nvidia** pour des réponses bien plus rapides et la prise en charge de modèles plus grands.
+
+      **Fonctionnalités clés :**
+      • Inférence accélérée par GPU (Nvidia CUDA)
+      • Discutez avec des modèles open source (Llama, Qwen, Gemma, DeepSeek, etc.)
+      • Téléchargez et gérez les modèles depuis l'interface intégrée
+      • Plusieurs conversations avec historique complet, enregistrées localement
+      • Markdown, coloration syntaxique et discussion avec documents/images
+      • Support multi-utilisateurs avec contrôles administrateur
+
+      **Parfait pour :** Toute personne disposant d'un GPU Nvidia souhaitant un assistant IA rapide et totalement privé sans envoyer ses requêtes à un fournisseur cloud.
+
+      **Prérequis :** Un GPU Nvidia ainsi que le **NVIDIA Container Toolkit** installé et configuré dans Docker sur l'hôte. Si votre serveur n'a pas de GPU, installez plutôt **Ollama (CPU)**.
+    es_es: |
+      Ollama con Open WebUI te ofrece un asistente privado tipo ChatGPT, autoalojado y que funciona completamente en tu propio servidor: ningún dato sale de tu máquina. Esta edición ejecuta la inferencia en una **GPU Nvidia** para respuestas mucho más rápidas y compatibilidad con modelos más grandes.
+
+      **Características clave:**
+      • Inferencia acelerada por GPU (Nvidia CUDA)
+      • Chatea con modelos de código abierto (Llama, Qwen, Gemma, DeepSeek y más)
+      • Descarga y gestiona modelos desde la interfaz integrada
+      • Múltiples conversaciones con historial completo, guardadas localmente
+      • Markdown, resaltado de código y chat con documentos/imágenes
+      • Soporte multiusuario con controles de administrador
+
+      **Perfecto para:** Cualquiera con una GPU Nvidia que quiera un asistente de IA rápido y totalmente privado sin enviar sus mensajes a un proveedor en la nube.
+
+      **Requisitos:** Una GPU Nvidia y el **NVIDIA Container Toolkit** instalado y configurado en Docker en el host. Si tu servidor no tiene GPU, instala **Ollama (CPU)** en su lugar.
+    zh_cn: |
+      Ollama 搭配 Open WebUI 为您提供一个私有的、自托管的 ChatGPT 式助手，完全运行在您自己的服务器上——没有任何数据离开您的设备。此版本在 **Nvidia GPU** 上进行推理，响应速度大幅提升，并支持更大的模型。
+
+      **主要功能：**
+      • GPU 加速推理（Nvidia CUDA）
+      • 与开源模型聊天（Llama、Qwen、Gemma、DeepSeek 等）
+      • 通过内置界面下载和管理模型
+      • 多个对话，保留完整历史记录，本地保存
+      • 支持 Markdown、代码高亮以及文档/图片对话
+      • 多用户支持及管理员控制
+
+      **适合人群：** 拥有 Nvidia GPU、希望获得快速且完全私有的 AI 聊天助手、又不愿将提示词发送给云服务商的人。
+
+      **要求：** 一块 Nvidia GPU，并在主机的 Docker 中安装和配置 **NVIDIA Container Toolkit**。如果您的服务器没有 GPU，请改装 **Ollama (CPU)**。
+    ko_kr: |
+      Open WebUI와 함께하는 Ollama는 전적으로 자체 서버에서 실행되는 비공개 자체 호스팅 ChatGPT형 어시스턴트를 제공합니다 — 어떤 데이터도 기기를 벗어나지 않습니다. 이 에디션은 **Nvidia GPU**에서 추론을 실행하여 훨씬 빠른 응답과 더 큰 모델을 지원합니다.
+
+      **주요 기능:**
+      • GPU 가속 추론 (Nvidia CUDA)
+      • 오픈소스 모델과 대화 (Llama, Qwen, Gemma, DeepSeek 등)
+      • 내장 인터페이스에서 모델 다운로드 및 관리
+      • 전체 기록이 로컬에 저장되는 다중 대화
+      • 마크다운, 코드 강조, 문서/이미지 대화
+      • 관리자 제어가 포함된 다중 사용자 지원
+
+      **이런 분께 좋습니다:** Nvidia GPU를 보유하고, 프롬프트를 클라우드 제공업체로 보내지 않으면서 빠르고 완전히 비공개인 AI 채팅 어시스턴트를 원하는 모든 분.
+
+      **요구 사항:** Nvidia GPU와 호스트의 Docker에 설치·구성된 **NVIDIA Container Toolkit**. 서버에 GPU가 없다면 **Ollama (CPU)**를 대신 설치하세요.
+  tips:
+    before_install:
+      en_us: |
+        **Requires an Nvidia GPU**
+
+        This edition only starts on a host that has an Nvidia GPU **and** the **NVIDIA Container Toolkit** installed and wired into Docker (`nvidia-ctk runtime configure` + Docker restarted). On a host without it, the container will fail to start with *"could not select device driver 'nvidia'"* — use **Ollama (CPU)** instead.
+
+        **Getting Started**
+
+        Open WebUI uses its own account system. **The first account you create becomes the administrator** — open the app, click *Sign up*, and register with your email and a password.
+
+        **How to use:**
+        1. Open the app and create your account (first sign-up = admin)
+        2. Go to **Admin Panel → Settings → Models** and pull a model (e.g. `llama3.2:1b`)
+        3. Start a new chat and select your model
+
+        **Note:** There is no email-based password reset — keep your credentials safe.
+      fr_fr: |
+        **Nécessite un GPU Nvidia**
+
+        Cette édition ne démarre que sur un hôte disposant d'un GPU Nvidia **et** du **NVIDIA Container Toolkit** installé et intégré à Docker (`nvidia-ctk runtime configure` + Docker redémarré). Sans cela, le conteneur ne démarrera pas (*« could not select device driver 'nvidia' »*) — utilisez plutôt **Ollama (CPU)**.
+
+        **Pour commencer**
+
+        Open WebUI utilise son propre système de comptes. **Le premier compte que vous créez devient l'administrateur** — ouvrez l'app, cliquez sur *S'inscrire* et enregistrez-vous avec votre e-mail et un mot de passe.
+
+        **Comment utiliser :**
+        1. Ouvrez l'app et créez votre compte (première inscription = admin)
+        2. Allez dans **Panneau d'administration → Paramètres → Modèles** et téléchargez un modèle (ex. `llama3.2:1b`)
+        3. Démarrez une nouvelle conversation et sélectionnez votre modèle
+
+        **Remarque :** Il n'y a pas de réinitialisation de mot de passe par e-mail — conservez vos identifiants en lieu sûr.
+      es_es: |
+        **Requiere una GPU Nvidia**
+
+        Esta edición solo arranca en un host con una GPU Nvidia **y** el **NVIDIA Container Toolkit** instalado e integrado en Docker (`nvidia-ctk runtime configure` + Docker reiniciado). Sin ello, el contenedor no arrancará (*"could not select device driver 'nvidia'"*) — usa **Ollama (CPU)** en su lugar.
+
+        **Para empezar**
+
+        Open WebUI usa su propio sistema de cuentas. **La primera cuenta que crees se convierte en administrador** — abre la app, haz clic en *Registrarse* y regístrate con tu correo y una contraseña.
+
+        **Cómo usar:**
+        1. Abre la app y crea tu cuenta (primer registro = admin)
+        2. Ve a **Panel de administración → Configuración → Modelos** y descarga un modelo (ej. `llama3.2:1b`)
+        3. Inicia un nuevo chat y selecciona tu modelo
+
+        **Nota:** No hay restablecimiento de contraseña por correo — guarda bien tus credenciales.
+      zh_cn: |
+        **需要 Nvidia GPU**
+
+        此版本仅在已安装 Nvidia GPU **并且**已将 **NVIDIA Container Toolkit** 安装并接入 Docker（`nvidia-ctk runtime configure` 并重启 Docker）的主机上启动。否则容器将无法启动（*"could not select device driver 'nvidia'"*）——请改用 **Ollama (CPU)**。
+
+        **开始使用**
+
+        Open WebUI 使用自己的账户系统。**您创建的第一个账户将成为管理员** — 打开应用，点击 *注册*，使用您的邮箱和密码进行注册。
+
+        **使用方法：**
+        1. 打开应用并创建账户（首次注册 = 管理员）
+        2. 进入 **管理面板 → 设置 → 模型** 并下载一个模型（例如 `llama3.2:1b`）
+        3. 开始新对话并选择您的模型
+
+        **注意：** 没有基于邮箱的密码重置功能——请妥善保管您的凭据。
+      ko_kr: |
+        **Nvidia GPU가 필요합니다**
+
+        이 에디션은 Nvidia GPU와 **NVIDIA Container Toolkit**이 설치되어 Docker에 연결된(`nvidia-ctk runtime configure` 후 Docker 재시작) 호스트에서만 시작됩니다. 그렇지 않으면 컨테이너가 *"could not select device driver 'nvidia'"* 오류로 시작되지 않습니다 — 대신 **Ollama (CPU)**를 사용하세요.
+
+        **시작하기**
+
+        Open WebUI는 자체 계정 시스템을 사용합니다. **처음 만든 계정이 관리자가 됩니다** — 앱을 열고 *회원가입*을 클릭한 뒤 이메일과 비밀번호로 등록하세요.
+
+        **사용 방법:**
+        1. 앱을 열고 계정을 생성하세요 (첫 가입 = 관리자)
+        2. **관리자 패널 → 설정 → 모델**로 이동하여 모델을 다운로드하세요 (예: `llama3.2:1b`)
+        3. 새 대화를 시작하고 모델을 선택하세요
+
+        **참고:** 이메일 기반 비밀번호 재설정이 없습니다 — 자격 증명을 안전하게 보관하세요.
