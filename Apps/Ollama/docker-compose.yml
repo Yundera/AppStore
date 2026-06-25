@@ -51,14 +51,6 @@ services:
       - /DATA/AppData/ollama/data:/root/.ollama
     cpu_shares: 20
     # No memory limit: model size varies and inference needs all available RAM (see rationale.md)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities:
-                - gpu
 
 networks:
   default:
@@ -89,7 +81,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ollama/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ollama/thumbnail.png
   title:
-    en_us: Ollama
+    en_us: Ollama (CPU)
   tagline:
     en_us: Run and chat with private AI models on your own server
     fr_fr: Exécutez et discutez avec des modèles d'IA privés sur votre propre serveur
