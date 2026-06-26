@@ -2,7 +2,7 @@ name: suwayomi
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:v2.1.2087
+    image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100
     user: $PUID:$PGID
     container_name: suwayomi
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
       EXTENSION_REPOS: >-
         ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]
       FLARESOLVERR_ENABLED: true
-      FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
+      FLARESOLVERR_URL: http://suwayomi-bypass:8191
     volumes:
       - /DATA/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
       - /DATA/AppData/$AppID/data/:/home/suwayomi/.local/share/Tachidesk
@@ -48,8 +48,8 @@ services:
           memory: 1G
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
-    container_name: suwayomi-flaresolverr
+    image: ghcr.io/thephaseless/byparr:main
+    container_name: suwayomi-bypass
     user: 0:0
     restart: unless-stopped
     environment:
@@ -73,8 +73,8 @@ x-casaos:
   index: /
   store_app_id: suwayomi
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/data /DATA/Media/Mangas &&
-    chown -R $PUID:$PGID /DATA/AppData/$AppID /DATA/Media/Mangas
+    mkdir -p /DATA/AppData/$AppID/data/ /DATA/Media/Mangas/ &&
+    chown -R $PUID:$PGID /DATA/AppData/$AppID/ /DATA/Media/Mangas/
   architectures:
     - amd64
     - arm64
