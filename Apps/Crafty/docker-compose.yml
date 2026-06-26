@@ -81,14 +81,7 @@ x-casaos:
       en_us: |
         After install, open the app and log in.
 
-        Default account:
-        | Username | Password                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
-
-        Please change this password immediately after your first login.
-
-        If the preset password does not work, Crafty generated its own on first
+        Crafty generated its own on first
         boot. Open the Files app and read the file at
         `AppData/crafty/config/default-creds.txt`.
 
