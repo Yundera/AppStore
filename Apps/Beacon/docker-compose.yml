@@ -2,7 +2,7 @@ name: beacon
 
 services:
   beacon-backend:
-    image: ghcr.io/worph/beacon:1.0.14
+    image: ghcr.io/worph/beacon:1.0.15
     container_name: beacon-backend
     hostname: beacon-backend
     restart: unless-stopped
@@ -13,7 +13,11 @@ services:
       WEB_PORT: "9300"
       LOG_LEVEL: info
       PUBLIC_URL: "https://beacon-${APP_DOMAIN}/mcp"
-      AUTH_HASH: $AUTH_HASH
+      # Persistent auth token sourced from /DATA/AppData/beacon/.env (created by
+      # pre-install-cmd, symlinked into the compose dir). Survives uninstall, so
+      # the token shown to the user no longer rotates on reinstall. NOT $AUTH_HASH,
+      # which CasaOS regenerates on every install.
+      AUTH_HASH: ${BEACON_AUTH}
       TZ: $TZ
     expose:
       - 9300
@@ -27,7 +31,7 @@ services:
           memory: 512M
 
   beacon-proxy:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.4
     container_name: beacon
     restart: unless-stopped
     expose:
@@ -43,7 +47,11 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: 0:0
     environment:
-      AUTH_HASH: $AUTH_HASH
+      # env mode: take the persistent token from the env (interpolated from the
+      # symlinked .env) instead of letting AppShield generate/manage its own, so
+      # the proxy and the backend share the exact same value.
+      AUTH_HASH_MODE: "env"
+      AUTH_HASH: ${BEACON_AUTH}
       BACKEND_HOST: "beacon-backend"
       BACKEND_PORT: "9300"
       LISTEN_PORT: "80"
@@ -70,6 +78,19 @@ networks:
 x-casaos:
   main: beacon-backend
   index: /
+
+  # Generate a persistent auth token once and keep it in user space so it does
+  # not rotate on uninstall/reinstall. The real file lives under the app's
+  # AppData (which survives uninstall); a symlink exposes it as the compose
+  # project .env so ${BEACON_AUTH} interpolates for both services.
+  # Idempotent: only generates if not already present.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID /DATA/AppData/casaos/apps/$AppID &&
+    ENV_FILE=/DATA/AppData/$AppID/.env &&
+    if ! grep -q '^BEACON_AUTH=' "$ENV_FILE" 2>/dev/null; then
+      echo "BEACON_AUTH=$(openssl rand -hex 64)" >> "$ENV_FILE";
+    fi &&
+    ln -sf "$ENV_FILE" /DATA/AppData/casaos/apps/$AppID/.env
 
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/icon.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/icon.png
@@ -137,12 +158,15 @@ x-casaos:
         Connect your AI assistant to the aggregated endpoint to access all discovered MCP tools at once.
 
         **Option 1: Public URL (with hash auth)**
+
+        Replace `YOUR_TOKEN` with the auth token shown in the Beacon dashboard.
+        The token is persistent — it stays the same across reinstalls.
         ```json
         {
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=YOUR_TOKEN"
             }
           }
         }
@@ -190,12 +214,16 @@ x-casaos:
         Connectez votre assistant IA a l'endpoint agrege pour acceder a tous les outils MCP decouverts.
 
         **Option 1: URL publique (avec hash auth)**
+
+        Remplacez `YOUR_TOKEN` par le token d'authentification affiche dans le
+        tableau de bord Beacon. Le token est persistant — il reste identique
+        apres une reinstallation.
         ```json
         {
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=YOUR_TOKEN"
             }
           }
         }
