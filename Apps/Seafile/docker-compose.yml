@@ -115,9 +115,6 @@ services:
       caddy_0.2_handle_path: "/sdoc-server/*"
       caddy_0.2_handle_path.0_rewrite: "* {uri}"
       caddy_0.2_handle_path.1_reverse_proxy: "seadoc:80"
-      # Rewrite bare / to /accounts/login/ to avoid 302 redirect (CF worker drops body on redirects)
-      caddy_0.@root.path: "/"
-      caddy_0.3_rewrite: "@root /accounts/login/"
       # Default: main seafile app
       caddy_0.4_reverse_proxy: "{{upstreams 80}}"
 
@@ -132,8 +129,6 @@ services:
       caddy_1.2_handle_path: "/sdoc-server/*"
       caddy_1.2_handle_path.0_rewrite: "* {uri}"
       caddy_1.2_handle_path.1_reverse_proxy: "seadoc:80"
-      caddy_1.@root.path: "/"
-      caddy_1.3_rewrite: "@root /accounts/login/"
       caddy_1.4_reverse_proxy: "{{upstreams 80}}"
 
       # --- caddy_2: sslip.io fallback (no gateway_tls) ---
@@ -146,8 +141,6 @@ services:
       caddy_2.2_handle_path: "/sdoc-server/*"
       caddy_2.2_handle_path.0_rewrite: "* {uri}"
       caddy_2.2_handle_path.1_reverse_proxy: "seadoc:80"
-      caddy_2.@root.path: "/"
-      caddy_2.3_rewrite: "@root /accounts/login/"
       caddy_2.4_reverse_proxy: "{{upstreams 80}}"
     depends_on:
       db:
@@ -339,6 +332,19 @@ x-casaos:
     SERVER_EMAIL = 'seafile@$APP_DOMAIN'
     EOF
       echo "SMTP configuration added"
+    fi
+    # Ensure reverse-proxy HTTPS settings are present (mandatory for Caddy TLS termination)
+    if [ -f "$SEAHUB_SETTINGS" ] && ! grep -q "SECURE_PROXY_SSL_HEADER" "$SEAHUB_SETTINGS"; then
+      echo "Adding reverse-proxy HTTPS configuration..."
+      cat >> "$SEAHUB_SETTINGS" << EOF
+
+    # Reverse proxy HTTPS settings (Caddy terminates TLS, forwards X-Forwarded-Proto)
+    USE_X_FORWARDED_HOST = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SERVICE_URL = 'https://seafile-$APP_DOMAIN'
+    FILE_SERVER_ROOT = 'https://seafile-$APP_DOMAIN/seafhttp'
+    EOF
+      echo "Reverse-proxy HTTPS configuration added"
     fi
     # Single restart to apply all config changes
     echo "Restarting Seafile to apply configuration..."
