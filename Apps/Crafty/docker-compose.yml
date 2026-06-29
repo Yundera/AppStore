@@ -4,7 +4,7 @@ services:
     image: registry.gitlab.com/crafty-controller/crafty-4:4.10.3
     container_name: crafty
     hostname: crafty
-    user: "0:0"                          # Crafty requires root; document this in rationale.md
+    user: "0:0"                          # Crafty requires root; see rationale.md
     cpu_shares: 50
     restart: unless-stopped
     expose:
@@ -111,23 +111,22 @@ x-casaos:
       en_us: |
         After install, open the app and log in.
 
-        Default account:
-        | Username | Password                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        Crafty generates its own admin password on first boot. Open the Files
+        app and read it from `AppData/crafty/config/default-creds.txt`
+        (username `admin`). Change it immediately after your first login.
 
-        Please change this password immediately after your first login.
+        Creating a server: pick a port in the 25500-25600 range (the ports
+        this app publishes). Bedrock servers use UDP port 19132.
 
-        If the preset password does not work, Crafty generated its own on first
-        boot. Open the Files app and read the file at
-        `AppData/crafty/config/default-creds.txt`.
+        How players connect:
+        - Java: `$APP_PUBLIC_IP_DASH.sslip.io` on the server's port, for
+          example `$APP_PUBLIC_IP_DASH.sslip.io:25565`.
+        - Bedrock: in "Add Server", set address `$APP_PUBLIC_IP_DASH.sslip.io`
+          and port `19132`.
 
-        Note: Minecraft servers you create must use a port in the 25500-25600
-        range (the ports this app publishes). Bedrock servers use UDP 19132.
+        The server must be reachable from the internet on that port. If your
+        PCS is behind CGNAT or the game port is not forwarded, players outside
+        your own network may be unable to connect.
   pre-install-cmd: |
     mkdir -p /DATA/AppData/$AppID/config /DATA/AppData/$AppID/servers /DATA/AppData/$AppID/backups /DATA/AppData/$AppID/logs /DATA/AppData/$AppID/import
     chown $PUID:$PGID /DATA/AppData/$AppID
-    if [ ! -f /DATA/AppData/$AppID/.initialized ]; then
-      printf '{"username":"admin","password":"%s"}' "$APP_DEFAULT_PASSWORD" > /DATA/AppData/$AppID/config/default.json
-      touch /DATA/AppData/$AppID/.initialized
-    fi
