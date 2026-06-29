@@ -112,7 +112,7 @@ x-casaos:
         **Getting started**
 
         Login: `admin`
-        Password: `$APP_DEFAULT_PASSWORD`
+        Password: `$APP_DEFAULT_PASSWORD!`
 
         **Creating a server**
 
@@ -134,4 +134,4 @@ x-casaos:
   pre-install-cmd: |
     mkdir -p /DATA/AppData/$AppID/config /DATA/AppData/$AppID/servers /DATA/AppData/$AppID/backups /DATA/AppData/$AppID/logs /DATA/AppData/$AppID/import
     chown $PUID:$PGID /DATA/AppData/$AppID
-    printf '{"username":"admin","password":"%sA1!"}' "$APP_DEFAULT_PASSWORD" > /DATA/AppData/$AppID/config/default.json
+    printf '{"username":"admin","password":"%s!"}' "$APP_DEFAULT_PASSWORD" > /DATA/AppData/$AppID/config/default.json
