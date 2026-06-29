@@ -81,7 +81,7 @@ x-casaos:
       en_us: |
         After install, open the app and log in.
 
-        Crafty generated its own on first
+        Crafty generated its own password on first
         boot. Open the Files app and read the file at
         `AppData/crafty/config/default-creds.txt`.
 
