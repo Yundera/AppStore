@@ -2,7 +2,7 @@ name: beacon
 
 services:
   beacon-backend:
-    image: ghcr.io/worph/beacon:1.0.15
+    image: ghcr.io/worph/beacon:1.0.16
     container_name: beacon-backend
     hostname: beacon-backend
     restart: unless-stopped
@@ -18,6 +18,9 @@ services:
       # the token shown to the user no longer rotates on reinstall. NOT $AUTH_HASH,
       # which CasaOS regenerates on every install.
       AUTH_HASH: ${BEACON_AUTH}
+      # Surfaces a "Manage remote access" link in the Beacon dashboard pointing
+      # at the AppShield-hosted OAuth admin page. Beacon itself does no OAuth.
+      OAUTH_ADMIN_URL: "https://beacon-${APP_DOMAIN}/AppShield/oauth"
       TZ: $TZ
     expose:
       - 9300
@@ -31,7 +34,9 @@ services:
           memory: 512M
 
   beacon-proxy:
-    image: ghcr.io/yundera/appshield:2.0.4
+    # 2.0.5+ includes the MCP OAuth 2.1 broker (oidc-provider fronting Dex),
+    # activated by MCP_OAUTH_RESOURCE below.
+    image: ghcr.io/yundera/appshield:2.0.5
     container_name: beacon
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -63,6 +68,15 @@ services:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      # MCP OAuth 2.1 broker (opt-in). When set, AppShield runs an OAuth/OIDC
+      # authorization server fronting Dex so claude.ai (via DCR) and clients like
+      # n8n (via a manually-created client) can reach /mcp with Bearer tokens.
+      # Requires an appshield image with MCP OAuth support (see image tag below).
+      MCP_OAUTH_RESOURCE: "https://beacon-${APP_DOMAIN}/mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - /DATA/AppData/beacon/oauth:/data/oauth
     depends_on:
       - beacon-backend
     networks:
@@ -88,7 +102,7 @@ x-casaos:
   # project .env so ${BEACON_AUTH} interpolates for both services.
   # Idempotent: only generates if not already present.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID /DATA/AppData/casaos/apps/$AppID &&
+    mkdir -p /DATA/AppData/$AppID /DATA/AppData/$AppID/oauth /DATA/AppData/casaos/apps/$AppID &&
     ENV_FILE=/DATA/AppData/$AppID/.env &&
     if ! grep -q '^BEACON_AUTH=' "$ENV_FILE" 2>/dev/null; then
       echo "BEACON_AUTH=$(openssl rand -hex 64)" >> "$ENV_FILE";
