@@ -1,26 +1,18 @@
 name: crafty
 services:
   crafty:
-    image: registry.gitlab.com/crafty-controller/crafty-4:4.10.4
+    image: registry.gitlab.com/crafty-controller/crafty-4:4.10.3
     container_name: crafty
-    user: 0:0                          # see rationale.md: Crafty's entrypoint fixes its own perms as root, then drops to its internal non-root user
+    hostname: crafty
+    user: "0:0"                          # Crafty requires root; document this in rationale.md
     cpu_shares: 50
     restart: unless-stopped
     expose:
-      - 8000                           # plain-HTTP web UI, for Caddy discovery
+      - 8443                             # self-signed HTTPS panel, reached by Caddy over the pcs network only
     ports:
-      - "25500-25600:25500-25600"      # Minecraft Java server port pool (Crafty's default range for new servers)
-      - "19132:19132/udp"              # Minecraft Bedrock
-      - "8123:8123"                    # Dynmap
-    labels:
-      caddy_0: crafty-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8000}}"
-      caddy_1: crafty-\${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8000}}"
-      caddy_2: crafty-\${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8000}}"
+      - "25500-25600:25500-25600"       # Minecraft Java server port pool (Crafty's default range for new servers)
+      - "19132:19132/udp"               # Minecraft Bedrock
+      - "8123:8123"                      # Dynmap
     environment:
       TZ: $TZ
     volumes:
@@ -29,8 +21,45 @@ services:
       - /DATA/AppData/$AppID/servers:/crafty/servers
       - /DATA/AppData/$AppID/config:/crafty/app/config
       - /DATA/AppData/$AppID/import:/crafty/import
+    labels:
+      # Crafty has its own login, so it carries the Caddy labels directly (Docmost pattern, no auth sidecar).
+      # Upstream is the panel's self-signed HTTPS on 8443: https upstream + skip cert verification.
+      # Crafty REQUIRES websockets (WSS): pin HTTP/1.1 and forward the Upgrade/Connection/Proto/Host headers.
+      caddy_0: crafty-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_0.reverse_proxy.transport: http
+      caddy_0.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_0.reverse_proxy.transport.versions: "1.1"
+      caddy_0.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_0.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_0.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_0.reverse_proxy.header_up_3: "Host {host}"
+      caddy_1: crafty-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_1.reverse_proxy.transport: http
+      caddy_1.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_1.reverse_proxy.transport.versions: "1.1"
+      caddy_1.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_1.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_1.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_1.reverse_proxy.header_up_3: "Host {host}"
+      caddy_2: crafty-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_2.reverse_proxy.transport: http
+      caddy_2.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_2.reverse_proxy.transport.versions: "1.1"
+      caddy_2.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_2.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_2.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_2.reverse_proxy.header_up_3: "Host {host}"
     networks:
       - pcs
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
 
 networks:
   pcs:
@@ -42,11 +71,12 @@ x-casaos:
     - amd64
     - arm64
   main: crafty
-  webui_port: 8000
+  webui_port: 80                         # gateway-side port; the Caddy labels map this clean subdomain to the container's 8443. Do NOT set this to 8443 or the dashboard builds 8443-crafty-<domain>:8443
   index: /
   author: Yundera Team
-  developer: Arcadia Technology
   category: Games
+  developer: Arcadia Technology
+  store_app_id: crafty
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/icon.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/thumbnail.png
   screenshot_link:
