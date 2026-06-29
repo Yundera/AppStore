@@ -39,6 +39,11 @@ services:
   n8nmcp-proxy:
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: n8nmcp
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: n8nmcp
     restart: unless-stopped
     cpu_shares: 50
     expose:
@@ -50,8 +55,6 @@ services:
       BACKEND_HOST: n8nmcp-backend
       BACKEND_PORT: "9640"
       LISTEN_PORT: "80"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
@@ -141,7 +144,7 @@ x-casaos:
         2. In n8n: **Settings → n8n API → Create an API key**
 
         **Setup (2 steps):**
-        1. Open this app's Web UI (you'll be prompted for the `ADMIN` password `$APP_DEFAULT_PASSWORD`)
+        1. Open this app's Web UI (you'll sign in with your Yundera account — no extra password)
         2. Paste the **n8n Base URL** (`http://n8n:80` is pre-filled for the companion app) and the **API key**, click **Test connection** → **Save**
 
         **MCP Integration (for AI/LLMs):**
@@ -194,4 +197,4 @@ x-casaos:
 
         **Security:**
         - The API key is stored only in `/DATA/AppData/n8nmcp/config.json` and is never logged or returned via the API
-        - The Web UI sits behind the Yundera hash-lock — you'll need the admin password to access it
+        - The Web UI is protected by your Yundera single sign-on — no extra login needed

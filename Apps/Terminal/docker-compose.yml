@@ -4,6 +4,11 @@ services:
   terminal:
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: terminal
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: terminal
     restart: unless-stopped
     expose:
       - "80"
@@ -25,8 +30,6 @@ services:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
     depends_on:
       - ttyd
     networks:

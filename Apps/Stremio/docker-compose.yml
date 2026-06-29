@@ -4,6 +4,11 @@ services:
   stremio:
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: stremio
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: stremio
     restart: unless-stopped
     user: "root"
     expose:

@@ -50,6 +50,11 @@ services:
   nextcloudmcp-proxy:
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: nextcloudmcp
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: nextcloudmcp
     restart: unless-stopped
     cpu_shares: 50
     expose:
@@ -60,8 +65,6 @@ services:
       BACKEND_HOST: nextcloudmcp-backend
       BACKEND_PORT: "9650"
       LISTEN_PORT: "80"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
@@ -161,7 +164,7 @@ x-casaos:
         Nextcloud MCP needs access to a Nextcloud account (the sibling `Nextcloud` app works great). After installation:
 
         1. In Nextcloud, go to **Settings → Personal → Security → Devices & sessions** and click **Create new app password** (name it `nextcloudmcp`).
-        2. Open the Nextcloud MCP Web UI (you'll be prompted for the `ADMIN` password `$APP_DEFAULT_PASSWORD`) and paste the URL, username, and app-password.
+        2. Open the Nextcloud MCP Web UI (you'll sign in with your Yundera account — no extra password) and paste the URL, username, and app-password.
         3. Click **Test connection**, then **Save**.
         4. (Optional) In the **LLM Target** panel, click **Rescan Beacon** — if an LLM MCP (e.g. ClaudeCode) is installed on the same server, it's auto-selected.
         5. (Optional) Enable **Auto-respond** to let Claude reply to your Talk DMs and `@<you>` mentions automatically.
@@ -234,14 +237,14 @@ x-casaos:
 
         **Security:**
         - Your Nextcloud app-password is stored only in `/DATA/AppData/nextcloudmcp/config.json` and is never logged or returned via the API.
-        - The Web UI sits behind the Yundera hash-lock — you'll need the admin password to access it.
+        - The Web UI is protected by your Yundera single sign-on — no extra login needed.
       fr_fr: |
         **Demarrage**
 
         Nextcloud MCP a besoin d'acces a un compte Nextcloud (l'app soeur `Nextcloud` fonctionne parfaitement). Apres installation:
 
         1. Dans Nextcloud, allez dans **Parametres → Personnel → Securite → Appareils et sessions** et cliquez sur **Creer un nouveau mot de passe d'application** (nommez-le `nextcloudmcp`).
-        2. Ouvrez l'interface Web de Nextcloud MCP (le mot de passe `ADMIN` `$APP_DEFAULT_PASSWORD` vous sera demande) et collez l'URL, le nom d'utilisateur et le mot de passe d'application.
+        2. Ouvrez l'interface Web de Nextcloud MCP (vous vous connecterez avec votre compte Yundera — aucun mot de passe supplementaire) et collez l'URL, le nom d'utilisateur et le mot de passe d'application.
         3. Cliquez sur **Tester la connexion**, puis **Enregistrer**.
         4. (Optionnel) Dans le panneau **LLM Target**, cliquez sur **Rescan Beacon** — si un LLM MCP (ex. ClaudeCode) est installe sur le meme serveur, il est auto-selectionne.
         5. (Optionnel) Activez **Reponse automatique** pour laisser Claude repondre automatiquement a vos messages prives Talk et aux mentions `@<vous>`.
@@ -298,14 +301,14 @@ x-casaos:
 
         **Securite:**
         - Votre mot de passe d'application Nextcloud est stocke uniquement dans `/DATA/AppData/nextcloudmcp/config.json` et n'est jamais journalise ni retourne via l'API.
-        - L'interface Web est protegee par le hash-lock Yundera — le mot de passe admin est requis pour y acceder.
+        - L'interface Web est protegee par votre authentification unique Yundera (SSO) — aucune connexion supplementaire.
       zh_cn: |
         **快速开始**
 
         Nextcloud MCP 需要访问 Nextcloud 账户（同级 `Nextcloud` 应用即可）。安装后：
 
         1. 在 Nextcloud 中，转到 **设置 → 个人 → 安全 → 设备和会话**，点击 **创建新的应用密码**（命名为 `nextcloudmcp`）。
-        2. 打开 Nextcloud MCP Web UI（会提示输入 `ADMIN` 密码 `$APP_DEFAULT_PASSWORD`），粘贴 URL、用户名和应用密码。
+        2. 打开 Nextcloud MCP Web UI（使用您的 Yundera 账户登录——无需额外密码），粘贴 URL、用户名和应用密码。
         3. 点击 **测试连接**，然后 **保存**。
         4. （可选）在 **LLM Target** 面板中，点击 **重新扫描 Beacon** — 如果同一服务器上安装了 LLM MCP（例如 ClaudeCode），它将被自动选中。
         5. （可选）启用 **自动回复**，让 Claude 自动回复您的 Talk 私信和 `@<您>` 提及。
@@ -344,4 +347,4 @@ x-casaos:
 
         **安全：**
         - Nextcloud 应用密码仅存储在 `/DATA/AppData/nextcloudmcp/config.json` 中，不会被记录或通过 API 返回。
-        - Web UI 位于 Yundera hash-lock 之后 — 需要管理员密码才能访问。
+        - Web UI 受您的 Yundera 单点登录 (SSO) 保护——无需额外登录。

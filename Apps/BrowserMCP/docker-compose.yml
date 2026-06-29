@@ -41,6 +41,11 @@ services:
   browsermcp-proxy:
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: browsermcp
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: browsermcp
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -53,8 +58,6 @@ services:
       BACKEND_HOST: browsermcp-backend
       BACKEND_PORT: "9746"
       LISTEN_PORT: "80"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
@@ -153,8 +156,7 @@ x-casaos:
         **Getting Started**
 
         After installation, Chromium launches automatically inside a virtual display.
-        The Web UI is protected by the Yundera hash-lock — when prompted, log in as
-        `ADMIN` with the password `$APP_DEFAULT_PASSWORD`.
+        The Web UI is protected by your Yundera single sign-on — no extra login.
 
         **Web Interface:**
         - **Main UI** — Dashboard with live noVNC browser view, status, and tool information
@@ -216,13 +218,12 @@ x-casaos:
         | `clear_cookies` | Clear all browser cookies |
 
         **Security:**
-        - The Web UI, live noVNC viewer, and `/api` endpoints sit behind the Yundera
-          hash-lock (ADMIN password). Only `/mcp` is reachable with the hash token.
+        - The Web UI, live noVNC viewer, and `/api` endpoints sit behind your Yundera
+          single sign-on. Only `/mcp` is reachable with the hash token.
       zh_cn: |
         **快速开始**
 
-        安装后，Chromium 将在虚拟显示中自动启动。Web 界面受 Yundera hash-lock 保护，
-        出现提示时，使用用户名 `ADMIN` 和密码 `$APP_DEFAULT_PASSWORD` 登录。
+        安装后，Chromium 将在虚拟显示中自动启动。Web 界面受您的 Yundera 单点登录 (SSO) 保护——无需额外登录。
 
         **Web 界面：**
         - **主 UI** — 带有实时 noVNC 浏览器视图、状态和工具信息的仪表板
