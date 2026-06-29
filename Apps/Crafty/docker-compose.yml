@@ -124,7 +124,7 @@ x-casaos:
         Give players the address below, plus the port of the server you
         created:
  
-        - **Java (Java Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `25565`
+        - **Java (Java Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`:`25565`
           (or whichever port you chose)
         - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `19132`
 
