@@ -124,9 +124,9 @@ x-casaos:
         Give players the address below, plus the port of the server you
         created:
  
-        - **Java:** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `25565`
+        - **Java (Java Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `25565`
           (or whichever port you chose)
-        - **Bedrock:** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `19132`
+        - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `19132`
 
         Your server must be reachable from the internet on that port. If your
         PCS is behind CGNAT or the port is not forwarded, players outside your
