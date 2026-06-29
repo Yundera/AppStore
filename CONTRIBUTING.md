@@ -672,6 +672,7 @@ services:
   myapp:                                    # AppShield sidecar (public-facing)
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: myapp                    # must equal top-level name: (load-bearing — see checklist)
+    hostname: myapp                          # must equal container_name — OIDC identity (load-bearing — see checklist)
     restart: unless-stopped
     user: "root"
     expose:
@@ -744,6 +745,7 @@ x-casaos:
 - [ ] `x-casaos.main` points at the primary service.
 - [ ] Backend service has no `ports:` and no public Caddy labels; it is reachable only via the `pcs` network.
 - [ ] The sidecar's `container_name` equals the top-level `name:` (lowercase alnum + `-`, not starting with a digit). `auth-registrar` derives the OIDC `client_id` from the container name via PTR lookup on the `pcs` network, so the `container_name` is load-bearing — it must be stable across reinstalls. The compose **service name itself may differ** (shipped apps use `myapp`, `myapp-proxy`, `nginxhashlock`, etc.).
+- [ ] The sidecar sets `hostname:` to the **same value** as its `container_name`. AppShield's auth-service builds its OIDC redirect URIs from `os.hostname()` (as `<app>-<suffix>`), and `auth-registrar` independently attests the app name via the container's PTR record and **rejects any redirect URI that doesn't match**. If `hostname:` is omitted, Docker defaults it to the random container ID, the submitted redirect URIs won't match the attested name, and OIDC registration fails at first login. (`container_name` alone does **not** set the in-container hostname.)
 - [ ] Do not claim `auth-${APP_DOMAIN}` in any Caddy label — it collides with the PCS's Authelia and causes intermittent `invalid_client` errors.
 - [ ] Pin AppShield to a specific version tag (currently `ghcr.io/yundera/appshield:2.0.3`) — never `:latest` / `:main`.
 
