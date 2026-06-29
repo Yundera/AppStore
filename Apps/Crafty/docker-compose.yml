@@ -111,10 +111,8 @@ x-casaos:
       en_us: |
         **Getting started**
 
-        After installation, open the app and sign in with the `admin` account.
-        Crafty generates a unique password on first boot: open the Files app
-        and read it from `AppData/crafty/config/default-creds.txt`. Change it
-        from the panel right after your first login.
+        Login: 'admin'
+        Password: '$APP_DEFAULT_PASSWORD' 
 
         **Creating a server**
 
