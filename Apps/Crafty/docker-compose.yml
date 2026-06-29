@@ -111,8 +111,8 @@ x-casaos:
       en_us: |
         **Getting started**
 
-        Login: 'admin'
-        Password: '$APP_DEFAULT_PASSWORD' 
+        Login: `admin`
+        Password: `$APP_DEFAULT_PASSWORD`
 
         **Creating a server**
 
