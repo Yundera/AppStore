@@ -109,24 +109,28 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        After install, open the app and log in.
+        **Getting started**
 
-        Crafty generates its own admin password on first boot. Open the Files
-        app and read it from `AppData/crafty/config/default-creds.txt`
-        (username `admin`). Change it immediately after your first login.
+        After installation, open the app and sign in with the `admin` account.
+        Crafty generates a unique password on first boot: open the Files app
+        and read it from `AppData/crafty/config/default-creds.txt`. Change it
+        from the panel right after your first login.
 
-        Creating a server: pick a port in the 25500-25600 range (the ports
-        this app publishes). Bedrock servers use UDP port 19132.
+        **Creating a server**
 
-        How players connect:
-        - Java: `$APP_PUBLIC_IP_DASH.sslip.io` on the server's port, for
-          example `$APP_PUBLIC_IP_DASH.sslip.io:25565`.
-        - Bedrock: in "Add Server", set address `$APP_PUBLIC_IP_DASH.sslip.io`
-          and port `19132`.
+        When you create a server, choose a port in the `25500-25600` range
+        (the ports this app publishes). Bedrock servers use UDP port `19132`.
 
-        The server must be reachable from the internet on that port. If your
-        PCS is behind CGNAT or the game port is not forwarded, players outside
-        your own network may be unable to connect.
+        **Sharing your server with players**
+
+        | Edition | Address | Port |
+        | ------- | ------- | ---- |
+        | Java | `$APP_PUBLIC_IP_DASH.sslip.io` | your server's port (e.g. `25565`) |
+        | Bedrock | `$APP_PUBLIC_IP_DASH.sslip.io` | `19132` |
+
+        Your server must be reachable from the internet on that port. If your
+        PCS is behind CGNAT or the port is not forwarded, players outside your
+        network may be unable to connect.
   pre-install-cmd: |
     mkdir -p /DATA/AppData/$AppID/config /DATA/AppData/$AppID/servers /DATA/AppData/$AppID/backups /DATA/AppData/$AppID/logs /DATA/AppData/$AppID/import
     chown $PUID:$PGID /DATA/AppData/$AppID
