@@ -156,9 +156,57 @@ x-casaos:
       * **Support multi-utilisateur**, pour que chacun dans votre foyer ait son propre espace
 
       Parfait pour les photographes, les familles, ou quiconque veut reprendre le contrôle de ses souvenirs. Immich fonctionne parfaitement sur votre serveur cloud personnel Yundera, ainsi vos médias restent **les vôtres : pour toujours**.
+    ko_kr: |
+      Immich는 기존 클라우드 서비스의 제한이나 추적 없이, 직접 호스팅하는 현대적인 사진·동영상 갤러리를 제공합니다.
+
+      휴대폰에서 사진과 동영상을 자동으로 백업하세요. 날짜, 위치, 얼굴별로 정리할 수 있습니다. 세련된 웹 앱에서 모든 것을 탐색하고, 스마트 TV에서 4K로 스트리밍하며, 가족 및 친구와 비공개로 앨범을 공유하세요 — 별도의 계정이나 앱이 필요 없습니다.
+
+      **v2.x 신기능:** 광학 문자 인식(OCR)으로 사진 속 텍스트를 검색할 수 있습니다. 영어, 중국어, 일본어, 한국어, 러시아어, 그리스어, 태국어 및 라틴 문자 언어를 지원합니다.
+
+      다른 플랫폼과 달리 Immich는 자신의 개인 서버에서 실행됩니다. 이는 다음을 의미합니다:
+
+      * **무제한 저장 공간** - Yundera 인터페이스에서 시장 가격으로 언제든 스토리지를 업그레이드할 수 있습니다
+      * **데이터 마이닝 없음**
+      * **로컬 네트워크에서 초고속 접근**
+      * **다중 사용자 지원** — 가족 모두가 각자의 공간을 가질 수 있습니다
+
+      사진작가, 가족, 또는 자신의 추억을 직접 관리하고 싶은 모든 분에게 완벽합니다. Immich는 Yundera 개인 클라우드 서버에서 완벽하게 작동하며, 여러분의 미디어는 **영원히 여러분의 것**입니다.
+    zh_cn: |
+      Immich 为您提供现代化的自托管照片和视频画廊，没有传统云服务的限制或追踪。
+
+      自动从手机备份照片和视频。按日期、位置或人脸进行整理。通过精美的网页应用浏览所有内容，在智能电视上以 4K 流式播放，并与家人和朋友私密共享相册——无需账户或应用。
+
+      **v2.x 新功能：** 光学字符识别（OCR）让您可以搜索照片中的文字，支持英语、中文、日语、韩语、俄语、希腊语、泰语和拉丁字母语言。
+
+      与其他平台不同，Immich 运行在您自己的私人服务器上。这意味着：
+
+      * **无限存储空间** - 您可以随时在 Yundera 界面上以市场价格升级存储
+      * **无数据挖掘**
+      * **本地网络闪电般快速访问**
+      * **多用户支持**，让家中每个人都有自己的空间
+
+      非常适合摄影师、家庭或任何想要掌控自己回忆的人。Immich 在您的 Yundera 个人云服务器上完美运行，您的媒体将**永远属于您**。
+    es_es: |
+      Immich le ofrece una galería moderna de fotos y vídeos autoalojada, sin las limitaciones ni el rastreo de los servicios en la nube tradicionales.
+
+      Haga copias de seguridad automáticas de sus fotos y vídeos desde su teléfono. Organícelos por fecha, ubicación o rostro. Explore todo desde una elegante aplicación web, transmita en 4K a su smart TV y comparta álbumes de forma privada con familiares y amigos, sin necesidad de cuenta ni aplicación.
+
+      **Nuevo en v2.x:** El reconocimiento óptico de caracteres (OCR) le permite buscar texto dentro de sus fotos, compatible con inglés, chino, japonés, coreano, ruso, griego, tailandés e idiomas con escritura latina.
+
+      A diferencia de otras plataformas, Immich se ejecuta en su propio servidor privado. Esto significa:
+
+      * **Almacenamiento ilimitado** - Puede ampliar el almacenamiento en cualquier momento a precio de mercado desde su interfaz Yundera
+      * **Sin minería de datos**
+      * **Acceso ultrarrápido en su red local**
+      * **Soporte multiusuario**, para que cada persona en su hogar tenga su propio espacio
+
+      Perfecto para fotógrafos, familias o cualquier persona que quiera recuperar el control de sus recuerdos. Immich funciona perfectamente en su servidor personal en la nube Yundera, para que sus medios sean **suyos para siempre**.
   tagline:
     en_us: Your Private Photo Library, Fully Under Your Control
     fr_fr: Votre bibliothèque photo privée, entièrement sous votre contrôle
+    ko_kr: 완전히 내가 관리하는 나만의 사진 라이브러리
+    zh_cn: 完全由您掌控的私人照片库
+    es_es: Su biblioteca de fotos privada, totalmente bajo su control
   title:
     en_us: Immich
   tips:
@@ -208,3 +256,69 @@ x-casaos:
         2. Dans Immich, allez dans **Administration → External Libraries**
         3. Créez une bibliothèque, ajoutez le chemin : `/import`
         4. Cliquez sur **Scan Library**
+      ko_kr: |
+        **설정 정보:**
+
+        🔐 **첫 설정**:
+        1. Immich가 완전히 시작될 때까지 5분간 기다려주세요
+        2. `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/`에 접속하여 관리자 계정을 생성하세요
+        3. 무제한 업로드를 위해 **항상 이 sslip.io URL을 사용하세요**
+
+        | 접속 방식 | URL | 업로드 제한 |
+        |-----------|-----|-------------|
+        | **권장** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ 무제한 |
+        | 표준 | `https://immich-$APP_DOMAIN/` | 100 MB |
+
+        📱 **모바일 앱**: Immich 앱을 다운로드하고 위의 sslip.io URL로 연결하면 사진/동영상을 무제한으로 백업할 수 있습니다.
+
+        🔍 **OCR (텍스트 검색)**: Immich v2.x에는 사진 속 텍스트를 검색할 수 있는 OCR 기능이 포함되어 있습니다. 기존 사진에 OCR을 활성화하려면 관리자 > Job Settings에서 OCR 작업을 실행하세요.
+
+        📁 **기존 사진 가져오기**: PCS에 이미 있는 사진을 가져오려면:
+        1. Files 앱을 사용하여 `/DATA/Gallery/`에 파일을 넣으세요
+        2. Immich에서 **Administration → External Libraries**로 이동하세요
+        3. 라이브러리를 생성하고 가져오기 경로 `/import`를 추가하세요
+        4. **Scan Library**를 클릭하세요
+      zh_cn: |
+        **设置信息：**
+
+        🔐 **首次设置**：
+        1. 请等待 5 分钟，让 Immich 完全启动
+        2. 访问 `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` 并创建管理员账户
+        3. **请始终使用此 sslip.io URL** 以获得无限上传
+
+        | 访问方式 | URL | 上传限制 |
+        |----------|-----|----------|
+        | **推荐** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ 无限制 |
+        | 标准 | `https://immich-$APP_DOMAIN/` | 100 MB |
+
+        📱 **移动应用**：下载 Immich 应用，使用上方的 sslip.io URL 连接，即可无限备份照片/视频。
+
+        🔍 **OCR（文字搜索）**：Immich v2.x 包含 OCR 功能，可搜索照片中的文字。要为现有照片启用 OCR，请前往 Administration > Job Settings 并运行 OCR 任务。
+
+        📁 **导入现有照片**：要导入 PCS 上已有的照片：
+        1. 使用 Files 应用将文件放入 `/DATA/Gallery/`
+        2. 在 Immich 中，前往 **Administration → External Libraries**
+        3. 创建库，添加导入路径：`/import`
+        4. 点击 **Scan Library**
+      es_es: |
+        **Información de configuración:**
+
+        🔐 **Primera configuración**:
+        1. Espere 5 minutos a que Immich se inicie completamente
+        2. Visite `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` y cree su cuenta de administrador
+        3. **Use siempre esta URL sslip.io** para subidas ilimitadas
+
+        | Tipo de acceso | URL | Límite de subida |
+        |----------------|-----|------------------|
+        | **Recomendado** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Ilimitado |
+        | Estándar | `https://immich-$APP_DOMAIN/` | 100 MB |
+
+        📱 **Aplicación móvil**: Descargue la app Immich y conéctese usando la URL sslip.io anterior para una copia de seguridad ilimitada de fotos/vídeos.
+
+        🔍 **OCR (Búsqueda de texto)**: Immich v2.x incluye OCR para buscar texto en sus fotos. Para activar OCR en las fotos existentes, vaya a Administration > Job Settings y ejecute la tarea OCR.
+
+        📁 **Importar fotos existentes**: Para importar fotos que ya están en su PCS:
+        1. Coloque los archivos en `/DATA/Gallery/` usando la app Files
+        2. En Immich, vaya a **Administration → External Libraries**
+        3. Cree una biblioteca, añada la ruta de importación: `/import`
+        4. Haga clic en **Scan Library**
