@@ -82,7 +82,7 @@ x-casaos:
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/screenshot-1.png
   title:
-    en_us: Crafty Controller
+    en_us: Crafty - Minecraft Server Manager
   tagline:
     en_us: Web-based Minecraft server manager.
     fr_fr: Gestionnaire de serveurs Minecraft en ligne.
@@ -90,19 +90,19 @@ x-casaos:
     es_es: Gestor de servidores de Minecraft basado en web.
   description:
     en_us: |
-      Crafty Controller is a web GUI for creating, running and managing
+      Crafty is a web GUI for creating, running and managing
       Minecraft servers (Java and Bedrock) from your browser. It launches and
       supervises your server processes, automates backups, builds servers from
       common loaders, gives you live console access, and supports per-user
       roles and permissions.
     fr_fr: |
-      Crafty Controller est une interface web pour creer, lancer et gerer des
+      Crafty est une interface web pour creer, lancer et gerer des
       serveurs Minecraft (Java et Bedrock) depuis votre navigateur. Il lance et
       supervise les processus serveur, automatise les sauvegardes, cree des
       serveurs a partir des loaders courants, donne acces a la console en direct
       et gere les roles et permissions par utilisateur.
     ko_kr: |
-      Crafty Controller는 브라우저에서 마인크래프트 서버(자바 및 베드락)를
+      Crafty 는 브라우저에서 마인크래프트 서버(자바 및 베드락)를
       생성, 실행, 관리할 수 있는 웹 GUI입니다. 서버 프로세스 실행 및 관리,
       백업 자동화, 일반 로더 기반 서버 생성, 실시간 콘솔 접근, 사용자별 역할
       및 권한을 지원합니다.
