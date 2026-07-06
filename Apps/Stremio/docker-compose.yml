@@ -58,7 +58,7 @@ services:
         target: /root/.stremio-server/
       - type: bind
         source: /DATA/AppData/stremio/localStorage.json
-        target: /srv/stremio-server/build/localStorage.json
+        target: /srv/stremio-server/localStorage.json
     networks:
       - pcs
     logging:
@@ -141,7 +141,7 @@ x-casaos:
             "id": "com.stremio.torrentsdb",
             "version": "1.0.0",
             "name": "TorrentsDB",
-            "description": "Torrentio fork with more providers — great backup when Torrentio is down",
+            "description": "Torrentio fork with more providers",
             "types": ["movie", "series"],
             "catalogs": [],
             "resources": ["stream"]
