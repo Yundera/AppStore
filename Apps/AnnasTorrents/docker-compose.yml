@@ -2,16 +2,22 @@ name: annas-torrents-webui
 
 services:
   # ── AppShield sidecar ──────────────────────────────────────────────
-  # nginx-hash-lock in OIDC mode. It self-registers as an OIDC client with
-  # the PCS auth-registrar on first login and gates every request through
-  # the built-in Authelia SSO before proxying to the backend. Only this
-  # service is publicly reachable (via Caddy); the backend has no Caddy
-  # labels and lives on the internal pcs network.
+  # AppShield (ghcr.io/yundera/appshield, formerly nginx-hash-lock) in OIDC
+  # mode. It self-registers as an OIDC client with the PCS auth-registrar on
+  # first login and gates every request through the built-in Authelia SSO
+  # before proxying to the backend. Only this service is publicly reachable
+  # (via Caddy); the backend has no Caddy labels and lives on the internal
+  # pcs network.
   annas-torrents-webui:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+    image: ghcr.io/yundera/appshield:2.0.5
     container_name: annas-torrents-webui
+    # OIDC identity: AppShield builds its OIDC redirect URIs from os.hostname(),
+    # and the auth-registrar attests this app's name via the container's PTR
+    # record — both container_name and hostname must equal the app name, or OIDC
+    # registration fails.
+    hostname: annas-torrents-webui
     restart: unless-stopped
-    user: 0:0
+    user: "root"
     expose:
       - "80"
     labels:
@@ -24,11 +30,14 @@ services:
       caddy_2: annas-torrents-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
-      # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
-      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "annas-torrents-webui-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
+      # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
       - annas-torrents-webui-backend
     networks:
@@ -36,8 +45,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 256M
+          memory: 128M
+    cpu_shares: 80
 
   # ── Backend (protected) ────────────────────────────────────────────
   # The FastAPI + embedded-libtorrent app. No Caddy labels: the web UI is
@@ -83,7 +92,8 @@ x-casaos:
     - arm64
   main: annas-torrents-webui
   webui_port: 80
-  index: /
+  # Launch URL carries the hash token so the user lands authenticated.
+  index: /?hash=$AUTH_HASH
   author: Yundera Team
   category: Downloader
   developer: cparthiv
