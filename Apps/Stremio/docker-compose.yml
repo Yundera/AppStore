@@ -21,6 +21,7 @@ services:
         hostname: stremio
         image: ghcr.io/yundera/nginx-hash-lock:1.0.7
         labels:
+            icon: https://raw.githubusercontent.com/Stremio/stremio-brand/master/images/mark/stremio-mark.png
             caddy_0: stremio-${APP_DOMAIN}
             caddy_0.import: gateway_tls
             caddy_0.reverse_proxy: '{{upstreams 80}}'
@@ -29,7 +30,6 @@ services:
             caddy_1.reverse_proxy: '{{upstreams 80}}'
             caddy_2: stremio-${APP_PUBLIC_IP_DASH}.sslip.io
             caddy_2.reverse_proxy: '{{upstreams 80}}'
-            icon: https://www.stremio.com/website/stremio-logo-small.png
         logging:
             driver: json-file
             options:
@@ -53,7 +53,7 @@ services:
             USERNAME: admin
         image: tsaridas/stremio-docker:v1.2.12
         labels:
-            icon: https://www.stremio.com/website/stremio-logo-small.png
+            icon: https://raw.githubusercontent.com/Stremio/stremio-brand/master/images/mark/stremio-mark.png
         logging:
             driver: json-file
             options:
@@ -105,7 +105,7 @@ x-casaos:
             Change via environment variables on "stremiocommunity" service.
     developer: Yundera
     hostname: stremio-${APP_DOMAIN}
-    icon: https://www.stremio.com/website/stremio-logo-small.png
+    icon: https://raw.githubusercontent.com/Stremio/stremio-brand/master/images/mark/stremio-mark.png
     index: /
     is_uncontrolled: false
     main: stremio
