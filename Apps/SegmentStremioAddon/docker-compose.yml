@@ -4,6 +4,11 @@ services:
   ssa-proxy:
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: ssa
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: ssa
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -19,8 +24,6 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       AUTH_HASH: $AUTH_HASH
-      USER: "segment"
-      PASSWORD: $APP_DEFAULT_PASSWORD
       BACKEND_HOST: "ssa-backend"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
