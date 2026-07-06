@@ -4,10 +4,6 @@ services:
   stremio:
     image: ghcr.io/yundera/appshield:2.0.3
     container_name: stremio
-    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
-    # os.hostname(), and the auth-registrar independently attests this app's name via the
-    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
-    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
     hostname: stremio
     restart: unless-stopped
     user: "root"
@@ -46,7 +42,6 @@ services:
         limits:
           memory: 512M
 
-
   stremiocommunity:
     image: tsaridas/stremio-docker:v1.2.12
     container_name: stremiocommunity
@@ -61,20 +56,11 @@ services:
       - type: bind
         source: /DATA/AppData/stremio/server/
         target: /root/.stremio-server/
+      - type: bind
+        source: /DATA/AppData/stremio/localStorage.json
+        target: /srv/stremio-server/build/localStorage.json
     networks:
       - pcs
-    x-casaos:
-      envs:
-        - container: USERNAME
-          description:
-            en_us: "Username for HTTP basic auth"
-        - container: PASSWORD
-          description:
-            en_us: "Password for HTTP basic auth"
-      volumes:
-        - container: /root/.stremio-server
-          description:
-            en_us: "Stremio server data and configuration"
     logging:
       driver: json-file
       options:
@@ -105,36 +91,120 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-2.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/thumbnail.png
   tagline:
-    en_us: "Stream movies & series (Community Edition)"
+    en_us: "Stream movies & series instantly — pre-configured with the best addons"
   category: Entertainment
   description:
     en_us: |
-      Stremio Community Edition with HTTP basic authentication.
+      Stremio Community Edition, pre-configured with the best free streaming addons so you can start watching immediately after installation.
 
-      Features:
-      - Clean subdomain (no port prefix)
-      - All-in-one streaming server with FFmpeg transcoding
-      - HTTP basic auth (USERNAME/PASSWORD)
+      **Pre-installed addons:**
+      - Torrentio (sorted by seeders, CAM/SCR excluded) — searches 20+ torrent sites
+      - TorrentsDB — Torrentio alternative with even more providers, great backup
+      - ThePirateBay+ — dedicated Pirate Bay addon for extra coverage
+      - MediaFusion — multi-source aggregator, strong for non-English content
+      - StreamX — pre-configured HD torrent links, no setup needed
 
-      Default credentials: admin / stremio
-      Change via environment variables on "stremiocommunity" service.
+      **Default credentials:** admin / stremio
+      Change via USERNAME/PASSWORD environment variables on "stremiocommunity" service.
 
-      This setup uses the tsaridas/stremio-docker community image
-      which bundles Stremio Server, Web UI, and FFmpeg in a single
-      optimized container.
+      💡 For best results with rare content, add a Real-Debrid account to any addon.
   title:
     en_us: "Stremio"
   store_app_id: stremio
   is_uncontrolled: false
   index: /
   webui_port: 80
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/stremio/server
+    if [ ! -f /DATA/AppData/stremio/localStorage.json ]; then
+      cat > /DATA/AppData/stremio/localStorage.json << 'EOF'
+    {
+      "addons": [
+        {
+          "transportUrl": "https://torrentio.strem.fun/sort=seeders|qualityfilter=scr,cam/manifest.json",
+          "transportName": "HTTP",
+          "manifest": {
+            "id": "com.stremio.torrentio.addon",
+            "version": "0.0.14",
+            "name": "Torrentio",
+            "description": "Torrent streams sorted by seeders, CAM/SCR excluded",
+            "types": ["movie", "series"],
+            "catalogs": [],
+            "resources": ["stream"]
+          },
+          "flags": {}
+        },
+        {
+          "transportUrl": "https://torrentsdb.com/sort=seeders|qualityfilter=scr,cam/manifest.json",
+          "transportName": "HTTP",
+          "manifest": {
+            "id": "com.stremio.torrentsdb",
+            "version": "1.0.0",
+            "name": "TorrentsDB",
+            "description": "Torrentio fork with more providers — great backup when Torrentio is down",
+            "types": ["movie", "series"],
+            "catalogs": [],
+            "resources": ["stream"]
+          },
+          "flags": {}
+        },
+        {
+          "transportUrl": "https://thepiratebay-plus.strem.fun/manifest.json",
+          "transportName": "HTTP",
+          "manifest": {
+            "id": "org.stremio.thepiratebayplus",
+            "version": "1.4.0",
+            "name": "ThePirateBay+",
+            "description": "Search movies, series and anime from ThePirateBay",
+            "types": ["movie", "series"],
+            "catalogs": [],
+            "resources": ["stream"]
+          },
+          "flags": {}
+        },
+        {
+          "transportUrl": "https://mediafusion.elfhosted.com/manifest.json",
+          "transportName": "HTTP",
+          "manifest": {
+            "id": "community.stremio.mediafusion",
+            "version": "3.0.0",
+            "name": "MediaFusion",
+            "description": "Multi-source streams, strong for non-English content",
+            "types": ["movie", "series"],
+            "catalogs": [],
+            "resources": ["stream", "catalog"]
+          },
+          "flags": {}
+        },
+        {
+          "transportUrl": "https://streamx.electron.al/manifest.json",
+          "transportName": "HTTP",
+          "manifest": {
+            "id": "community.stremio.streamx",
+            "version": "1.0.0",
+            "name": "StreamX",
+            "description": "Pre-configured HD torrent links, no setup needed",
+            "types": ["movie", "series"],
+            "catalogs": [],
+            "resources": ["stream"]
+          },
+          "flags": {}
+        }
+      ]
+    }
+    EOF
+    fi
   tips:
     before_install:
       en_us: |
-        Access: `https://${REF_DOMAIN}/`
-        Default credentials: `admin` / `stremio`
-
+        **Default credentials:** `admin` / `stremio`
         Change via USERNAME/PASSWORD environment variables on "stremiocommunity" service.
 
-        You can find Stremio addons in the Stremio Addon Catalog: https://addons.strem.io/
-        Or search for "Stremio addons" online for more options.
+        **Pre-installed addons (no setup needed):**
+        - **Torrentio** — searches 20+ torrent sites, sorted by seeders
+        - **TorrentsDB** — backup for when Torrentio is down, more providers
+        - **ThePirateBay+** — extra coverage from The Pirate Bay
+        - **MediaFusion** — great for non-English and regional content
+        - **StreamX** — pre-configured HD links
+
+        💡 For the best experience with rare content, add a **Real-Debrid** account (~€3/month) to any addon — cached streams start instantly with no buffering.
