@@ -1,210 +1,129 @@
 name: stremio
-
 services:
-  stremio:
-    image: ghcr.io/yundera/appshield:2.0.3
-    container_name: stremio
-    hostname: stremio
-    restart: unless-stopped
-    user: "root"
-    expose:
-      - 80
-    labels:
-      caddy_0: stremio-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: stremio-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: stremio-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
-    environment:
-      BACKEND_HOST: "stremiocommunity"
-      BACKEND_PORT: "8080"
-      LISTEN_PORT: "80"
-      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
-    tmpfs:
-      - /var/cache/nginx:size=50M
-    depends_on:
-      - stremiocommunity
-    networks:
-      - pcs
-    logging:
-      driver: json-file
-      options:
-        max-size: "50m"
-        max-file: "3"
-    cpu_shares: 70
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
-  stremiocommunity:
-    image: tsaridas/stremio-docker:v1.2.12
-    container_name: stremiocommunity
-    restart: unless-stopped
-    user: "0:0"
-    environment:
-      NO_CORS: "1"
-      AUTO_SERVER_URL: "1"
-      USERNAME: "admin"
-      PASSWORD: "stremio"
-    volumes:
-      - type: bind
-        source: /DATA/AppData/stremio/server/
-        target: /root/.stremio-server/
-      - type: bind
-        source: /DATA/AppData/stremio/localStorage.json
-        target: /srv/stremio-server/localStorage.json
-    networks:
-      - pcs
-    logging:
-      driver: json-file
-      options:
-        max-size: "50m"
-        max-file: "3"
-    cpu_shares: 70
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-
+    stremio:
+        cpu_shares: 70
+        container_name: stremio
+        depends_on:
+            stremiocommunity:
+                condition: service_started
+                required: true
+        deploy:
+            resources:
+                limits:
+                    memory: "134217728"
+        environment:
+            AUTH_DISABLED: "true"
+            BACKEND_HOST: stremiocommunity
+            BACKEND_PORT: "8080"
+            LISTEN_PORT: "80"
+        expose:
+            - "80"
+        hostname: stremio
+        image: ghcr.io/yundera/nginx-hash-lock:1.0.7
+        labels:
+            caddy_0: stremio-${APP_DOMAIN}
+            caddy_0.import: gateway_tls
+            caddy_0.reverse_proxy: '{{upstreams 80}}'
+            caddy_1: stremio-${APP_PUBLIC_IP_DASH}.nip.io
+            caddy_1.import: gateway_tls
+            caddy_1.reverse_proxy: '{{upstreams 80}}'
+            caddy_2: stremio-${APP_PUBLIC_IP_DASH}.sslip.io
+            caddy_2.reverse_proxy: '{{upstreams 80}}'
+            icon: https://www.stremio.com/website/stremio-logo-small.png
+        logging:
+            driver: json-file
+            options:
+                max-file: "3"
+                max-size: 50m
+        networks:
+            pcs: {}
+        restart: unless-stopped
+        user: "0:0"
+    stremiocommunity:
+        cpu_shares: 70
+        container_name: stremiocommunity
+        deploy:
+            resources:
+                limits:
+                    memory: "1073741824"
+        environment:
+            AUTO_SERVER_URL: "1"
+            NO_CORS: "1"
+            PASSWORD: stremio
+            USERNAME: admin
+        image: tsaridas/stremio-docker:v1.2.12
+        labels:
+            icon: https://www.stremio.com/website/stremio-logo-small.png
+        logging:
+            driver: json-file
+            options:
+                max-file: "3"
+                max-size: 50m
+        networks:
+            pcs: null
+        restart: unless-stopped
+        user: "0:0"
+        volumes:
+            - type: bind
+              source: /DATA/AppData/stremio/server/
+              target: /root/.stremio-server
+              bind:
+                create_host_path: true
+        x-casaos:
+            envs:
+                - container: USERNAME
+                  description:
+                    en_us: Username for HTTP basic auth
+                - container: PASSWORD
+                  description:
+                    en_us: Password for HTTP basic auth
+            volumes:
+                - container: /root/.stremio-server
+                  description:
+                    en_us: Stremio server data and configuration
 networks:
-  pcs:
-    name: pcs
-    external: true
-
+    default:
+        name: stremio_default
+    pcs:
+        name: pcs
+        external: true
 x-casaos:
-  architectures:
-    - amd64
-    - arm64
-    - arm/v7
-  main: stremio
-  author: Yundera
-  developer: Yundera
-  icon: https://www.stremio.com/website/stremio-logo-small.png
-  screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-2.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/thumbnail.png
-  tagline:
-    en_us: "Stream movies & series instantly — pre-configured with the best addons"
-  category: Entertainment
-  description:
-    en_us: |
-      Stremio Community Edition, pre-configured with the best free streaming addons so you can start watching immediately after installation.
-
-      **Pre-installed addons:**
-      - Torrentio (sorted by seeders, CAM/SCR excluded) — searches 20+ torrent sites
-      - TorrentsDB — Torrentio alternative with even more providers, great backup
-      - ThePirateBay+ — dedicated Pirate Bay addon for extra coverage
-      - MediaFusion — multi-source aggregator, strong for non-English content
-      - StreamX — pre-configured HD torrent links, no setup needed
-
-      **Default credentials:** admin / stremio
-      Change via USERNAME/PASSWORD environment variables on "stremiocommunity" service.
-
-      💡 For best results with rare content, add a Real-Debrid account to any addon.
-  title:
-    en_us: "Stremio"
-  store_app_id: stremio
-  is_uncontrolled: false
-  index: /
-  webui_port: 80
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/stremio/server
-    if [ ! -f /DATA/AppData/stremio/localStorage.json ]; then
-      cat > /DATA/AppData/stremio/localStorage.json << 'EOF'
-    {
-      "addons": [
-        {
-          "transportUrl": "https://torrentio.strem.fun/sort=seeders|qualityfilter=scr,cam/manifest.json",
-          "transportName": "HTTP",
-          "manifest": {
-            "id": "com.stremio.torrentio.addon",
-            "version": "0.0.14",
-            "name": "Torrentio",
-            "description": "Torrent streams sorted by seeders, CAM/SCR excluded",
-            "types": ["movie", "series"],
-            "catalogs": [],
-            "resources": ["stream"]
-          },
-          "flags": {}
-        },
-        {
-          "transportUrl": "https://torrentsdb.com/sort=seeders|qualityfilter=scr,cam/manifest.json",
-          "transportName": "HTTP",
-          "manifest": {
-            "id": "com.stremio.torrentsdb",
-            "version": "1.0.0",
-            "name": "TorrentsDB",
-            "description": "Torrentio fork with more providers",
-            "types": ["movie", "series"],
-            "catalogs": [],
-            "resources": ["stream"]
-          },
-          "flags": {}
-        },
-        {
-          "transportUrl": "https://thepiratebay-plus.strem.fun/manifest.json",
-          "transportName": "HTTP",
-          "manifest": {
-            "id": "org.stremio.thepiratebayplus",
-            "version": "1.4.0",
-            "name": "ThePirateBay+",
-            "description": "Search movies, series and anime from ThePirateBay",
-            "types": ["movie", "series"],
-            "catalogs": [],
-            "resources": ["stream"]
-          },
-          "flags": {}
-        },
-        {
-          "transportUrl": "https://mediafusion.elfhosted.com/manifest.json",
-          "transportName": "HTTP",
-          "manifest": {
-            "id": "community.stremio.mediafusion",
-            "version": "3.0.0",
-            "name": "MediaFusion",
-            "description": "Multi-source streams, strong for non-English content",
-            "types": ["movie", "series"],
-            "catalogs": [],
-            "resources": ["stream", "catalog"]
-          },
-          "flags": {}
-        },
-        {
-          "transportUrl": "https://streamx.electron.al/manifest.json",
-          "transportName": "HTTP",
-          "manifest": {
-            "id": "community.stremio.streamx",
-            "version": "1.0.0",
-            "name": "StreamX",
-            "description": "Pre-configured HD torrent links, no setup needed",
-            "types": ["movie", "series"],
-            "catalogs": [],
-            "resources": ["stream"]
-          },
-          "flags": {}
-        }
-      ]
-    }
-    EOF
-    fi
-  tips:
-    before_install:
-      en_us: |
-        **Default credentials:** `admin` / `stremio`
-        Change via USERNAME/PASSWORD environment variables on "stremiocommunity" service.
-
-        **Pre-installed addons (no setup needed):**
-        - **Torrentio** — searches 20+ torrent sites, sorted by seeders
-        - **TorrentsDB** — backup for when Torrentio is down, more providers
-        - **ThePirateBay+** — extra coverage from The Pirate Bay
-        - **MediaFusion** — great for non-English and regional content
-        - **StreamX** — pre-configured HD links
-
-        💡 For the best experience with rare content, add a **Real-Debrid** account (~€3/month) to any addon — cached streams start instantly with no buffering.
+    architectures:
+        - amd64
+        - arm64
+        - arm/v7
+    author: Yundera
+    category: Entertainment
+    description:
+        en_us: |
+            Stremio Community Edition.
+            Features:
+            - Clean subdomain (no port prefix)
+            - All-in-one streaming server with FFmpeg transcoding
+            - HTTP basic auth (USERNAME/PASSWORD)
+            Default credentials: admin / stremio
+            Change via environment variables on "stremiocommunity" service.
+    developer: Yundera
+    hostname: stremio-${APP_DOMAIN}
+    icon: https://www.stremio.com/website/stremio-logo-small.png
+    index: /
+    is_uncontrolled: false
+    main: stremio
+    port_map: "443"
+    scheme: https
+    screenshot_link:
+        - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-1.png
+        - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-2.png
+    store_app_id: stremio
+    tagline:
+        en_us: Stream movies & series (Community Edition)
+    thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/thumbnail.png
+    tips:
+        before_install:
+            en_us: |
+                Default credentials: `admin` / `stremio`
+                Change via USERNAME/PASSWORD environment variables on "stremiocommunity" service.
+                You can find Stremio addons at https://addons.strem.io/
+    title:
+        en_us: Stremio
+    webui_port: 80
