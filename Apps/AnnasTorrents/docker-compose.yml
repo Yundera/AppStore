@@ -54,7 +54,7 @@ services:
   # (6881 TCP+UDP) is published directly to the host — it is raw swarm
   # traffic, not HTTP, so it does not (and cannot) go through the sidecar.
   annas-torrents-webui-backend:
-    image: ghcr.io/worph/annas-torrents-webui:1.0.0
+    image: ghcr.io/worph/annas-torrents-webui:1.0.2
     container_name: annas-torrents-webui-backend
     restart: unless-stopped
     expose:
