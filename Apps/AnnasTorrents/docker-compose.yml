@@ -30,7 +30,6 @@ services:
       caddy_2: annas-torrents-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "annas-torrents-webui-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
@@ -57,6 +56,9 @@ services:
     image: ghcr.io/worph/annas-torrents-webui:1.0.2
     container_name: annas-torrents-webui-backend
     restart: unless-stopped
+    # Runs unprivileged as the platform-injected PUID:PGID (1000:1000). The data
+    # dir is created + chowned by pre-install-cmd below so this non-root process
+    # can write /data/content — no root needed.
     expose:
       - "8080"          # Web UI — internal only, fronted by the sidecar
     ports:
@@ -70,7 +72,7 @@ services:
       PUBLIC_URL: "https://annas-torrents-${APP_DOMAIN}"
       TZ: $TZ
     volumes:
-      - /DATA/AppData/annas-torrents-webui/data:/data
+      - /DATA/AppData/annas-torrents-webui/data/:/data
     networks:
       - pcs
     deploy:
@@ -92,8 +94,13 @@ x-casaos:
     - arm64
   main: annas-torrents-webui
   webui_port: 80
-  # Launch URL carries the hash token so the user lands authenticated.
-  index: /?hash=$AUTH_HASH
+  index: /
+  # Create the data dir owned by the runtime user before first start, so the
+  # non-root backend (PUID:PGID) can write it. Without this, Docker auto-creates
+  # the bind mount as root:root and the app crashes with EACCES on /data/content.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/annas-torrents-webui/data &&
+    chown -R ${PUID:-1000}:${PGID:-1000} /DATA/AppData/annas-torrents-webui/data
   author: Yundera Team
   category: Downloader
   developer: cparthiv
