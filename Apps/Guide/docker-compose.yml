@@ -2,17 +2,17 @@ name: guide
 
 services:
   guide:
-    image: ghcr.io/yundera/guideapp:latest
+    image: ghcr.io/yundera/guideapp:1.0.0
     container_name: guide
-    hostname: guide
-    cpu_shares: 30
+    user: 0:0  # nginx needs root to bind port 80; no volumes (see rationale.md)
+    cpu_shares: 80
     deploy:
       resources:
         limits:
           memory: 64M
     environment:
       TZ: $TZ
-      CASAOS_URL: "https://ui-${APP_DOMAIN}"
+      CASAOS_URL: "https://${APP_DOMAIN}"
     expose:
       - 80
     labels:
@@ -23,7 +23,6 @@ services:
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: guide-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.import: gateway_tls
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     restart: unless-stopped
     networks:
@@ -57,7 +56,7 @@ x-casaos:
   developer: Yundera
 
   title:
-    en_us: Guide
+    en_us: Start Here (Guide)
     fr_fr: Guide
     ko_kr: 가이드
 
@@ -121,38 +120,3 @@ x-casaos:
 
       PCS를 처음 설정한 뒤 바로 설치하기에 좋아요 — 몇 분 만에 오리엔테이션을
       마치고 Guide에서 App Store로 이동해 원하는 앱을 설치할 수 있습니다.
-
-  tips:
-    before_install:
-      en_us: |
-        Guide is a static documentation app — no accounts, no data to lose.
-        Just install and open it from your dashboard.
-
-        * Access via `https://guide-$APP_PUBLIC_IP_DASH.sslip.io/` or
-          `https://guide-$APP_DOMAIN/`
-        * Your answers to the onboarding questions are stored **only in your
-          browser** (localStorage) — nothing is sent to a server.
-        * To customise the App Store link at the end of the install tutorial,
-          set the `CASAOS_URL` environment variable (defaults to your PCS's
-          CasaOS dashboard).
-      fr_fr: |
-        Guide est une app de documentation statique — pas de compte, aucune
-        donnée à perdre. Installez-la et ouvrez-la depuis votre tableau de bord.
-
-        * Accès via `https://guide-$APP_PUBLIC_IP_DASH.sslip.io/` ou
-          `https://guide-$APP_DOMAIN/`
-        * Vos réponses à l'onboarding sont stockées **uniquement dans votre
-          navigateur** (localStorage) — rien n'est envoyé à un serveur.
-        * Pour personnaliser le lien vers l'App Store en fin de tutoriel,
-          définissez la variable `CASAOS_URL` (par défaut : le tableau de bord
-          CasaOS de votre PCS).
-      ko_kr: |
-        Guide는 정적 문서 앱입니다 — 계정도, 잃을 데이터도 없습니다. 설치 후
-        대시보드에서 바로 열어 보세요.
-
-        * 접속: `https://guide-$APP_PUBLIC_IP_DASH.sslip.io/` 또는
-          `https://guide-$APP_DOMAIN/`
-        * 온보딩 답변은 **브라우저의 localStorage에만** 저장되며 서버로 전송
-          되지 않습니다.
-        * 설치 튜토리얼 마지막의 App Store 링크를 바꾸려면 `CASAOS_URL` 환경
-          변수를 설정하세요 (기본값: 이 PCS의 CasaOS 대시보드).
