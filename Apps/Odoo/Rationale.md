@@ -1,62 +1,35 @@
-# Odoo Security Rationale
+# Odoo — Rationale
 
-## Root Container Usage
+## What deviation / exception is being requested
 
-This application uses root containers (`user: "0:0"`) for both PostgreSQL and Odoo services.
+Both services run as `user: "0:0"` (root):
+- `postgres` (postgres:18.3)
+- `odoo` (odoo:19.0)
 
-### Why Root is Required
+Authentication relies on Odoo's built-in onboarding — the database manager page requires a master password (`$APP_DEFAULT_PASSWORD`) on first access, then users log in with their created admin account.
 
-**CasaOS Permission Behavior:**
-- CasaOS automatically applies PUID:PGID (1000:1000) when no `user` field is specified
-- This differs from standard Docker behavior and can cause conflicts with official images
+## Why it is necessary
 
-**PostgreSQL Service:**
-- The official PostgreSQL image expects to run as the `postgres` user (UID 999)
-- When CasaOS applies UID 1000, PostgreSQL cannot properly initialize or access its data directory
-- Running as root allows PostgreSQL to properly manage file permissions in `/var/lib/postgresql/data`
+CasaOS automatically applies `PUID:PGID` (1000:1000) when no `user` field is specified, which differs from standard Docker behavior.
 
-**Odoo Service:**
-- The official Odoo image expects to run as the `odoo` user
-- Similar to PostgreSQL, CasaOS's automatic UID 1000 assignment conflicts with Odoo's internal user management
-- Running as root ensures proper access to `/var/lib/odoo`, `/etc/odoo`, and `/mnt/extra-addons`
+- **PostgreSQL**: The official image expects to run as the `postgres` user (UID 999). CasaOS's automatic UID 1000 prevents PostgreSQL from initializing or accessing its data directory.
+- **Odoo**: The official image expects to run as the `odoo` user. UID 1000 conflicts with Odoo's internal user management and access to `/var/lib/odoo`, `/etc/odoo`, and `/mnt/extra-addons`.
 
-### Security Mitigation
+## Security mitigations in place
 
-**Volume Isolation:**
-- All volumes are mapped exclusively to `/DATA/AppData/$AppID/`
-- No access to user directories (`/DATA/Documents/`, `/DATA/Media/`, etc.)
-- No shared volumes with other applications
+- **Volume isolation**: All volumes map exclusively to `/DATA/AppData/odoo/` — no access to user directories (`/DATA/Documents/`, `/DATA/Media/`, etc.).
+- **Network isolation**: PostgreSQL is only reachable on the internal `odoo-internal` network. Only the Odoo web UI (port 80) is exposed via Caddy on the `pcs` network.
+- **Official images**: `postgres:18.3` and `odoo:19.0` from Docker Hub, regularly updated and security-audited.
+- **Resource limits**: PostgreSQL capped at 512M memory, Odoo at 1G.
 
-**Network Isolation:**
-- PostgreSQL is not exposed outside the Docker network
-- Only Odoo's web interface (port 8069) is exposed via NSL Router
-- Database communication is container-to-container only
+## Alternatives considered and rejected
 
-**Official Images:**
-- Using official `postgres:15.15` and `odoo:18.0` images from Docker Hub
-- These images have been security audited and are regularly updated
-- Images include internal security measures and user management
+- **Specific UIDs** (e.g. 999 for postgres): Breaks when upstream images change their internal user IDs; less maintainable across updates.
+- **Custom entrypoint scripts**: Adds complexity and maintenance burden; deviates from official image best practices.
 
-### Alternative Approaches Considered
+## Data protection
 
-1. **Using specific UIDs (999 for postgres, odoo UID for Odoo):**
-   - Would require knowing exact UIDs used by official images
-   - Would break when images change their internal user IDs
-   - Less maintainable across updates
-
-2. **Custom entrypoint scripts:**
-   - Would add complexity and maintenance burden
-   - Could introduce security vulnerabilities
-   - Would deviate from official image best practices
-
-3. **User directory access:**
-   - Not required for this application
-   - All data is contained within AppData directory
-
-### Conclusion
-
-Root containers are necessary for this application due to CasaOS's automatic PUID/PGID behavior conflicting with official PostgreSQL and Odoo images. The security risk is minimal because:
-- Volumes are isolated to AppData only
-- Using official, security-audited images
-- No access to user directories or system files
-- PostgreSQL is not exposed outside the container network
+- All persistent data is under `/DATA/AppData/odoo/` (postgres-data, odoo-data, config, addons).
+- No shared volumes with other applications.
+- PostgreSQL is not exposed outside the container network.
+- `pre-install-cmd` guards config creation with an existence check (`if [ ! -f ... ]`) to preserve user modifications across reinstalls.
