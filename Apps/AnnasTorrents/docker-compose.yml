@@ -96,11 +96,14 @@ x-casaos:
   webui_port: 80
   index: /
   # Create the data dir owned by the runtime user before first start, so the
-  # non-root backend (PUID:PGID) can write it. Without this, Docker auto-creates
-  # the bind mount as root:root and the app crashes with EACCES on /data/content.
+  # non-root backend (UID 1000:1000, the platform-injected PUID:PGID) can write
+  # it. Without this, Docker auto-creates the bind mount as root:root and the
+  # app crashes with EACCES on /data/content. Hardcoded to 1000:1000 because
+  # CasaOS's install-time substitution strips ${VAR:-default} fallbacks and
+  # leaves bare $PUID/$PGID that are empty in the pre-install shell.
   pre-install-cmd: |
     mkdir -p /DATA/AppData/annas-torrents-webui/data &&
-    chown -R ${PUID:-1000}:${PGID:-1000} /DATA/AppData/annas-torrents-webui/data
+    chown -R 1000:1000 /DATA/AppData/annas-torrents-webui/data
   author: Yundera Team
   category: Downloader
   developer: cparthiv
