@@ -62,6 +62,7 @@ x-casaos:
   main: vaultwarden
   author: Yundera Team
   category: Utilities
+  tags: ["privacy", "personal", "business"]
   description:
     en_us: |
       🔐 **What is Vaultwarden?**

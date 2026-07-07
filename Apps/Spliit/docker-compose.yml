@@ -105,6 +105,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: Finance
+  tags: ["business", "personal", "productivity"]
   developer: Spliit Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/icon.png
   screenshot_link:

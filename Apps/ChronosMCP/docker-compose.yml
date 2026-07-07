@@ -70,6 +70,7 @@ x-casaos:
   index: /?hash=$AUTH_HASH
   author: Yundera
   category: Utilities
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **Schedule MCP tool calls with cron expressions**

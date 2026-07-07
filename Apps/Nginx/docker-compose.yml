@@ -55,6 +55,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: WEB
+  tags: ["website", "developer"]
   description:
     en_us: |
       **🌐 What is nginx?**

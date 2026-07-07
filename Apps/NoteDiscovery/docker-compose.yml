@@ -51,6 +51,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: Documents
+  tags: ["productivity", "files", "personal"]
   developer: gamosoft
   store_app_id: notediscovery
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/icon.png

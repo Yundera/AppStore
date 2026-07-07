@@ -118,6 +118,7 @@ x-casaos:
     - amd64
   author: Yundera
   category: Developer
+  tags: ["developer"]
   developer: Worph
   title:
     en_us: Beacon

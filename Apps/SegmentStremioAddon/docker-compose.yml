@@ -76,6 +76,7 @@ x-casaos:
     - arm64
   author: Worph
   category: Media
+  tags: ["media", "personal"]
   description:
     en_us: |
       Stremio Addon - Browse and stream your local media library directly in Stremio with on-the-fly HLS transcoding.

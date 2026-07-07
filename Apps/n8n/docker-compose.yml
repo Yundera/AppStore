@@ -86,6 +86,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: Automation
+  tags: ["developer", "productivity", "business"]
   developer: n8n GmbH
   store_app_id: n8n
   description:

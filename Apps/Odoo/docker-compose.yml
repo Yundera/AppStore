@@ -81,6 +81,7 @@ x-casaos:
   main: odoo
   webui_port: 80
   category: Business
+  tags: ["business", "productivity"]
   author: CasaOS Team
   developer: Odoo S.A.
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odoo/icon.png

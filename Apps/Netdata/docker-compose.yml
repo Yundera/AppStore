@@ -94,6 +94,7 @@ x-casaos:
   main: nginxhashlock
   author: Yundera Team
   category: Utilities
+  tags: ["developer", "privacy"]
   description:
     en_us: Real-time performance and health monitoring for systems, containers, and applications. Monitor everything with per-second granularity and beautiful, interactive dashboards.
     ko_kr: 시스템, 컨테이너, 애플리케이션의 실시간 성능 및 상태 모니터링. 초 단위 세분성과 아름다운 대화형 대시보드로 모든 것을 모니터링합니다.

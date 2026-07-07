@@ -67,6 +67,7 @@ x-casaos:
   main: guacamole
   index: /guacamole
   category: Productivity
+  tags: ["productivity", "developer"]
   tagline:
     en_us: Open-source remote desktop gateway.
     zh_cn: 开源远程桌面网关。

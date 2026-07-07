@@ -48,6 +48,7 @@ x-casaos:
     - arm64
   author: Yundera
   category: Network
+  tags: ["privacy", "personal", "developer"]
   description:
     en_us: "Tailscale is a secure mesh VPN that creates encrypted connections between your devices. This container runs the Tailscale node daemon with web UI enabled for easy device management. Connect your CasaOS server to your Tailscale network to access it securely from anywhere. Includes exit node functionality to route traffic through your server and accept routes from other nodes. Perfect for secure remote access to your home lab and services."
   developer: Tailscale Inc.

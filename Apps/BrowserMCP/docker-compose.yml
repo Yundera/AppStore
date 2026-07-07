@@ -93,6 +93,7 @@ x-casaos:
   author: Yundera
   developer: Worph
   category: Developer
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **A headless Chromium browser in the cloud, controlled by AI via MCP**

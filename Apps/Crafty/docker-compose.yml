@@ -75,6 +75,7 @@ x-casaos:
   index: /
   author: Yundera Team
   category: Games
+  tags: ["games", "personal", "family"]
   developer: Arcadia Technology
   store_app_id: crafty
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/icon.png

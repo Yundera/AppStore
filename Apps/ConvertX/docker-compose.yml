@@ -84,6 +84,7 @@ x-casaos:
   main: convertx
   author: Yundera Team
   category: Utilities
+  tags: ["files", "personal"]
   developer: C4illin
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/icon.png
   screenshot_link:

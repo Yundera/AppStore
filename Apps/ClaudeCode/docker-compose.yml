@@ -102,6 +102,7 @@ x-casaos:
   main: claude
   author: Yundera
   category: Developer
+  tags: ["developer", "ai"]
   description:
     en_us: |
       Claude Code Container - Web-based terminal interface for Claude Code (Anthropic's CLI for Claude).

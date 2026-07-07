@@ -130,6 +130,7 @@ x-casaos:
         change the number of hops or disable anonymity per-download in the UI.
   author: Yundera Team
   category: Downloader
+  tags: ["files", "privacy", "personal"]
   developer: Tribler
   description:
     en_us: Tribler is a decentralized, privacy-focused BitTorrent client. It routes downloads through its own built-in onion network (Tor-like), so you can search for and download torrents anonymously without any central server, VPN, or tracker dependency.

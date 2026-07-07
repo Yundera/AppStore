@@ -125,6 +125,7 @@ x-casaos:
     - arm64
   store_app_id: immich
   category: Gallery
+  tags: ["photos", "personal", "family"]
   author: Cp0204
   developer: alextran1502
   description:

@@ -59,6 +59,7 @@ x-casaos:
   main: psitransfer
   author: CasaOS Team
   category: Utilities
+  tags: ["files", "personal"]
   description:
     en_us: |
       PsiTransfer is a simple, open-source, self-hosted file sharing solution. It's designed as a lightweight alternative to WeTransfer with powerful features:

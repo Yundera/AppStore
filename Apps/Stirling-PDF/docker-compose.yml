@@ -64,6 +64,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: Office
+  tags: ["files", "productivity", "business", "personal"]
   developer: Stirling Tools
   description:
     en_us: |

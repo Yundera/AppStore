@@ -81,6 +81,7 @@ x-casaos:
     - amd64
   author: Yundera Team
   category: Chat
+  tags: ["ai", "developer"]
   developer: Open WebUI
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OllamaNvidia/icon.png
   screenshot_link:

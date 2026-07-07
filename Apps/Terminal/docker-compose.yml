@@ -74,6 +74,7 @@ x-casaos:
   tagline:
     en_us: "Secure hash-locked terminal access"
   category: Utilities
+  tags: ["developer"]
   description:
     en_us: "A secure terminal with hash-based authentication using nginxhashlock"
   title:

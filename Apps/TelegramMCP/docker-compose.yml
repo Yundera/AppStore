@@ -85,6 +85,7 @@ x-casaos:
   index: /?hash=${AUTH_HASH}
   author: Aptero
   category: Chat
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **Telegram control for AI assistants via MCP**

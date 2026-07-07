@@ -111,6 +111,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: Documents
+  tags: ["productivity", "files", "business", "personal"]
   developer: Docmost
   store_app_id: docmost
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/icon.png

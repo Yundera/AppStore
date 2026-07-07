@@ -52,6 +52,7 @@ x-casaos:
   main: filebrowser
   author: Yundera Team
   category: Cloud
+  tags: ["files", "personal"]
   description:
     en_us: |
       FileBrowser Your Private File Manager Made Easy

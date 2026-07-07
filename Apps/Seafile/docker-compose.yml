@@ -378,6 +378,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Cloud
+  tags: ["files", "personal", "business"]
   description:
     en_us: Seafile is a file hosting and collaboration platform with privacy protection and teamwork features. It allows you to create private clouds for file sharing and collaboration, supporting automatic sync across devices, version control, and secure file encryption. Perfect for teams and individuals who need reliable cloud storage with advanced sharing capabilities.
     es_es: Seafile es una plataforma de alojamiento y colaboración de archivos con protección de privacidad y características de trabajo en equipo. Te permite crear nubes privadas para compartir archivos y colaborar, con sincronización automática entre dispositivos, control de versiones y cifrado seguro de archivos.

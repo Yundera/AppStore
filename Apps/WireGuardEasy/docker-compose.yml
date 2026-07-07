@@ -66,6 +66,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/screenshot-3.png
   category: Network
+  tags: ["privacy", "personal"]
   title:
     en_us: WireGuard Easy
   tagline:

@@ -121,6 +121,7 @@ x-casaos:
         fr_fr: Delai d'expiration HTTP (en secondes) pour les appels a l'API Docmost. Par defaut 30.
   author: Aptero
   category: Developer
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **Docmost knowledge base control for AI assistants via MCP**

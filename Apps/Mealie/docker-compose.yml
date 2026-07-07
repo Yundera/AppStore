@@ -60,6 +60,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Utilities
+  tags: ["personal", "family"]
   description:
     en_us: |
       **Your family cookbook that never loses recipes**

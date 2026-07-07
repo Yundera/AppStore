@@ -95,6 +95,7 @@ x-casaos:
   index: /?hash=$AUTH_HASH
   author: Aptero
   category: Utilities
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **Your entire Nextcloud — Notes, Calendar, Contacts, Files, Deck, Talk — exposed to AI assistants via MCP.**

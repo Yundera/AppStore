@@ -171,6 +171,8 @@ x-casaos:
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nextcloud/thumbnail.png
 
   category: Utilities
+
+  tags: ["files", "productivity", "business", "personal"]
   architectures: [amd64, arm64]
   author: Yundera Team
   developer: Nextcloud GmbH

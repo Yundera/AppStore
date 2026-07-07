@@ -67,6 +67,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Media
+  tags: ["media", "personal", "family"]
   developer: Jellyfin Project
   description:
     en_us: Jellyfin - The Free Software Media System that puts you in control of managing and streaming your media. Stream to any device from your own server.

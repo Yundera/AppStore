@@ -119,6 +119,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/screenshot-3.png
   category: Network
+  tags: ["privacy", "personal"]
   title:
     en_us: WireGuard Easy - Host
   tagline:

@@ -1,0 +1,158 @@
+name: guide
+
+services:
+  guide:
+    image: ghcr.io/yundera/guideapp:latest
+    container_name: guide
+    hostname: guide
+    cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    environment:
+      TZ: $TZ
+      CASAOS_URL: "https://ui-${APP_DOMAIN}"
+    expose:
+      - 80
+    labels:
+      caddy_0: guide-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: guide-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: guide-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.import: gateway_tls
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    restart: unless-stopped
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: guide
+  webui_port: 80
+  index: /
+  scheme: https
+
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guide/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guide/thumbnail.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guide/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guide/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guide/screenshot-3.png
+
+  architectures:
+    - amd64
+    - arm64
+  store_app_id: guide
+  category: Utilities
+  tags: ["personal", "family", "business"]
+  author: Yundera Team
+  developer: Yundera
+
+  title:
+    en_us: Guide
+    fr_fr: Guide
+    ko_kr: 가이드
+
+  tagline:
+    en_us: Learn how to use your Personal Cloud Server
+    fr_fr: Apprenez à utiliser votre Personal Cloud Server
+    ko_kr: 개인 클라우드 서버 사용법을 안내해 드려요
+
+  description:
+    en_us: |
+      **Start Here — a friendly guide to your Personal Cloud Server.**
+
+      Guide answers a few short questions ("who is this cloud for?", "how techie
+      are you?", "what are you into?") and then hands you a personalised
+      shortlist of apps to install first. Tap any app to read a plain-language
+      description and a step-by-step install tutorial with screenshots.
+
+      * Localised in English, French, and Korean
+      * Step-by-step guides for popular apps (Immich, Jellyfin, Docmost, Odoo,
+        Suwayomi) with more added over time
+      * Zero-configuration — install and open it, that's it
+      * Runs fully offline once installed; no external calls at runtime
+      * Small footprint (64 MB memory cap)
+
+      Best installed right after your PCS is set up — new users get oriented in
+      a couple of minutes, and can jump straight from Guide into the App Store
+      to install the apps that fit them.
+    fr_fr: |
+      **Start Here — un guide convivial pour votre Personal Cloud Server.**
+
+      Guide vous pose quelques questions rapides (« pour qui est ce cloud ? »,
+      « quel est votre niveau technique ? », « qu'est-ce qui vous intéresse ? »)
+      puis vous propose une sélection d'apps à installer en premier. Touchez une
+      app pour lire une description simple et un tutoriel d'installation pas à
+      pas illustré.
+
+      * Localisé en anglais, français et coréen
+      * Guides pas à pas pour les apps populaires (Immich, Jellyfin, Docmost,
+        Odoo, Suwayomi) et d'autres à venir
+      * Aucune configuration — installez et ouvrez, c'est tout
+      * Fonctionne entièrement hors-ligne une fois installé
+      * Empreinte réduite (limite de 64 Mo de mémoire)
+
+      À installer juste après la configuration de votre PCS — les nouveaux
+      utilisateurs sont orientés en quelques minutes et peuvent passer
+      directement de Guide à l'App Store pour installer les apps qui leur
+      correspondent.
+    ko_kr: |
+      **Start Here — 개인 클라우드 서버(PCS)를 위한 친근한 안내서.**
+
+      Guide는 몇 가지 간단한 질문(“이 클라우드는 누구를 위한 것인가요?”, “기술
+      수준은?”, “무엇에 관심 있나요?”)을 통해 먼저 설치하기 좋은 앱 목록을
+      맞춤 추천합니다. 각 앱을 눌러 쉬운 설명과 스크린샷이 포함된 단계별 설치
+      튜토리얼을 확인하세요.
+
+      * 영어·프랑스어·한국어 지원
+      * Immich, Jellyfin, Docmost, Odoo, Suwayomi 등 인기 앱의 단계별 안내
+      * 별도 설정 불필요 — 설치 후 바로 사용
+      * 설치 후에는 완전히 오프라인으로 동작
+      * 가벼운 리소스 사용 (메모리 64MB 제한)
+
+      PCS를 처음 설정한 뒤 바로 설치하기에 좋아요 — 몇 분 만에 오리엔테이션을
+      마치고 Guide에서 App Store로 이동해 원하는 앱을 설치할 수 있습니다.
+
+  tips:
+    before_install:
+      en_us: |
+        Guide is a static documentation app — no accounts, no data to lose.
+        Just install and open it from your dashboard.
+
+        * Access via `https://guide-$APP_PUBLIC_IP_DASH.sslip.io/` or
+          `https://guide-$APP_DOMAIN/`
+        * Your answers to the onboarding questions are stored **only in your
+          browser** (localStorage) — nothing is sent to a server.
+        * To customise the App Store link at the end of the install tutorial,
+          set the `CASAOS_URL` environment variable (defaults to your PCS's
+          CasaOS dashboard).
+      fr_fr: |
+        Guide est une app de documentation statique — pas de compte, aucune
+        donnée à perdre. Installez-la et ouvrez-la depuis votre tableau de bord.
+
+        * Accès via `https://guide-$APP_PUBLIC_IP_DASH.sslip.io/` ou
+          `https://guide-$APP_DOMAIN/`
+        * Vos réponses à l'onboarding sont stockées **uniquement dans votre
+          navigateur** (localStorage) — rien n'est envoyé à un serveur.
+        * Pour personnaliser le lien vers l'App Store en fin de tutoriel,
+          définissez la variable `CASAOS_URL` (par défaut : le tableau de bord
+          CasaOS de votre PCS).
+      ko_kr: |
+        Guide는 정적 문서 앱입니다 — 계정도, 잃을 데이터도 없습니다. 설치 후
+        대시보드에서 바로 열어 보세요.
+
+        * 접속: `https://guide-$APP_PUBLIC_IP_DASH.sslip.io/` 또는
+          `https://guide-$APP_DOMAIN/`
+        * 온보딩 답변은 **브라우저의 localStorage에만** 저장되며 서버로 전송
+          되지 않습니다.
+        * 설치 튜토리얼 마지막의 App Store 링크를 바꾸려면 `CASAOS_URL` 환경
+          변수를 설정하세요 (기본값: 이 PCS의 CasaOS 대시보드).

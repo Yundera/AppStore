@@ -57,6 +57,7 @@ x-casaos:
   store_app_id: navidrome
   author: Yundera Team
   category: Media
+  tags: ["media", "personal", "family"]
   developer: Deluan Quintão
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/icon.png
   screenshot_link:

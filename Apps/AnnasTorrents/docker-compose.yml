@@ -106,6 +106,7 @@ x-casaos:
     chown -R 1000:1000 /DATA/AppData/annas-torrents-webui/data
   author: Yundera Team
   category: Downloader
+  tags: ["files", "personal"]
   developer: cparthiv
   store_app_id: annas-torrents-webui
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/icon.png

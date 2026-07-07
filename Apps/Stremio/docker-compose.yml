@@ -107,6 +107,7 @@ x-casaos:
   tagline:
     en_us: "Stream movies & series (Community Edition)"
   category: Entertainment
+  tags: ["media", "personal", "family"]
   description:
     en_us: |
       Stremio Community Edition with HTTP basic authentication.

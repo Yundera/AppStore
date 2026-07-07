@@ -57,6 +57,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Media
+  tags: ["media", "personal"]
   developer: Servarr (Prowlarr)
   description:
     en_us: Prowlarr is an indexer manager and proxy built on the *arr stack. It integrates seamlessly with Radarr, Sonarr, Lidarr and Readarr, managing all of your trackers and indexers from a single interface and keeping them in sync. Pairs with the Radarr, Sonarr and Lidarr standalone apps in this store.

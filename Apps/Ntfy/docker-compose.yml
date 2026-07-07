@@ -55,6 +55,7 @@ x-casaos:
   index: /
   author: Yundera
   category: Utilities
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **Push notifications for AI assistants via ntfy + MCP**

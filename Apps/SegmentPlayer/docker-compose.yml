@@ -73,6 +73,7 @@ x-casaos:
     - arm64
   author: Worph
   category: Media
+  tags: ["media", "personal"]
   description:
     en_us: |
       SegmentPlayer is a media streaming application that serves your video files as HLS streams on-the-fly.

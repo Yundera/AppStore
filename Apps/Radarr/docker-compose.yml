@@ -56,6 +56,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Media
+  tags: ["media", "personal"]
   developer: Servarr (Radarr)
   description:
     en_us: Radarr is a movie collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new movies, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Writes into the same `/DATA/Media/Movies` library Jellyfin reads, so your movies are ready to stream.

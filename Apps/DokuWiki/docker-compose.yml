@@ -61,6 +61,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Wiki
+  tags: ["productivity", "files", "personal", "business"]
   developer: DokuWiki Community
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DokuWiki/icon.png
   screenshot_link:

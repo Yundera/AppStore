@@ -56,6 +56,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Media
+  tags: ["media", "personal"]
   developer: Servarr (Sonarr)
   description:
     en_us: Sonarr is a TV series collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new episodes, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Uses the same `/DATA/Media/TV Shows` library folder Jellyfin reads.
