@@ -257,3 +257,6 @@ x-casaos:
         }
         ```
         *Note: L'assistant IA doit etre sur le reseau Docker `pcs`.*
+
+x-compose-app:
+  webui-host: beacon-${domain}

@@ -188,3 +188,6 @@ x-casaos:
         Esta es la version **WireGuard Easy v15**. La cuenta de administrador se configura automaticamente. La configuracion VPN se puede cambiar desde la interfaz web despues de iniciar sesion.
 
         La VPN escucha en el puerto UDP 51820. Asegurese de que este puerto este abierto en su firewall/router.
+
+x-compose-app:
+  webui-host: wgeasy-${domain}

@@ -212,3 +212,7 @@ x-casaos:
         Accede al juego: `https://tincatan-username.nsl.sh/`
         Primera ejecución: 5-10 minutos para compilar con Maven.
   index: /home
+
+x-compose-app:
+  webui-host: tincatan-${domain}
+  webui-path: "/home"

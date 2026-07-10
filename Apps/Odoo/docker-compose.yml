@@ -221,3 +221,6 @@ x-casaos:
     fi
   index: /
   scheme: https
+
+x-compose-app:
+  webui-host: odoo-${domain}

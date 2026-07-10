@@ -192,3 +192,7 @@ x-casaos:
   webui_port: 80
   scheme: https
   store_app_id: netdata
+
+x-compose-app:
+  webui-host: netdata-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

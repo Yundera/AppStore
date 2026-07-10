@@ -141,3 +141,7 @@ x-casaos:
         | 用户名 | 密码 |
         | -------- | -------- |
         | `guacadmin`    | `guacadmin`    |
+
+x-compose-app:
+  webui-host: guacamole-${domain}
+  webui-path: "/guacamole"

@@ -154,3 +154,7 @@ x-casaos:
     en_us: Tribler
   store_app_id: tribler
   is_uncontrolled: false
+
+x-compose-app:
+  webui-host: tribler-${domain}
+  webui-path: "/ui/"

@@ -225,3 +225,6 @@ x-casaos:
         **Notas importantes:**
         - Los archivos se almacenan en `/DATA/AppData/psitransfer/data/`
         - La retención predeterminada es de 24 horas (86400 segundos)
+
+x-compose-app:
+  webui-host: psitransfer-${domain}

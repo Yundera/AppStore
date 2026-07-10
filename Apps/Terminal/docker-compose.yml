@@ -84,3 +84,7 @@ x-casaos:
   # nginxhashlock handles the hash validation automatically
   index: /?hash=$AUTH_HASH
   webui_port: 80
+
+x-compose-app:
+  webui-host: terminal-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

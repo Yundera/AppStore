@@ -205,3 +205,6 @@ x-casaos:
         **Autenticación:** Navidrome requiere crear una cuenta de administrador en el primer lanzamiento.
 
         **Compartir:** Usa la opción Compartir en cualquier álbum o lista de reproducción para generar un enlace público. Cualquiera con el enlace puede escuchar, sin necesidad de cuenta.
+
+x-compose-app:
+  webui-host: navidrome-${domain}

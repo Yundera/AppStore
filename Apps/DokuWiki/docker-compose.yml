@@ -209,3 +209,6 @@ x-casaos:
         4. Haga clic en Guardar — listo!
 
         No se necesita base de datos. Todos los datos se almacenan como archivos de texto.
+
+x-compose-app:
+  webui-host: dokuwiki-${domain}

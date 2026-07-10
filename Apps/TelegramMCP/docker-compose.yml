@@ -193,3 +193,7 @@ x-casaos:
         - The bot token is stored only in `/DATA/AppData/telegrammcp/config.json` on this server and is never logged or returned via the API
         - The Web UI is protected by your Yundera single sign-on — no extra login needed
         - `/mcp` and `/webhook` are intentionally reachable without the login flow (MCP clients and Telegram's servers can't perform it); keep the app domain private and rely on the URL hash for the MCP endpoint
+
+x-compose-app:
+  webui-host: telegrammcp-${domain}
+  webui-path: "/?hash=${AUTH_HASH}"

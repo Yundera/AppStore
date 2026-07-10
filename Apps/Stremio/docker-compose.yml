@@ -139,3 +139,6 @@ x-casaos:
 
         You can find Stremio addons in the Stremio Addon Catalog: https://addons.strem.io/
         Or search for "Stremio addons" online for more options.
+
+x-compose-app:
+  webui-host: stremio-${domain}

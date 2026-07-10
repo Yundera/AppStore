@@ -137,3 +137,7 @@ x-casaos:
         **Note**: This app requires root permissions to function properly with SQLite database.
   index: /?hash=$AUTH_HASH
   webui_port: 80
+
+x-compose-app:
+  webui-host: convertx-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

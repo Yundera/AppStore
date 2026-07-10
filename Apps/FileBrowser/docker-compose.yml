@@ -157,3 +157,6 @@ x-casaos:
     en_us: FileBrowser
   index: /
   webui_port: 80
+
+x-compose-app:
+  webui-host: filebrowser-${domain}

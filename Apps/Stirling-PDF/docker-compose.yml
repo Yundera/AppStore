@@ -344,3 +344,7 @@ x-casaos:
         **Cómo usar:**
         ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!
   index: /login
+
+x-compose-app:
+  webui-host: stirlingpdf-${domain}
+  webui-path: "/login"

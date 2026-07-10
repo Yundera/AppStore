@@ -147,3 +147,7 @@ x-casaos:
   title:
     en_us: Segment Stremio Addon
     fr_fr: Addon Stremio Segment
+
+x-compose-app:
+  webui-host: ssa-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

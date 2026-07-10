@@ -214,3 +214,7 @@ x-casaos:
         **Security:**
         - Docmost credentials are stored only in `/DATA/AppData/docmostmcp/config.json` on this server and never logged or returned via the API
         - The MCP endpoint is gated by the URL hash token; the config UI is protected by your Yundera single sign-on
+
+x-compose-app:
+  webui-host: docmostmcp-${domain}
+  webui-path: "/?hash=${AUTH_HASH}"

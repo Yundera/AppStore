@@ -199,3 +199,6 @@ x-casaos:
       exit 0
     ' || echo "[pre-install] host claude provisioning skipped (host-SSH may be unavailable); continuing"
     exit 0
+
+x-compose-app:
+  webui-host: clauderoot-${domain}

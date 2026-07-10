@@ -76,3 +76,6 @@ x-casaos:
     en_us: Radarr
   store_app_id: radarr
   is_uncontrolled: false
+
+x-compose-app:
+  webui-host: radarr-${domain}

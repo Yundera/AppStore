@@ -87,3 +87,6 @@ x-casaos:
     en_us: qBittorrent
   store_app_id: qbittorrent
   is_uncontrolled: false
+
+x-compose-app:
+  webui-host: qbittorrent-${domain}

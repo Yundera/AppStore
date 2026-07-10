@@ -349,3 +349,7 @@ x-casaos:
         **安全：**
         - Nextcloud 应用密码仅存储在 `/DATA/AppData/nextcloudmcp/config.json` 中，不会被记录或通过 API 返回。
         - Web UI 受您的 Yundera 单点登录 (SSO) 保护——无需额外登录。
+
+x-compose-app:
+  webui-host: nextcloudmcp-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

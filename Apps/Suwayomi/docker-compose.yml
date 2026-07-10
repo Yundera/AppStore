@@ -200,3 +200,6 @@ x-casaos:
         2. "찾아보기"를 클릭하여 소스 찾기
         3. 좋아하는 만화 검색
         4. 읽기 시작 — 진행 상황이 자동 저장됩니다
+
+x-compose-app:
+  webui-host: suwayomi-${domain}

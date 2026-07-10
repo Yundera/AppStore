@@ -240,3 +240,7 @@ x-casaos:
         5. Vérifiez "Soldes" pour voir qui doit à qui
         -----------------------------
         Partagez le lien du groupe avec vos amis - ils auront besoin des identifiants ci-dessus.
+
+x-compose-app:
+  webui-host: spliit-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

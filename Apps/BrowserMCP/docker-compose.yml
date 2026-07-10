@@ -279,3 +279,7 @@ x-casaos:
         | `get_cookies` | 获取浏览器 cookies |
         | `set_cookies` | 设置浏览器 cookies |
         | `clear_cookies` | 清除所有浏览器 cookies |
+
+x-compose-app:
+  webui-host: browsermcp-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

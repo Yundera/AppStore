@@ -199,3 +199,6 @@ x-casaos:
       wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude/workspace/CLAUDE.md
     fi &&
     chown -R 1000:1000 /DATA/AppData/claude
+
+x-compose-app:
+  webui-host: claude-${domain}

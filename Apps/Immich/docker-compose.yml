@@ -209,3 +209,6 @@ x-casaos:
         2. Dans Immich, allez dans **Administration → External Libraries**
         3. Créez une bibliothèque, ajoutez le chemin : `/import`
         4. Cliquez sur **Scan Library**
+
+x-compose-app:
+  webui-host: immich-${domain}

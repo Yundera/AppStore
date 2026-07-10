@@ -76,3 +76,6 @@ x-casaos:
     en_us: Sonarr
   store_app_id: sonarr
   is_uncontrolled: false
+
+x-compose-app:
+  webui-host: sonarr-${domain}

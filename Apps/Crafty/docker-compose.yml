@@ -136,3 +136,6 @@ x-casaos:
     mkdir -p /DATA/AppData/$AppID/config /DATA/AppData/$AppID/servers /DATA/AppData/$AppID/backups /DATA/AppData/$AppID/logs /DATA/AppData/$AppID/import
     chown $PUID:$PGID /DATA/AppData/$AppID
     printf '{"username":"admin","password":"%s!"}' "$APP_DEFAULT_PASSWORD" > /DATA/AppData/$AppID/config/default.json
+
+x-compose-app:
+  webui-host: crafty-${domain}

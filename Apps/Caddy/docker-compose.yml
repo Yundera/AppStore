@@ -181,3 +181,6 @@ x-casaos:
       wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/pre-install/Caddyfile -O /DATA/AppData/caddy/Caddyfile
     fi &&
     chmod -R 755 /DATA/AppData/caddy
+
+x-compose-app:
+  webui-host: caddy-${domain}

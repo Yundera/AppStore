@@ -243,3 +243,6 @@ x-casaos:
         AllRecipes, Food Network, BBC Good Food, y miles de blogs de cocina y sitios web.
         
         **Consejo:** ¡Intenta copiar URLs de recetas de las descripciones de tus videos de cocina favoritos de YouTube!
+
+x-compose-app:
+  webui-host: mealie-${domain}

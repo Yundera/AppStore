@@ -238,3 +238,7 @@ x-casaos:
         | `get_logs` | 查看执行日志 |
         | `clear_logs` | 清除规则的日志 |
         | `get_status` | 获取调度器状态 |
+
+x-compose-app:
+  webui-host: chronosmcp-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

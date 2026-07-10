@@ -96,3 +96,6 @@ x-casaos:
   title:
     en_us: Duplicati
   index: /
+
+x-compose-app:
+  webui-host: duplicati-${domain}

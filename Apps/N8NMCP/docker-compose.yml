@@ -199,3 +199,7 @@ x-casaos:
         **Security:**
         - The API key is stored only in `/DATA/AppData/n8nmcp/config.json` and is never logged or returned via the API
         - The Web UI is protected by your Yundera single sign-on — no extra login needed
+
+x-compose-app:
+  webui-host: n8nmcp-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

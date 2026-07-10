@@ -188,3 +188,6 @@ x-casaos:
         Notes : le split-tunnel par defaut ne route que `10.9.0.0/24`, votre trafic internet normal reste direct (pas de kill-switch). Le service cible doit ecouter sur toutes les interfaces (`0.0.0.0`).
 
         **Pare-feu :** le VPN ecoute sur **UDP 51820** - ce port doit etre ouvert. L'interface de gestion ecoute aussi sur le port hote `51821` en HTTP ; utilisez le lien HTTPS de la passerelle.
+
+x-compose-app:
+  webui-host: wgeasyhost-${domain}

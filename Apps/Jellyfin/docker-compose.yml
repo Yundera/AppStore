@@ -186,3 +186,6 @@ x-casaos:
         - Musique : `/DATA/Media/Music/`
 
         **Astuce :** Jellyfin est entièrement gratuit sans abonnement ni limitation.
+
+x-compose-app:
+  webui-host: jellyfin-${domain}

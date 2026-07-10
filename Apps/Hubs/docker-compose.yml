@@ -418,3 +418,6 @@ x-casaos:
 
         **리소스:** RAM 약 3 GB, vCPU 약 2개. 동시 접속 ~10명 이하 룸에 적합합니다.
         **More info:** [Hubs Community on Yundera](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
+
+x-compose-app:
+  webui-host: hubs-${domain}

@@ -222,3 +222,6 @@ x-casaos:
 
         **Nota:** La protección por contraseña está activada por defecto.
   index: /
+
+x-compose-app:
+  webui-host: notediscovery-${domain}

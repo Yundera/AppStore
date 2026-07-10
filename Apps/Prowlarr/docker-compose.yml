@@ -77,3 +77,6 @@ x-casaos:
     en_us: Prowlarr
   store_app_id: prowlarr
   is_uncontrolled: false
+
+x-compose-app:
+  webui-host: prowlarr-${domain}

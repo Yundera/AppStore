@@ -451,3 +451,6 @@ x-casaos:
         **Importante**: El servicio SMTP de Yundera está conectado automáticamente - ¡la recuperación de contraseñas funciona de inmediato!
   index: /
   webui_port: 80
+
+x-compose-app:
+  webui-host: vaultwarden-${domain}

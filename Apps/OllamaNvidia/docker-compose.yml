@@ -245,3 +245,6 @@ x-casaos:
         3. 새 대화를 시작하고 모델을 선택하세요
 
         **참고:** 이메일 기반 비밀번호 재설정이 없습니다 — 자격 증명을 안전하게 보관하세요.
+
+x-compose-app:
+  webui-host: ollama-nvidia-${domain}

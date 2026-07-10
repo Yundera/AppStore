@@ -419,3 +419,6 @@ x-casaos:
         - Virtual Seafile drive available at `/DATA/Seafile` on the host system
   title:
     en_us: Seafile
+
+x-compose-app:
+  webui-host: seafile-${domain}

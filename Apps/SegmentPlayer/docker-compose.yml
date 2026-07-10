@@ -140,3 +140,6 @@ x-casaos:
   title:
     en_us: SegmentPlayer
     fr_fr: SegmentPlayer
+
+x-compose-app:
+  webui-host: segment-${domain}

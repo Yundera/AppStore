@@ -302,3 +302,6 @@ x-casaos:
       DOCMOST_APP_SECRET=$(openssl rand -hex 32) &&
       printf 'DOCMOST_APP_SECRET=%s\n' "$DOCMOST_APP_SECRET" > "$ENV_FILE"
     fi
+
+x-compose-app:
+  webui-host: docmost-${domain}

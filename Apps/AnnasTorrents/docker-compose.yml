@@ -182,3 +182,6 @@ x-casaos:
         **⚠️ Safety:** this app downloads and seeds real content. Distributing
         certain materials may not be legal in all jurisdictions. Consider a VPN and
         seed at your own risk.
+
+x-compose-app:
+  webui-host: annas-torrents-webui-${domain}

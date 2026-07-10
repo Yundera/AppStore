@@ -76,3 +76,6 @@ x-casaos:
     en_us: Lidarr
   store_app_id: lidarr
   is_uncontrolled: false
+
+x-compose-app:
+  webui-host: lidarr-${domain}

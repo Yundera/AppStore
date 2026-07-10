@@ -297,3 +297,6 @@ x-casaos:
         **Cómo usar:**
         ¡Crea tu primer flujo de trabajo haciendo clic en el botón "+" y conectando los nodos!
   index: /
+
+x-compose-app:
+  webui-host: n8n-${domain}

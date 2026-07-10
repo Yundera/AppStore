@@ -562,3 +562,6 @@ x-casaos:
 
         Si más adelante ves una advertencia "mimetype migrations available", ejecuta desde el terminal CasaOS:
         `docker exec nextcloud php occ maintenance:repair --include-expensive`
+
+x-compose-app:
+  webui-host: nextcloud-${domain}

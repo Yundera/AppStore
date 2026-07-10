@@ -168,3 +168,6 @@ x-casaos:
       wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/pre-install/nginx.conf -O /DATA/AppData/Nginx/nginx.conf
     fi &&
     chmod -R 755 /DATA/AppData/nginx
+
+x-compose-app:
+  webui-host: nginx-${domain}

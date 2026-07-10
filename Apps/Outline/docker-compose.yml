@@ -460,3 +460,6 @@ x-casaos:
       sed -i "s|__PCS_EMAIL__|$PCS_EMAIL|g" "$DEX_CONFIG" &&
       sed -i "s|__BCRYPT_HASH__|$BCRYPT_HASH|g" "$DEX_CONFIG"
     fi
+
+x-compose-app:
+  webui-host: outline-${domain}
