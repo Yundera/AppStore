@@ -1,0 +1,114 @@
+name: docusaurus
+
+services:
+  docusaurus:
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: docusaurus
+    hostname: docusaurus
+    restart: unless-stopped
+    user: "root"
+    expose:
+      - "80"
+    labels:
+      caddy_0: docusaurus-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: docusaurus-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: docusaurus-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "docusaurus-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+    depends_on:
+      - docusaurus-backend
+    cpu_shares: 80
+    networks:
+      - pcs
+
+  docusaurus-init:
+    image: node:20-alpine3.20
+    container_name: docusaurus-init
+    restart: "no"
+    user: "0:0"
+    cpu_shares: 50
+    working_dir: /tmp
+    volumes:
+      - /DATA/AppData/$AppID/src/:/output
+      - /DATA/AppData/$AppID/build/:/build-output
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        if [ -f /output/.initialized ]; then
+          echo "Already initialized, skipping."
+          exit 0
+        fi
+        echo "Initializing Docusaurus project..."
+        npx create-docusaurus@3.10.1 site classic --javascript \
+          && cd site \
+          && npm run build \
+          && cp -r ./* /output/ \
+          && cp -r /output/build/* /build-output/ \
+          && touch /output/.initialized \
+          && echo "Done."
+
+  docusaurus-backend:
+    image: nginx:1.27-alpine
+    container_name: docusaurus-backend
+    restart: unless-stopped
+    user: "0:0"
+    expose:
+      - "80"
+    volumes:
+      - /DATA/AppData/$AppID/build/:/usr/share/nginx/html/:ro
+    depends_on:
+      docusaurus-init:
+        condition: service_completed_successfully
+    cpu_shares: 50
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: docusaurus
+  store_app_id: docusaurus
+  webui_port: 80
+  index: /?hash=${AUTH_HASH}
+  scheme: https
+  author: Yundera Team
+  category: Utilities
+  developer: Meta (Facebook)
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docusaurus/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docusaurus/screenshot-1.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docusaurus/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docusaurus/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docusaurus/screenshot-3.png
+  title:
+    en_us: Docusaurus
+  tagline:
+    en_us: Build beautiful documentation websites
+  description:
+    en_us: |
+      Docusaurus is a static site generator by Meta. Build documentation
+      websites with Markdown, versioning, i18n, and search built in.
+      Perfect for project docs, knowledge bases, and blogs.
+  tips:
+    before_install:
+      en_us: |
+        A new Docusaurus project will be created on first install.
+        Edit your docs in the File Manager at /DATA/AppData/docusaurus/src/docs/.
+        To rebuild after editing, restart the app.
