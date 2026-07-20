@@ -1,0 +1,82 @@
+name: prowlarr
+
+services:
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:2.4.0
+    container_name: prowlarr
+    restart: unless-stopped
+    user: $PUID:$PGID
+    expose:
+      - 9696
+    labels:
+      caddy_0: prowlarr-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 9696}}"
+      caddy_1: prowlarr-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 9696}}"
+      caddy_2: prowlarr-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 9696}}"
+    networks:
+      - pcs
+    environment:
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/prowlarr/config:/config   # dedicated Prowlarr config
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  main: prowlarr
+  index: /
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/prowlarr/config
+  tips:
+    before_install:
+      en_us: |
+        🔍 **Prowlarr** is an indexer manager — it manages your trackers/indexers in one place and syncs them to Radarr, Sonarr and other *arr apps automatically.
+
+        📂 Config lives in `/DATA/AppData/prowlarr/`.
+
+        🔗 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):
+        - **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.
+        - **qBittorrent** (`qbittorrent:80`) — add it as a *Download Client* inside **Radarr/Sonarr** for automated grabs (a download client added in Prowlarr only powers Prowlarr's own manual searches and does not sync to apps).
+        - **Jellyfin** — point it at `/DATA/Media` to stream everything Radarr/Sonarr import.
+
+        ❓ Questions? Contact us at help@yundera.com
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Media
+  tags: ["media", "personal"]
+  developer: Servarr (Prowlarr)
+  description:
+    en_us: Prowlarr is an indexer manager and proxy built on the *arr stack. It integrates seamlessly with Radarr, Sonarr, Lidarr and Readarr, managing all of your trackers and indexers from a single interface and keeping them in sync. Pairs with the Radarr, Sonarr and Lidarr standalone apps in this store.
+    fr_fr: Prowlarr est un gestionnaire et proxy d'indexeurs construit sur la suite *arr. Il s'intègre parfaitement avec Radarr, Sonarr, Lidarr et Readarr, gérant tous vos trackers et indexeurs depuis une seule interface et les gardant synchronisés. S'associe aux apps Radarr, Sonarr et Lidarr autonomes de ce store.
+    es_es: Prowlarr es un gestor y proxy de indexadores construido sobre el stack *arr. Se integra perfectamente con Radarr, Sonarr, Lidarr y Readarr, gestionando todos tus trackers e indexadores desde una sola interfaz y manteniéndolos sincronizados. Se combina con las apps Radarr, Sonarr y Lidarr independientes de esta tienda.
+    zh_cn: Prowlarr 是基于 *arr 堆栈构建的索引器管理器和代理。它与 Radarr、Sonarr、Lidarr 和 Readarr 无缝集成，在单一界面中管理您的所有跟踪器和索引器并保持同步。与本商店中的 Radarr、Sonarr 和 Lidarr 独立应用配合使用。
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Prowlarr/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Prowlarr/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Prowlarr/thumbnail.png
+  tagline:
+    en_us: Manage all your indexers in one place and sync them to every *arr app.
+    fr_fr: Gérez tous vos indexeurs en un seul endroit et synchronisez-les avec chaque app *arr.
+    es_es: Gestiona todos tus indexadores en un solo lugar y sincronízalos con cada app *arr.
+    zh_cn: 在一处管理所有索引器，并同步到每个 *arr 应用。
+  title:
+    en_us: Prowlarr
+  store_app_id: prowlarr
+  is_uncontrolled: false
+
+x-compose-app:
+  webui-host: prowlarr-${domain}

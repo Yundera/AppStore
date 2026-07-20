@@ -63,6 +63,7 @@ x-casaos:
     - arm64
   author: Yundera Team
   category: Downloader
+  tags: ["files", "personal"]
   developer: qBittorrent Project
   description:
     en_us: qBittorrent is a cross-platform free and open-source BitTorrent client with a clean, simple interface and powerful features including sequential downloading, bandwidth scheduling, and RSS feed support.
@@ -86,3 +87,6 @@ x-casaos:
     en_us: qBittorrent
   store_app_id: qbittorrent
   is_uncontrolled: false
+
+x-compose-app:
+  webui-host: qbittorrent-${domain}

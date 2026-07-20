@@ -1,10 +1,10 @@
 name: chronosmcp
 services:
-  # Main server — reachable at chronosmcp:9054 on the pcs network
-  chronosmcp:
+  # Main server — reachable at chronosmcp-backend:9054 on the pcs network
+  chronosmcp-backend:
     image: ghcr.io/worph/chronos-mcp:1.0.7
-    container_name: chronosmcp
-    hostname: chronosmcp
+    container_name: chronosmcp-backend
+    hostname: chronosmcp-backend
     user: $PUID:$PGID
     restart: unless-stopped
     expose:
@@ -21,9 +21,15 @@ services:
     networks:
       - pcs
 
-  # Nginx-hash-lock provides perimeter authentication for the web UI
+  # AppShield provides perimeter authentication (SSO + hash) for the web UI
   chronosmcp-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: chronosmcp
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: chronosmcp
     restart: unless-stopped
     cpu_shares: 50
     expose:
@@ -31,13 +37,14 @@ services:
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: chronosmcp
+      BACKEND_HOST: chronosmcp-backend
       BACKEND_PORT: "9054"
       LISTEN_PORT: "80"
-      USER: "ADMIN"
-      PASSWORD: $APP_DEFAULT_PASSWORD
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     depends_on:
-      - chronosmcp
+      - chronosmcp-backend
     networks:
       - pcs
     labels:
@@ -59,10 +66,11 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: chronosmcp
+  main: chronosmcp-backend
   index: /?hash=$AUTH_HASH
   author: Yundera
   category: Utilities
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **Schedule MCP tool calls with cron expressions**
@@ -149,7 +157,7 @@ x-casaos:
           "mcpServers": {
             "chronos-mcp": {
               "type": "http",
-              "url": "http://chronosmcp:9054/mcp"
+              "url": "http://chronosmcp-backend:9054/mcp"
             }
           }
         }
@@ -211,7 +219,7 @@ x-casaos:
           "mcpServers": {
             "chronos-mcp": {
               "type": "http",
-              "url": "http://chronosmcp:9054/mcp"
+              "url": "http://chronosmcp-backend:9054/mcp"
             }
           }
         }
@@ -230,3 +238,7 @@ x-casaos:
         | `get_logs` | 查看执行日志 |
         | `clear_logs` | 清除规则的日志 |
         | `get_status` | 获取调度器状态 |
+
+x-compose-app:
+  webui-host: chronosmcp-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

@@ -2,7 +2,7 @@ name: stirlingpdf
 
 services:
   stirlingpdf:
-    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.8.0
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.10.0
     container_name: stirling-pdf
     restart: unless-stopped
     expose:
@@ -64,6 +64,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: Office
+  tags: ["files", "productivity", "business", "personal"]
   developer: Stirling Tools
   description:
     en_us: |
@@ -343,3 +344,7 @@ x-casaos:
         **Cómo usar:**
         ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!
   index: /login
+
+x-compose-app:
+  webui-host: stirlingpdf-${domain}
+  webui-path: "/login"

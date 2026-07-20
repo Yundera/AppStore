@@ -1,15 +1,23 @@
 name: spliit
 services:
   nginxhashlock:
-    image: ghcr.io/yundera/nginx-hash-lock:latest
-    container_name: spliit-nginxhashlock
+    image: ghcr.io/yundera/appshield:2.0.3
+    container_name: spliit
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: spliit
     restart: unless-stopped
     user: "root"
     environment:
       AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: "spliit"
+      BACKEND_HOST: "spliit-backend"
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     expose:
       - 80
     labels:
@@ -22,8 +30,10 @@ services:
       caddy_2: spliit-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
-      - spliit
-      - db
+      spliit-backend:
+        condition: service_started
+      db:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -37,17 +47,24 @@ services:
       - NET_ADMIN
 
   db:
-    image: postgres:16-alpine
+    image: postgres:16.13-alpine
     container_name: spliit-db
     user: 0:0
+    cpu_shares: 50
     environment:
       POSTGRES_DB: spliit
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
       TZ: UTC
     volumes:
-      - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
+      - /DATA/AppData/spliit/pgdata/:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d spliit"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - pcs
     deploy:
@@ -55,19 +72,21 @@ services:
         limits:
           memory: 512M
 
-  spliit:
+  spliit-backend:
     image: ghcr.io/spliit-app/spliit:1.19.0
-    container_name: spliit
+    container_name: spliit-backend
     restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 50
     environment:
       TZ: $TZ
       POSTGRES_PRISMA_URL: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
       POSTGRES_URL_NON_POOLING: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - pcs
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
     deploy:
       resources:
         limits:
@@ -86,6 +105,7 @@ x-casaos:
   webui_port: 80
   author: Yundera Team
   category: Finance
+  tags: ["business", "personal", "productivity"]
   developer: Spliit Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/icon.png
   screenshot_link:
@@ -93,10 +113,14 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/thumbnail.png
-  index: /?hash=$AUTH_HASH  
+  index: /?hash=$AUTH_HASH
   store_app_id: Spliit
   title:
     en_us: Spliit
+    ko_kr: Spliit
+    zh_cn: Spliit
+    fr_fr: Spliit
+    es_es: Spliit
   tagline:
     en_us: Free and Open Source Expense Sharing App
     ko_kr: 무료 오픈소스 비용 분할 앱
@@ -127,6 +151,14 @@ x-casaos:
   tips:
     before_install:
       en_us: |
+        **Default Login (for guests visiting shared links):**
+
+        | Field    | Value   |
+        |----------|---------|
+        | Username | `admin` |
+        | Password | `spliit`|
+
+        You can change these in the app's environment settings before installing.
         -----------------------------
         **How to use:**
         1. Click "Create a group"
@@ -134,9 +166,17 @@ x-casaos:
         3. Add people (just their names)
         4. Start adding expenses
         5. Check "Balances" to see who owes whom
-        -----------------------------        
-        Share the group link with friends - no signup needed!
+        -----------------------------
+        Share the group link with friends - they will need the credentials above to access it.
       ko_kr: |
+        **기본 로그인 (공유 링크 방문자용):**
+
+        | 항목     | 값      |
+        |----------|---------|
+        | 사용자명 | `admin` |
+        | 비밀번호 | `spliit`|
+
+        설치 전 앱의 환경 설정에서 변경할 수 있습니다.
         -----------------------------
         **사용 방법:**
         1. "그룹 만들기" 클릭
@@ -145,7 +185,16 @@ x-casaos:
         4. 비용 추가 시작
         5. "잔액"을 확인하여 누가 누구에게 빚졌는지 확인
         -----------------------------
+        그룹 링크를 친구와 공유하세요 - 위 자격증명이 필요합니다.
       zh_cn: |
+        **默认登录（访问共享链接的访客）：**
+
+        | 字段   | 值      |
+        |--------|---------|
+        | 用户名 | `admin` |
+        | 密码   | `spliit`|
+
+        您可以在安装前在应用的环境设置中更改这些。
         -----------------------------
         **使用方法：**
         1. 点击"创建群组"
@@ -154,7 +203,16 @@ x-casaos:
         4. 开始添加费用
         5. 查看"余额"了解谁欠谁
         -----------------------------
+        与朋友分享群组链接 - 他们需要上面的凭据才能访问。
       es_es: |
+        **Inicio de sesión predeterminado (para invitados con enlaces compartidos):**
+
+        | Campo      | Valor   |
+        |------------|---------|
+        | Usuario    | `admin` |
+        | Contraseña | `spliit`|
+
+        Puedes cambiarlos en la configuración de entorno de la app antes de instalar.
         -----------------------------
         **Cómo usar:**
         1. Haz clic en "Crear un grupo"
@@ -163,7 +221,16 @@ x-casaos:
         4. Empieza a añadir gastos
         5. Revisa "Saldos" para ver quién debe a quién
         -----------------------------
+        Comparte el enlace del grupo con amigos - necesitarán las credenciales anteriores.
       fr_fr: |
+        **Connexion par défaut (pour les invités avec liens partagés) :**
+
+        | Champ         | Valeur  |
+        |---------------|---------|
+        | Utilisateur   | `admin` |
+        | Mot de passe  | `spliit`|
+
+        Vous pouvez les modifier dans les paramètres d'environnement de l'app avant l'installation.
         -----------------------------
         **Comment utiliser:**
         1. Cliquez sur "Créer un groupe"
@@ -172,3 +239,8 @@ x-casaos:
         4. Commencez à ajouter des dépenses
         5. Vérifiez "Soldes" pour voir qui doit à qui
         -----------------------------
+        Partagez le lien du groupe avec vos amis - ils auront besoin des identifiants ci-dessus.
+
+x-compose-app:
+  webui-host: spliit-${domain}
+  webui-path: "/?hash=$AUTH_HASH"

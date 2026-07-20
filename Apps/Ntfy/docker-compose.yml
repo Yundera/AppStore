@@ -55,6 +55,7 @@ x-casaos:
   index: /
   author: Yundera
   category: Utilities
+  tags: ["developer", "ai"]
   description:
     en_us: |
       **Push notifications for AI assistants via ntfy + MCP**
@@ -181,3 +182,6 @@ x-casaos:
         | `send_photo` | 发送带图片附件的通知 |
         | `list_messages` | 从主题读取缓存消息 |
         | `server_info` | 获取服务器健康状态和版本信息 |
+
+x-compose-app:
+  webui-host: ntfy-${domain}

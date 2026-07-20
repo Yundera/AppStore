@@ -51,6 +51,7 @@ x-casaos:
   main: duplicati
   author: Yundera Team
   category: Cloud
+  tags: ["files", "privacy", "personal"]
   description:
     en_us: Duplicati is a free, open source, backup client that securely stores encrypted, incremental, compressed backups on cloud storage services and remote file servers.
     zh_cn: Duplicati是一个免费的开源备份客户端，它可以安全地存储加密的、增量的、压缩的备份文件到云存储服务和远程文件服务器。
@@ -95,3 +96,6 @@ x-casaos:
   title:
     en_us: Duplicati
   index: /
+
+x-compose-app:
+  webui-host: duplicati-${domain}

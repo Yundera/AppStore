@@ -1,0 +1,187 @@
+name: annas-torrents-webui
+
+services:
+  # ── AppShield sidecar ──────────────────────────────────────────────
+  # AppShield (ghcr.io/yundera/appshield, formerly nginx-hash-lock) in OIDC
+  # mode. It self-registers as an OIDC client with the PCS auth-registrar on
+  # first login and gates every request through the built-in Authelia SSO
+  # before proxying to the backend. Only this service is publicly reachable
+  # (via Caddy); the backend has no Caddy labels and lives on the internal
+  # pcs network.
+  annas-torrents-webui:
+    image: ghcr.io/yundera/appshield:2.0.5
+    container_name: annas-torrents-webui
+    # OIDC identity: AppShield builds its OIDC redirect URIs from os.hostname(),
+    # and the auth-registrar attests this app's name via the container's PTR
+    # record — both container_name and hostname must equal the app name, or OIDC
+    # registration fails.
+    hostname: annas-torrents-webui
+    restart: unless-stopped
+    user: "root"
+    expose:
+      - "80"
+    labels:
+      caddy_0: annas-torrents-webui-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: annas-torrents-webui-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: annas-torrents-webui-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      BACKEND_HOST: "annas-torrents-webui-backend"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+    depends_on:
+      - annas-torrents-webui-backend
+    networks:
+      - pcs
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    cpu_shares: 80
+
+  # ── Backend (protected) ────────────────────────────────────────────
+  # The FastAPI + embedded-libtorrent app. No Caddy labels: the web UI is
+  # only reachable through the AppShield sidecar. The BitTorrent peer port
+  # (6881 TCP+UDP) is published directly to the host — it is raw swarm
+  # traffic, not HTTP, so it does not (and cannot) go through the sidecar.
+  annas-torrents-webui-backend:
+    image: ghcr.io/worph/annas-torrents-webui:1.0.2
+    container_name: annas-torrents-webui-backend
+    restart: unless-stopped
+    # Runs unprivileged as the platform-injected PUID:PGID (1000:1000). The data
+    # dir is created + chowned by pre-install-cmd below so this non-root process
+    # can write /data/content — no root needed.
+    expose:
+      - "8080"          # Web UI — internal only, fronted by the sidecar
+    ports:
+      - "6881:6881/tcp" # BitTorrent peer traffic
+      - "6881:6881/udp" # DHT / uTP
+    environment:
+      DATA_DIR: /data
+      TORRENT_PORT: "6881"
+      # Public base URL for share links (/view). Points at the SSO-fronted
+      # domain so shared links resolve for other viewers.
+      PUBLIC_URL: "https://annas-torrents-webui-${APP_DOMAIN}"
+      TZ: $TZ
+    volumes:
+      - /DATA/AppData/annas-torrents-webui/data/:/data
+    networks:
+      - pcs
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          memory: 512M
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: annas-torrents-webui
+  webui_port: 80
+  index: /
+  # Create the data dir owned by the runtime user before first start, so the
+  # non-root backend (UID 1000:1000, the platform-injected PUID:PGID) can write
+  # it. Without this, Docker auto-creates the bind mount as root:root and the
+  # app crashes with EACCES on /data/content. Hardcoded to 1000:1000 because
+  # CasaOS's install-time substitution strips ${VAR:-default} fallbacks and
+  # leaves bare $PUID/$PGID that are empty in the pre-install shell.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/annas-torrents-webui/data &&
+    chown -R 1000:1000 /DATA/AppData/annas-torrents-webui/data
+  author: Yundera Team
+  category: Downloader
+  tags: ["files", "personal"]
+  developer: cparthiv
+  store_app_id: annas-torrents-webui
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/thumbnail.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/screenshot-1.png
+  title:
+    en_us: Anna's Torrents
+  tagline:
+    en_us: Seed Anna's Archive and watch your live contribution — behind SSO.
+    fr_fr: Partagez Anna's Archive et suivez votre contribution en direct — derrière le SSO.
+  description:
+    en_us: |
+      **A dashboard for seeding Anna's Archive — the largest open library in human history.**
+
+      Anna's Archive stays alive because volunteers seed its torrents. This web UI
+      wraps the `annas-torrents` selection logic in a friendly dashboard: pick how
+      much you want to contribute, and the app downloads and seeds the actual
+      content from an embedded libtorrent session — no separate torrent client to
+      install and wire up.
+
+      **What you can do:**
+      - Set a target size (TB/GB) and start seeding with one click
+      - Watch live **coverage** — how much of Anna's Archive your seeded torrents represent
+      - Track **disk used**, **upload/download bandwidth**, and **swarm health** (seeders/leechers) in near real time
+      - Share your impact with a read-only `/view` vantage page and multi-network share buttons
+      - Donate to Anna's Archive directly from the UI
+
+      **Protected by AppShield:** the control panel is fronted by the built-in
+      Authelia SSO, so only you can reach it — no login page to configure.
+
+      **Note on safety:** this app downloads and seeds real content. Distributing
+      certain materials may not be legal in all jurisdictions; seed at your own risk.
+    fr_fr: |
+      **Un tableau de bord pour partager Anna's Archive — la plus grande bibliothèque ouverte de l'histoire.**
+
+      Anna's Archive survit grâce aux volontaires qui partagent ses torrents. Cette
+      interface web enveloppe la logique de sélection d'`annas-torrents` dans un
+      tableau de bord convivial : choisissez votre contribution, et l'application
+      télécharge et partage le contenu réel via une session libtorrent embarquée —
+      aucun client torrent séparé à installer.
+
+      **Ce que vous pouvez faire :**
+      - Définir une taille cible (To/Go) et démarrer le partage en un clic
+      - Suivre la **couverture** en direct de la portion d'Anna's Archive que vous préservez
+      - Suivre l'**espace disque**, la **bande passante** et la **santé du swarm** en temps quasi réel
+      - Partager votre impact via une page `/view` en lecture seule et des boutons de partage
+      - Faire un don à Anna's Archive directement depuis l'interface
+
+      **Protégé par AppShield :** le panneau de contrôle est protégé par le SSO
+      Authelia intégré — aucune page de connexion à configurer.
+  tips:
+    before_install:
+      en_us: |
+        **Access & login**
+        - Open the app URL and sign in with your Yundera SSO account — AppShield
+          (Authelia) gates the dashboard, so there is no separate password to set.
+
+        **BitTorrent connectivity**
+        - Peer traffic uses port **6881 (TCP + UDP)**, published directly to the
+          host. For best swarm connectivity, forward/open 6881 on your router.
+
+        **Getting started**
+        1. Set a contribution target (in TB or GB) and click *Start contributing*.
+        2. The app fetches the prioritized torrent list and begins downloading +
+           seeding to its data volume.
+        3. The dashboard updates coverage, disk, bandwidth, and swarm stats live.
+
+        **Data** is stored under `/DATA/AppData/annas-torrents-webui/data`
+        (.torrent files, seeded content, and libtorrent resume state — seeding
+        resumes across restarts without re-checking).
+
+        **⚠️ Safety:** this app downloads and seeds real content. Distributing
+        certain materials may not be legal in all jurisdictions. Consider a VPN and
+        seed at your own risk.
+
+x-compose-app:
+  webui-host: annas-torrents-webui-${domain}

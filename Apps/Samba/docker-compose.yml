@@ -52,6 +52,7 @@ x-casaos:
     - arm
   author: Yundera Team
   category: Cloud
+  tags: ["files", "personal", "business"]
   description:
     en_us: |
       SMB File Server - Universal Network File Sharing

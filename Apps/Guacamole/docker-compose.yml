@@ -67,6 +67,7 @@ x-casaos:
   main: guacamole
   index: /guacamole
   category: Productivity
+  tags: ["productivity", "developer"]
   tagline:
     en_us: Open-source remote desktop gateway.
     zh_cn: 开源远程桌面网关。
@@ -130,9 +131,17 @@ x-casaos:
         | Username | Password |
         | -------- | -------- |
         | `guacadmin`    | `guacadmin`    |
+
+        For better performance, you can access Guacamole directly at
+        https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io/guacamole/ instead of going
+        through the nsl.sh gateway.
       zh_cn: |
         默认账号
 
         | 用户名 | 密码 |
         | -------- | -------- |
         | `guacadmin`    | `guacadmin`    |
+
+x-compose-app:
+  webui-host: guacamole-${domain}
+  webui-path: "/guacamole"

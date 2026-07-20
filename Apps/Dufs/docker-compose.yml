@@ -60,6 +60,7 @@ x-casaos:
   main: dufs
   author: Yundera Team
   category: Cloud
+  tags: ["files", "personal"]
   description:
     en_us: |
       Dufs - Modern File Server with WebDAV Support
@@ -139,3 +140,6 @@ x-casaos:
     en_us: Dufs
   index: /
   webui_port: 80
+
+x-compose-app:
+  webui-host: dufs-${domain}
