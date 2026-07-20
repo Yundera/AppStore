@@ -1,0 +1,241 @@
+name: uptimekuma
+
+services:
+  uptimekuma:
+    image: louislam/uptime-kuma:2.4.0
+    container_name: uptimekuma
+    restart: unless-stopped
+    user: "0:0"
+    networks:
+      - pcs
+    expose:
+      - "80"
+    labels:
+      caddy_0: uptimekuma-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: uptimekuma-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: uptimekuma-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    volumes:
+      - /DATA/AppData/$AppID/data/:/app/data
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      UPTIME_KUMA_PORT: 80
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const http = require('http'); const req = http.request({host:'localhost',port:80,path:'/api/entry-page',timeout:3000}, res => { process.exit(res.statusCode === 200 ? 0 : 1) }); req.on('error', () => process.exit(1)); req.end()\""]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 90
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: uptimekuma
+  webui_port: 80
+  author: Yundera Team
+  category: Utilities
+  developer: Louis Lam
+  store_app_id: uptimekuma
+  tags: ["monitoring", "uptime", "status"]
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/thumbnail.png
+  description:
+    en_us: |
+      **Self-hosted monitoring tool for websites, APIs, and services**
+
+      Uptime Kuma is a fancy, open-source monitoring tool that checks if your websites, APIs, and services are online. Get instant notifications when something goes down.
+
+      **Key Features:**
+      - HTTP(s), TCP, Ping, DNS, Docker, and 20+ monitor types
+      - Beautiful real-time status dashboard
+      - Notifications via Email, Telegram, Discord, Slack, and 90+ services
+      - Multi-language support
+      - Status pages for public sharing
+      - Proxy support (SOCKS5, HTTP)
+      - Certificate expiry monitoring
+      - 1-minute monitoring intervals
+
+      **Perfect for:** Anyone who wants to monitor their websites, APIs, and services with a beautiful dashboard and instant alerts.
+    ko_kr: |
+      **웹사이트, API, 서비스를 위한 셀프호스팅 모니터링 도구**
+
+      Uptime Kuma는 웹사이트, API, 서비스가 온라인인지 확인하는 세련된 오픈소스 모니터링 도구입니다. 서비스가 다운되면 즉시 알림을 받으세요.
+
+      **주요 기능:**
+      - HTTP(s), TCP, Ping, DNS, Docker 등 20가지 이상의 모니터 유형
+      - 아름다운 실시간 상태 대시보드
+      - 이메일, Telegram, Discord, Slack 등 90개 이상의 알림 서비스
+      - 다국어 지원
+      - 공개 공유를 위한 상태 페이지
+      - 프록시 지원 (SOCKS5, HTTP)
+      - 인증서 만료 모니터링
+      - 1분 간격 모니터링
+
+      **이런 분께 완벽해요:** 아름다운 대시보드와 즉각적인 알림으로 웹사이트, API, 서비스를 모니터링하고 싶은 모든 분.
+    zh_cn: |
+      **用于网站、API 和服务的自托管监控工具**
+
+      Uptime Kuma 是一个精美的开源监控工具，可以检查您的网站、API 和服务是否在线。当服务宕机时，您会立即收到通知。
+
+      **主要功能：**
+      - HTTP(s)、TCP、Ping、DNS、Docker 等 20 多种监控类型
+      - 精美的实时状态仪表板
+      - 通过邮件、Telegram、Discord、Slack 等 90 多种服务发送通知
+      - 多语言支持
+      - 可公开分享的状态页面
+      - 代理支持（SOCKS5、HTTP）
+      - 证书到期监控
+      - 1 分钟监控间隔
+
+      **非常适合：** 任何想要通过精美仪表板和即时警报来监控网站、API 和服务的人。
+    fr_fr: |
+      **Outil de surveillance auto-hébergé pour sites web, API et services**
+
+      Uptime Kuma est un élégant outil de surveillance open-source qui vérifie si vos sites web, API et services sont en ligne. Recevez des notifications instantanées en cas de panne.
+
+      **Fonctionnalités principales :**
+      - HTTP(s), TCP, Ping, DNS, Docker et plus de 20 types de moniteurs
+      - Magnifique tableau de bord d'état en temps réel
+      - Notifications par e-mail, Telegram, Discord, Slack et plus de 90 services
+      - Support multilingue
+      - Pages de statut pour le partage public
+      - Support proxy (SOCKS5, HTTP)
+      - Surveillance de l'expiration des certificats
+      - Intervalles de surveillance d'1 minute
+
+      **Parfait pour :** Toute personne souhaitant surveiller ses sites web, API et services avec un beau tableau de bord et des alertes instantanées.
+    es_es: |
+      **Herramienta de monitoreo auto-alojada para sitios web, APIs y servicios**
+
+      Uptime Kuma es una elegante herramienta de monitoreo de código abierto que verifica si tus sitios web, APIs y servicios están en línea. Recibe notificaciones instantáneas cuando algo falla.
+
+      **Características principales:**
+      - HTTP(s), TCP, Ping, DNS, Docker y más de 20 tipos de monitores
+      - Hermoso panel de estado en tiempo real
+      - Notificaciones por correo, Telegram, Discord, Slack y más de 90 servicios
+      - Soporte multiidioma
+      - Páginas de estado para compartir públicamente
+      - Soporte de proxy (SOCKS5, HTTP)
+      - Monitoreo de expiración de certificados
+      - Intervalos de monitoreo de 1 minuto
+
+      **Perfecto para:** Cualquiera que quiera monitorear sus sitios web, APIs y servicios con un hermoso panel y alertas instantáneas.
+  tagline:
+    en_us: Self-hosted uptime monitoring with beautiful dashboard
+    ko_kr: 아름다운 대시보드를 갖춘 셀프호스팅 업타임 모니터링
+    zh_cn: 拥有精美仪表板的自托管正常运行时间监控
+    fr_fr: Surveillance de disponibilité auto-hébergée avec tableau de bord élégant
+    es_es: Monitoreo de disponibilidad auto-alojado con hermoso panel
+  title:
+    en_us: Uptime Kuma
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started:**
+
+        1. After installation, visit your Uptime Kuma instance
+        2. Create your admin account on first visit
+        3. Add your first monitor (HTTP, Ping, TCP, etc.)
+        4. Set up notification channels (Email, Telegram, Discord, etc.)
+
+        🔒 **HTTPS & Let's Encrypt**: Your connection is automatically secured with a Let's Encrypt certificate. After first setup, you may need to wait a few minutes for the certificate to be provisioned. Once issued, HTTPS works automatically.
+
+        **Features:**
+        - 20+ monitor types supported
+        - 90+ notification services
+        - Public status pages
+        - Certificate expiry monitoring
+
+        **Note:** The first user to register becomes the admin.
+      ko_kr: |
+        **시작하기:**
+
+        1. 설치 후 Uptime Kuma 인스턴스를 방문하세요
+        2. 첫 방문 시 관리자 계정을 생성하세요
+        3. 첫 번째 모니터를 추가하세요 (HTTP, Ping, TCP 등)
+        4. 알림 채널을 설정하세요 (이메일, Telegram, Discord 등)
+
+        🔒 **HTTPS & Let's Encrypt**: Let's Encrypt 인증서로 자동 보안됩니다. 첫 설정 후 인증서가 발급될 때까지 몇 분 정도 기다려야 할 수 있습니다. 발급 완료 후 HTTPS가 자동으로 작동합니다.
+
+        **기능:**
+        - 20가지 이상의 모니터 유형 지원
+        - 90개 이상의 알림 서비스
+        - 공개 상태 페이지
+        - 인증서 만료 모니터링
+
+        **참고:** 첫 번째 등록 사용자가 관리자가 됩니다.
+      zh_cn: |
+        **开始使用：**
+
+        1. 安装后，访问您的 Uptime Kuma 实例
+        2. 首次访问时创建管理员账户
+        3. 添加您的第一个监控（HTTP、Ping、TCP 等）
+        4. 设置通知渠道（邮件、Telegram、Discord 等）
+
+        🔒 **HTTPS & Let's Encrypt**：通过 Let's Encrypt 证书自动加密。首次设置后，您可能需要等待几分钟以完成证书签发。签发完成后，HTTPS 将自动生效。
+
+        **功能：**
+        - 支持 20 多种监控类型
+        - 90 多种通知服务
+        - 公开状态页面
+        - 证书到期监控
+
+        **注意：** 第一个注册的用户成为管理员。
+      fr_fr: |
+        **Commencer :**
+
+        1. Après l'installation, visitez votre instance Uptime Kuma
+        2. Créez votre compte administrateur lors de la première visite
+        3. Ajoutez votre premier moniteur (HTTP, Ping, TCP, etc.)
+        4. Configurez les canaux de notification (e-mail, Telegram, Discord, etc.)
+
+        🔒 **HTTPS & Let's Encrypt** : Votre connexion est automatiquement sécurisée avec un certificat Let's Encrypt. Après la première installation, vous devrez peut-être attendre quelques minutes pour que le certificat soit provisionné. Une fois émis, HTTPS fonctionne automatiquement.
+
+        **Fonctionnalités :**
+        - Plus de 20 types de moniteurs supportés
+        - Plus de 90 services de notification
+        - Pages de statut publiques
+        - Surveillance de l'expiration des certificats
+
+        **Note :** Le premier utilisateur à s'inscrire devient l'administrateur.
+      es_es: |
+        **Comenzar:**
+
+        1. Después de la instalación, visite su instancia de Uptime Kuma
+        2. Cree su cuenta de administrador en la primera visita
+        3. Agregue su primer monitor (HTTP, Ping, TCP, etc.)
+        4. Configure los canales de notificación (correo, Telegram, Discord, etc.)
+
+        🔒 **HTTPS & Let's Encrypt**: Su conexión se asegura automáticamente con un certificado Let's Encrypt. Después de la primera configuración, es posible que deba esperar unos minutos para que se emita el certificado. Una vez emitido, HTTPS funciona automáticamente.
+
+        **Características:**
+        - Más de 20 tipos de monitores soportados
+        - Más de 90 servicios de notificación
+        - Páginas de estado públicas
+        - Monitoreo de expiración de certificados
+
+        **Nota:** El primer usuario en registrarse se convierte en administrador.
+  index: /
+
+x-compose-app:
+  webui-host: uptimekuma-${domain}
