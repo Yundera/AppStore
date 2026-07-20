@@ -177,6 +177,10 @@ x-casaos:
         | **Recommended** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Unlimited |
         | Standard | `https://immich-$APP_DOMAIN/` | 100 MB |
 
+        🔒 **HTTPS & Let's Encrypt**: Your connection is automatically secured with a Let's Encrypt certificate. After first setup, you may need to wait a few minutes for the certificate to be provisioned. Once issued, HTTPS works automatically.
+
+        ⚠️ **Large File Uploads (>100 MB)**: To upload videos or media larger than 100 MB, you **must** use the sslip.io URL. The sslip.io certificate is also provisioned by Let's Encrypt and works automatically once issued.
+
         📱 **Mobile App**: Download the Immich app and connect using the sslip.io URL above for unlimited photo/video backup.
 
         🔍 **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.
@@ -199,6 +203,10 @@ x-casaos:
         |--------------|-----|-----------------|
         | **Recommandé** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Illimité |
         | Standard | `https://immich-$APP_DOMAIN/` | 100 Mo |
+
+        🔒 **HTTPS & Let's Encrypt** : Votre connexion est automatiquement sécurisée avec un certificat Let's Encrypt. Après la première installation, vous devrez peut-être attendre quelques minutes pour que le certificat soit provisionné. Une fois émis, HTTPS fonctionne automatiquement.
+
+        ⚠️ **Fichiers volumineux (>100 Mo)** : Pour télécharger des vidéos ou médias de plus de 100 Mo, vous **devez** utiliser l'URL sslip.io. Le certificat sslip.io est également provisionné par Let's Encrypt et fonctionne automatiquement une fois émis.
 
         📱 **Application mobile** : Téléchargez l'app Immich et connectez-vous avec l'URL sslip.io ci-dessus pour une sauvegarde illimitée de vos photos/vidéos.
 
