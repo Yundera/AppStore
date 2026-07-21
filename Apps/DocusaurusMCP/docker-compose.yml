@@ -3,7 +3,7 @@ name: docusaurusmcp
 services:
   # MCP server — exposes Docusaurus docs via MCP tools (list, read, write, search, rebuild)
   docusaurusmcp-backend:
-    image: ghcr.io/yundera/docusaurus-mcp:1.0.1
+    image: ghcr.io/yundera/docusaurus-mcp:1.0.2
     container_name: docusaurusmcp-backend
     hostname: docusaurusmcp-backend
     user: "0:0"
