@@ -3,7 +3,7 @@ name: docusaurusmcp
 services:
   # MCP server — exposes Docusaurus docs via MCP tools (list, read, write, search, rebuild)
   docusaurusmcp-backend:
-    image: ghcr.io/yundera/docusaurus-mcp:1.0.0
+    image: ghcr.io/yundera/docusaurus-mcp:1.0.2
     container_name: docusaurusmcp-backend
     hostname: docusaurusmcp-backend
     user: "0:0"
@@ -181,6 +181,9 @@ x-casaos:
         | `write_doc` | Create or update a Markdown/MDX document |
         | `search_docs` | Full-text search across all documents |
         | `rebuild` | Run the Docusaurus build and update the live site |
+        | `list_files` | List files in the project root or subdirectory (CSS, config, etc.) |
+        | `read_file` | Read any project file (CSS, JS, JSON, etc.) |
+        | `write_file` | Create or overwrite any project file |
       fr_fr: |
         **Prerequis:**
         1. Une instance **Docusaurus** en cours d'execution, installee depuis ce App Store
@@ -194,6 +197,9 @@ x-casaos:
         | `write_doc` | Creer ou mettre a jour un document |
         | `search_docs` | Recherche plein texte dans tous les documents |
         | `rebuild` | Lancer le build Docusaurus et mettre a jour le site |
+        | `list_files` | Lister les fichiers du projet (CSS, config, etc.) |
+        | `read_file` | Lire un fichier du projet (CSS, JS, JSON, etc.) |
+        | `write_file` | Creer ou remplacer un fichier du projet |
 
 x-compose-app:
   webui-host: docusaurusmcp-${domain}
