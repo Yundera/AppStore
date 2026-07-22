@@ -2,7 +2,7 @@ name: immich
 
 services:
   immich:
-    image: ghcr.io/immich-app/immich-server:v2.7.5
+    image: ghcr.io/immich-app/immich-server:v3.0.3
     container_name: immich
     user: $PUID:$PGID
     cpu_shares: 70
@@ -18,7 +18,7 @@ services:
       IMMICH_PORT: 80
       PGID: $PGID
       PUID: $PUID
-      TZ: $TZ
+      TZ: Etc/UTC
     expose:
       - 80
     labels:
@@ -41,7 +41,7 @@ services:
       - pcs
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v2.7.5
+    image: ghcr.io/immich-app/immich-machine-learning:v3.0.3
     container_name: immich_machine_learning
     cpu_shares: 5
     deploy:
@@ -51,7 +51,7 @@ services:
           cpus: '0.5'
     user: 0:0  # no users volume mount so can run as root
     environment:
-      TZ: $TZ
+      TZ: Etc/UTC
       PGID: 0
       PUID: 0
     restart: unless-stopped
@@ -63,14 +63,14 @@ services:
       - immich
 
   redis:
-    image: docker.io/valkey/valkey:9@sha256:3b55fbaa0cd93cf0d9d961f405e4dfcc70efe325e2d84da207a0a8e6d8fde4f9
+    image: docker.io/valkey/valkey:9@sha256:4963247afc4cd33c7d3b2d2816b9f7f8eeebab148d29056c2ca4d7cbc966f2d9
     container_name: immich-redis
     cpu_shares: 10
     user: 0:0 # no volume mount so can run as root
     healthcheck:
       test: redis-cli ping || exit 1
     environment:
-      TZ: $TZ
+      TZ: Etc/UTC
     restart: unless-stopped
     networks:
       - immich
