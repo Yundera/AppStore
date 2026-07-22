@@ -1,0 +1,192 @@
+name: tuwunel
+
+services:
+  tuwunel:
+    image: ghcr.io/matrix-construct/tuwunel:v1.8.2
+    container_name: tuwunel
+    restart: unless-stopped
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    # Image is distroless (no shell/curl) but ships its own health binary
+    healthcheck:
+      test: ["CMD", "tuwunel", "--health-check"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    expose:
+      - 8008
+    labels:
+      # matrix-* = CANONICAL Matrix identity domain. This is the server_name.
+      # It is engine-neutral on purpose: a future homeserver app (e.g. Synapse)
+      # must bind this same domain and the same server_name to preserve user
+      # identities (@user:matrix-<domain>). NEVER change or drop this binding.
+      # (The tuwunel-* WebUI domain is bound to the Element Web container below.)
+      caddy_0: matrix-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8008}}"
+      caddy_1: matrix-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8008}}"
+      caddy_2: matrix-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8008}}"
+    environment:
+      TZ: $TZ
+      # --- Identity (permanent — see caddy_1 note above) ---
+      TUWUNEL_SERVER_NAME: matrix-${APP_DOMAIN}
+      # Federation runs over 443 (Yundera gateway); no port 8448 needed.
+      # Tuwunel serves /.well-known/matrix/{client,server} itself with these values.
+      TUWUNEL_WELL_KNOWN: '{client="https://matrix-${APP_DOMAIN}",server="matrix-${APP_DOMAIN}:443"}'
+      # --- Listener ---
+      TUWUNEL_ADDRESS: 0.0.0.0
+      TUWUNEL_PORT: "8008"
+      TUWUNEL_DATABASE_PATH: /var/lib/tuwunel
+      # --- Registration: token-gated (open signup on a federated server invites abuse).
+      # First registered user becomes the server admin.
+      TUWUNEL_ALLOW_REGISTRATION: "true"
+      TUWUNEL_REGISTRATION_TOKEN: $APP_DEFAULT_PASSWORD
+      TUWUNEL_NEW_USER_DISPLAYNAME_SUFFIX: ""
+      # --- Federation ---
+      TUWUNEL_ALLOW_FEDERATION: "true"
+      TUWUNEL_TRUSTED_SERVERS: '["matrix.org"]'
+    volumes:
+      - /DATA/AppData/tuwunel/db/:/var/lib/tuwunel/
+    networks:
+      - pcs
+
+  # Element Web — bundled Matrix client, preconfigured to this homeserver.
+  # This is the app's WebUI; the homeserver itself has no UI.
+  element:
+    image: vectorim/element-web:v1.12.24
+    container_name: tuwunel-element
+    restart: unless-stopped
+    cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      tuwunel:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/config.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    expose:
+      - 80
+    labels:
+      # tuwunel-* = app/WebUI domain (store {name}-{domain} convention)
+      caddy_0: tuwunel-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: tuwunel-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: tuwunel-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    volumes:
+      # Written by pre-install-cmd with the PCS domain substituted
+      - /DATA/AppData/tuwunel/element/config.json:/app/config.json:ro
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: element
+  webui_port: 80
+  author: Yundera Team
+  category: Chat
+  tags: ["privacy", "personal", "communication"]
+  developer: Matrix Construct
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/screenshot-3.png
+  index: /
+  store_app_id: Tuwunel
+  title:
+    en_us: Tuwunel
+  tagline:
+    en_us: Your own identity on the Matrix network — federated, private chat under your domain
+  description:
+    en_us: |
+      💬 **What is Tuwunel?**
+
+      **Tuwunel** is a fast, lightweight **Matrix homeserver** — the official successor to conduwuit, written in Rust. Matrix is an open, federated chat network (like email, but for messaging): thousands of servers world-wide all talk to each other, and **nobody owns the network**.
+
+      Running your own homeserver means your chat identity is truly **yours**:
+
+      • Your ID is `@you:matrix-<your-domain>` — issued by **your** server, not a company
+      • Chat with anyone on the Matrix network (matrix.org, mozilla.org, and thousands more)
+      • End-to-end encrypted rooms, voice/video calls, file sharing
+      • Your message history and media stay **on your server**
+
+      ✅ Use it with **Element** (web, desktop, iOS, Android) or any Matrix client — just point the client at your server.
+
+      💻 **Element Web included**
+
+      The app bundles the **Element** web client, preconfigured for your server — open the app and you're on your own Matrix server, no setup needed.
+
+      🚀 **Getting started**
+
+      1. Install the app and open it — Element loads, already pointed at your server
+      2. **Create an account** — use your Yundera default password as the *registration token*
+      3. The **first account created becomes the server admin**
+      4. On mobile, install the Element app and enter `matrix-<your-domain>` as the homeserver
+
+      🪪 **Your identity is engine-independent**
+
+      Your Matrix ID lives on the neutral `matrix-<your-domain>` address — not on a software-specific one. If Yundera ships an alternative Matrix server engine in the future, it will use the **same identity domain**, so your `@you:matrix-…` handle survives an engine switch.
+  tips:
+    before_install:
+      en_us: |
+        **⚠️ Your Matrix identity is permanent**
+
+        Your server name will be `matrix-<your-domain>` and your user ID `@name:matrix-<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.
+
+        **🔑 Registration**
+
+        Account creation requires a **registration token**. The **first account registered becomes the admin**.
+
+        | Setting | Value |
+        |---------|-------|
+        | Registration Token | `$APP_DEFAULT_PASSWORD` |
+        | Web Client (Element) | [🔗 Open Element](https://tuwunel-$APP_DOMAIN/) |
+        | Homeserver (for mobile apps) | `matrix-$APP_DOMAIN` |
+
+        Keep the token private — anyone who has it can create accounts on your server.
+
+        **📱 Connecting a client**
+
+        The app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix-<your-domain>`.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/tuwunel/element &&
+    ELEMENT_CONFIG="/DATA/AppData/tuwunel/element/config.json" &&
+    cat > "$ELEMENT_CONFIG" << EOF
+    {
+      "default_server_config": {
+        "m.homeserver": {
+          "base_url": "https://matrix-${APP_DOMAIN}",
+          "server_name": "matrix-${APP_DOMAIN}"
+        }
+      },
+      "brand": "Element",
+      "disable_custom_urls": false,
+      "disable_guests": true,
+      "show_labs_settings": false,
+      "default_theme": "auto"
+    }
+    EOF
