@@ -1,0 +1,166 @@
+name: casadash
+
+services:
+  # ===========================================================================
+  # APPSHIELD GATE — the only public entrypoint to CasaDash.
+  #
+  # NAMING IS LOAD-BEARING: this container MUST be named `casadash`, and the
+  # dashboard behind it `casadash-app`. The auth-registrar derives an app's
+  # client_id from a PTR lookup of the *caller's container name* on the pcs
+  # network, and only ever issues redirect URIs under `<client_id>-<suffix>`.
+  # Name this container `casadash-gate` and it registers callbacks for
+  # casadash-gate-${APP_DOMAIN} — a hostname the caddy_* labels below do not
+  # publish, so the OIDC callback lands on an unrouted host and login dead-ends.
+  # The gate therefore takes the app's public name; the backend gets the suffix.
+  #
+  # SECURITY: CasaDash has NO authentication of any kind (upstream non-goal) and
+  # it mounts the Docker socket, so an exposed port is root on the host. It is
+  # never published: the dashboard only `expose`s 8080 on the internal `pcs`
+  # network, and the ONLY route in is this gate, which owns the caddy_* labels.
+  # Never add a `ports:` mapping to the casadash-app service.
+  # ===========================================================================
+  casadash:
+    image: ghcr.io/yundera/appshield:2.0.5
+    container_name: casadash
+    hostname: casadash
+    restart: unless-stopped
+    user: "0:0"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "casadash-app"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      # Must list the SAME host suffixes as the caddy_* labels below — the
+      # registrar validates every requested callback against exactly this set.
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+    expose:
+      - 80
+    labels:
+      caddy_0: casadash-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: casadash-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: casadash-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - casadash-app
+    networks:
+      - pcs
+    cpu_shares: 40
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # The dashboard itself. Named `casadash-app` so the gate above can own the
+  # public name `casadash` — see the naming note there.
+  casadash-app:
+    image: ghcr.io/worph/casadash:1.0.1
+    container_name: casadash-app
+    hostname: casadash-app
+    restart: unless-stopped
+    environment:
+      CASADASH_ADDR: ":8080"
+
+      # DATA_HOST_PATH MUST equal DATA_ROOT. CasaDash reads the raw
+      # `com.docker.compose.project.working_dir` label — a HOST path — and opens
+      # it directly, with no container-path remapping. If the two differ, every
+      # app's compose lookup opens a path that does not exist inside this
+      # container and NO app gets a tile.
+      DATA_ROOT: "/DATA"
+      DATA_HOST_PATH: "/DATA"
+
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+
+      # Reverse-proxy reference values used to render app routes. REF_NET must be
+      # `pcs` (CasaDash's own default is `mesh`, which does not exist here).
+      REF_NET: "pcs"
+      REF_PORT: "443"
+      REF_SCHEME: "https"
+      REF_DOMAIN: "${APP_DOMAIN}"
+
+      APPSTORE_URL: "https://github.com/Yundera/AppStore/archive/refs/heads/main.zip"
+
+      # The PCS infrastructure must not be uninstallable from the dashboard. The
+      # tiles still render; only the Uninstall action is withheld, and the API
+      # refuses it too. `casaos` in particular is fatal to remove — its AppData
+      # directory is also CasaOS's apps root, holding every app definition on the
+      # box, including the yundera stack itself.
+      PROTECTED_APPS: "casadash,casaos,yundera"
+    # Runs as root (the image has no USER directive and its entrypoint is the
+    # binary itself), which is how it reaches the root-owned Docker socket without
+    # the host's docker GID — a store app has no way to resolve that at install
+    # time. PUID/PGID above still govern the ownership of files it creates.
+    expose:
+      - 8080   # NEVER `ports:` — see the security note on the gate above
+    networks:
+      - pcs
+    cpu_shares: 90
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    volumes:
+      - type: bind
+        source: /DATA
+        target: /DATA
+        bind:
+          propagation: rshared
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: casadash
+  author: Yundera Team
+  category: Utilities
+  tags: ["dashboard", "apps", "system"]
+  developer: worph
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/CasaDash/icon.png
+  index: /
+  port_map: "443"
+  scheme: https
+  webui_port: 80
+  title:
+    en_us: CasaDash
+  tagline:
+    en_us: A faster, lighter dashboard for your Personal Cloud Server.
+    fr_fr: Un tableau de bord plus rapide et plus léger pour votre serveur cloud personnel.
+  description:
+    en_us: |
+      CasaDash is the dashboard for your Yundera Personal Cloud Server — the place you land to see everything you are running, start and stop it, read its logs, and install something new.
+
+      It shows every app on the box as a tile, whether it was installed from the Yundera App Store or brought up by hand with Docker Compose. Open an app, restart it, watch its resource usage, edit its environment or its compose file, and apply store updates — all without touching a terminal.
+
+      Access is protected by your Personal Cloud Server login. CasaDash itself has no separate account and is never exposed directly: every request passes through the AppShield gate, which authenticates you against your PCS identity before anything reaches the dashboard.
+    fr_fr: |
+      CasaDash est le tableau de bord de votre serveur cloud personnel Yundera — l'endroit où vous arrivez pour voir tout ce que vous exécutez, le démarrer et l'arrêter, lire ses journaux et installer de nouvelles applications.
+
+      Il affiche chaque application sous forme de tuile, qu'elle ait été installée depuis l'App Store Yundera ou lancée à la main avec Docker Compose. Ouvrez une application, redémarrez-la, surveillez sa consommation de ressources, modifiez son environnement ou son fichier compose, et appliquez les mises à jour du store — le tout sans jamais ouvrir un terminal.
+
+      L'accès est protégé par l'identifiant de votre serveur cloud personnel. CasaDash n'a pas de compte séparé et n'est jamais exposé directement : chaque requête passe par la passerelle AppShield, qui vous authentifie avant que quoi que ce soit n'atteigne le tableau de bord.
+  tips:
+    before_install:
+      en_us: |
+        CasaDash signs you in with your Personal Cloud Server account — there is no
+        separate password to remember.
+
+        It manages Docker on your server, so it can see and control every app you
+        have installed.
+
+x-compose-app:
+  webui-host: casadash-${domain}
