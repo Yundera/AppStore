@@ -93,7 +93,10 @@ services:
     volumes:
       - /DATA/AppData/immich/pgdata/:/var/lib/postgresql/data/
     healthcheck:
-      test: pg_isready --dbname='immich' --username='postgres' || exit 1; Chksum="$$(psql --dbname='immich' --username='postgres' --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
+      # Inline command substitution ($$(...)) instead of a named $$Chksum var: CasaOS re-serializes the compose and
+      # collapses $$Chksum to $Chksum, which Docker then interpolates to an empty string (false "unhealthy"). $$(...) has
+      # no bare $VAR, so it survives that collapse. See rationale.md.
+      test: pg_isready --dbname='immich' --username='postgres' || exit 1; [ "$$(psql --dbname='immich' --username='postgres' --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')" = '0' ] || exit 1
       interval: 5m
       start_interval: 30s
       start_period: 5m
