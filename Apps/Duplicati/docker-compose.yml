@@ -2,7 +2,7 @@ name: duplicati
 services:
   duplicati:
     container_name: duplicati
-    image: linuxserver/duplicati:2.2.0
+    image: linuxserver/duplicati:version-v2.3.0.4_stable_2026-07-09
     user: 0:0
     environment:
       PGID: 0
@@ -27,7 +27,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 2G
         reservations:
           memory: 64M
     restart: unless-stopped
@@ -93,6 +93,8 @@ x-casaos:
       en_us: |
         Default Password : `$APP_DEFAULT_PASSWORD`
         Your Files will appear in the `Computer/source/DATA` directory inside duplicati source panel (3).
+        On first launch Duplicati offers to connect to the Duplicati Console (their optional cloud service) - choose "Proceed without connecting to console" to keep everything local.
+        Note: Duplicati encrypts its settings with your password from install time. If you later change your Yundera password and reinstall the app, delete `/DATA/AppData/duplicati/config` first or the app will fail to start.
   title:
     en_us: Duplicati
   index: /
