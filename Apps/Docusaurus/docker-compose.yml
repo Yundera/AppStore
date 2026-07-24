@@ -1,37 +1,6 @@
 name: docusaurus
 
 services:
-  docusaurus:
-    image: ghcr.io/yundera/appshield:2.0.3
-    container_name: docusaurus
-    hostname: docusaurus
-    restart: unless-stopped
-    user: "root"
-    expose:
-      - "80"
-    labels:
-      caddy_0: docusaurus-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: docusaurus-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: docusaurus-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
-    environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: "docusaurus-backend"
-      BACKEND_PORT: "80"
-      LISTEN_PORT: "80"
-      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
-    depends_on:
-      - docusaurus-backend
-    cpu_shares: 80
-    networks:
-      - pcs
-
   docusaurus-init:
     image: node:20-alpine3.20
     container_name: docusaurus-init
@@ -45,22 +14,24 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - |
-        if [ -f /output/.initialized ]; then
-          echo "Already initialized, skipping."
-          exit 0
+        if [ ! -f /output/.initialized ]; then
+          echo "Initializing Docusaurus project..."
+          npx create-docusaurus@3.10.1 site classic --javascript \
+            && cp -r site/* /output/ \
+            && rm -rf site \
+            && touch /output/.initialized \
+            && echo "Project initialized."
         fi
-        echo "Initializing Docusaurus project..."
-        npx create-docusaurus@3.10.1 site classic --javascript \
-          && cd site \
+        echo "Building Docusaurus site..."
+        cd /output \
           && npm run build \
-          && cp -r ./* /output/ \
-          && cp -r /output/build/* /build-output/ \
-          && touch /output/.initialized \
-          && echo "Done."
+          && cp -r build/* /build-output/ \
+          && echo "Build complete."
 
-  docusaurus-backend:
+  docusaurus:
     image: nginx:1.27-alpine
-    container_name: docusaurus-backend
+    container_name: docusaurus
+    hostname: docusaurus
     restart: unless-stopped
     user: "0:0"
     expose:
@@ -71,6 +42,15 @@ services:
       docusaurus-init:
         condition: service_completed_successfully
     cpu_shares: 50
+    labels:
+      caddy_0: docusaurus-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: docusaurus-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: docusaurus-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
 
@@ -86,8 +66,7 @@ x-casaos:
   main: docusaurus
   store_app_id: docusaurus
   webui_port: 80
-  index: /?hash=${AUTH_HASH}
-  scheme: https
+  index: /
   author: Yundera Team
   category: Utilities
   developer: Meta (Facebook)
@@ -101,14 +80,41 @@ x-casaos:
     en_us: Docusaurus
   tagline:
     en_us: Build beautiful documentation websites
+    fr_fr: Creez de beaux sites de documentation
+    ko_kr: 아름다운 문서 웹사이트를 만드세요
   description:
     en_us: |
       Docusaurus is a static site generator by Meta. Build documentation
       websites with Markdown, versioning, i18n, and search built in.
       Perfect for project docs, knowledge bases, and blogs.
+    fr_fr: |
+      Docusaurus est un generateur de sites statiques par Meta. Creez des sites
+      de documentation avec Markdown, versionnage, i18n et recherche integres.
+      Ideal pour la documentation de projets, les bases de connaissances et les blogs.
+    ko_kr: |
+      Docusaurus는 Meta에서 만든 정적 사이트 생성기입니다. Markdown, 버전 관리,
+      다국어 지원, 검색 기능이 내장된 문서 웹사이트를 만들 수 있습니다.
+      프로젝트 문서, 지식 베이스, 블로그에 적합합니다.
   tips:
     before_install:
       en_us: |
+        **Warning:** This is a public documentation site with no login or authentication. Anyone with the address can read everything inside it. Only add content you are happy to share publicly, and never store private notes, credentials, or personal data here.
+
         A new Docusaurus project will be created on first install.
         Edit your docs in the File Manager at /DATA/AppData/docusaurus/src/docs/.
-        To rebuild after editing, restart the app.
+        To rebuild after editing, restart the app or use DocusaurusMCP's rebuild tool.
+      fr_fr: |
+        **Attention :** Ce site de documentation est public, sans authentification. Toute personne disposant de l'adresse peut lire son contenu. N'ajoutez que du contenu que vous acceptez de partager publiquement, et ne stockez jamais de notes privees, d'identifiants ou de donnees personnelles ici.
+
+        Un nouveau projet Docusaurus sera cree lors de la premiere installation.
+        Modifiez vos documents dans le gestionnaire de fichiers a /DATA/AppData/docusaurus/src/docs/.
+        Pour reconstruire apres modification, redemarrez l'application ou utilisez l'outil rebuild de DocusaurusMCP.
+      ko_kr: |
+        **경고:** 이 문서 사이트는 로그인이나 인증 없이 공개됩니다. 주소를 아는 누구나 모든 내용을 읽을 수 있습니다. 공개해도 괜찮은 내용만 추가하고, 비공개 메모, 자격 증명, 개인 정보는 절대 저장하지 마세요.
+
+        첫 설치 시 새로운 Docusaurus 프로젝트가 생성됩니다.
+        /DATA/AppData/docusaurus/src/docs/ 경로에서 파일 매니저를 통해 문서를 편집할 수 있습니다.
+        편집 후 반영하려면 앱을 재시작하거나 DocusaurusMCP의 rebuild 도구를 사용하세요.
+
+x-compose-app:
+  webui-host: docusaurus-${domain}
