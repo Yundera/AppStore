@@ -34,6 +34,11 @@ services:
       # Dashboard / configure login. Gates the human UI only; the add-on URL that
       # Stremio fetches stays reachable (its encrypted config is the credential).
       AIOSTREAMS_AUTH: "admin:$APP_DEFAULT_PASSWORD"
+      # Enforcement is separate from credentials. Without this, authRequired
+      # defaults to false and /stremio/configure is public. Setting it true also
+      # enables the CONFIG_ACCESS_KEY gate, which is generated and persisted
+      # automatically on first run.
+      AIOSTREAMS_AUTH_REQUIRED: "true"
     volumes:
       - /DATA/AppData/aiostreams/data/:/app/data
     # The image's built-in healthcheck uses a 5s start_period, too short for the
