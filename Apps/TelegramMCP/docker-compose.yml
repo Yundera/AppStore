@@ -35,7 +35,7 @@ services:
   # flow: MCP clients and Telegram's webhook callers cannot do the cookie
   # dance. Everything else (the config UI at /) sits behind hash + password.
   telegrammcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: telegrammcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

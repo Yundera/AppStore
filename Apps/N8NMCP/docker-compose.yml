@@ -37,7 +37,7 @@ services:
 
   # AppShield provides perimeter authentication (human SSO + machine hash) for the web UI
   n8nmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: n8nmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

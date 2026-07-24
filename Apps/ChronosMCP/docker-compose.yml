@@ -23,7 +23,7 @@ services:
 
   # AppShield provides perimeter authentication (SSO + hash) for the web UI
   chronosmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: chronosmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

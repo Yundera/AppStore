@@ -48,7 +48,7 @@ services:
   # talking to `nextcloudmcp-backend:9650` directly on the pcs network bypass this,
   # which is what we want — Beacon discovery, Claude Code, etc. stay fast.
   nextcloudmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: nextcloudmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

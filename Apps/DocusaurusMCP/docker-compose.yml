@@ -53,7 +53,7 @@ services:
   # AppShield provides perimeter authentication for the MCP endpoint:
   # human SSO via OIDC for the admin panel, plus machine/API hash auth.
   docusaurusmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: docusaurusmcp
     hostname: docusaurusmcp
     restart: unless-stopped

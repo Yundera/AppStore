@@ -21,7 +21,7 @@ services:
         expose:
             - "80"
         hostname: stremio
-        image: ghcr.io/yundera/appshield:2.0.3
+        image: ghcr.io/yundera/appshield:2.0.6
         labels:
             icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/stremio.png
             caddy_0: stremio-${APP_DOMAIN}

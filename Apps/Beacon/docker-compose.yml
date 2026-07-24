@@ -36,7 +36,7 @@ services:
   beacon-proxy:
     # 2.0.5+ includes the MCP OAuth 2.1 broker (oidc-provider fronting Dex),
     # activated by MCP_OAUTH_RESOURCE below.
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: beacon
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

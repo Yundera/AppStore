@@ -1,0 +1,2 @@
+1.0.0
+- Initial release: CasaOS dashboard as an installable app.

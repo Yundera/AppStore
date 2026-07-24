@@ -20,7 +20,7 @@ services:
   # Never add a `ports:` mapping to the casadash-app service.
   # ===========================================================================
   casadash:
-    image: ghcr.io/yundera/appshield:2.0.5
+    image: ghcr.io/yundera/appshield:2.0.6
     container_name: casadash
     hostname: casadash
     restart: unless-stopped
