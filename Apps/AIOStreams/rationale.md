@@ -1,41 +1,53 @@
-# AIOStreams — Rationale
+# AIOStreams Rationale
 
 ## What deviation / exception is being requested
 
-The app uses its **own built-in authentication** (enabled by default) rather than
-the recommended AppShield OIDC sidecar, and its Stremio add-on protocol endpoints
+The app uses its **own built-in authentication** rather than the recommended
+AppShield OIDC sidecar, and its Stremio add-on protocol endpoints
 (`/stremio/<config>/manifest.json`, `/stremio/<config>/stream/...`) are reachable
 without the platform SSO.
 
 ## Why it is necessary
 
 AIOStreams is a Stremio add-on. Stremio fetches the manifest and stream endpoints
-machine-to-machine when you open a title; it cannot complete an interactive OIDC /
-Authelia login. Placing the app behind AppShield SSO would make those endpoints
-unreachable and break playback. The add-on's install URL and its human dashboard
-share the same `/stremio/` path prefix, so AppShield `ALLOWED_PATHS` cannot exempt
-the fetch endpoints without also exposing the dashboard.
+machine-to-machine when a title is opened; it cannot complete an interactive OIDC
+login. Placing the app behind AppShield SSO would make those endpoints unreachable
+and break playback.
 
-This is the same shape as the existing `Apps/SegmentStremioAddon`, which exposes its
-add-on API to Stremio while gating its UI.
+The add-on's install URL and its human-facing configure page share the same
+`/stremio/` path prefix (`/stremio/<config>/manifest.json` versus
+`/stremio/configure`), so a prefix-based AppShield `ALLOWED_PATHS` entry cannot
+exempt the fetch endpoints without also exposing the configure page.
+
+This is the same shape as the existing `Apps/SegmentStremioAddon`, which exposes
+its add-on API to Stremio (`ALLOWED_PATHS: "/api/"`) while gating its UI behind
+AppShield. AIOStreams cannot use that mechanism only because its two surfaces are
+not separable by prefix.
 
 ## Security mitigations in place
 
-- The dashboard and configure page are gated by the app's own login
-  (`AIOSTREAMS_AUTH: admin:$APP_DEFAULT_PASSWORD`), enabled by default.
-- The add-on endpoints require the per-install, encrypted configuration blob as
-  their credential. That blob is encrypted with a 64-character hex `SECRET_KEY`
-  generated uniquely per install (see below), so the endpoints are not usable
-  without a URL the operator generated.
-- Runs as `user: $PUID:$PGID` (non-root), all volumes confined to
-  `/DATA/AppData/aiostreams/`, with `cpu_shares` and a memory limit set.
+- The configure page and dashboard are gated by the app's own login, set via
+  `AIOSTREAMS_AUTH: admin:$APP_DEFAULT_PASSWORD` **and**
+  `AIOSTREAMS_AUTH_REQUIRED: "true"`. Both are required: `AIOSTREAMS_AUTH` only
+  defines the credential map, and the enforcement flag defaults to `false`, which
+  would leave the configure page public.
+- Enabling `AIOSTREAMS_AUTH_REQUIRED` also activates the `CONFIG_ACCESS_KEY` gate,
+  which is generated and persisted automatically on first run and checked on
+  config create, update and serve.
+- The add-on endpoints are addressed by a per-install configuration blob encrypted
+  with a 64-character hex `SECRET_KEY` generated uniquely per install, so they are
+  not usable without a URL the operator generated.
+- Runs as `user: $PUID:$PGID`, all volumes confined to `/DATA/AppData/aiostreams/`,
+  with `cpu_shares` and a memory limit set.
 
 ## Alternatives considered and rejected
 
-- **AppShield OIDC in front:** breaks Stremio's machine fetch (no interactive login).
+- **AppShield OIDC in front:** breaks Stremio's machine-to-machine fetch, since the
+  client cannot complete an interactive login.
 - **AppShield with `ALLOWED_PATHS`:** cannot split the shared `/stremio/` prefix, so
-  it would either break fetch or expose the dashboard.
-- **No authentication at all:** rejected. The dashboard is gated by default.
+  it would either break the fetch or expose the configure page.
+- **No authentication at all:** rejected. This is what the app does by default, and
+  is why `AIOSTREAMS_AUTH_REQUIRED` is set explicitly.
 
 ## Data protection
 
