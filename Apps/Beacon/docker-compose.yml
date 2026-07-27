@@ -34,9 +34,12 @@ services:
           memory: 512M
 
   beacon-proxy:
-    # 2.0.5+ includes the MCP OAuth 2.1 broker (oidc-provider fronting Dex),
-    # activated by MCP_OAUTH_RESOURCE below.
-    image: ghcr.io/yundera/appshield:2.0.6
+    # 2.0.7+ is a generic OAuth 2.1 broker (oidc-provider fronting Dex): it
+    # protects whatever path the OAUTH_RESOURCE URL names (here /mcp) and
+    # advertises OAUTH_SCOPE — no MCP-specific knowledge. Activated by
+    # OAUTH_RESOURCE below. (2.0.5/2.0.6 used the MCP_OAUTH_RESOURCE name, kept as
+    # a back-compat alias.)
+    image: ghcr.io/yundera/appshield:2.0.7
     container_name: beacon
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -68,11 +71,17 @@ services:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
-      # MCP OAuth 2.1 broker (opt-in). When set, AppShield runs an OAuth/OIDC
-      # authorization server fronting Dex so claude.ai (via DCR) and clients like
-      # n8n (via a manually-created client) can reach /mcp with Bearer tokens.
-      # Requires an appshield image with MCP OAuth support (see image tag below).
-      MCP_OAUTH_RESOURCE: "https://beacon-${APP_DOMAIN}/mcp"
+      # OAuth 2.1 broker (opt-in). When OAUTH_RESOURCE is set, AppShield runs an
+      # OAuth/OIDC authorization server fronting Dex so claude.ai (via DCR) and
+      # clients like n8n (via a manual client) can reach this resource with Bearer
+      # tokens. AppShield protects the path in the URL (/mcp) and advertises the
+      # OAUTH_SCOPE below. Requires appshield >= 2.0.7 (older images read the
+      # legacy MCP_OAUTH_RESOURCE name instead and hardcode the /mcp path + scope).
+      OAUTH_RESOURCE: "https://beacon-${APP_DOMAIN}/mcp"
+      # Scope this resource advertises/grants. Free-form label (AppShield's own
+      # default is the generic "access"); set explicitly to "mcp" so Beacon's
+      # advertised scope is unchanged from earlier releases.
+      OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
       # Persist DCR/manual clients, signing keys and grants across redeploys.
