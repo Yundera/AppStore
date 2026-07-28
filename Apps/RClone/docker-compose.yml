@@ -1,0 +1,140 @@
+name: rclone
+services:
+  rclone:
+    user: $PUID:$PGID
+    image: rclone/rclone:1.74.4
+    container_name: rclone
+    hostname: rclone
+    restart: unless-stopped
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 256M
+    expose:
+      - 80
+    networks:
+      - pcs
+    labels:
+      caddy_0: rclone-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: rclone-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: rclone-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    volumes:
+      - /DATA/AppData/rclone/config/:/config/rclone/
+      - /DATA/AppData/rclone/cache/:/cache/
+      - /DATA/Rclone/:/data/:rshared,z
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - /etc/fuse.conf:/etc/fuse.conf:ro
+    cap_add:
+      - SYS_ADMIN
+    privileged: true
+    security_opt:
+      - apparmor:unconfined
+    devices:
+      - /dev/fuse:/dev/fuse:rwm
+    command:
+      - rcd
+      - --rc-web-gui
+      - --rc-addr
+      - :80
+      - --rc-user
+      - admin
+      - --rc-pass
+      - $APP_DEFAULT_PASSWORD
+      - --rc-allow-origin
+      - "*"
+      - --config
+      - /config/rclone/rclone.conf
+      - --cache-dir
+      - /cache
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm
+    - arm64
+  tagline:
+    en_us: Web UI to manage and mount cloud storage.
+    zh_cn: 管理和挂载云存储的 Web UI。
+    de_de: Web-UI zum Verwalten und Einbinden von Cloud-Speicher.
+    es_es: Interfaz web para gestionar y montar almacenamiento en la nube.
+    fr_fr: Interface web pour gérer et monter le stockage cloud.
+    it_it: Interfaccia web per gestire e montare l'archiviazione cloud.
+    ko_kr: 클라우드 스토리지를 관리하고 마운트하는 웹 UI입니다.
+  description:
+    en_us: Rclone is a command-line program to manage files on cloud storage. It mounts cloud storage as a local disk, allowing you to access your cloud files as if they were on your local machine.
+    zh_cn: Rclone 是一个管理云存储文件的命令行程序。它将云存储挂载为本地磁盘，使您能够像访问本地文件一样访问云文件。
+    de_de: Rclone ist ein Kommandozeilenprogramm zur Verwaltung von Dateien in der Cloud. Es bindet Cloud-Speicher als lokale Festplatte ein, sodass Sie auf Ihre Cloud-Dateien zugreifen können, als wären sie auf Ihrem lokalen Computer.
+    es_es: Rclone es un programa de línea de comandos para gestionar archivos en almacenamiento en la nube. Monta el almacenamiento en la nube como un disco local, lo que le permite acceder a sus archivos en la nube como si estuvieran en su máquina local.
+    fr_fr: Rclone est un programme en ligne de commande pour gérer les fichiers sur le stockage cloud. Il monte le stockage cloud comme un disque local, vous permettant d'accéder à vos fichiers cloud comme s'ils étaient sur votre machine locale.
+    it_it: Rclone è un programma a riga di comando per gestire i file su cloud storage. Monta il cloud storage come disco locale, permettendo di accedere ai file cloud come se fossero sulla macchina locale.
+    ko_kr: Rclone은 클라우드 스토리지의 파일을 관리하는 명령줄 프로그램입니다. 클라우드 스토리지를 로컬 디스크로 마운트하여 클라우드 파일을 로컬 컴퓨터에 있는 것처럼 사용할 수 있습니다.
+  developer: Rclone
+  author: Rclone
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RClone/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RClone/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RClone/screenshot-3.png
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RClone/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/RClone/thumbnail.png
+  category: Cloud
+  title:
+    en_us: Rclone
+  tips:
+    before_install:
+      en_us: |
+        **Setup Steps**:
+        1. **Configure Remote**: Use "Config" to add your cloud storage (Google Drive, OneDrive, etc.)
+        2. **Verify Connection**: Use "Explorer" to browse and test access to your remote files
+        3. **Mount Remote**: Use "Mount" to mount your remote to `/data` path
+
+        **Important**: After mounting, files will be accessible at `/DATA/Rclone/` on your host system and to other containers.
+
+        **Mount Configuration**:
+        - Always mount remotes to `/data` inside the rclone web UI
+        - This maps to `/DATA/Rclone/` on your CasaOS system
+        - Files will be accessible to other containers that mount this directory
+        - Other apps can access your cloud files by mounting `/DATA/Rclone/`
+
+        **Virtual Files Setup (OneDrive/Dropbox style)**:
+        For virtual files that download on-demand (like cloud sync clients):
+        - **VFS Cache Mode**: Set to `minimal` for virtual files or `writes` for better performance
+        - **VFS Cache Max Size**: Set based on available disk space (e.g., `10G` or `50G`)
+        - **VFS Cache Max Age**: How long to keep cached files (e.g., `24h` or `168h` for 1 week)
+        - **VFS Read Chunk Size**: Use `128M` for faster streaming of large files
+        - **VFS Cache Poll Interval**: Set to `15s` to check for remote changes
+        - **Mount Options**: Add `--allow-other` to make files accessible to other containers
+
+        **Recommended Settings for Virtual Files**:
+        ```
+        VFS Cache Mode: minimal
+        VFS Cache Max Size: 10G
+        VFS Cache Max Age: 168h
+        VFS Read Chunk Size: 128M
+        VFS Cache Poll Interval: 15s
+        Mount Options: --allow-other
+        ```
+
+        **Note**: The container is limited to 2 GB of RAM. If you raise **VFS Read Chunk Size**
+        or run many parallel transfers, raise the memory limit accordingly, or transfers of
+        large files may be killed by the OOM killer.
+
+        **Default Account**:
+        | Username | Password |
+        |----------|----------|
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+  main: rclone
+  webui_port: 80
