@@ -21,7 +21,7 @@ services:
         expose:
             - "80"
         hostname: stremio
-        image: ghcr.io/yundera/appshield:2.0.6
+        image: ghcr.io/yundera/appshield:2.0.3
         labels:
             icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/stremio.png
             caddy_0: stremio-${APP_DOMAIN}
@@ -46,6 +46,14 @@ services:
     stremiocommunity:
         cpu_shares: 70
         container_name: stremiocommunity
+        entrypoint: ["/bin/sh", "-c"]
+        command:
+            - |
+                if ! grep -q 'yundera-download-fix' /etc/nginx/http.d/default.conf; then
+                  sed -i 's@^\(    location / {\)@    location ~ "^/([a-zA-Z0-9]{40})/(.+)$$" { proxy_pass http://backend; proxy_buffering off; proxy_max_temp_file_size 0; }  # yundera-download-fix\n\1@' /etc/nginx/http.d/default.conf
+                fi
+                cd /srv/stremio-server
+                exec ./stremio-web-service-run.sh
         deploy:
             resources:
                 limits:
