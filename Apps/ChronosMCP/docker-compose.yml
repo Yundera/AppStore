@@ -21,9 +21,12 @@ services:
     networks:
       - pcs
 
-  # AppShield provides perimeter authentication (SSO + hash) for the web UI
+  # AppShield provides perimeter authentication for the web UI (Yundera SSO) and
+  # for the /mcp endpoint (OAuth 2.1 broker — see OAUTH_RESOURCE below).
   chronosmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
+    # OAUTH_SCOPE names and a configurable protected path.
+    image: ghcr.io/yundera/appshield:2.0.7
     container_name: chronosmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -36,13 +39,22 @@ services:
       - 80
     user: "root"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: chronosmcp-backend
       BACKEND_PORT: "9054"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      # OAuth 2.1 broker: AppShield runs an OAuth/OIDC authorization server
+      # fronting Dex and gates the path named by the resource URL (/mcp) on
+      # Bearer tokens. This is the machine/API path, replacing hash auth —
+      # clients like claude.ai self-register via DCR, others get a manual client
+      # from the admin page at https://chronosmcp-${APP_DOMAIN}/AppShield/oauth.
+      OAUTH_RESOURCE: "https://chronosmcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - /DATA/AppData/chronosmcp/oauth:/data/oauth
     depends_on:
       - chronosmcp-backend
     networks:
@@ -67,7 +79,8 @@ x-casaos:
     - amd64
     - arm64
   main: chronosmcp-backend
-  index: /?hash=$AUTH_HASH
+  # The Web UI is behind Yundera SSO — no hash in the URL.
+  index: /
   author: Yundera
   category: Utilities
   tags: ["developer", "ai"]
@@ -137,17 +150,25 @@ x-casaos:
 
         Chronos itself exposes an MCP server, allowing AI assistants to create, update, and manage cron rules.
 
-        **Option 1: Public URL (with hash auth)**
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your Yundera login.
         ```json
         {
           "mcpServers": {
             "chronos-mcp": {
               "type": "http",
-              "url": "https://chronosmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -199,17 +220,22 @@ x-casaos:
 
         Chronos 本身暴露一个 MCP 服务器，允许 AI 助手创建、更新和管理 cron 规则。
 
-        **选项 1：公共 URL（使用 hash 认证）**
+        **选项 1：公共 URL（OAuth）**
+
+        `/mcp` 端点受 OAuth 2.1 保护。将客户端指向以下 URL — 支持 OAuth 发现的客户端
+        （claude.ai、Claude Desktop）会自动注册并打开浏览器，让您使用 Yundera 账号授权。
         ```json
         {
           "mcpServers": {
             "chronos-mcp": {
               "type": "http",
-              "url": "https://chronosmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
+        **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** 创建。
 
         **选项 2：本地 Docker 连接（无需认证）**
 
@@ -241,4 +267,4 @@ x-casaos:
 
 x-compose-app:
   webui-host: chronosmcp-${domain}
-  webui-path: "/?hash=$AUTH_HASH"
+  webui-path: "/"

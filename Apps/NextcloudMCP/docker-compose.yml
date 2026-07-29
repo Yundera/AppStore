@@ -43,12 +43,19 @@ services:
     networks:
       - pcs
 
-  # Nginx-hash-lock gates the Web UI so the Nextcloud app-password you paste
-  # into it isn't reachable by anyone guessing the subdomain. MCP clients
-  # talking to `nextcloudmcp-backend:9650` directly on the pcs network bypass this,
-  # which is what we want — Beacon discovery, Claude Code, etc. stay fast.
+  # AppShield gates the Web UI behind Yundera SSO, so the Nextcloud app-password
+  # you paste into it isn't reachable by anyone guessing the subdomain, and gates
+  # /mcp on OAuth 2.1 for remote MCP clients (see OAUTH_RESOURCE below). MCP
+  # clients talking to `nextcloudmcp-backend:9650` directly on the pcs network
+  # bypass this entirely — Beacon discovery, Claude Code, etc. stay fast.
+  #
+  # NOTE: the OAuth broker protects exactly one path prefix, so /talk-mcp is NOT
+  # OAuth-gated — from outside it sits behind the interactive SSO gate, and
+  # in-cluster clients should use http://nextcloudmcp-backend:9650/talk-mcp.
   nextcloudmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
+    # OAUTH_SCOPE names and a configurable protected path.
+    image: ghcr.io/yundera/appshield:2.0.7
     container_name: nextcloudmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -61,13 +68,22 @@ services:
       - 80
     user: "root"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: nextcloudmcp-backend
       BACKEND_PORT: "9650"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
+      # OAuth 2.1 broker: AppShield runs an OAuth/OIDC authorization server
+      # fronting Dex and gates the path named by the resource URL (/mcp) on
+      # Bearer tokens. This is the machine/API path, replacing hash auth —
+      # clients like claude.ai self-register via DCR, others get a manual client
+      # from the admin page at https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth.
+      OAUTH_RESOURCE: "https://nextcloudmcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - /DATA/AppData/nextcloudmcp/oauth:/data/oauth
     depends_on:
       - nextcloudmcp-backend
     networks:
@@ -92,7 +108,8 @@ x-casaos:
     - amd64
     - arm64
   main: nextcloudmcp-backend
-  index: /?hash=$AUTH_HASH
+  # The Web UI is behind Yundera SSO — no hash in the URL.
+  index: /
   author: Aptero
   category: Utilities
   tags: ["developer", "ai"]
@@ -179,21 +196,25 @@ x-casaos:
         - `nextcloud-mcp__nc_notes_*`, `nextcloud-mcp__nc_calendar_*`, `nextcloud-mcp__deck_*`, etc.
         - `nextcloud-talk-mcp__talk_send_to_user`, `nextcloud-talk-mcp__talk_list_conversations`, etc.
 
-        **Option 2: Public URL (with hash auth)**
+        **Option 2: Public URL (OAuth)**
+
+        `/mcp` is protected by OAuth 2.1. Clients that support OAuth discovery
+        (claude.ai, Claude Desktop) register themselves and open a browser for
+        you to approve with your Yundera login. For clients needing a
+        pre-created client_id/client_secret (n8n, custom scripts), create one at
+        **https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth**.
         ```json
         {
           "mcpServers": {
             "nextcloud-mcp": {
               "type": "http",
-              "url": "https://nextcloudmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
-            },
-            "nextcloud-talk-mcp": {
-              "type": "http",
-              "url": "https://nextcloudmcp-${APP_DOMAIN}/talk-mcp?hash=${AUTH_HASH}"
+              "url": "https://nextcloudmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        *`talk-mcp` is not available over the public URL — use Beacon (Option 1)
+        or the local Docker connection below.*
 
         **Option 3: Local Docker connection (no auth required)**
         ```json
@@ -259,21 +280,26 @@ x-casaos:
         - `nextcloud-mcp__nc_notes_*`, `nextcloud-mcp__nc_calendar_*`, `nextcloud-mcp__deck_*`, etc.
         - `nextcloud-talk-mcp__talk_send_to_user`, `nextcloud-talk-mcp__talk_list_conversations`, etc.
 
-        **Option 2: URL publique (avec authentification hash)**
+        **Option 2: URL publique (OAuth)**
+
+        `/mcp` est protege par OAuth 2.1. Les clients compatibles avec la
+        decouverte OAuth (claude.ai, Claude Desktop) s'enregistrent seuls et
+        ouvrent un navigateur pour que vous autorisiez avec votre compte
+        Yundera. Pour les clients necessitant un client_id/client_secret
+        pre-cree (n8n, scripts), creez-en un sur
+        **https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth**.
         ```json
         {
           "mcpServers": {
             "nextcloud-mcp": {
               "type": "http",
-              "url": "https://nextcloudmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
-            },
-            "nextcloud-talk-mcp": {
-              "type": "http",
-              "url": "https://nextcloudmcp-${APP_DOMAIN}/talk-mcp?hash=${AUTH_HASH}"
+              "url": "https://nextcloudmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        *`talk-mcp` n'est pas disponible via l'URL publique — utilisez Beacon
+        (Option 1) ou la connexion Docker locale ci-dessous.*
 
         **Option 3: Connexion Docker locale (pas d'auth requise)**
         ```json
@@ -321,13 +347,18 @@ x-casaos:
         **选项 1：通过 Beacon（推荐）**
         如果安装了 Beacon，两个服务器都会自动发现并命名空间化。
 
-        **选项 2：公共 URL（使用 hash 认证）**
+        **选项 2：公共 URL（OAuth）**
+
+        `/mcp` 受 OAuth 2.1 保护。支持 OAuth 发现的客户端（claude.ai、Claude Desktop）
+        会自动注册并打开浏览器，让您使用 Yundera 账号授权。对于需要预先创建
+        client_id/client_secret 的客户端（n8n、自定义脚本），请在
+        **https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth** 创建。
         ```json
         {
           "mcpServers": {
             "nextcloud-mcp": {
               "type": "http",
-              "url": "https://nextcloudmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://nextcloudmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
@@ -352,4 +383,4 @@ x-casaos:
 
 x-compose-app:
   webui-host: nextcloudmcp-${domain}
-  webui-path: "/?hash=$AUTH_HASH"
+  webui-path: "/"

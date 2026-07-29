@@ -34,7 +34,6 @@ services:
       # Must list the SAME host suffixes as the caddy_* labels below — the
       # registrar validates every requested callback against exactly this set.
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
     expose:
       - 80
     labels:

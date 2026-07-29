@@ -693,11 +693,13 @@ services:
       LISTEN_PORT: "80"                                     # port AppShield listens on (matches `expose` + Caddy)
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"      # presence of this enables OIDC mode
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},\${APP_PUBLIC_IP_DASH}.nip.io,\${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       # Optional:
       # USER: "ADMIN"                                       # extra basic-auth gate in front of the UI
       # PASSWORD: $APP_DEFAULT_PASSWORD
       # ALLOWED_PATHS: "mcp"                                # paths reachable with the hash token only (MCP servers)
+      # OAUTH_RESOURCE: "https://myapp-${APP_DOMAIN}/mcp"   # OAuth 2.1 gate on that path (machine/API clients)
+      # OAUTH_SCOPE: "mcp"
+      # OAUTH_DATA_DIR: "/data/oauth"                       # mount /DATA/AppData/myapp/oauth here to persist clients
     depends_on:
       - myapp-backend
     cpu_shares: 80
@@ -734,13 +736,17 @@ x-casaos:
 | `LISTEN_PORT` | yes | Port AppShield listens on (matches `expose` + Caddy `{{upstreams}}`). |
 | `OIDC_REGISTRAR_URL` | yes | `http://auth-registrar:9092` — enables OIDC; self-registers (no client id/secret). |
 | `REDIRECT_HOST_SUFFIXES` | yes | `${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io` — valid OIDC redirect hosts. |
-| `CREDENTIAL_VALIDATE_URL` | yes | `http://casaos-oidc-bridge:8090/validate` — validates the session against the PCS bridge. |
 | `USER` / `PASSWORD` | optional | Extra basic-auth gate in front of the UI (e.g. `ADMIN` / `$APP_DEFAULT_PASSWORD`). |
 | `ALLOWED_PATHS` | optional | Paths reachable with just the hash token, bypassing basic-auth — e.g. `mcp` for MCP servers. |
+| `OAUTH_RESOURCE` | optional | Enables AppShield's OAuth 2.1 broker and gates exactly the path in the URL (e.g. `https://myapp-${APP_DOMAIN}/mcp`) on Bearer tokens. The machine/API path for MCP servers — see `Apps/Beacon`, `Apps/ChronosMCP`. Requires AppShield **>= 2.0.7**. |
+| `OAUTH_SCOPE` | optional | Scope the resource advertises/grants (default `access`; MCP apps use `mcp`). |
+| `OAUTH_DATA_DIR` | optional | Where registered clients, signing keys and grants live. Set to `/data/oauth` and bind-mount `/DATA/AppData/<app>/oauth` so they survive redeploys. |
+
+> **`CREDENTIAL_VALIDATE_URL` is gone.** It used to point at `http://casaos-oidc-bridge:8090/validate` so machine clients could authenticate with CasaOS credentials. The bridge is being removed — do **not** add this variable to new apps. Machine/API access now goes through `OAUTH_RESOURCE` (or a real `AUTH_HASH`, which needs `AUTH_HASH_MODE: "env"` or `"managed"` — the default is `off` and silently ignores `AUTH_HASH`).
 
 **Checklist for OIDC apps:**
 - [ ] Caddy labels are attached **only to the AppShield sidecar**, never to the backend — otherwise the backend is exposed unauthenticated.
-- [ ] The sidecar carries the full env set: `AUTH_HASH`, `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL`, `REDIRECT_HOST_SUFFIXES`, `CREDENTIAL_VALIDATE_URL`.
+- [ ] The sidecar carries the full env set: `AUTH_HASH`, `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL`, `REDIRECT_HOST_SUFFIXES`.
 - [ ] `x-casaos.index` is set to `/?hash=$AUTH_HASH` when using `AUTH_HASH`.
 - [ ] `x-casaos.main` points at the primary service.
 - [ ] Backend service has no `ports:` and no public Caddy labels; it is reachable only via the `pcs` network.
@@ -749,7 +755,7 @@ x-casaos:
 - [ ] Do not claim `auth-${APP_DOMAIN}` in any Caddy label — it collides with the PCS's Authelia and causes intermittent `invalid_client` errors.
 - [ ] Pin AppShield to a specific version tag (currently `ghcr.io/yundera/appshield:2.0.3`) — never `:latest` / `:main`.
 
-**Requirements on the host PCS:** the `authelia`, `auth-registrar`, and `casaos-oidc-bridge` containers must be running on the `pcs` network (provisioned automatically by the current `template-root`). If they are missing, the app fails at first login with `ENOTFOUND auth-registrar` in the sidecar logs.
+**Requirements on the host PCS:** the `authelia` and `auth-registrar` containers must be running on the `pcs` network (provisioned automatically by the current `template-root`). If they are missing, the app fails at first login with `ENOTFOUND auth-registrar` in the sidecar logs.
 
 #### System Variables
 

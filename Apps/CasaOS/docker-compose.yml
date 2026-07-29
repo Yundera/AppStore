@@ -1,12 +1,15 @@
 name: casaos
 
 # NOTE — this app ships the `casaos` service ONLY, not `casaos-oidc-bridge`.
-# The bridge is PCS infrastructure, not part of CasaOS-the-app: it is what every
-# AppShield-gated app validates credentials against (CREDENTIAL_VALIDATE_URL →
-# http://casaos-oidc-bridge:8090/validate), and it needs BRIDGE_SECRET from the
-# PCS unified .env — a value the App Store cannot inject. It stays in the yundera
+# The bridge is PCS infrastructure, not part of CasaOS-the-app: it is the Dex
+# connector that backs Yundera SSO, and it needs BRIDGE_SECRET from the PCS
+# unified .env — a value the App Store cannot inject. It stays in the yundera
 # infrastructure stack, so uninstalling CasaOS here does not take every other
 # app's login with it.
+#
+# (Store apps no longer set CREDENTIAL_VALIDATE_URL against the bridge's
+# :8090/validate endpoint — that machine-auth path was dropped ahead of the
+# bridge's removal; machine access now goes through AppShield's OAuth broker.)
 
 services:
   casaos:

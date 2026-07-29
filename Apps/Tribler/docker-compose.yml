@@ -27,7 +27,6 @@ services:
       # Presence of OIDC_REGISTRAR_URL enables OIDC mode (self-registers via container_name).
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
-      CREDENTIAL_VALIDATE_URL: "http://casaos-oidc-bridge:8090/validate"
       BACKEND_HOST: "tribler-backend"
       BACKEND_PORT: "8086"
       LISTEN_PORT: "80"
