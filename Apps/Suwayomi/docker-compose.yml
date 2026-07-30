@@ -2,7 +2,7 @@ name: suwayomi
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100
+    image: ghcr.io/suwayomi/suwayomi-server:v2.3.2243
     user: $PUID:$PGID
     container_name: suwayomi
     restart: unless-stopped
@@ -48,7 +48,7 @@ services:
           memory: 1G
 
   flaresolverr:
-    image: ghcr.io/thephaseless/byparr:main
+    image: ghcr.io/thephaseless/byparr:latest@sha256:01a46a2865d9a6db5eb8ead04ec0dd33b8fbe233e8565ae70b50d4cc0af4cfb0
     container_name: suwayomi-bypass
     user: 0:0
     restart: unless-stopped
@@ -86,7 +86,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/thumbnail.png
   title:
     en_us: Suwayomi
   tagline:
