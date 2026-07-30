@@ -2,7 +2,7 @@ name: plausible
 
 services:
   plausible-db:
-    image: postgres:16.6-alpine
+    image: postgres:16.13-alpine
     container_name: plausible-db
     restart: unless-stopped
     user: "0:0"
@@ -55,7 +55,7 @@ services:
     cpu_shares: 50
 
   plausible:
-    image: ghcr.io/plausible/community-edition:v3.2.0
+    image: ghcr.io/plausible/community-edition:v3.2.1
     container_name: plausible
     restart: unless-stopped
     user: "0:0"
