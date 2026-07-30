@@ -2,7 +2,7 @@ name: dolibarr
 
 services:
   dolibarr:
-    image: dolibarr/dolibarr:22.0.4
+    image: dolibarr/dolibarr:22.0.5
     container_name: dolibarr
     restart: unless-stopped
     user: "0:0"
@@ -49,7 +49,7 @@ services:
     cpu_shares: 70
 
   db:
-    image: mariadb:11.8.6
+    image: mariadb:11.8.8
     container_name: dolibarr-db
     restart: unless-stopped
     user: "0:0"
@@ -69,10 +69,10 @@ services:
       MARIADB_DISABLE_UPGRADE_BACKUP: 1
     healthcheck:
       test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
-      interval: 15s
+      interval: 30s
       timeout: 10s
-      retries: 10
-      start_period: 60s
+      retries: 15
+      start_period: 120s
     deploy:
       resources:
         limits:
@@ -87,6 +87,8 @@ networks:
     external: true
 
 x-casaos:
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/documents /DATA/AppData/$AppID/custom /DATA/AppData/$AppID/db
   architectures:
     - amd64
     - arm64
@@ -192,6 +194,8 @@ x-casaos:
         | `admin`  | `$APP_DEFAULT_PASSWORD` |
 
         The database and admin account are configured automatically. Just open the app and log in.
+
+        **⏳ First install may take 5–10 minutes** while the database creates and indexes all tables. If you see a loading screen, please wait — this is normal on first startup only.
       ko_kr: |
         # 기본 계정
 
@@ -200,6 +204,8 @@ x-casaos:
         | `admin`  | `$APP_DEFAULT_PASSWORD` |
 
         데이터베이스와 관리자 계정은 자동으로 설정됩니다. 앱을 열고 로그인하세요.
+
+        **⏳ 최초 설치 시 5~10분 소요될 수 있습니다.** 데이터베이스가 모든 테이블을 생성하고 인덱싱하는 동안 로딩 화면이 표시될 수 있습니다. 이는 첫 실행 시에만 발생하는 정상적인 과정입니다.
       zh_cn: |
         # 默认账户
 
@@ -208,6 +214,8 @@ x-casaos:
         | `admin`  | `$APP_DEFAULT_PASSWORD` |
 
         数据库和管理员账户已自动配置。打开应用并登录即可。
+
+        **⏳ 首次安装可能需要 5-10 分钟**，数据库会创建和索引所有表。如果看到加载画面，请耐心等待——这只在首次启动时发生。
       fr_fr: |
         # Compte par defaut
 
@@ -216,6 +224,8 @@ x-casaos:
         | `admin`           | `$APP_DEFAULT_PASSWORD` |
 
         La base de donnees et le compte administrateur sont configures automatiquement. Ouvrez l'application et connectez-vous.
+
+        **⏳ La premiere installation peut prendre 5 a 10 minutes** pendant que la base de donnees cree et indexe toutes les tables. Si vous voyez un ecran de chargement, veuillez patienter — c'est normal uniquement au premier demarrage.
       es_es: |
         # Cuenta predeterminada
 
@@ -224,3 +234,5 @@ x-casaos:
         | `admin`  | `$APP_DEFAULT_PASSWORD` |
 
         La base de datos y la cuenta de administrador se configuran automaticamente. Abra la aplicacion e inicie sesion.
+
+        **⏳ La primera instalacion puede tardar 5-10 minutos** mientras la base de datos crea e indexa todas las tablas. Si ve una pantalla de carga, por favor espere — esto es normal solo en el primer inicio.
