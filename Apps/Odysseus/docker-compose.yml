@@ -1,0 +1,417 @@
+name: odysseus
+
+services:
+  odysseus-chromadb:
+    image: chromadb/chroma:1.5.0
+    container_name: odysseus-chromadb
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 30
+    expose:
+      - "8000"
+    environment:
+      ANONYMIZED_TELEMETRY: "FALSE"
+    volumes:
+      # chroma 1.5.x reads persist_path from the baked-in /config.yaml, which is /data
+      # (older 0.x images used /chroma/chroma — do not copy that path from upstream)
+      - /DATA/AppData/odysseus/chroma/:/data/
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - odysseus-internal
+
+  odysseus-searxng:
+    image: searxng/searxng:2026.5.31-7159b8aed
+    container_name: odysseus-searxng
+    restart: unless-stopped
+    cpu_shares: 30
+    expose:
+      - "8080"
+    environment:
+      SEARXNG_BASE_URL: http://odysseus-searxng:8080/
+    volumes:
+      # settings.yml (with a generated secret_key and the json format Odysseus needs)
+      # is written by pre-install-cmd
+      - /DATA/AppData/odysseus/searxng/:/etc/searxng/
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5).read(1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - odysseus-internal
+
+  nginxhashlock:
+    image: ghcr.io/yundera/appshield:2.0.6
+    container_name: odysseus
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: odysseus
+    restart: unless-stopped
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "odysseus-backend"
+      BACKEND_PORT: "7000"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+    expose:
+      - 80
+    labels:
+      icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/icon.png
+      caddy_0: odysseus-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: odysseus-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: odysseus-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - odysseus-backend
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    cpu_shares: 80
+    networks:
+      - pcs
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+
+  odysseus-backend:
+    image: ghcr.io/worph/odysseus:1.0.2-dev.7c8070f
+    container_name: odysseus-backend
+    restart: unless-stopped
+    # must start as root: the image entrypoint repairs bind-mount ownership then
+    # drops to PUID/PGID with gosu before running uvicorn
+    user: "0:0"
+    # uvicorn ends up as PID 1 and never reaps children, so every Chromium the
+    # built-in browser MCP server spawns is left as a zombie. Those accumulate
+    # in the host process table and slow down container enumeration for
+    # everything on the box. Docker's init process reaps them.
+    init: true
+    cpu_shares: 70
+    depends_on:
+      odysseus-chromadb:
+        condition: service_started
+      odysseus-searxng:
+        condition: service_healthy
+    # reached only by AppShield (nginxhashlock), which owns the published routes
+    expose:
+      - "7000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      # --- backing services ---
+      CHROMADB_HOST: odysseus-chromadb
+      CHROMADB_PORT: "8000"
+      SEARXNG_INSTANCE: http://odysseus-searxng:8080
+      DATABASE_URL: sqlite:///./data/app.db
+      FASTEMBED_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      # --- authentication ---
+      # AppShield in front is the only auth layer, and it has to be: it reserves
+      # `location /login` for its own login page, which shadows this app's /login
+      # route. With AUTH_ENABLED=true the app redirects to /login, AppShield answers
+      # instead of the backend, and the app's login form is unreachable.
+      AUTH_ENABLED: "false"
+      LOCALHOST_BYPASS: "false"
+      SECURE_COOKIES: "true"
+      ODYSSEUS_ADMIN_USER: admin
+      ODYSSEUS_ADMIN_PASSWORD: $APP_DEFAULT_PASSWORD
+      # comma-separated exact origins - all three published hostnames must be listed
+      ALLOWED_ORIGINS: https://odysseus-${APP_DOMAIN},https://odysseus-${APP_PUBLIC_IP_DASH}.nip.io,https://odysseus-${APP_PUBLIC_IP_DASH}.sslip.io
+      # --- model backend ---
+      # no model ships with the app; set a provider key or a reachable model
+      # server URL in Settings on first use (see tips.before_install)
+      OPENAI_API_KEY: ""
+      OLLAMA_BASE_URL: ""
+      RESEARCH_LLM_ENDPOINT: ""
+      EMBEDDING_URL: ""
+      # --- optional integrations, left empty on purpose ---
+      NTFY_BASE_URL: ""
+      HF_TOKEN: ""
+      DATA_BRAVE_API_KEY: ""
+      TAVILY_API_KEY: ""
+    volumes:
+      - /DATA/AppData/odysseus/data/:/app/data/
+      - /DATA/AppData/odysseus/logs/:/app/logs/
+      - /DATA/AppData/odysseus/data/ssh/:/app/.ssh/
+      - /DATA/AppData/odysseus/data/huggingface/:/app/.cache/huggingface/
+      - /DATA/AppData/odysseus/data/local/:/app/.local/
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:7000/api/health', timeout=5).read(1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+    networks:
+      - odysseus-internal
+      - pcs
+
+networks:
+  odysseus-internal:
+    driver: bridge
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: nginxhashlock
+  store_app_id: odysseus
+  webui_port: 80
+  index: /?hash=$AUTH_HASH
+  scheme: https
+  port_map: "443"
+  hostname: odysseus-${APP_DOMAIN}
+  is_uncontrolled: false
+  author: Yundera Team
+  developer: Odysseus
+  category: Chat
+  tags: ["ai", "productivity", "automation"]
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-1.png
+  title:
+    en_us: Odysseus
+    ko_kr: Odysseus
+    zh_cn: Odysseus
+    fr_fr: Odysseus
+    es_es: Odysseus
+  tagline:
+    en_us: Self-hosted AI workspace with chat, agents and deep research
+    ko_kr: 채팅, 에이전트, 심층 리서치를 갖춘 셀프 호스팅 AI 워크스페이스
+    zh_cn: 自托管 AI 工作区，支持聊天、智能体和深度研究
+    fr_fr: Espace de travail IA auto-heberge avec chat, agents et recherche approfondie
+    es_es: Espacio de trabajo IA autoalojado con chat, agentes e investigacion profunda
+  description:
+    en_us: |
+      **Odysseus — Self-hosted AI Workspace**
+
+      An open-source personal AI workspace that keeps your conversations, documents and memory on your own server. Bring your own model — Odysseus is the interface and the agent runtime, not the model.
+
+      **Key Features:**
+      - Multi-turn chat with autonomous agents and tool use
+      - Deep research over the web via a bundled private SearXNG instance
+      - Persistent long-term memory backed by ChromaDB
+      - Email (IMAP/SMTP) and calendar (CalDAV) integration
+      - Document editing and a side-by-side model comparison view
+      - Model Context Protocol (MCP) support for extending the agent with tools
+
+      **Bring Your Own Model:**
+      Connect an API provider (OpenAI, OpenRouter) or point Odysseus at a model server you already run — Ollama, vLLM or llama.cpp. Nothing is configured by default; you choose the backend on first login.
+
+      **Privacy First:**
+      Chats, memory, files and the search index all stay in `/DATA/AppData/odysseus/` on your server. Web searches go through your own SearXNG instance, not a third-party search API.
+    ko_kr: |
+      **Odysseus — 셀프 호스팅 AI 워크스페이스**
+
+      대화, 문서, 메모리를 자신의 서버에 보관하는 오픈소스 개인 AI 워크스페이스입니다. 모델은 직접 연결하세요 — Odysseus는 인터페이스이자 에이전트 런타임입니다.
+
+      **주요 기능:**
+      - 자율 에이전트와 도구 사용이 가능한 멀티턴 채팅
+      - 내장 SearXNG 인스턴스를 통한 웹 심층 리서치
+      - ChromaDB 기반 영구 장기 메모리
+      - 이메일(IMAP/SMTP) 및 캘린더(CalDAV) 연동
+      - 문서 편집 및 모델 비교 보기
+      - 에이전트 확장을 위한 MCP 지원
+
+      **모델 직접 연결:**
+      API 제공자(OpenAI, OpenRouter)를 연결하거나 이미 운영 중인 모델 서버(Ollama, vLLM, llama.cpp)를 지정하세요. 기본 설정은 없으며 첫 로그인 후 선택합니다.
+
+      **개인정보 보호:**
+      채팅, 메모리, 파일, 검색 인덱스가 모두 서버의 `/DATA/AppData/odysseus/`에 저장됩니다.
+    zh_cn: |
+      **Odysseus — 自托管 AI 工作区**
+
+      开源的个人 AI 工作区，将对话、文档和记忆保存在您自己的服务器上。自带模型 — Odysseus 提供界面和智能体运行时，而非模型本身。
+
+      **主要功能：**
+      - 支持自主智能体和工具调用的多轮对话
+      - 通过内置私有 SearXNG 实例进行网络深度研究
+      - 基于 ChromaDB 的持久长期记忆
+      - 邮件（IMAP/SMTP）与日历（CalDAV）集成
+      - 文档编辑和模型对比视图
+      - 支持 MCP 以扩展智能体工具
+
+      **自带模型：**
+      连接 API 提供商（OpenAI、OpenRouter），或指向您已运行的模型服务（Ollama、vLLM、llama.cpp）。默认不配置任何后端，首次登录后自行选择。
+
+      **隐私优先：**
+      所有数据保存在服务器的 `/DATA/AppData/odysseus/` 目录中。
+    fr_fr: |
+      **Odysseus — Espace de travail IA auto-heberge**
+
+      Un espace de travail IA personnel open-source qui garde vos conversations, documents et memoire sur votre propre serveur. Apportez votre modele — Odysseus est l'interface et le moteur d'agents, pas le modele.
+
+      **Fonctionnalites cles :**
+      - Chat multi-tours avec agents autonomes et utilisation d'outils
+      - Recherche approfondie sur le web via une instance SearXNG privee integree
+      - Memoire long terme persistante basee sur ChromaDB
+      - Integration email (IMAP/SMTP) et calendrier (CalDAV)
+      - Edition de documents et comparaison de modeles cote a cote
+      - Support MCP pour etendre l'agent avec des outils
+
+      **Apportez votre modele :**
+      Connectez un fournisseur d'API (OpenAI, OpenRouter) ou pointez Odysseus vers un serveur de modeles que vous exploitez deja (Ollama, vLLM, llama.cpp).
+
+      **Confidentialite :**
+      Toutes les donnees restent dans `/DATA/AppData/odysseus/` sur votre serveur.
+    es_es: |
+      **Odysseus — Espacio de trabajo IA autoalojado**
+
+      Un espacio de trabajo IA personal de codigo abierto que mantiene tus conversaciones, documentos y memoria en tu propio servidor. Trae tu modelo — Odysseus es la interfaz y el motor de agentes, no el modelo.
+
+      **Caracteristicas principales:**
+      - Chat multiturno con agentes autonomos y uso de herramientas
+      - Investigacion profunda en la web mediante una instancia SearXNG privada integrada
+      - Memoria persistente a largo plazo basada en ChromaDB
+      - Integracion de correo (IMAP/SMTP) y calendario (CalDAV)
+      - Edicion de documentos y comparacion de modelos
+      - Soporte MCP para ampliar el agente con herramientas
+
+      **Trae tu modelo:**
+      Conecta un proveedor de API (OpenAI, OpenRouter) o apunta Odysseus a un servidor de modelos que ya ejecutes (Ollama, vLLM, llama.cpp).
+
+      **Privacidad:**
+      Todos los datos permanecen en `/DATA/AppData/odysseus/` en tu servidor.
+  tips:
+    before_install:
+      en_us: |
+        **No separate login.** Odysseus is protected by AppShield, so opening it from
+        your dashboard signs you in with your PCS account — there is no second
+        username and password to keep.
+
+        **You must connect a model before Odysseus is useful.**
+
+        No model is bundled. Open **Settings > Models** and pick one:
+
+        - **API provider (easiest)** — paste an OpenAI or OpenRouter API key.
+        - **Your own model server** — enter the URL of an Ollama / vLLM / llama.cpp
+          endpoint you already run. For Ollama, remember the `/v1` suffix,
+          e.g. `http://192.168.1.10:11434/v1`.
+
+        **First start takes a few minutes.** The container runs its setup script,
+        then downloads the embedding model used for memory and search. Watch
+        progress with `docker logs -f odysseus`.
+
+        **Resource use:** this app runs four containers (AppShield, Odysseus,
+        ChromaDB, SearXNG) and reserves up to ~4.6 GB of RAM in total. Running a model
+        locally on the same machine needs considerably more on top of that.
+
+        **Note on the image:** the upstream project does not currently publish a
+        public container image, so this app uses a community rebuild of the
+        official source. See the project at
+        [odysseusai.dev](https://odysseusai.dev).
+      ko_kr: |
+        **별도 로그인 불필요.** Odysseus는 AppShield로 보호되므로 대시보드에서 앱을 열면
+        PCS 계정으로 자동 로그인됩니다. 따로 기억할 사용자명과 비밀번호가 없습니다.
+
+        **모델을 연결해야 사용할 수 있습니다.**
+
+        모델은 포함되어 있지 않습니다. **Settings > Models**에서 선택하세요:
+
+        - **API 제공자 (가장 간단)** — OpenAI 또는 OpenRouter API 키 입력
+        - **자체 모델 서버** — 운영 중인 Ollama / vLLM / llama.cpp 주소 입력
+          (Ollama는 `/v1` 접미사 필요, 예: `http://192.168.1.10:11434/v1`)
+
+        **첫 시작은 몇 분 걸립니다.** 설정 스크립트 실행 후 임베딩 모델을
+        다운로드합니다. `docker logs -f odysseus`로 확인하세요.
+
+        **리소스:** 컨테이너 4개(AppShield, Odysseus, ChromaDB, SearXNG)가 최대 약 4.6GB
+        RAM을 사용합니다.
+      zh_cn: |
+        **无需单独登录。** Odysseus 由 AppShield 保护，从仪表板打开即以您的 PCS 账户
+        自动登录，无需另外记住用户名和密码。
+
+        **必须先连接模型才能使用。**
+
+        本应用不包含模型。进入 **Settings > Models** 选择：
+
+        - **API 提供商（最简单）** — 填入 OpenAI 或 OpenRouter API 密钥
+        - **自有模型服务** — 填入您已运行的 Ollama / vLLM / llama.cpp 地址
+          （Ollama 需要 `/v1` 后缀，例如 `http://192.168.1.10:11434/v1`）
+
+        **首次启动需要几分钟**，会下载嵌入模型。可用
+        `docker logs -f odysseus` 查看进度。
+
+        **资源占用：** 运行四个容器（AppShield、Odysseus、ChromaDB、SearXNG），
+        总计最多约 4.6 GB 内存。
+      fr_fr: |
+        **Aucune connexion separee.** Odysseus est protege par AppShield : ouvrir
+        l'application depuis votre tableau de bord vous connecte avec votre compte
+        PCS, sans identifiant ni mot de passe supplementaire a retenir.
+
+        **Vous devez connecter un modele avant de pouvoir utiliser Odysseus.**
+
+        Aucun modele n'est fourni. Ouvrez
+        **Settings > Models** et choisissez :
+
+        - **Fournisseur d'API (le plus simple)** — cle OpenAI ou OpenRouter
+        - **Votre propre serveur de modeles** — URL d'un endpoint Ollama /
+          vLLM / llama.cpp (pour Ollama, ajoutez le suffixe `/v1`)
+
+        **Le premier demarrage prend quelques minutes** (telechargement du
+        modele d'embedding). Suivez avec `docker logs -f odysseus`.
+
+        **Ressources :** quatre conteneurs, jusqu'a ~4,6 Go de RAM au total.
+      es_es: |
+        **Sin inicio de sesion aparte.** Odysseus esta protegido por AppShield: al abrir
+        la aplicacion desde tu panel entras con tu cuenta del PCS, sin usuario ni
+        contrasena adicionales que recordar.
+
+        **Debes conectar un modelo antes de poder usar Odysseus.**
+
+        No se incluye ningun modelo. Abre
+        **Settings > Models** y elige:
+
+        - **Proveedor de API (lo mas facil)** — clave de OpenAI u OpenRouter
+        - **Tu propio servidor de modelos** — URL de un endpoint Ollama /
+          vLLM / llama.cpp (para Ollama, anade el sufijo `/v1`)
+
+        **El primer arranque tarda unos minutos** (descarga del modelo de
+        embeddings). Sigue el progreso con `docker logs -f odysseus`.
+
+        **Recursos:** cuatro contenedores, hasta ~4,6 GB de RAM en total.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/odysseus/data /DATA/AppData/odysseus/logs /DATA/AppData/odysseus/chroma /DATA/AppData/odysseus/searxng &&
+    if [ ! -s /DATA/AppData/odysseus/searxng/settings.yml ]; then
+      printf 'use_default_settings: true\n\nserver:\n  secret_key: "%s"\n  limiter: false\n  image_proxy: false\n\nsearch:\n  formats:\n    - html\n    - json\n' "$(openssl rand -hex 32)" > /DATA/AppData/odysseus/searxng/settings.yml
+    fi &&
+    chmod 644 /DATA/AppData/odysseus/searxng/settings.yml &&
+    chmod 755 /DATA/AppData/odysseus/searxng
+
+x-compose-app:
+  webui-host: odysseus-${domain}
