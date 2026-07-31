@@ -2,7 +2,7 @@ name: beacon
 
 services:
   beacon-backend:
-    image: ghcr.io/worph/beacon:1.0.16
+    image: ghcr.io/worph/beacon:1.0.19
     container_name: beacon-backend
     hostname: beacon-backend
     restart: unless-stopped
@@ -25,6 +25,16 @@ services:
     expose:
       - 9300
       - 9099
+    volumes:
+      # Beacon's own state, all under /app/data: externally-added MCP server
+      # configs (external.json), the per-server description/note overrides
+      # (annotations.json), the OAuth tokens and registered client for each
+      # OAuth-protected external server (oauth/*.json, written 0600), and the
+      # instance id used as the federation loop guard (beacon-id).
+      # Without this it is all recreated empty on every redeploy, which means
+      # re-adding external servers and re-authorizing each one by hand after
+      # every app update.
+      - /DATA/AppData/beacon/data:/app/data
     networks:
       - pcs
     deploy:
@@ -39,7 +49,11 @@ services:
     # advertises OAUTH_SCOPE — no MCP-specific knowledge. Activated by
     # OAUTH_RESOURCE below. (2.0.5/2.0.6 used the MCP_OAUTH_RESOURCE name, kept as
     # a back-compat alias.)
-    image: ghcr.io/yundera/appshield:2.0.7
+    # 2.0.9+ additionally advertises offline_access and adds prompt=consent to
+    # authorization requests that ask for it — without that, OIDC Core 11.1 makes
+    # the provider drop the scope and issue no refresh token, so every client had
+    # to be re-authorized by hand once the 1h access token expired.
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: beacon
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -110,7 +124,7 @@ x-casaos:
   # project .env so ${BEACON_AUTH} interpolates for both services.
   # Idempotent: only generates if not already present.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID /DATA/AppData/$AppID/oauth /DATA/AppData/casaos/apps/$AppID &&
+    mkdir -p /DATA/AppData/$AppID /DATA/AppData/$AppID/oauth /DATA/AppData/$AppID/data /DATA/AppData/casaos/apps/$AppID &&
     ENV_FILE=/DATA/AppData/$AppID/.env &&
     if ! grep -q '^BEACON_AUTH=' "$ENV_FILE" 2>/dev/null; then
       echo "BEACON_AUTH=$(openssl rand -hex 64)" >> "$ENV_FILE";
@@ -141,6 +155,8 @@ x-casaos:
 
       **What you can do:**
       - Automatically discover MCP servers on the same Docker network
+      - Add remote MCP servers by URL, including ones behind an OAuth login
+      - Connect another Beacon and get its servers individually, not buried behind it
       - Access all MCP tools through a single unified endpoint
       - View discovered servers and their tools via the web dashboard
       - Trigger manual discovery scans
@@ -156,6 +172,8 @@ x-casaos:
 
       **Ce que vous pouvez faire:**
       - Decouvrir automatiquement les serveurs MCP sur le meme reseau Docker
+      - Ajouter des serveurs MCP distants par URL, y compris ceux proteges par OAuth
+      - Connecter un autre Beacon et recuperer ses serveurs individuellement
       - Acceder a tous les outils MCP via un seul endpoint unifie
       - Visualiser les serveurs decouverts et leurs outils via le tableau de bord web
       - Declencher des scans de decouverte manuels
@@ -205,17 +223,25 @@ x-casaos:
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "http://beacon-backend:9099/mcp"
+              "url": "http://beacon-backend:9300/mcp"
             }
           }
         }
         ```
-        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+        *Note: Requires the AI assistant to be on the `pcs` Docker network. Port 9300 is the
+        web/MCP port; 9099 is the UDP discovery port and serves no HTTP.*
 
         **Web Dashboard:**
         - View all discovered MCP servers at the main URL
         - See available tools per server
         - Trigger manual discovery via the UI
+
+        **Adding servers that aren't on this machine:**
+
+        Open **External MCP Servers** in the dashboard and paste the endpoint URL.
+        - If it needs an OAuth login, Beacon registers itself with the remote automatically and shows a **Connect** button — finish the login in the popup and it stays connected, refreshing its own token from then on.
+        - If the URL is another Beacon, its servers are imported individually (`remote.docmost-mcp__…`) rather than hidden behind it.
+        - Pre-registered OAuth credentials and custom scopes live under **Advanced**, and a JSON bundle can still be pasted there to add several at once or to set static auth headers.
 
         **Compatible MCP servers:**
         Any MCP server using the `mcp-announce` SDK on the `pcs` network will be automatically discovered. Apps like Lystik, OpenKeep, BrowserMCP, and others are compatible.
@@ -259,12 +285,20 @@ x-casaos:
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "http://beacon-backend:9099/mcp"
+              "url": "http://beacon-backend:9300/mcp"
             }
           }
         }
         ```
-        *Note: L'assistant IA doit etre sur le reseau Docker `pcs`.*
+        *Note: L'assistant IA doit etre sur le reseau Docker `pcs`. Le port 9300 est celui
+        du web/MCP; 9099 est le port de decouverte UDP et ne sert aucun HTTP.*
+
+        **Ajouter des serveurs distants:**
+
+        Ouvrez **External MCP Servers** dans le tableau de bord et collez l'URL du endpoint.
+        - Si le serveur necessite une connexion OAuth, Beacon s'enregistre automatiquement aupres du serveur distant et affiche un bouton **Connect** — terminez la connexion dans la popup et Beacon renouvelle ensuite son jeton tout seul.
+        - Si l'URL est un autre Beacon, ses serveurs sont importes individuellement (`distant.docmost-mcp__…`) au lieu d'etre masques derriere lui.
+        - Les identifiants OAuth pre-enregistres et les scopes personnalises sont dans **Advanced**, ou l'on peut aussi coller un bundle JSON pour en ajouter plusieurs a la fois.
 
 x-compose-app:
   webui-host: beacon-${domain}
