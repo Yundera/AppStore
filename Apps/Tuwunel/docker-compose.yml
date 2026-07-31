@@ -63,6 +63,7 @@ services:
     image: vectorim/element-web:v1.12.24
     container_name: tuwunel-element
     restart: unless-stopped
+    user: $PUID:$PGID
     cpu_shares: 30
     deploy:
       resources:
@@ -71,24 +72,32 @@ services:
     depends_on:
       tuwunel:
         condition: service_healthy
+    environment:
+      TZ: $TZ
+      # MUST stay 8080. The image's entrypoint renders /etc/nginx/templates into
+      # /etc/nginx/conf.d at startup, but conf.d is owned by the image's `nginx`
+      # user and we run as $PUID — the render silently fails and nginx falls back
+      # to the baked default.conf, which listens on 8080. Anything else (e.g. the
+      # image default of 80) leaves nothing listening on the advertised port.
+      ELEMENT_WEB_PORT: "8080"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/config.json"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/config.json"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
     expose:
-      - 80
+      - 8080
     labels:
       # tuwunel-* = app/WebUI domain (store {name}-{domain} convention)
       caddy_0: tuwunel-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_0.reverse_proxy: "{{upstreams 8080}}"
       caddy_1: tuwunel-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.reverse_proxy: "{{upstreams 8080}}"
       caddy_2: tuwunel-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.reverse_proxy: "{{upstreams 8080}}"
     volumes:
       # Written by pre-install-cmd with the PCS domain substituted
       - /DATA/AppData/tuwunel/element/config.json:/app/config.json:ro
@@ -105,7 +114,7 @@ x-casaos:
     - amd64
     - arm64
   main: element
-  webui_port: 80
+  webui_port: 8080
   author: Yundera Team
   category: Chat
   tags: ["privacy", "personal", "communication"]
