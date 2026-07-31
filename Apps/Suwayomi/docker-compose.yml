@@ -33,7 +33,7 @@ services:
       WEB_UI_CHANNEL: bundled
       WEB_UI_UPDATE_INTERVAL: 0.0
       EXTENSION_REPOS: >-
-        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]
+        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"]
       FLARESOLVERR_ENABLED: true
       FLARESOLVERR_URL: http://suwayomi-bypass:8191
     volumes:
