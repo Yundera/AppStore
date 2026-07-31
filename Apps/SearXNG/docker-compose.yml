@@ -1,0 +1,322 @@
+name: searxng
+
+services:
+  nginxhashlock:
+    image: ghcr.io/yundera/appshield:2.0.6
+    container_name: searxng
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: searxng
+    restart: unless-stopped
+    user: "root"
+    environment:
+      AUTH_HASH: $AUTH_HASH
+      BACKEND_HOST: "searxng-backend"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+    expose:
+      - 80
+    labels:
+      caddy_0: searxng-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: searxng-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: searxng-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - searxng-backend
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    cpu_shares: 80
+    networks:
+      - pcs
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+
+  searxng-backend:
+    image: searxng/searxng:2026.7.31-057a77168
+    container_name: searxng-backend
+    restart: unless-stopped
+    cpu_shares: 50
+
+    expose:
+      - "8080"
+
+    environment:
+      - TZ=$TZ
+      # base_url is left unset on purpose: SearXNG then derives absolute links
+      # from the request Host, so all three routes above keep working.
+      #
+      # The bot limiter is left off (its default): AppShield already authenticates
+      # every request, so there is no anonymous traffic to rate-limit. Turning it on
+      # behind two reverse proxies needs a matching trusted_proxies list in
+      # limiter.toml, or all users collapse into one rate-limit bucket and get 429s.
+      - SEARXNG_LIMITER=false
+
+    volumes:
+      # settings.yml is generated here on first start (with a random secret_key)
+      # and is the file to edit to enable engines, rename the instance, etc.
+      - /DATA/AppData/searxng/config/:/etc/searxng/
+      - /DATA/AppData/searxng/cache/:/var/cache/searxng/
+
+    cap_drop:
+      - ALL
+    cap_add:
+      # entrypoint chowns the two mounts and copies settings.yml from the
+      # template with -p, which needs FOWNER on the root-owned bind mount
+      - CHOWN
+      - FOWNER
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: nginxhashlock
+  author: Yundera
+  developer: searxng
+  category: WEB
+  tags: ["search", "privacy", "metasearch"]
+  description:
+    en_us: |
+      SearXNG is a free, self-hosted metasearch engine. It forwards your query to more than 200 search
+      services, merges the results, and gives them back to you without ever building a profile of you.
+
+      - **No tracking, no profiling** - no cookies for advertisers, no search history sold on
+      - **Aggregates 200+ sources** - Google, Bing, DuckDuckGo, Wikipedia, GitHub, Stack Overflow, arXiv and many more
+      - **You choose the engines** - enable, disable or reweight any source, per category
+      - **Specialised categories** - general, images, videos, news, maps, music, IT, science, files, social media
+      - **Your own front page** - set it as the default search engine in any browser via OpenSearch
+      - **Bang-style shortcuts** - `!gh docker` searches GitHub, `!wp cats` searches Wikipedia
+      - **Themes and preferences** - light/dark, safe search, language and region, all stored client-side
+      - **Optional JSON API** - turn it on to plug SearXNG into scripts, agents or LLM tooling
+
+      Because the instance runs on your own server, the search engines see your server, not you.
+    ko_kr: |
+      SearXNG는 무료로 직접 호스팅하는 메타 검색 엔진입니다. 검색어를 200개 이상의 검색 서비스로 전달하고
+      결과를 통합하여 보여주며, 사용자 프로필은 전혀 만들지 않습니다.
+
+      - **추적 및 프로파일링 없음** - 광고용 쿠키 없음, 검색 기록 판매 없음
+      - **200개 이상의 소스 통합** - Google, Bing, DuckDuckGo, Wikipedia, GitHub, Stack Overflow, arXiv 등
+      - **엔진 직접 선택** - 카테고리별로 소스를 활성화, 비활성화 또는 가중치 조정
+      - **전문 카테고리** - 일반, 이미지, 동영상, 뉴스, 지도, 음악, IT, 과학, 파일, 소셜 미디어
+      - **나만의 시작 페이지** - OpenSearch로 모든 브라우저의 기본 검색 엔진으로 설정
+      - **뱅 단축키** - `!gh docker`는 GitHub 검색, `!wp cats`는 Wikipedia 검색
+      - **테마 및 환경설정** - 라이트/다크, 세이프서치, 언어 및 지역 설정을 클라이언트에 저장
+      - **선택적 JSON API** - 스크립트, 에이전트, LLM 도구와 연동 가능
+
+      인스턴스가 사용자 서버에서 실행되므로 검색 엔진은 사용자가 아닌 서버만 보게 됩니다.
+    zh_cn: |
+      SearXNG 是一个免费的自托管元搜索引擎。它将您的查询转发到 200 多个搜索服务，
+      合并结果后返回给您，且从不建立您的个人画像。
+
+      - **无跟踪、无画像** - 没有广告商 Cookie，不出售搜索历史
+      - **聚合 200+ 来源** - Google、Bing、DuckDuckGo、维基百科、GitHub、Stack Overflow、arXiv 等
+      - **自选搜索引擎** - 按分类启用、禁用或调整任意来源的权重
+      - **专业分类** - 综合、图片、视频、新闻、地图、音乐、IT、科学、文件、社交媒体
+      - **专属首页** - 通过 OpenSearch 设为任意浏览器的默认搜索引擎
+      - **Bang 快捷指令** - `!gh docker` 搜索 GitHub，`!wp cats` 搜索维基百科
+      - **主题与偏好** - 明/暗主题、安全搜索、语言与地区，全部保存在客户端
+      - **可选 JSON API** - 开启后可接入脚本、智能体或大模型工具链
+
+      由于实例运行在您自己的服务器上，搜索引擎看到的是您的服务器，而不是您。
+    fr_fr: |
+      SearXNG est un métamoteur de recherche libre et auto-hébergé. Il transmet votre requête à plus de
+      200 services de recherche, fusionne les résultats et vous les restitue sans jamais établir votre profil.
+
+      - **Aucun suivi, aucun profilage** - pas de cookies publicitaires, pas d'historique revendu
+      - **Plus de 200 sources agrégées** - Google, Bing, DuckDuckGo, Wikipédia, GitHub, Stack Overflow, arXiv…
+      - **Vous choisissez les moteurs** - activez, désactivez ou repondérez chaque source, par catégorie
+      - **Catégories spécialisées** - général, images, vidéos, actualités, cartes, musique, IT, science, fichiers, réseaux sociaux
+      - **Votre propre page d'accueil** - définissez-le comme moteur par défaut via OpenSearch
+      - **Raccourcis « bang »** - `!gh docker` cherche sur GitHub, `!wp cats` sur Wikipédia
+      - **Thèmes et préférences** - clair/sombre, recherche sécurisée, langue et région, stockés côté client
+      - **API JSON optionnelle** - activez-la pour brancher SearXNG sur vos scripts, agents ou outils LLM
+
+      L'instance tournant sur votre propre serveur, les moteurs voient votre serveur, pas vous.
+    es_es: |
+      SearXNG es un metabuscador libre y autoalojado. Reenvía tu consulta a más de 200 servicios de
+      búsqueda, combina los resultados y te los devuelve sin crear nunca un perfil sobre ti.
+
+      - **Sin rastreo ni perfilado** - sin cookies publicitarias, sin historial de búsqueda vendido
+      - **Agrega más de 200 fuentes** - Google, Bing, DuckDuckGo, Wikipedia, GitHub, Stack Overflow, arXiv y más
+      - **Tú eliges los motores** - activa, desactiva o repondera cualquier fuente, por categoría
+      - **Categorías especializadas** - general, imágenes, vídeos, noticias, mapas, música, IT, ciencia, archivos, redes sociales
+      - **Tu propia página de inicio** - conviértelo en buscador por defecto de cualquier navegador vía OpenSearch
+      - **Atajos «bang»** - `!gh docker` busca en GitHub, `!wp cats` en Wikipedia
+      - **Temas y preferencias** - claro/oscuro, búsqueda segura, idioma y región, guardados en el cliente
+      - **API JSON opcional** - actívala para conectar SearXNG con scripts, agentes o herramientas LLM
+
+      Como la instancia corre en tu propio servidor, los buscadores ven tu servidor, no a ti.
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-1.png
+  tagline:
+    en_us: Privacy-respecting metasearch across 200+ engines
+    ko_kr: 200개 이상의 엔진을 아우르는 프라이버시 존중 메타 검색
+    zh_cn: 尊重隐私的元搜索，聚合 200+ 搜索引擎
+    fr_fr: Métamoteur respectueux de la vie privée, plus de 200 moteurs
+    es_es: Metabuscador respetuoso con la privacidad en más de 200 motores
+  title:
+    en_us: SearXNG
+    ko_kr: SearXNG
+    zh_cn: SearXNG
+    fr_fr: SearXNG
+    es_es: SearXNG
+  index: /?hash=$AUTH_HASH
+  webui_port: 80
+  store_app_id: searxng
+  tips:
+    before_install:
+      en_us: |
+        ## Private to you
+
+        SearXNG itself has no accounts, so access is guarded by AppShield: open the app from your
+        dashboard and you are signed in automatically. Anyone without that link — or without your
+        SSO session — cannot reach the search page. Search preferences (theme, language, enabled
+        engines) are stored in your browser, per device.
+
+        **Make it your browser's search engine:** open the app once from your dashboard and sign in —
+        the session lasts 30 days — then add `https://searxng-$APP_DOMAIN/search?q=%s` as a custom
+        engine. Searches go straight through; when the session lapses you are asked to sign in again.
+
+        ## Configuration
+
+        `settings.yml` is created on first start in `/DATA/AppData/searxng/config/`. Edit it to
+        rename the instance, enable extra engines, or turn on the JSON API
+        (`search: formats: [html, json]` — needed to query SearXNG from scripts or AI agents),
+        then restart the app.
+
+        SearXNG's own bot rate-limiter is off, since AppShield already authenticates every request.
+
+        **Resources:** two containers, up to ~1.1 GB RAM.
+      ko_kr: |
+        ## 나만의 비공개 인스턴스
+
+        SearXNG 자체에는 계정이 없으므로 AppShield가 접근을 보호합니다. 대시보드에서 앱을 열면
+        자동으로 인증됩니다. 이 링크나 SSO 세션이 없는 사람은 검색 페이지에 접근할 수 없습니다.
+        검색 환경설정(테마, 언어, 사용 엔진)은 기기별로 브라우저에 저장됩니다.
+
+        **브라우저 기본 검색 엔진으로 설정:** 대시보드에서 앱을 한 번 열어 로그인한 뒤(세션은 30일 유지)
+        `https://searxng-$APP_DOMAIN/search?q=%s`를 사용자 지정 엔진으로 추가하세요. 검색은 바로
+        연결되며, 세션이 만료되면 다시 로그인하라는 안내가 표시됩니다.
+
+        ## 설정
+
+        `settings.yml`은 첫 실행 시 `/DATA/AppData/searxng/config/`에 생성됩니다. 인스턴스 이름 변경,
+        추가 엔진 활성화, JSON API 활성화(`search: formats: [html, json]` — 스크립트나 AI 에이전트에서
+        조회하려면 필요)를 하려면 이 파일을 편집한 뒤 앱을 재시작하세요.
+
+        AppShield가 모든 요청을 인증하므로 SearXNG 자체의 봇 속도 제한은 꺼져 있습니다.
+
+        **리소스:** 컨테이너 2개, 최대 약 1.1GB RAM.
+      zh_cn: |
+        ## 仅您可访问
+
+        SearXNG 本身没有账户体系，因此由 AppShield 守护访问权限：从仪表板打开应用即自动完成认证。
+        没有该链接、也没有您的 SSO 会话的人无法访问搜索页面。
+        搜索偏好（主题、语言、启用的引擎）按设备保存在浏览器中。
+
+        **设为浏览器默认搜索引擎：** 先从仪表板打开一次应用并登录（会话保持 30 天），然后将
+        `https://searxng-$APP_DOMAIN/search?q=%s` 添加为自定义搜索引擎。搜索会直接通过；
+        会话过期后会提示您重新登录。
+
+        ## 配置
+
+        首次启动时会在 `/DATA/AppData/searxng/config/` 生成 `settings.yml`。编辑它可重命名实例、
+        启用更多搜索引擎，或开启 JSON API（`search: formats: [html, json]` — 从脚本或 AI 智能体
+        调用时必需），然后重启应用。
+
+        由于 AppShield 已对每个请求进行认证，SearXNG 自带的机器人限速默认关闭。
+
+        **资源占用：** 两个容器，最多约 1.1 GB 内存。
+      fr_fr: |
+        ## Privé, réservé à vous
+
+        SearXNG n'a pas de comptes : l'accès est donc gardé par AppShield. Ouvrez l'application
+        depuis votre tableau de bord et vous êtes authentifié automatiquement. Sans ce lien — ou sans
+        votre session SSO — personne n'atteint la page de recherche. Les préférences de recherche
+        (thème, langue, moteurs activés) sont stockées dans votre navigateur, par appareil.
+
+        **En faire le moteur de recherche du navigateur :** ouvrez l'application une fois depuis votre
+        tableau de bord et connectez-vous — la session dure 30 jours — puis ajoutez
+        `https://searxng-$APP_DOMAIN/search?q=%s` comme moteur personnalisé. Les recherches passent
+        directement ; à l'expiration de la session, une reconnexion vous est demandée.
+
+        ## Configuration
+
+        `settings.yml` est créé au premier démarrage dans `/DATA/AppData/searxng/config/`. Modifiez-le
+        pour renommer l'instance, activer d'autres moteurs ou ouvrir l'API JSON
+        (`search: formats: [html, json]` — nécessaire pour interroger SearXNG depuis un script ou un
+        agent IA), puis redémarrez l'application.
+
+        Le limiteur anti-bot propre à SearXNG est désactivé, AppShield authentifiant déjà chaque requête.
+
+        **Ressources :** deux conteneurs, jusqu'à ~1,1 Go de RAM.
+      es_es: |
+        ## Privado, solo para ti
+
+        SearXNG no tiene cuentas, así que AppShield protege el acceso: abre la aplicación desde tu
+        panel y quedas autenticado automáticamente. Quien no tenga ese enlace — ni tu sesión SSO — no
+        puede llegar a la página de búsqueda. Las preferencias de búsqueda (tema, idioma, motores
+        activos) se guardan en tu navegador, por dispositivo.
+
+        **Conviértelo en el buscador del navegador:** abre la aplicación una vez desde tu panel e inicia
+        sesión — la sesión dura 30 días — y luego añade `https://searxng-$APP_DOMAIN/search?q=%s` como
+        motor personalizado. Las búsquedas pasan directamente; cuando la sesión caduca se te pide
+        iniciar sesión de nuevo.
+
+        ## Configuración
+
+        `settings.yml` se crea en el primer arranque en `/DATA/AppData/searxng/config/`. Edítalo para
+        renombrar la instancia, activar más motores o abrir la API JSON
+        (`search: formats: [html, json]` — necesaria para consultar SearXNG desde scripts o agentes
+        de IA) y reinicia la aplicación.
+
+        El limitador anti-bots propio de SearXNG está desactivado, ya que AppShield autentica cada petición.
+
+        **Recursos:** dos contenedores, hasta ~1,1 GB de RAM.
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/searxng/config /DATA/AppData/searxng/cache &&
+    chmod -R 755 /DATA/AppData/searxng
+
+x-compose-app:
+  webui-host: searxng-${domain}
