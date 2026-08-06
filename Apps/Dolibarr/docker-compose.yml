@@ -20,6 +20,7 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: dolibarr-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
+    entrypoint: ["/bin/bash", "-c", "rm -f /var/www/documents/install.lock && exec docker-run.sh apache2-foreground"]
     volumes:
       - /DATA/AppData/$AppID/documents:/var/www/documents
       - /DATA/AppData/$AppID/custom:/var/www/html/custom
