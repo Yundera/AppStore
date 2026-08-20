@@ -30,11 +30,32 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
-    cpu_shares: 10
+    cpu_shares: 80
     deploy:
       resources:
         limits:
           memory: 256M
+    x-casaos:
+      envs:
+        - container: PUID
+          description:
+            en_us: User ID owning the files FileBrowser creates. Defaults to your server user.
+        - container: PGID
+          description:
+            en_us: Group ID owning the files FileBrowser creates. Defaults to your server group.
+        - container: TZ
+          description:
+            en_us: Timezone used for the file timestamps shown in the interface.
+        - container: FB_DATABASE
+          description:
+            en_us: Path to the FileBrowser database inside the container. Stored on the /db volume.
+      volumes:
+        - container: /db/
+          description:
+            en_us: FileBrowser's own database - user accounts, permissions, shares and settings. Kept across uninstall and reinstall.
+        - container: /srv/
+          description:
+            en_us: The whole of /DATA - Documents, Downloads, Media and AppData. This is everything FileBrowser can browse, edit, delete and share, so any user you create here can reach it.
 
 networks:
   pcs:
@@ -43,9 +64,15 @@ networks:
 
 x-casaos:
   pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/filebrowser:/data alpine sh -c "mkdir -p /data/db && chown -R $PUID:$PGID /data" &&
-    docker run --rm --user $PUID:$PGID -v /DATA/AppData/filebrowser/db/:/db/ filebrowser/filebrowser:v2.63.2 config init --database /db/database.db &&
-    docker run --rm --user $PUID:$PGID -v /DATA/AppData/filebrowser/db/:/db/ filebrowser/filebrowser:v2.63.2 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
+    # db/ is created and chowned by the x-compose-app.folders block below, which
+    # Maison guarantees before this hook runs - don't mkdir it here.
+    # Idempotency: only seed the database on a first install. On reinstall or
+    # upgrade the existing one is reused - `config init` refuses to overwrite it
+    # and would abort the whole hook.
+    if [ ! -f /DATA/AppData/$AppID/db/database.db ]; then
+      docker run --rm --user $PUID:$PGID -v /DATA/AppData/$AppID/db/:/db/ filebrowser/filebrowser:v2.63.2 config init --database /db/database.db &&
+      docker run --rm --user $PUID:$PGID -v /DATA/AppData/$AppID/db/:/db/ filebrowser/filebrowser:v2.63.2 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
+    fi
   architectures:
     - amd64
     - arm64

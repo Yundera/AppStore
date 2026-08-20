@@ -23,7 +23,7 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 8200}}"
     networks:
       - pcs
-    cpu_shares: 10
+    cpu_shares: 30
     deploy:
       resources:
         limits:

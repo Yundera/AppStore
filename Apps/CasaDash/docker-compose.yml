@@ -49,7 +49,7 @@ services:
       - casadash-app
     networks:
       - pcs
-    cpu_shares: 40
+    cpu_shares: 90
     deploy:
       resources:
         limits:

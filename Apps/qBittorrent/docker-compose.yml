@@ -30,7 +30,7 @@ services:
     volumes:
       - /DATA/AppData/qbittorrent/config/:/config
       - /DATA/Downloads/:/downloads
-    cpu_shares: 10
+    cpu_shares: 50
     deploy:
       resources:
         limits:

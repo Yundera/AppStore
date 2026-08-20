@@ -25,7 +25,7 @@ services:
       - /DATA/AppData/sonarr/config:/config   # dedicated Sonarr config
       - /DATA/Media/TV Shows:/tv              # shared TV library (same folder Jellyfin reads)
       - /DATA/Downloads:/downloads            # shared downloads folder
-    cpu_shares: 10
+    cpu_shares: 50
     deploy:
       resources:
         limits:

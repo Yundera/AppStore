@@ -23,7 +23,7 @@ services:
       TZ: $TZ
     volumes:
       - /DATA/AppData/prowlarr/config:/config   # dedicated Prowlarr config
-    cpu_shares: 10
+    cpu_shares: 50
     deploy:
       resources:
         limits:

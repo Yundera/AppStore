@@ -43,7 +43,7 @@ services:
   immich-machine-learning:
     image: ghcr.io/immich-app/immich-machine-learning:v3.0.3
     container_name: immich_machine_learning
-    cpu_shares: 5
+    cpu_shares: 20
     deploy:
       resources:
         limits:
@@ -65,7 +65,7 @@ services:
   redis:
     image: docker.io/valkey/valkey:9@sha256:4963247afc4cd33c7d3b2d2816b9f7f8eeebab148d29056c2ca4d7cbc966f2d9
     container_name: immich-redis
-    cpu_shares: 10
+    cpu_shares: 70
     user: 0:0 # no volume mount so can run as root
     healthcheck:
       test: redis-cli ping || exit 1
@@ -78,7 +78,7 @@ services:
   database:
     image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
     container_name: immich-postgres
-    cpu_shares: 10
+    cpu_shares: 70
     user: $PUID:$PGID
     shm_size: 128mb
     environment:

@@ -11,6 +11,8 @@ Before submitting your PR, ensure your app meets these requirements:
 ### Tech Checklist
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
 - [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
+- [ ] **Install hooks are idempotent**: a hook is rerun on every reinstall and every version upgrade, so guard one-shot work behind an existence check or a sentinel. A hook that exits non-zero leaves the app installed but **stopped**. See [Pre-Installation Commands](#pre-installation-commands)
+- [ ] **Directories the app needs are declared** under `x-compose-app.folders` with `schema_version: 2`, not created by a hook. See [Maison and `x-compose-app`](#maison-and-x-compose-app)
 
 ### Security Checklist
 - [ ] An authentication method is enabled and documented - this is **mandatory**. Exceptions must be explained in rationale.md (e.g., public websites).
@@ -35,7 +37,7 @@ Before submitting your PR, ensure your app meets these requirements:
 
 ### Documentation Checklist
 - [ ] Clear description of the application
-- [ ] Volume and environment variable descriptions
+- [ ] Volume and environment variable descriptions — per-entry `description` blocks under the **service's** `x-casaos.envs` / `x-casaos.volumes` (see `Apps/FileBrowser` or `Apps/Stremio`). A mount that exposes a broad slice of `/DATA` must say so
 - [ ] Icon and screenshots meet specifications - files and URLs point to this Yundera repository (eg https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png)
 
 ## Testing and Submit Process
@@ -104,13 +106,13 @@ Applications must be designed to preserve user data across uninstallation and re
 
 **Requirements:**
 - **Persistent Volume Mapping**: All user data, configurations, and databases must be stored in volumes mapped to `/DATA/AppData/[AppName]/`
-- **Graceful Data Reuse**: Applications must detect and reuse existing data when reinstalled
+- **Graceful Data Reuse**: Applications must detect and reuse existing data when reinstalled. In practice this is a property of the app's **install hook**: it runs again on every reinstall and every upgrade, so anything that only makes sense once must be guarded by an existence check
 - **No Data Erasure**: Container startup processes must never erase or overwrite existing user data
 - **Configuration Preservation**: Settings, user accounts, and preferences should persist across container lifecycle
 
 **Implementation Guidelines:**
 - Map all persistent data to `/DATA/AppData/[AppName]/` subdirectories
-- Use initialization scripts that check for existing data before creating defaults
+- Use initialization scripts that check for existing data before creating defaults — and remember `&&` chains propagate the failure: one initialiser refusing to overwrite an existing file takes the whole hook down with it
 - Ensure database migrations are handled gracefully on version updates
 - Test uninstall/reinstall scenarios to verify data persistence
 
@@ -452,13 +454,200 @@ x-casaos:
 
 ### Features
 
-CasaOS supports additional configuration options for enhanced app management:
+Apps are configured through two extension blocks: `x-casaos`, inherited from the
+CasaOS store format, and `x-compose-app`, read by Yundera's own dashboard.
+
+#### Maison and `x-compose-app`
+
+Yundera's dashboard is **Maison**. It consumes the unmodified CasaOS `x-casaos`
+block, so every existing store app keeps working unchanged — but it also reads its
+own Compose extension, `x-compose-app`, and **prefers it for every field it
+defines**, falling back for anything it omits:
+
+```
+x-compose-app  →  x-casaos  →  runtime derivation
+```
+
+Most apps in this store already carry an `x-compose-app` block. Two of its keys are
+load-bearing and both require `schema_version: 2`: **`folders`** and **`hooks`**.
+Declare `schema_version: 2` when your app *needs* them, so an older Maison refuses
+the app outright instead of silently starting it without its directories.
+
+##### The stack-up sequence
+
+Everything below hangs off one sequence, and **every** `docker compose up` Maison
+runs goes through it — install, start from the tile, store update, and saving the
+app's config alike:
+
+```
+ensure folders  →  pre_up  →  docker compose up -d  →  post_up
+```
+
+`pre_install` / `post_install` bracket that sequence, but only on the install itself:
+
+```
+write compose + .env  →  ensure folders  →  pull images
+                      →  pre_install  →  [ the up sequence ]  →  post_install
+```
+
+The ordering is the part to internalise: **a directory declared under `folders`
+exists, owned correctly, before any image is pulled, before any hook runs, and
+before the containers start** — on the first boot and on every boot after it.
+
+##### `folders` — the directories your app needs
+
+Compose creates a missing bind-mount source as an empty **root-owned** directory. An
+app that drops privileges to `PUID:PGID` then can't write to its own config volume:
+the classic "permission denied on first start". `folders` fixes that declaratively.
+
+```yaml
+x-compose-app:
+  schema_version: 2
+  folders:
+    - /DATA/AppData/$AppID/config            # shorthand: this path, all defaults
+    - path: /DATA/AppData/$AppID/data        # full form
+      user: $PUID
+      group: $PGID
+      mode: "0750"
+    - path: /DATA/Media
+      group: media
+      recursive: true                        # also reclaim what is already inside
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `path` | — (required) | Absolute host path, under `/DATA`. Interpolated with the app's variables and its `.env`. |
+| `user` | `$PUID` | Owning user. |
+| `group` | `$PGID` | Owning group. |
+| `mode` | `"0755"` | Permissions of `path` itself. **Must be quoted.** |
+| `recursive` | `false` | Apply `user`/`group` to everything already inside `path`, not just `path`. |
+
+**Maison does not read `volumes:` and guess.** A compose file says nothing about
+whether a bind source is meant to be a directory or a config file, and every
+heuristic for it — a trailing `/`, a dot in the last segment — is wrong in one
+direction or the other. So a directory your app needs is a directory your app
+**declares**; anything undeclared is left to Docker exactly as it would be outside
+Maison. This is the one real porting step for an app coming from a CasaOS store:
+its bind mounts work, but any directory needing `PUID:PGID` ownership before first
+start has to be listed here.
+
+Three things are declaration *errors* that fail the up rather than being skipped: a
+variable that resolves to nothing, a relative path, and a path outside `/DATA`.
+Ownership and mode are applied best-effort — a filesystem that can't `chown` logs a
+warning rather than blocking an otherwise healthy start.
+
+`mode` must be quoted. Unquoted, YAML types it as an octal *int* and the leading
+zero is gone before Maison ever sees it:
+
+```yaml
+mode: "0750"   # ✅
+mode: 0750     # ❌ rejected — Maison names the fix rather than guessing what 488 meant
+```
+
+Use `recursive: true` only when the app must reclaim a tree it didn't create — a
+restored backup, a media library another app wrote, a directory an earlier
+root-running version left behind. The walk is proportional to the size of the tree,
+so keep it off multi-terabyte media folders that are already correct. It rewrites
+**ownership only**; `mode` still applies to `path` itself and nothing below it.
+
+##### `hooks` — shell around the lifecycle
+
+| Hook | Runs |
+|---|---|
+| `pre_install` | Once, at install: after images are pulled, before the first up. |
+| `post_install` | Once, right after that first up succeeds. |
+| `pre_up` | Before **every** up — install, every later start, update, and config save. |
+| `post_up` | After every up. |
+
+```yaml
+x-compose-app:
+  schema_version: 2
+  hooks:
+    pre_install: |
+      openssl rand -hex 32 > /DATA/AppData/$AppID/secrets/key
+    post_up: |
+      echo "$AppID up at $(date)" >> /var/log/maison-apps.log
+```
+
+`pre_install` / `post_install` generalise the CasaOS `pre-install-cmd` /
+`post-install-cmd` and **win over them** when both are present. An app carrying only
+`x-casaos` keeps working with no change, which is why most of this store still uses
+`pre-install-cmd` — both run through the same machinery and the requirements below
+apply identically.
+
+**Failure semantics.** `pre_install` and `pre_up` are **fatal**: a pre-hook is the
+app's precondition, and if it doesn't hold the stack must not start. Note what that
+means for `pre_up` — a flaky one blocks the app on *every* start. `post_install` and
+`post_up` are logged and swallowed, because tearing a healthy app back down over a
+failed after-the-fact tweak would be worse than the failed tweak.
+
+**Where hooks run.** Through `/bin/bash -c` **inside the Maison container**, with the
+working directory set to the app's folder, but talking to the **host** Docker daemon
+via `DOCKER_HOST`. They get the app's interpolation variables plus its `.env`,
+`AppID`, and `APP_DIR`. Because they're aimed at the host daemon, `/DATA` and
+`${DATA_ROOT}` references in a hook name **host** paths — so a `docker run -v` in a
+hook must name a path the host daemon can resolve.
+
+> **Don't `mkdir` in a hook.** That path is a host path, but the `mkdir` itself runs
+> in the Maison container — creating the wrong directory in the wrong place. Declare
+> it under `folders` instead: those are created through Maison's data mount and are
+> correct on both sides. Hooks are for **Docker-level** work — priming a volume with
+> `docker run`, pulling a sidecar image, poking another stack. Directories are what
+> `folders` is for.
+
+##### `webui-host` — the click URL
+
+CasaOS asks for a container port and *derives* a hostname at install time.
+`x-compose-app` instead lets you declare the **final URL**, so the tile's link and
+the app's Caddy route are the same string:
+
+```yaml
+services:
+  myapp:
+    labels:
+      caddy_0: myapp-${APP_DOMAIN}         # the route
+x-compose-app:
+  webui-host: myapp-${domain}              # the click URL host — same shape
+  webui-path: /
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `webui-host` | — | The URL host. Omit for a headless app — its tile gets no open action. |
+| `webui-path` | `/` | Path appended to the host; may include a query string. |
+| `webui-scheme` | `https` | The scheme the **browser** uses. |
+| `webui-port` | `""` | The **URL** port, not the container port. Empty in the normal gateway case. |
+
+`${domain}` / `${DOMAIN}` are resolved on every render, so the URL tracks a domain
+change and works for apps Maison never installed. Keeping `webui-host` identical to
+the `caddy_0` label also matters for route generation: Maison clones the app's Caddy
+route group onto every additional domain the deployment answers on, so the click URL
+keeps mirroring the route it was cloned from.
+
+##### `view` — which grid the tile lands in
+
+```yaml
+x-compose-app:
+  view: system        # apps (default) | system | hidden
+```
+
+`view: system` also **protects** the app — Maison refuses Stop and Uninstall (Restart
+and Start stay available, so a wedged platform app is still recoverable without SSH)
+and skips it in scheduled backups. It is a foot-gun guard, not a security boundary:
+the app declares it about itself. Reserve it for platform pieces; ordinary apps
+should leave `view` alone.
+
+##### Keys Maison writes itself
+
+`store` / `store-app-id` and `generated-routes` show up in an *installed* app's
+override file. They are Maison's own bookkeeping — don't use those names for
+author fields.
 
 #### Pre-Installation Commands
 
 You can specify commands to run before container startup using `pre-install-cmd`. It executes on the host before any of the app's services start. Two styles are acceptable — pick whichever is simpler for your needs:
 
-**Style A — plain shell on the host.** Good for creating directories, downloading static assets, or setting permissions with tools that already exist on the host.
+**Style A — plain shell on the host.** Good for downloading static assets or seeding config files with tools that already exist on the host. (For *directories*, use `x-compose-app.folders` instead — see [Maison and `x-compose-app`](#maison-and-x-compose-app).)
 
 ```yaml
 x-casaos:
@@ -479,17 +668,29 @@ Static assets the script needs can live under `Apps/[AppName]/pre-install/` in t
 ```yaml
 x-casaos:
   pre-install-cmd: |
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 config init --database /db/database.db &&
-    docker run --rm -v /DATA/AppData/filebrowser/:/data ubuntu:22.04 chown -R $PUID:$PGID /data &&
-    docker run --rm -v /DATA/AppData/filebrowser/db/:/db filebrowser/filebrowser:v2.32.0 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
+    # db/ is created and chowned by x-compose-app.folders, which Maison guarantees
+    # before this hook runs — don't mkdir or chown it here.
+    # Idempotency: seed the database only on a first install. `config init` refuses
+    # an existing database and exits non-zero, which would abort the whole hook on
+    # every reinstall and every version upgrade.
+    if [ ! -f /DATA/AppData/$AppID/db/database.db ]; then
+      docker run --rm --user $PUID:$PGID -v /DATA/AppData/$AppID/db/:/db/ filebrowser/filebrowser:v2.63.2 config init --database /db/database.db &&
+      docker run --rm --user $PUID:$PGID -v /DATA/AppData/$AppID/db/:/db/ filebrowser/filebrowser:v2.63.2 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
+    fi
 ```
+
+> The guard is not decoration. Chaining one-shot initialisers with `&&` and no
+> existence check is the single most common way an app passes a fresh install and
+> then fails every reinstall and upgrade afterwards — the hook exits non-zero, and
+> the app is left installed but **stopped**, with its data intact but unreachable
+> until someone presses Start by hand.
 
 **Requirements (apply to both styles):**
 - [ ] **Specific version tags**: Never use `:latest` — always pin exact versions (e.g. `alpine:3.19`, `ubuntu:22.04`).
 - [ ] **Idempotent**: Safe to rerun. Guard destructive / one-shot work behind a sentinel file (`touch /DATA/AppData/$AppID/.initialized`) or an existence check.
 - [ ] **Non-interactive**: Must not prompt.
 - [ ] **No hardcoded credentials**: Use `$APP_DEFAULT_PASSWORD` and friends.
-- [ ] **User permissions when touching user directories**: Use `--user $PUID:$PGID` (Style B) or `chown -R $PUID:$PGID` (either style) whenever files will live under `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, or `/DATA/Gallery`.
+- [ ] **User permissions when touching user directories**: Use `--user $PUID:$PGID` (Style B) whenever files will live under `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, or `/DATA/Gallery`. To *own a directory*, declare it under `x-compose-app.folders` rather than chowning it here — Maison creates and chowns it before this hook runs.
 
 **Common use cases:**
 - Create default configuration files

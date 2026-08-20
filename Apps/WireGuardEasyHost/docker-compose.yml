@@ -71,7 +71,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - /DATA/AppData/$AppID/nginx.conf:/etc/nginx/nginx.conf:ro
-    cpu_shares: 10
+    cpu_shares: 80
     mem_limit: 64m
 
 networks:

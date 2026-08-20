@@ -25,7 +25,7 @@ services:
       - /DATA/AppData/lidarr/config:/config   # dedicated Lidarr config
       - /DATA/Media/Music:/music              # shared music library (same folder Jellyfin reads)
       - /DATA/Downloads:/downloads            # shared downloads folder
-    cpu_shares: 10
+    cpu_shares: 50
     deploy:
       resources:
         limits:
