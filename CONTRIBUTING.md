@@ -37,7 +37,7 @@ Before submitting your PR, ensure your app meets these requirements:
 
 ### Documentation Checklist
 - [ ] Clear description of the application
-- [ ] Volume and environment variable descriptions — per-entry `description` blocks under the **service's** `x-casaos.envs` / `x-casaos.volumes` (see `Apps/FileBrowser` or `Apps/Stremio`). A mount that exposes a broad slice of `/DATA` must say so
+- [ ] A mount that exposes a broad slice of `/DATA` (`/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, or `/DATA` itself) is called out — in the app `description`, in `tips.before_install`, or in `rationale.md`. The user has to be able to see what the app can reach before they install it
 - [ ] Icon and screenshots meet specifications - files and URLs point to this Yundera repository (eg https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png)
 
 ## Testing and Submit Process
@@ -467,6 +467,15 @@ defines**, falling back for anything it omits:
 ```
 x-compose-app  →  x-casaos  →  runtime derivation
 ```
+
+Maison reads the **app-level** `x-casaos` block. It does *not* read the per-service
+`x-casaos.envs` / `x-casaos.volumes` / `ports` / `devices` description lists that the
+CasaOS UI used to render as a per-field config form — the struct is parsed and then
+never consumed, so those `description:` entries reach no user. **Don't write them in
+new apps.** They survive in a handful of older apps (`Apps/FileBrowser`,
+`Apps/Stremio`) as inert metadata; leave them alone rather than churning the files.
+Anything a user genuinely needs to know before installing belongs in the app
+`description`, in `tips.before_install`, or in `rationale.md`.
 
 Most apps in this store already carry an `x-compose-app` block. Two of its keys are
 load-bearing and both require `schema_version: 2`: **`folders`** and **`hooks`**.
