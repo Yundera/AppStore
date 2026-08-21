@@ -2,7 +2,7 @@ name: wordpress
 
 services:
   wordpress:
-    image: wordpress:6.9.4-apache
+    image: wordpress:7.1.0-apache
     container_name: wordpress
     restart: unless-stopped
     user: "0:0"
@@ -40,7 +40,7 @@ services:
     cpu_shares: 70
 
   db:
-    image: mariadb:11.8.6
+    image: mariadb:11.8.8
     container_name: wordpress-db
     restart: unless-stopped
     user: "0:0"
@@ -59,8 +59,8 @@ services:
       test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 15
+      start_period: 120s
     deploy:
       resources:
         limits:
@@ -75,6 +75,8 @@ networks:
     external: true
 
 x-casaos:
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/html /DATA/AppData/$AppID/db
   architectures:
     - amd64
     - arm64
