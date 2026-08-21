@@ -1,0 +1,236 @@
+name: ghost
+
+services:
+  ghost:
+    image: ghost:6-alpine
+    container_name: ghost
+    hostname: ghost
+    restart: unless-stopped
+    user: "0:0"
+    networks:
+      - ghost-network
+      - pcs
+    expose:
+      - "2368"
+    labels:
+      caddy_0: ghost-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 2368}}"
+      caddy_1: ghost-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 2368}}"
+      caddy_2: ghost-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 2368}}"
+    volumes:
+      - /DATA/AppData/$AppID/content:/var/lib/ghost/content
+    environment:
+      NODE_ENV: production
+      url: https://ghost-${APP_DOMAIN}
+      database__client: mysql
+      database__connection__host: ghost-db
+      database__connection__port: 3306
+      database__connection__user: ghost
+      database__connection__password: $APP_DEFAULT_PASSWORD
+      database__connection__database: ghost
+      mail__transport: SMTP
+      mail__from: $PCS_EMAIL
+      mail__options__host: $SMTP_HOST
+      mail__options__port: $SMTP_PORT
+      mail__options__tls__rejectUnauthorized: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 50
+
+  db:
+    image: mariadb:11.8.8
+    container_name: ghost-db
+    restart: unless-stopped
+    user: "0:0"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    networks:
+      - ghost-network
+    volumes:
+      - /DATA/AppData/$AppID/db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
+      MYSQL_DATABASE: ghost
+      MYSQL_USER: ghost
+      MYSQL_PASSWORD: $APP_DEFAULT_PASSWORD
+      MARIADB_AUTO_UPGRADE: 1
+      MARIADB_DISABLE_UPGRADE_BACKUP: 1
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 50
+
+networks:
+  ghost-network:
+    driver: bridge
+  pcs:
+    name: pcs
+    external: true
+
+x-casaos:
+  pre-install-cmd: |
+    mkdir -p /DATA/AppData/$AppID/content /DATA/AppData/$AppID/db
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Blog
+  developer: Ghost Foundation
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/thumbnail.png
+  index: /ghost
+  tagline:
+    en_us: Professional publishing platform for newsletters and blogs
+    ko_kr: 뉴스레터와 블로그를 위한 프로페셔널 퍼블리싱 플랫폼
+    zh_cn: 专业的新闻通讯和博客发布平台
+    fr_fr: Plateforme de publication professionnelle pour newsletters et blogs
+    es_es: Plataforma de publicacion profesional para newsletters y blogs
+  title:
+    en_us: Ghost
+  store_app_id: ghost
+  main: ghost
+  webui_port: 80
+  description:
+    en_us: |
+      **Professional publishing platform for modern creators**
+
+      Ghost is a powerful, open-source publishing platform for building newsletters, blogs, and content-driven websites. Used by major organizations and independent creators worldwide.
+
+      **What you can do:**
+      - Create and publish blog posts with a beautiful editor
+      - Build and send email newsletters to subscribers
+      - Manage paid memberships and subscriptions
+      - Customize your site with themes and integrations
+      - Use the Admin API to automate content publishing
+      - Built-in SEO, social sharing, and analytics
+
+      **Perfect for:** Content creators, journalists, tech bloggers, newsletter publishers, and anyone who wants a professional publishing platform without the complexity of WordPress.
+    ko_kr: |
+      **현대적인 크리에이터를 위한 프로페셔널 퍼블리싱 플랫폼**
+
+      Ghost는 뉴스레터, 블로그, 콘텐츠 중심 웹사이트를 구축하기 위한 강력한 오픈소스 퍼블리싱 플랫폼입니다. 전 세계 주요 조직과 독립 크리에이터들이 사용합니다.
+
+      **할 수 있는 것:**
+      - 아름다운 에디터로 블로그 포스트 작성 및 게시
+      - 구독자에게 이메일 뉴스레터 발송
+      - 유료 멤버십 및 구독 관리
+      - 테마와 통합으로 사이트 커스터마이징
+      - Admin API로 콘텐츠 게시 자동화
+      - SEO, 소셜 공유, 분석 기능 내장
+
+      **이런 분께 완벽해요:** 콘텐츠 크리에이터, 기자, 테크 블로거, 뉴스레터 발행인, WordPress의 복잡함 없이 프로페셔널한 퍼블리싱 플랫폼이 필요한 분.
+    zh_cn: |
+      **面向现代创作者的专业发布平台**
+
+      Ghost 是一个强大的开源发布平台，用于构建新闻通讯、博客和内容驱动的网站。被全球主要组织和独立创作者广泛使用。
+
+      **您可以做的事:**
+      - 使用精美的编辑器创建和发布博客文章
+      - 向订阅者构建和发送电子邮件通讯
+      - 管理付费会员和订阅
+      - 使用主题和集成自定义您的网站
+      - 使用 Admin API 自动化内容发布
+      - 内置 SEO、社交分享和分析功能
+
+      **完美适合:** 内容创作者、记者、技术博客作者、新闻通讯发行者，以及需要专业发布平台而不想要 WordPress 复杂性的任何人。
+    fr_fr: |
+      **Plateforme de publication professionnelle pour createurs modernes**
+
+      Ghost est une puissante plateforme de publication open source pour creer des newsletters, des blogs et des sites web axes sur le contenu. Utilisee par des organisations majeures et des createurs independants dans le monde entier.
+
+      **Ce que vous pouvez faire:**
+      - Creer et publier des articles de blog avec un bel editeur
+      - Construire et envoyer des newsletters par email aux abonnes
+      - Gerer les abonnements et adhesions payantes
+      - Personnaliser votre site avec des themes et integrations
+      - Utiliser l'API Admin pour automatiser la publication de contenu
+      - SEO, partage social et analytiques integres
+
+      **Parfait pour:** Les createurs de contenu, journalistes, blogueurs tech, editeurs de newsletters et toute personne souhaitant une plateforme de publication professionnelle sans la complexite de WordPress.
+    es_es: |
+      **Plataforma de publicacion profesional para creadores modernos**
+
+      Ghost es una potente plataforma de publicacion de codigo abierto para crear newsletters, blogs y sitios web centrados en contenido. Utilizada por importantes organizaciones y creadores independientes en todo el mundo.
+
+      **Lo que puedes hacer:**
+      - Crear y publicar articulos de blog con un hermoso editor
+      - Construir y enviar newsletters por email a suscriptores
+      - Gestionar membresias y suscripciones de pago
+      - Personalizar tu sitio con temas e integraciones
+      - Usar la API Admin para automatizar la publicacion de contenido
+      - SEO, compartir en redes sociales y analiticas integradas
+
+      **Perfecto para:** Creadores de contenido, periodistas, bloggers de tecnologia, editores de newsletters y cualquiera que quiera una plataforma de publicacion profesional sin la complejidad de WordPress.
+  tips:
+    before_install:
+      en_us: |
+        # Setup Guide
+
+        After installation, the app opens the **admin page** (`/ghost`) directly.
+
+        No default credentials are needed — you'll create your own admin account on first visit.
+
+        **Public site URL:** Your blog is available at `https://ghost-<your-domain>` (without `/ghost` at the end). Share this URL with your readers.
+
+        **Email/Newsletter:** To enable newsletter sending, configure your SMTP settings in PCS Settings before installing. Ghost needs an email provider (Mailgun, SendGrid, etc.) for sending newsletters.
+      ko_kr: |
+        # 설정 가이드
+
+        설치 후 앱을 열면 **관리자 페이지** (`/ghost`)로 바로 이동합니다.
+
+        기본 비밀번호는 없으며, 첫 방문 시 직접 관리자 계정을 생성합니다.
+
+        **블로그 주소:** 일반 방문자용 블로그는 `https://ghost-<도메인>` 입니다 (뒤에 `/ghost` 없이). 이 주소를 독자에게 공유하세요.
+
+        **이메일/뉴스레터:** 뉴스레터 발송을 활성화하려면 설치 전에 PCS 설정에서 SMTP를 구성하세요. Ghost는 뉴스레터 발송을 위해 이메일 프로바이더(Mailgun, SendGrid 등)가 필요합니다.
+      zh_cn: |
+        # 设置指南
+
+        安装后，应用会直接打开 **管理页面** (`/ghost`)。
+
+        无需默认凭据 — 首次访问时创建自己的管理员账户。
+
+        **博客地址:** 访客可通过 `https://ghost-<您的域名>` 访问博客（末尾不带 `/ghost`）。请将此地址分享给读者。
+
+        **邮件/新闻通讯:** 要启用新闻通讯发送，请在安装前在 PCS 设置中配置 SMTP。Ghost 需要邮件提供商（Mailgun、SendGrid 等）来发送新闻通讯。
+      fr_fr: |
+        # Guide de configuration
+
+        Apres l'installation, l'application ouvre directement la **page d'administration** (`/ghost`).
+
+        Aucun identifiant par defaut n'est necessaire — vous creez votre propre compte admin lors de la premiere visite.
+
+        **URL du blog:** Votre blog est accessible a `https://ghost-<votre-domaine>` (sans `/ghost` a la fin). Partagez cette URL avec vos lecteurs.
+
+        **Email/Newsletter:** Pour activer l'envoi de newsletters, configurez vos parametres SMTP dans les parametres PCS avant l'installation. Ghost a besoin d'un fournisseur email (Mailgun, SendGrid, etc.) pour envoyer les newsletters.
+      es_es: |
+        # Guia de configuracion
+
+        Despues de la instalacion, la aplicacion abre directamente la **pagina de administracion** (`/ghost`).
+
+        No se necesitan credenciales predeterminadas — creara su propia cuenta de administrador en la primera visita.
+
+        **URL del blog:** Su blog esta disponible en `https://ghost-<su-dominio>` (sin `/ghost` al final). Comparta esta URL con sus lectores.
+
+        **Email/Newsletter:** Para habilitar el envio de newsletters, configure sus ajustes SMTP en la configuracion PCS antes de instalar. Ghost necesita un proveedor de email (Mailgun, SendGrid, etc.) para enviar newsletters.
