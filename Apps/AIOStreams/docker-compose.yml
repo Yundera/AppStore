@@ -75,15 +75,34 @@ x-casaos:
   category: Media
   tags: ["media", "stremio", "personal"]
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AIOStreams/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AIOStreams/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AIOStreams/thumbnail.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AIOStreams/screenshot-1.png
+  # Generates the 64-char hex key that encrypts saved configuration, once, and
+  # keeps it in AppData so it survives uninstall/restore (the SQLite config store
+  # is unreadable without the same key). /DATA/AppData/aiostreams is created by
+  # x-compose-app.folders below, before this hook runs - no mkdir here.
+  #
+  # openssl is NOT present in the container hooks run in, so it is only used when
+  # it happens to exist; `od` on /dev/urandom is the portable path, and a one-shot
+  # `docker run` against the app's own (already pulled) image is the last resort.
+  #
+  # The key is APPENDED to the app .env only when absent: Maison writes that file
+  # with APP_DOMAIN, PUID/PGID, APP_DEFAULT_PASSWORD etc. before this hook runs,
+  # so a truncating `>` here would wipe every variable the compose file needs.
   pre-install-cmd: |
-    APP_DATA="/DATA/AppData/aiostreams" &&
-    ENV_FILE="/DATA/AppData/casaos/apps/aiostreams/.env" &&
-    mkdir -p "$APP_DATA/data" &&
-    if [ ! -s "$APP_DATA/secret_key" ]; then
-      openssl rand -hex 32 > "$APP_DATA/secret_key"
+    if [ ! -s /DATA/AppData/aiostreams/secret_key ]; then
+      if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 32 > /DATA/AppData/aiostreams/secret_key
+      elif [ -r /dev/urandom ] && command -v od >/dev/null 2>&1; then
+        od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /DATA/AppData/aiostreams/secret_key
+      else
+        docker run --rm --entrypoint /nodejs/bin/node ghcr.io/viren070/aiostreams:v2.31.1 -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > /DATA/AppData/aiostreams/secret_key
+      fi
     fi &&
-    printf 'AIOSTREAMS_SECRET_KEY=%s\n' "$(cat "$APP_DATA/secret_key")" > "$ENV_FILE"
+    if ! grep -q '^AIOSTREAMS_SECRET_KEY=' $APP_DIR/.env 2>/dev/null; then
+      printf 'AIOSTREAMS_SECRET_KEY=%s\n' "$(cat /DATA/AppData/aiostreams/secret_key)" >> $APP_DIR/.env
+    fi
   title:
     en_us: AIOStreams
   tagline:

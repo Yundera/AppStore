@@ -49,7 +49,7 @@ To ensure easy testing, please follow these steps:
 
 1. Start with a regular compose app, which is a directory containing a `docker-compose.yml` file. Test it on your own machine to ensure you can start it successfully. In your instance, you can edit the compose file with a text editor and restart the app to check if the changes work. Use SSH to do `docker compose up -d` if needed.
 
-2. Copy the docker compose to an instance of CasaOS, e.g., `/DATA/AppData/casaos/apps/MyApp/docker-compose.yml`. Add all the required CasaOS-specific fields (x-casaos metadata, etc.) and test from the instance using SSH and the `docker compose up -d` command.
+2. Copy the compose onto a PCS under the app's own folder, e.g. `/DATA/AppData/MyApp/docker-compose.yml`, add the required metadata (`x-casaos`, `x-compose-app`), and test it there over SSH with `docker compose up -d`. Note that a hand-run `docker compose up` is **not** the same as an install: Maison rewrites the file (networks, `${DATA_ROOT}`, `.env`) before it ever starts, so a compose that works by hand can still fail as an installed app. Step 4 is what actually proves it.
 
 3. When the local setup is stable, push to your forked repo. Create a new directory under `Apps` with your app name (along with logo, screenshot, and description files), e.g., `MyApp`.
 
@@ -573,7 +573,10 @@ x-compose-app:
   schema_version: 2
   hooks:
     pre_install: |
-      openssl rand -hex 32 > /DATA/AppData/$AppID/secrets/key
+      # No openssl in the Maison container — use od(1), which busybox and
+      # coreutils both provide. Anything beyond a POSIX shell toolbox should go
+      # through a pinned `docker run` (Style B below) rather than be assumed.
+      od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /DATA/AppData/$AppID/secrets/key
     post_up: |
       echo "$AppID up at $(date)" >> /var/log/maison-apps.log
 ```
@@ -596,6 +599,22 @@ via `DOCKER_HOST`. They get the app's interpolation variables plus its `.env`,
 `AppID`, and `APP_DIR`. Because they're aimed at the host daemon, `/DATA` and
 `${DATA_ROOT}` references in a hook name **host** paths — so a `docker run -v` in a
 hook must name a path the host daemon can resolve.
+
+**Reaching the app's `.env`.** `$APP_DIR` is the app's folder and is already the
+working directory, so the env file Maison prefills is `$APP_DIR/.env`:
+
+```yaml
+    pre_install: |
+      # Append, never truncate: Maison has already written APP_DOMAIN, PUID,
+      # PGID, APP_DEFAULT_PASSWORD and APP_NET into this file. A bare `>` wipes
+      # them and the app installs with an empty environment.
+      grep -q '^MYAPP_SECRET=' $APP_DIR/.env ||
+        printf 'MYAPP_SECRET=%s\n' "$(cat /DATA/AppData/$AppID/secrets/key)" >> $APP_DIR/.env
+```
+
+> There is **no** `/DATA/AppData/casaos/apps/<id>/.env`. That was CasaOS's layout;
+> Maison does not use it, and a hook writing there silently succeeds while the app
+> never sees the value.
 
 > **Don't `mkdir` in a hook.** That path is a host path, but the `mkdir` itself runs
 > in the Maison container — creating the wrong directory in the wrong place. Declare
@@ -661,7 +680,8 @@ You can specify commands to run before container startup using `pre-install-cmd`
 ```yaml
 x-casaos:
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/config
+    # config/ is created and chowned by x-compose-app.folders before this hook
+    # runs — there is nothing to mkdir here.
     # Idempotency: guard work behind a sentinel file so reruns are no-ops
     if [ ! -f /DATA/AppData/$AppID/.initialized ]; then
       wget -O /DATA/AppData/$AppID/config/init.sql \
@@ -777,7 +797,6 @@ services:
 
 networks:
   pcs:
-    name: pcs
     external: true
 
 x-casaos:
@@ -811,7 +830,6 @@ services:
 
 networks:
   pcs:
-    name: pcs
     external: true
 
 x-casaos:
@@ -841,7 +859,27 @@ Caddy handles:
 - Add Caddy labels only to the main web UI service (not to database or backend services)
 - The app name in the Caddy labels should be simple without spaces or special characters
 - Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` for portability
-- Always include the `pcs` network definition with `external: true`
+- Always include the `pcs` network definition with `external: true`, and **never set
+  `name:` on it** — see the two rules below. Both are load-bearing on a real PCS.
+
+> **Declare `pcs` without `name:`.** Write `pcs: {external: true}` and nothing more.
+> Compose resolves an external network from its key, so the wire network is still
+> `pcs` — but Maison's launcher treats an external network whose `name:` equals its
+> own key as one *it* generated, deletes the entry, and detaches it from **every**
+> service. Only `x-casaos.main` then gets the app network back. Writing
+> `name: pcs` therefore strands every other service on the compose default bridge,
+> where Docker's embedded DNS does not resolve container names.
+
+> **`x-casaos.main` must name the service carrying the `caddy_N` labels.** Maison
+> attaches the app network to that service and no other, and the tile's health
+> follows it. Point `main` at a backend and the public-facing sidecar is left off the
+> network entirely: Caddy has no upstream and every request 502s or 503s, behind a
+> tile still showing green. For an AppShield app, `main` is always the **sidecar**.
+
+> **Multi-service apps: consider an app-private bridge.** A second network shared by
+> your services (`myapp-internal: {driver: bridge}`, listed on each service alongside
+> `pcs`) keeps backend↔sidecar DNS working regardless of how the shared network is
+> rewritten. Required if your services must reach each other by name.
 
 **Example Multi-Service Configuration:**
 
@@ -928,11 +966,11 @@ services:
 
 networks:
   pcs:
-    name: pcs
     external: true
 
 x-casaos:
-  main: myapp                       # primary service (the sidecar; some apps point it at the backend)
+  main: myapp                       # the SIDECAR — the service carrying the caddy_N
+                                    # labels. Never the backend: see the rules above.
   index: /?hash=$AUTH_HASH          # launch URL carries the hash token so the user lands authenticated
   webui_port: 80                    # optional; keep at 80 if set
 ```
