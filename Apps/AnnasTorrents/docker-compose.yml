@@ -48,9 +48,10 @@ services:
 
   # ── Backend (protected) ────────────────────────────────────────────
   # The FastAPI + embedded-libtorrent app. No Caddy labels: the web UI is
-  # only reachable through the AppShield sidecar, and it publishes no host
-  # ports. The BitTorrent peer port (6881 TCP+UDP) ships commented out: raw
-  # swarm traffic cannot go through the sidecar, so binding it is opt-in.
+  # only reachable through the AppShield sidecar and is never published to
+  # the host. The BitTorrent peer port (6881 TCP+UDP) *is* published: raw
+  # swarm traffic cannot go through an HTTP proxy, and without it no peer
+  # can dial in — hence the `needs-public-ip` tag.
   annas-torrents-webui-backend:
     image: ghcr.io/worph/annas-torrents-webui:1.0.2
     container_name: annas-torrents-webui-backend

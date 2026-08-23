@@ -119,7 +119,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/thumbnail.png
   description:
     en_us: |
       **Open-source collaborative wiki and documentation software**
@@ -296,11 +296,29 @@ x-casaos:
 
         **Nota:** El primer usuario en registrarse se convierte en administrador del espacio de trabajo.
   index: /
+  # Generates the 32-byte hex APP_SECRET Docmost signs sessions with, once, and
+  # keeps it in AppData so it survives uninstall/restore. /DATA/AppData/docmost is
+  # created by x-compose-app.folders below, before this hook runs - no mkdir here.
+  #
+  # openssl is NOT present in the container hooks run in, so it is only used when
+  # it happens to exist; `od` on /dev/urandom is the portable path, and a one-shot
+  # `docker run` against the app's own (already pulled) image is the last resort.
+  #
+  # The secret is APPENDED to the app .env only when absent: Maison writes that file
+  # with APP_DOMAIN, PUID/PGID, APP_DEFAULT_PASSWORD etc. before this hook runs,
+  # so a truncating `>` here would wipe every variable the compose file needs.
   pre-install-cmd: |
-    ENV_FILE="/DATA/AppData/casaos/apps/docmost/.env" &&
-    if [ ! -s "$ENV_FILE" ]; then
-      DOCMOST_APP_SECRET=$(openssl rand -hex 32) &&
-      printf 'DOCMOST_APP_SECRET=%s\n' "$DOCMOST_APP_SECRET" > "$ENV_FILE"
+    if [ ! -s /DATA/AppData/docmost/app_secret ]; then
+      if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 32 > /DATA/AppData/docmost/app_secret
+      elif [ -r /dev/urandom ] && command -v od >/dev/null 2>&1; then
+        od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /DATA/AppData/docmost/app_secret
+      else
+        docker run --rm --entrypoint node docmost/docmost:0.70.3 -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))" > /DATA/AppData/docmost/app_secret
+      fi
+    fi &&
+    if ! grep -q '^DOCMOST_APP_SECRET=' $APP_DIR/.env 2>/dev/null; then
+      printf 'DOCMOST_APP_SECRET=%s\n' "$(cat /DATA/AppData/docmost/app_secret)" >> $APP_DIR/.env
     fi
 
 x-compose-app:

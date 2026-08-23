@@ -19,6 +19,7 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
+      - suwayomi-internal
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -52,6 +53,8 @@ services:
     container_name: suwayomi-flaresolverr
     user: 0:0
     restart: unless-stopped
+    networks:
+      - suwayomi-internal
     environment:
       TZ: $TZ
     cpu_shares: 20
@@ -61,6 +64,8 @@ services:
           memory: 512M
 
 networks:
+  suwayomi-internal:
+    driver: bridge
   pcs:
     name: ${APP_NET:-pcs}
     external: true
@@ -69,9 +74,6 @@ x-casaos:
   main: suwayomi
   index: /
   store_app_id: suwayomi
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/suwayomi/data &&
-    mkdir -p /DATA/Media/Mangas
   architectures:
     - amd64
     - arm64
@@ -84,7 +86,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/thumbnail.png
   title:
     en_us: Suwayomi
   tagline:

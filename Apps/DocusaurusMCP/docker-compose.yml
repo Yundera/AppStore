@@ -50,10 +50,9 @@ services:
     networks:
       - pcs
 
-  # AppShield gates the admin panel with Yundera SSO. /mcp is exempt via
-  # ALLOWED_PATHS and uncredentialed — migrate to OAUTH_RESOURCE.
+  # AppShield gates the admin panel with Yundera SSO and /mcp with OAuth 2.1.
   docusaurusmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: docusaurusmcp
     hostname: docusaurusmcp
     restart: unless-stopped
@@ -62,12 +61,22 @@ services:
       - 80
     user: "root"
     environment:
-      ALLOWED_PATHS: "mcp,sse,messages"
       BACKEND_HOST: docusaurusmcp-backend
       BACKEND_PORT: "9750"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # OAuth 2.1 broker: AppShield runs an OAuth/OIDC authorization server
+      # fronting Dex and gates the path named by the resource URL (/mcp) on
+      # Bearer tokens. This is the machine/API path: clients like claude.ai
+      # self-register via DCR, others get a manual client
+      # from the admin page at https://docusaurusmcp-${APP_DOMAIN}/AppShield/oauth.
+      OAUTH_RESOURCE: "https://docusaurusmcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/docusaurusmcp/oauth/:/data/oauth
     depends_on:
       - docusaurusmcp-backend
     networks:
@@ -102,7 +111,7 @@ x-casaos:
   tags: ["developer", "ai"]
   developer: Yundera Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/thumbnail.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/screenshot-2.png
@@ -140,7 +149,12 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your Yundera login.
         ```json
         {
           "mcpServers": {
@@ -151,6 +165,9 @@ x-casaos:
           }
         }
         ```
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://docusaurusmcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -209,6 +226,9 @@ x-compose-app:
       user: $PUID
       group: $PGID
     - path: /DATA/AppData/docusaurus/build
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/docusaurusmcp/oauth
       user: $PUID
       group: $PGID
   webui-host: docusaurusmcp-${domain}

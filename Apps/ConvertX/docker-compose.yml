@@ -30,6 +30,7 @@ services:
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
     depends_on:
       - convertx-backend
+    cpu_shares: 80
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own
       # network because that is where its backend lives.
@@ -97,7 +98,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/thumbnail.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-1.png
   title:
     en_us: ConvertX
   tagline:

@@ -33,5 +33,5 @@ This app deviates from the default AppStore requirements in three ways:
 ## Data protection
 
 - All persistent state is mapped under `/DATA/AppData/$AppID/` (`backups`, `logs`, `servers`, `config`, `import`), so user worlds, server configs, and backups survive uninstall and reinstall.
-- The app folder is owned by `$PUID:$PGID` (set in the pre-install command) so the user can manage or remove it from the Files app.
+- The app's data directories are declared under `x-compose-app.folders` and are created and owned as `$PUID:$PGID` by Maison before every `up`, so the user can manage or remove them from the Files app.
 - First-run credential seeding is guarded by a `.initialized` sentinel, so reinstalling over existing data never overwrites an existing admin account or configuration.

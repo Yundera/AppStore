@@ -88,8 +88,6 @@ networks:
     external: true
 
 x-casaos:
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/documents /DATA/AppData/$AppID/custom /DATA/AppData/$AppID/db
   architectures:
     - amd64
     - arm64
@@ -237,3 +235,18 @@ x-casaos:
         La base de datos y la cuenta de administrador se configuran automaticamente. Abra la aplicacion e inicie sesion.
 
         **⏳ La primera instalacion puede tardar 5-10 minutos** mientras la base de datos crea e indexa todas las tablas. Si ve una pantalla de carga, por favor espere — esto es normal solo en el primer inicio.
+
+x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  folders:
+    - path: /DATA/AppData/$AppID/documents
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/custom
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/db
+      user: $PUID
+      group: $PGID
+  webui-host: dolibarr-${domain}

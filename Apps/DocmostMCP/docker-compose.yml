@@ -7,6 +7,7 @@ services:
     hostname: docmostmcp-backend
     user: "0:0"
     restart: unless-stopped
+    cpu_shares: 50
     expose:
       - 8000
     environment:
@@ -15,8 +16,8 @@ services:
       - TZ=$TZ
       - PORT=8000
       # Docmost connection — the image's entrypoint writes these into
-      # /data/config.json on first start. CasaOS prompts the user for any
-      # field with an empty default at install time.
+      # /data/config.json on first start. Maison renders no per-field install
+      # form, so these start empty and are set in the config UI at / instead.
       - DOCMOST_BASE_URL=http://docmost
       - DOCMOST_EMAIL=
       - DOCMOST_PASSWORD=
@@ -153,9 +154,9 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Fill the install form with your Docmost credentials**
+        **Set your Docmost credentials in the config UI after install**
 
-        On the install screen, you'll see fields for `DOCMOST_EMAIL` and `DOCMOST_PASSWORD`. The first time the container starts it bakes those into `/DATA/AppData/docmostmcp/config.json`. After that, the bundled **config UI** at `/` is the easiest way to update them: click **Open** on the app card to land on the UI, where you can edit credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL.
+        There is no install form to fill in — the app installs with `DOCMOST_EMAIL` and `DOCMOST_PASSWORD` empty and the MCP server starts, but every Docmost call fails until you set them. Click **Open** on the app card to land on the bundled **config UI** at `/`, where you enter the credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL. What you save is written to `/DATA/AppData/docmostmcp/config.json` and survives redeploys.
 
         **Prerequisites:**
         1. A running **Docmost** instance reachable from the `pcs` Docker network (typically the companion Docmost app installed from this store)

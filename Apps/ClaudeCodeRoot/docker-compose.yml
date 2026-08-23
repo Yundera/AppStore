@@ -130,13 +130,19 @@ x-casaos:
 
       Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
     zh_cn: |
-      Claude Code 容器 - Claude Code（Anthropic 的 Claude CLI）的 Web 终端界面。
+      Claude Code 容器（root）- Claude Code（Anthropic 的 Claude CLI）的 Web 终端界面。
+
+      这是**特权版本**，用于 PCS 管理和调试，拥有对宿主虚拟机的完全控制权。如果只需要不接触宿主机的沙盒化自动化（例如通过 MCP 驱动 n8n），请改为安装“Claude Code”应用。
 
       功能：
       - 基于 Web 的 Claude Code 终端访问
       - 带会话管理的登录页面
       - 持久化工作区
       - 连接时自动启动 Claude
+      - 完整的管理权限：可访问 Docker socket，并通过专用的 `claude` 宿主机用户（免密 sudo）以 SSH 登录宿主虚拟机
+      - 可挂载整个 /DATA（包括其他应用的数据），并可对虚拟机执行任何维护操作
+
+      默认密码为自动生成，请在应用设置中查看 AUTH_PASSWORD 的值。
   developer: Anthropic / Yundera
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCodeRoot/icon.png
   screenshot_link:
@@ -164,6 +170,18 @@ x-casaos:
         **This is the privileged (root) app for PCS administration and debugging.** It has full control of the host VM (Docker socket + SSH admin/sudo).
 
         **MCP automation is disabled on this app.** The programmatic MCP endpoint is intentionally not exposed here. If you want to drive Claude Code from n8n or other agents via MCP, install the standard "Claude Code" app instead.
+      zh_cn: |
+        认证方式：
+        - Anthropic API 密钥（https://console.anthropic.com/），或
+        - Claude Pro/Max 订阅（首次运行时通过 OAuth 认证）
+
+        使用订阅认证时请将 API 密钥留空。
+
+        默认登录密码：`$APP_DEFAULT_PASSWORD`
+
+        **这是用于 PCS 管理和调试的特权（root）应用。** 它拥有对宿主虚拟机的完全控制权（Docker socket + SSH 管理员/sudo），并以读写方式挂载整个 /DATA，因此可以读取和修改其他所有应用的数据。请仅在您自己管理的 PCS 上安装，并立即修改默认密码。
+
+        **本应用已禁用 MCP 自动化。** 此处刻意不开放程序化 MCP 端点。如果需要通过 MCP 从 n8n 或其他智能体驱动 Claude Code，请改为安装标准的“Claude Code”应用。
   # Runs as root INSIDE the casa-img container (only /DATA + docker.sock are in
   # scope here), so host-user provisioning must break out to the host namespace
   # via the docker socket: `docker run -v /:/host alpine:3.20 chroot /host ...`.
@@ -174,12 +192,14 @@ x-casaos:
   # script always exits 0 — provisioning the host `claude` user is only needed for
   # the optional host-SSH feature, so it must NEVER block the app from installing.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/clauderoot/workspace /DATA/AppData/clauderoot/config || true
+    # workspace/ and config/ are declared under x-compose-app.folders — Maison
+    # creates and chowns them before this hook runs; don't mkdir or chown them here.
     touch /DATA/AppData/clauderoot/config/.claude.json || true
+    chown $PUID:$PGID /DATA/AppData/clauderoot/config/.claude.json || true
     if [ ! -f /DATA/AppData/clauderoot/workspace/CLAUDE.md ]; then
       wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCodeRoot/pre-install/CLAUDE.md -O /DATA/AppData/clauderoot/workspace/CLAUDE.md || true
+      chown $PUID:$PGID /DATA/AppData/clauderoot/workspace/CLAUDE.md || true
     fi
-    chown -R 1000:1000 /DATA/AppData/clauderoot || true
     docker run --rm -v /:/host alpine:3.20 chroot /host /bin/sh -c '
       id claude >/dev/null 2>&1 || useradd -m -s /bin/bash -p "*" claude || true
       # OpenSSH refuses ALL auth (incl. pubkey) for an account whose shadow

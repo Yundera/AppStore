@@ -115,9 +115,18 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        A new Docusaurus project will be created on first install.
-        Edit your docs in the File Manager at /DATA/AppData/docusaurus/src/docs/.
-        To rebuild after editing, restart the app.
+        A new Docusaurus site is generated and built on first install, then
+        served read-only by Nginx behind the app's SSO gate.
+
+        Your content lives on the server at /DATA/AppData/docusaurus/src/
+        (Markdown pages under docs/); the published HTML lives at
+        /DATA/AppData/docusaurus/build/.
+
+        Editing the Markdown is not enough on its own — the site has to be
+        rebuilt before changes appear, and restarting this app does not rebuild
+        it: the build runs once, at first install. Install the **Docusaurus MCP**
+        app from this store to edit pages and trigger a rebuild; it works on the
+        same two directories.
 
 x-compose-app:
   schema_version: 2
@@ -131,3 +140,5 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/build
       user: $PUID
       group: $PGID
+  webui-host: docusaurus-${domain}
+  webui-path: "/"
