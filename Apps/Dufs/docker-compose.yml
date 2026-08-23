@@ -7,7 +7,7 @@ services:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-    image: sigoden/dufs:v0.45.0
+    image: sigoden/dufs:v0.46.0
     restart: unless-stopped
     command: [
       "/srv",
@@ -41,11 +41,27 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
+    cpu_shares: 50
     deploy:
       resources:
         limits:
           memory: 128M
           cpus: '0.5'
+    x-casaos:
+      envs:
+        - container: PUID
+          description:
+            en_us: User ID owning the files Dufs creates. Defaults to your server user.
+        - container: PGID
+          description:
+            en_us: Group ID owning the files Dufs creates. Defaults to your server group.
+        - container: TZ
+          description:
+            en_us: Timezone used for the file timestamps shown in the interface.
+      volumes:
+        - container: /srv
+          description:
+            en_us: The whole of /DATA - Documents, Downloads, Media, Gallery and AppData, which holds every other app's database, configuration and secrets. Dufs serves all of it read-write over the web UI and WebDAV, so whoever has the admin password can browse, upload, overwrite, delete and download it as an archive.
 
 networks:
   pcs:
@@ -67,6 +83,8 @@ x-casaos:
       
       Dufs is a modern, lightweight file server that combines a beautiful web interface with powerful WebDAV capabilities. Access and manage your files through a responsive web browser or connect via WebDAV from any device or application.
       
+      What it can reach: Dufs serves the whole of `/DATA` read-write - Documents, Downloads, Media, Gallery and AppData, the last of which holds the databases, configuration and secrets of every other app on this server. The single `admin` account has full read/write access to all of it.
+      
       Web Interface Features:
       • Clean, intuitive file browser with drag-and-drop uploads
       • File preview for images, videos, documents, and code
@@ -87,6 +105,8 @@ x-casaos:
       Dufs - 现代文件服务器，支持 WebDAV
       
       Dufs 是一个现代、轻量级的文件服务器，结合了美观的 Web 界面和强大的 WebDAV 功能。通过响应式网页浏览器访问和管理文件，或从任何设备或应用程序通过 WebDAV 连接。
+      
+      可访问范围：Dufs 以读写方式提供整个 `/DATA`——Documents、Downloads、Media、Gallery 以及 AppData，其中 AppData 保存着本服务器上其他所有应用的数据库、配置和密钥。唯一的 `admin` 账户对这一切拥有完全的读写权限。
       
       Web 界面功能：
       • 清洁、直观的文件浏览器，支持拖放上传
@@ -117,6 +137,18 @@ x-casaos:
   tips:
     before_install:
       en_us: |
+        What this app can reach
+        
+        Dufs mounts the whole of `/DATA` read-write and serves it over both the web
+        UI and WebDAV. That includes `/DATA/Documents`, `/DATA/Downloads`,
+        `/DATA/Media`, `/DATA/Gallery` and `/DATA/AppData` - the last one holding the
+        databases, configuration and secrets of every other app installed on this
+        server. The single `admin` account below has read/write access to all of it:
+        it can upload, overwrite, delete, follow symlinks out of the tree and
+        download whole directories as archives. Change the default password right
+        after install and only give it to someone you would trust with the whole
+        server.
+        
         Default WebDAV Access
         | Username   | Password       | Access |
         | --------   | ------------   | ------ |
@@ -136,10 +168,60 @@ x-casaos:
         net stop webclient
         net start webclient
         ```
+      zh_cn: |
+        此应用可以访问的范围
+        
+        Dufs 以读写方式挂载整个 `/DATA`，并通过 Web 界面和 WebDAV 同时提供服务。
+        其中包括 `/DATA/Documents`、`/DATA/Downloads`、`/DATA/Media`、
+        `/DATA/Gallery`，以及保存着本服务器上其他所有应用数据库、配置和密钥的
+        `/DATA/AppData`。下面这个唯一的 `admin` 账户对这一切拥有读写权限：它可以
+        上传、覆盖、删除、跟随指向目录树之外的符号链接，并将整个目录打包下载。
+        请在安装后立即修改默认密码，并且只把它交给你愿意托付整台服务器的人。
+        
+        默认 WebDAV 访问
+        | 用户名     | 密码           | 权限   |
+        | --------   | ------------   | ------ |
+        | `admin`    | `$APP_DEFAULT_PASSWORD` | 读/写 |
+        
+        WebDAV 地址：https://dufs-$APP_DOMAIN/
+        
+        挂载方法：
+        • Windows：映射网络驱动器 → https://dufs-$APP_DOMAIN/
+        • macOS：访达 → 前往 → 连接服务器 → https://dufs-$APP_DOMAIN/
+        • Linux：文件 → 其他位置 → 连接到服务器 → dav://dufs-$APP_DOMAIN/
+        
+        在 Windows 上传输大文件时，可以在管理员命令提示符中运行以下命令来提高上传大小限制：
+        ```
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v FileSizeLimitInBytes /t REG_DWORD /d 4294967295 /f
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WebClient\Parameters" /v FileAttributesLimitInBytes /t REG_DWORD /d 100000000 /f
+        net stop webclient
+        net start webclient
+        ```
   title:
     en_us: Dufs
   index: /
   webui_port: 80
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  #
+  # Hand-authored, NOT derived from `volumes:` above: the single bind source is the
+  # data root itself, and neither /DATA nor /DATA/AppData may be declared here —
+  # see rationale.md. What is declared is the set of user-facing directories Dufs
+  # exists to write into, so upload / new folder / WebDAV PUT are guaranteed to work
+  # there on a box where they do not yet exist or are root-owned.
+  folders:
+    - path: /DATA/Documents
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Gallery
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media
+      user: $PUID
+      group: $PGID
   webui-host: dufs-${domain}
