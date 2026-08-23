@@ -13,6 +13,8 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
 - [ ] **Install hooks are idempotent**: a hook is rerun on every reinstall and every version upgrade, so guard one-shot work behind an existence check or a sentinel. A hook that exits non-zero leaves the app installed but **stopped**. See [Pre-Installation Commands](#pre-installation-commands)
 - [ ] **Directories the app needs are declared** under `x-compose-app.folders` with `schema_version: 2`, not created by a hook. See [Maison and `x-compose-app`](#maison-and-x-compose-app)
+- [ ] **Deployment values are references, not literals**: the shared network is declared as `name: ${APP_NET:-pcs}` (never a bare `name: pcs`), and every bind source starts with `${DATA_ROOT:-/DATA}`. Maison copies the compose byte-for-byte and never rewrites it, so a literal freezes the app to one deployment. See [System Variables](#system-variables)
+- [ ] **Only services that need outside reachability are on the shared network**, and each of them has an app-prefixed service name and `container_name`. Siblings that only talk to each other belong on an app-internal `driver: bridge` network. See [Shared-network hygiene](#caddy-integration-web-ui-access)
 
 ### Security Checklist
 - [ ] An authentication method is enabled and documented - this is **mandatory**. Exceptions must be explained in rationale.md (e.g., public websites).
@@ -49,7 +51,7 @@ To ensure easy testing, please follow these steps:
 
 1. Start with a regular compose app, which is a directory containing a `docker-compose.yml` file. Test it on your own machine to ensure you can start it successfully. In your instance, you can edit the compose file with a text editor and restart the app to check if the changes work. Use SSH to do `docker compose up -d` if needed.
 
-2. Copy the compose onto a PCS under the app's own folder, e.g. `/DATA/AppData/MyApp/docker-compose.yml`, add the required metadata (`x-casaos`, `x-compose-app`), and test it there over SSH with `docker compose up -d`. Note that a hand-run `docker compose up` is **not** the same as an install: Maison rewrites the file (networks, `${DATA_ROOT}`, `.env`) before it ever starts, so a compose that works by hand can still fail as an installed app. Step 4 is what actually proves it.
+2. Copy the compose onto a PCS under the app's own folder, e.g. `/DATA/AppData/MyApp/docker-compose.yml`, add the required metadata (`x-casaos`, `x-compose-app`), and test it there over SSH with `docker compose up -d`. A hand-run `docker compose up -d` in the app's folder is exactly what Maison does — it copies your `docker-compose.yml` byte-for-byte and never edits it; the only things it adds are the app's `.env` (the deployment's variables) and `docker-compose.override.yml` (the extra domains it publishes on). So if it works by hand with a real `.env`, it works as an installed app. Step 4 still proves the listing itself — metadata, icon, pre-install assets.
 
 3. When the local setup is stable, push to your forked repo. Create a new directory under `Apps` with your app name (along with logo, screenshot, and description files), e.g., `MyApp`.
 
@@ -119,10 +121,17 @@ Applications must be designed to preserve user data across uninstallation and re
 **Example Volume Mapping:**
 ```yaml
 volumes:
-  - /DATA/AppData/myapp/config:/app/config
-  - /DATA/AppData/myapp/database:/var/lib/database
-  - /DATA/AppData/myapp/uploads:/app/uploads
+  - ${DATA_ROOT:-/DATA}/AppData/myapp/config:/app/config
+  - ${DATA_ROOT:-/DATA}/AppData/myapp/database:/var/lib/database
+  - ${DATA_ROOT:-/DATA}/AppData/myapp/uploads:/app/uploads
 ```
+
+Write the bind source as `${DATA_ROOT:-/DATA}/…`, not a bare `/DATA/…`. The data
+folder is `/DATA` on a PCS but not on every deployment, and a bind source is resolved
+by the **host** daemon — so the reference is what makes the app portable. The `:-/DATA`
+default keeps the compose working when you run it by hand. See
+[System Variables](#system-variables). Elsewhere in this document `/DATA/...` is used
+as shorthand for the data folder itself; in a bind source, always write the variable.
 
 This approach ensures that when users uninstall and reinstall applications, they can continue from where they left off without losing any personal data or configurations.
 
@@ -761,18 +770,43 @@ labels:
 **Notes:**
 - `caddy_2` does NOT have `import: gateway_tls` - uses Let's Encrypt
 - Replace `80` with your app's actual web UI port
-- Add labels only to the main web UI service
-- Ensure the `pcs` network is configured
+- Ensure the `pcs` network is declared as shown below
 
 **Compose File Requirements:**
 - Use `expose` to expose the web UI port (required for Caddy discovery)
-- Add Caddy labels to the main web UI service only
-- Connect the main service to the `pcs` network
+- Add Caddy labels to every service that answers on its own hostname. Most apps have exactly one; an app that also ships, say, its own Dex has two, and each gets its own `caddy_N` group on its own service
+- Declare the shared network yourself, and connect **every service that must be reachable from outside your own compose project** to it — anything with Caddy labels, plus anything another app talks to. Services that only talk to their siblings do not belong on it (see *Shared-network hygiene* below):
+
+  ```yaml
+  networks:
+    pcs:                       # the key is yours; the name is the deployment's
+      name: ${APP_NET:-pcs}
+      external: true
+  ```
+
+  Write `${APP_NET:-pcs}`, never a bare `pcs`. Maison copies your `docker-compose.yml` byte-for-byte and does not rewrite it, so the reference is what lets the same app run on a deployment whose network is called something else — and the `:-pcs` default keeps a bare `docker compose up` working when you test by hand
 - Use `${APP_DOMAIN}` and `\${APP_PUBLIC_IP_DASH}` variables
-- Set `container_name` explicitly on the main service. Caddy resolves each label's upstream via container DNS on the `pcs` network, so the container must have a stable, predictable name. Constraints:
+- Set `container_name` explicitly on every service you attach to `pcs`. Caddy resolves each label's upstream via container DNS on that network, so the container must have a stable, predictable name. Constraints:
   - lowercase alphanumerics and `-` only (no underscores, dots, or other special characters)
   - must **not** start with a digit
   - should match the top-level `name:` and service name for consistency
+
+**Shared-network hygiene:**
+
+`pcs` is one flat network shared by every app on the box, and its DNS namespace is
+shared with them. Compose gives each attached service an alias equal to its **service
+name**, and Docker also resolves **container names** — so two apps that each attach a
+service called `db` will cross-resolve, and one app's web tier can end up talking to
+another's database. It is rare in practice only because names differ.
+
+Two rules keep it that way:
+
+- **Attach only what needs outside reachability.** A database, a cache or a worker that
+  only its own siblings talk to belongs on an app-internal network (`driver: bridge`),
+  not on `pcs`. Services on the same compose project reach each other by service name
+  without either.
+- **Prefix what you do attach.** Give every service on `pcs` an app-prefixed service
+  name and `container_name` (`outline-dex`, not `dex`).
 
 **Example - Complete Caddy Configuration:**
 ```yaml
@@ -797,6 +831,7 @@ services:
 
 networks:
   pcs:
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -830,6 +865,7 @@ services:
 
 networks:
   pcs:
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -966,6 +1002,7 @@ services:
 
 networks:
   pcs:
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -1009,7 +1046,13 @@ x-casaos:
 
 Yundera injects the following variables into every app at container creation. Reference them in `environment:`, `volumes:`, `labels:`, and `pre-install-cmd`.
 
+These are written into the app's `.env` on install and refreshed on **every start**, so they track the deployment as it changes. Maison does not edit your compose file — a variable reaches your app only because your compose references it.
+
+For the two that describe *where the deployment puts things*, write the defaulted form (`${APP_NET:-pcs}`, `${DATA_ROOT:-/DATA}`): the reference is what makes the app portable, and the default is what keeps a hand-run `docker compose up -d` working before Maison has written an `.env`.
+
 **Available variables:**
+- `$APP_NET`: The shared external network apps are attached to (`pcs` on a PCS). Use it as `name: ${APP_NET:-pcs}` in your `networks:` block — see [Caddy Integration](#caddy-integration-web-ui-access).
+- `$DATA_ROOT`: The data folder as the **Docker host** sees it — normally `/DATA`, but not on every deployment. Use it as the prefix of every bind source: `${DATA_ROOT:-/DATA}/AppData/$AppID/…`.
 - `$APP_DOMAIN`: Domain root for this app (e.g. `user.nsl.sh`). Compose a full URL as `https://<prefix>-${APP_DOMAIN}`.
 - `$APP_PUBLIC_IP_DASH`: The server's public IPv4 with dots converted to dashes — used for `nip.io` / `sslip.io` Caddy labels.
 - `$APP_DEFAULT_PASSWORD`: A secure default password generated by Yundera. Use it for first-boot admin credentials instead of hard-coding.
@@ -1029,7 +1072,7 @@ environment:
   - PGID=$PGID
   - TZ=$TZ
 volumes:
-  - /DATA/AppData/$AppID/data:/app/data
+  - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/app/data
 ```
 
 #### Environment Variables
