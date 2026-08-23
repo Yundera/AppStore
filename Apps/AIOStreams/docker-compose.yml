@@ -40,7 +40,7 @@ services:
       # automatically on first run.
       AIOSTREAMS_AUTH_REQUIRED: "true"
     volumes:
-      - /DATA/AppData/aiostreams/data/:/app/data
+      - ${DATA_ROOT:-/DATA}/AppData/aiostreams/data/:/app/data
     # The image's built-in healthcheck uses a 5s start_period, too short for the
     # ~15-20s anime-database warmup on a shared VPS core. Give it generous grace
     # so the container is never reported unhealthy (and cycled) during startup.
@@ -60,7 +60,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

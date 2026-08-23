@@ -30,6 +30,8 @@ services:
       caddy_2: annas-torrents-webui-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
+      # No AUTH_HASH: Maison injects no such token, so it would resolve to an
+      # empty string. The only way in is the OIDC/Authelia gate.
       BACKEND_HOST: "annas-torrents-webui-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
@@ -48,16 +50,16 @@ services:
 
   # ── Backend (protected) ────────────────────────────────────────────
   # The FastAPI + embedded-libtorrent app. No Caddy labels: the web UI is
-  # only reachable through the AppShield sidecar. The BitTorrent peer port
-  # (6881 TCP+UDP) is published directly to the host — it is raw swarm
-  # traffic, not HTTP, so it does not (and cannot) go through the sidecar.
+  # only reachable through the AppShield sidecar, and it publishes no host
+  # ports. The BitTorrent peer port (6881 TCP+UDP) ships commented out: raw
+  # swarm traffic cannot go through the sidecar, so binding it is opt-in.
   annas-torrents-webui-backend:
     image: ghcr.io/worph/annas-torrents-webui:1.0.2
     container_name: annas-torrents-webui-backend
     restart: unless-stopped
-    # Runs unprivileged as the platform-injected PUID:PGID (1000:1000). The data
-    # dir is created + chowned by pre-install-cmd below so this non-root process
-    # can write /data/content — no root needed.
+    # Runs unprivileged as the platform-injected PUID:PGID. The data dir is
+    # created + chowned by x-compose-app.folders so this non-root process can
+    # write /data/content — no root needed.
     expose:
       - "8080"          # Web UI — internal only, fronted by the sidecar
     ports:
@@ -71,9 +73,10 @@ services:
       PUBLIC_URL: "https://annas-torrents-webui-${APP_DOMAIN}"
       TZ: $TZ
     volumes:
-      - /DATA/AppData/annas-torrents-webui/data/:/data
+      - ${DATA_ROOT:-/DATA}/AppData/annas-torrents-webui/data/:/data
     networks:
       - pcs
+    cpu_shares: 50
     deploy:
       resources:
         limits:
@@ -83,8 +86,12 @@ services:
           memory: 512M
 
 networks:
+  # The deployment's shared network, under whatever name it carries there.
+  # ${APP_NET} comes from the app's .env; the `:-pcs` default keeps a hand-run
+  # `docker compose up -d` working. Maison copies this file byte-for-byte and
+  # never rewrites it, so the reference has to be written here.
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -94,18 +101,11 @@ x-casaos:
   main: annas-torrents-webui
   webui_port: 80
   index: /
-  # Create the data dir owned by the runtime user before first start, so the
-  # non-root backend (UID 1000:1000, the platform-injected PUID:PGID) can write
-  # it. Without this, Docker auto-creates the bind mount as root:root and the
-  # app crashes with EACCES on /data/content. Hardcoded to 1000:1000 because
-  # CasaOS's install-time substitution strips ${VAR:-default} fallbacks and
-  # leaves bare $PUID/$PGID that are empty in the pre-install shell.
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/annas-torrents-webui/data &&
-    chown -R 1000:1000 /DATA/AppData/annas-torrents-webui/data
+  # No pre-install-cmd: the data dir is created and chowned to $PUID:$PGID by
+  # x-compose-app.folders below, before any image is pulled or container starts.
   author: Yundera Team
   category: Downloader
-  tags: ["files", "personal"]
+  tags: ["files", "personal", "needs-public-ip"]
   developer: cparthiv
   store_app_id: annas-torrents-webui
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/icon.png
@@ -131,11 +131,13 @@ x-casaos:
       - Set a target size (TB/GB) and start seeding with one click
       - Watch live **coverage** — how much of Anna's Archive your seeded torrents represent
       - Track **disk used**, **upload/download bandwidth**, and **swarm health** (seeders/leechers) in near real time
-      - Share your impact with a read-only `/view` vantage page and multi-network share buttons
+      - Review your impact on a read-only `/view` vantage page (SSO-gated like the
+        rest of the app, so it is visible to accounts on this server, not to the public)
       - Donate to Anna's Archive directly from the UI
 
-      **Protected by AppShield:** the control panel is fronted by the built-in
-      Authelia SSO, so only you can reach it — no login page to configure.
+      **Protected by AppShield:** every route, including `/view`, is fronted by the
+      built-in Authelia SSO, so only you can reach it — no login page to configure.
+      Share links therefore do not open for anyone without an account on this server.
 
       **Note on safety:** this app downloads and seeds real content. Distributing
       certain materials may not be legal in all jurisdictions; seed at your own risk.
@@ -152,11 +154,13 @@ x-casaos:
       - Définir une taille cible (To/Go) et démarrer le partage en un clic
       - Suivre la **couverture** en direct de la portion d'Anna's Archive que vous préservez
       - Suivre l'**espace disque**, la **bande passante** et la **santé du swarm** en temps quasi réel
-      - Partager votre impact via une page `/view` en lecture seule et des boutons de partage
+      - Consulter votre impact sur une page `/view` en lecture seule (protégée par le
+        SSO comme le reste de l'app : accessible aux comptes de ce serveur, pas au public)
       - Faire un don à Anna's Archive directement depuis l'interface
 
-      **Protégé par AppShield :** le panneau de contrôle est protégé par le SSO
-      Authelia intégré — aucune page de connexion à configurer.
+      **Protégé par AppShield :** toutes les routes, y compris `/view`, sont protégées
+      par le SSO Authelia intégré — aucune page de connexion à configurer. Les liens de
+      partage ne s'ouvrent donc pas pour qui n'a pas de compte sur ce serveur.
   tips:
     before_install:
       en_us: |
@@ -166,7 +170,10 @@ x-casaos:
 
         **BitTorrent connectivity**
         - Peer traffic uses port **6881 (TCP + UDP)**, published directly to the
-          host. For best swarm connectivity, forward/open 6881 on your router.
+          host. Forward/open 6881 on your router so peers can reach you.
+        - Needs a publicly reachable IP. Behind CGNAT, or on a PCS routed through
+          the mesh tunnel, the app still runs but only makes outbound
+          connections: far fewer peers, and nobody can download from you.
 
         **Getting started**
         1. Set a contribution target (in TB or GB) and click *Start contributing*.

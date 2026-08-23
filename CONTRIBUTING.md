@@ -40,6 +40,7 @@ Before submitting your PR, ensure your app meets these requirements:
 ### Documentation Checklist
 - [ ] Clear description of the application
 - [ ] A mount that exposes a broad slice of `/DATA` (`/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, or `/DATA` itself) is called out — in the app `description`, in `tips.before_install`, or in `rationale.md`. The user has to be able to see what the app can reach before they install it
+- [ ] An app that needs inbound connections from the internet (it publishes a non-HTTP `ports:` entry) carries the `needs-public-ip` tag. See [Publishing host ports](#publishing-host-ports)
 - [ ] Icon and screenshots meet specifications - files and URLs point to this Yundera repository (eg https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png)
 
 ## Testing and Submit Process
@@ -878,6 +879,64 @@ x-casaos:
 - Any port works with Caddy - just match the `expose` and label port values
 - The URL remains clean regardless of the backend port
 
+#### Publishing host ports
+
+`expose:` is the default and covers every HTTP port: Caddy reaches the container over
+the shared network, so publishing a web UI to the host adds nothing but a second door
+that bypasses Caddy, the certificates, and the app's login gate. **Never publish a web
+UI port** — and on an AppShield app, never publish the protected backend's HTTP port.
+
+**`ports:` is legitimate — and sometimes required — for traffic Caddy cannot carry.**
+An HTTP reverse proxy can only front HTTP. If your app speaks a protocol that peers or
+clients must reach directly, publish that port and say so. Shipped examples:
+
+| App | Published | Why |
+|---|---|---|
+| `Apps/Crafty` | `25500-25600/tcp`, `19132/udp` | Minecraft Java + Bedrock — game protocol, not HTTP |
+| `Apps/Hubs` | `40000-40050/tcp+udp` | WebRTC media |
+| `Apps/Samba` | `445/tcp` | SMB |
+| `Apps/WireGuardEasy` | `51820/udp` | WireGuard |
+| `Apps/AnnasTorrents` | `6881/tcp+udp` | BitTorrent peer + DHT traffic |
+| `Apps/qBittorrent` | `6881/tcp+udp` (shipped commented out) | same, but the client is usable without it |
+
+When you do publish:
+
+- Publish **only** the non-HTTP port(s). The web UI stays on `expose:` behind Caddy.
+- Pick fixed, documented ports and keep them out of the way of the host itself
+  (the PCS stack owns `80`/`443`, SSH owns `22`). Two apps that publish the same host
+  port cannot run side by side — the second one fails to start.
+- Publishing a port makes it reachable from the internet, unauthenticated, with no SSO
+  in front. That is the point for a swarm or game port; make sure it is not the point
+  for anything else the container listens on.
+- Say what the port is for in a comment next to it, and tag the app `needs-public-ip` if clients have to dial in from outside (see below).
+
+**Ship it enabled if the app needs it to work.** Comment a `ports:` block out only when
+the app is genuinely useful without it and the port is a pure enhancement — and then say
+so in `tips.before_install` so the user knows what to uncomment.
+
+#### Reserved tag: `needs-public-ip`
+
+Most `x-casaos.tags` are topical (`media`, `files`, `developer`, `personal`). One tag is
+**reserved and functional**: `needs-public-ip`. Add it to any app that only works
+properly when inbound connections from the internet reach the host — i.e. any app that
+publishes a port other people or devices have to dial in on.
+
+```yaml
+x-casaos:
+  category: Downloader
+  tags: ["files", "personal", "needs-public-ip"]
+```
+
+Not every PCS has a reachable public IP: a PCS behind CGNAT, or one routed through the
+mesh-router WireGuard tunnel, gets its HTTPS routes from the gateway but has **no**
+directly reachable address for raw TCP/UDP. On such a host the app installs and starts
+fine, and then quietly underperforms — a torrent client that never gets inbound peers,
+a game server nobody can join. The tag is what lets the user see that before installing.
+
+The tag is the whole requirement — no extra `tips.before_install` boilerplate is
+expected. Add a note there only if the app has something specific to say (a port to
+forward, what degrades without it).
+
 Caddy handles:
 - Automatic HTTPS certificate management
 - Subdomain routing to the correct container
@@ -946,7 +1005,7 @@ x-casaos:
 
 The recommended way to satisfy the authentication requirement is to front your app with the **AppShield** sidecar (`ghcr.io/yundera/appshield`, formerly `nginx-hash-lock`), which plugs into the PCS's built-in Authelia SSO. The sidecar self-registers as an OIDC client with the PCS's `auth-registrar` on first login — there are **no client IDs, no secrets, and no issuer URL to configure**.
 
-Reference deployments: copy a recently-shipped SSO app such as `Apps/ConvertX`, `Apps/Spliit`, or `Apps/BrowserMCP` (an MCP server). The live store is the source of truth — if this guide and a shipped app disagree, the app wins.
+Reference deployments: copy a recently-shipped SSO app such as `Apps/Beacon` or `Apps/BrowserMCP` (MCP servers, with the OAuth broker) or `Apps/Spliit` (plain web UI). The live store is the source of truth — if this guide and a shipped app disagree, the app wins.
 
 **Pattern:** put the AppShield container in front of your backend, point Caddy at AppShield instead of the backend, and keep the backend reachable only on the internal `pcs` network.
 
@@ -954,7 +1013,7 @@ Reference deployments: copy a recently-shipped SSO app such as `Apps/ConvertX`, 
 name: myapp
 services:
   myapp:                                    # AppShield sidecar (public-facing)
-    image: ghcr.io/yundera/appshield:2.0.3
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: myapp                    # must equal top-level name: (load-bearing — see checklist)
     hostname: myapp                          # must equal container_name — OIDC identity (load-bearing — see checklist)
     restart: unless-stopped
@@ -971,7 +1030,8 @@ services:
       caddy_2: myapp-\${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
-      AUTH_HASH: $AUTH_HASH                                 # token; pair with x-casaos.index: /?hash=$AUTH_HASH
+      # No AUTH_HASH: the platform injects no token into the app's .env, so it would
+      # resolve to an empty string. See the note under the table below.
       BACKEND_HOST: "myapp-backend"                         # internal DNS name of the protected container
       BACKEND_PORT: "80"                                    # port the backend listens on
       LISTEN_PORT: "80"                                     # port AppShield listens on (matches `expose` + Caddy)
@@ -1008,7 +1068,7 @@ networks:
 x-casaos:
   main: myapp                       # the SIDECAR — the service carrying the caddy_N
                                     # labels. Never the backend: see the rules above.
-  index: /?hash=$AUTH_HASH          # launch URL carries the hash token so the user lands authenticated
+  index: /                          # launch path; the SSO gate handles authentication
   webui_port: 80                    # optional; keep at 80 if set
 ```
 
@@ -1016,7 +1076,7 @@ x-casaos:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `AUTH_HASH` | yes | Injected token; pair with `x-casaos.index: /?hash=$AUTH_HASH`. |
+| `AUTH_HASH` | **no — legacy** | CasaOS-era per-app token. Do not set it in new apps; see the note below. |
 | `BACKEND_HOST` / `BACKEND_PORT` | yes | Internal DNS name + port of the protected container. |
 | `LISTEN_PORT` | yes | Port AppShield listens on (matches `expose` + Caddy `{{upstreams}}`). |
 | `OIDC_REGISTRAR_URL` | yes | `http://auth-registrar:9092` — enables OIDC; self-registers (no client id/secret). |
@@ -1027,18 +1087,36 @@ x-casaos:
 | `OAUTH_SCOPE` | optional | Scope the resource advertises/grants (default `access`; MCP apps use `mcp`). |
 | `OAUTH_DATA_DIR` | optional | Where registered clients, signing keys and grants live. Set to `/data/oauth` and bind-mount `/DATA/AppData/<app>/oauth` so they survive redeploys. |
 
-> **`CREDENTIAL_VALIDATE_URL` is gone.** It used to point at `http://casaos-oidc-bridge:8090/validate` so machine clients could authenticate with CasaOS credentials. The bridge is being removed — do **not** add this variable to new apps. Machine/API access now goes through `OAUTH_RESOURCE` (or a real `AUTH_HASH`, which needs `AUTH_HASH_MODE: "env"` or `"managed"` — the default is `off` and silently ignores `AUTH_HASH`).
+> **`AUTH_HASH` is dead under Maison — do not add it.** It was generated per app by the
+> CasaOS installer. Maison generates nothing: the variables an app receives are its
+> `BaseVars` (`AppID`, `PUID`, `PGID`, `TZ`, `DATA_ROOT`, `DATA_HOST_PATH`) plus the
+> deployment's `.env.app` (`APP_NET`, `APP_DOMAIN`, `APP_PUBLIC_IP*`, `APP_EMAIL`,
+> `APP_DEFAULT_PASSWORD`, …), and `AUTH_HASH` is in neither. Written into a compose
+> file it interpolates to an empty string; written into `index` or a tip it shows up as
+> a literal `${AUTH_HASH}`. It would be inert even if it were set — AppShield ignores it
+> unless `AUTH_HASH_MODE` is `"env"` or `"managed"`, and the default is `off`. So: no
+> `AUTH_HASH:` in `environment:`, and no `/?hash=…` in `x-casaos.index` or
+> `x-compose-app.webui-path`.
+
+> **`CREDENTIAL_VALIDATE_URL` is gone.** It used to point at `http://casaos-oidc-bridge:8090/validate` so machine clients could authenticate with CasaOS credentials. The bridge is being removed — do **not** add this variable to new apps. Machine/API access now goes through `OAUTH_RESOURCE`.
+
+> **Machine/API clients: use `OAUTH_RESOURCE`, not `ALLOWED_PATHS`.** `ALLOWED_PATHS`
+> exempts a path from the SSO gate; with `AUTH_HASH` inert, nothing takes its place and
+> the path ends up reachable with no credential at all. `OAUTH_RESOURCE` (AppShield
+> >= 2.0.7) gates exactly that path on Bearer tokens instead — see `Apps/Beacon` and
+> `Apps/BrowserMCP`. Some older store apps still ship the `ALLOWED_PATHS` pattern; they
+> are being migrated, do not copy them.
 
 **Checklist for OIDC apps:**
 - [ ] Caddy labels are attached **only to the AppShield sidecar**, never to the backend — otherwise the backend is exposed unauthenticated.
-- [ ] The sidecar carries the full env set: `AUTH_HASH`, `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL`, `REDIRECT_HOST_SUFFIXES`.
-- [ ] `x-casaos.index` is set to `/?hash=$AUTH_HASH` when using `AUTH_HASH`.
+- [ ] The sidecar carries the full env set: `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL`, `REDIRECT_HOST_SUFFIXES`.
+- [ ] No `AUTH_HASH` anywhere: not in `environment:`, and no `/?hash=…` in `x-casaos.index`, `x-compose-app.webui-path`, or a tip. It resolves to nothing under Maison.
 - [ ] `x-casaos.main` points at the primary service.
-- [ ] Backend service has no `ports:` and no public Caddy labels; it is reachable only via the `pcs` network.
+- [ ] Backend service has no public Caddy labels, and does **not** publish its **HTTP/UI** port to the host — the UI must be reachable only through the sidecar, over the shared network. Publishing a *non-HTTP* port the app genuinely needs (BitTorrent peer, game server, SMB, WireGuard, …) is fine and expected: that traffic cannot pass through an HTTP sidecar, and blocking it would just break the app. See [Publishing host ports](#publishing-host-ports).
 - [ ] The sidecar's `container_name` equals the top-level `name:` (lowercase alnum + `-`, not starting with a digit). `auth-registrar` derives the OIDC `client_id` from the container name via PTR lookup on the `pcs` network, so the `container_name` is load-bearing — it must be stable across reinstalls. The compose **service name itself may differ** (shipped apps use `myapp`, `myapp-proxy`, `nginxhashlock`, etc.).
 - [ ] The sidecar sets `hostname:` to the **same value** as its `container_name`. AppShield's auth-service builds its OIDC redirect URIs from `os.hostname()` (as `<app>-<suffix>`), and `auth-registrar` independently attests the app name via the container's PTR record and **rejects any redirect URI that doesn't match**. If `hostname:` is omitted, Docker defaults it to the random container ID, the submitted redirect URIs won't match the attested name, and OIDC registration fails at first login. (`container_name` alone does **not** set the in-container hostname.)
 - [ ] Do not claim `auth-${APP_DOMAIN}` in any Caddy label — it collides with the PCS's Authelia and causes intermittent `invalid_client` errors.
-- [ ] Pin AppShield to a specific version tag (currently `ghcr.io/yundera/appshield:2.0.3`) — never `:latest` / `:main`.
+- [ ] Pin AppShield to a specific version tag (currently `ghcr.io/yundera/appshield:2.0.9`; `OAUTH_RESOURCE` needs >= 2.0.7) — never `:latest` / `:main`.
 
 **Requirements on the host PCS:** the `authelia` and `auth-registrar` containers must be running on the `pcs` network (provisioned automatically by the current `template-root`). If they are missing, the app fails at first login with `ENOTFOUND auth-registrar` in the sidecar logs.
 
