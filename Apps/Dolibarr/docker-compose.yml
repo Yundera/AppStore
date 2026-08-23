@@ -22,8 +22,8 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     entrypoint: ["/bin/bash", "-c", "rm -f /var/www/documents/install.lock && exec docker-run.sh apache2-foreground"]
     volumes:
-      - /DATA/AppData/$AppID/documents:/var/www/documents
-      - /DATA/AppData/$AppID/custom:/var/www/html/custom
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/documents:/var/www/documents
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/custom:/var/www/html/custom
     environment:
       DOLI_DB_HOST: dolibarr-db
       DOLI_DB_NAME: dolibarr
@@ -60,7 +60,7 @@ services:
     networks:
       - dolibarr-network
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/mysql
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/db:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
       MYSQL_DATABASE: dolibarr
@@ -84,7 +84,7 @@ networks:
   dolibarr-network:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

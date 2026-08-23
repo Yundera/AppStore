@@ -14,7 +14,7 @@ services:
     volumes:
       # chroma 1.5.x reads persist_path from the baked-in /config.yaml, which is /data
       # (older 0.x images used /chroma/chroma — do not copy that path from upstream)
-      - /DATA/AppData/odysseus/chroma/:/data/
+      - ${DATA_ROOT:-/DATA}/AppData/odysseus/chroma/:/data/
     deploy:
       resources:
         limits:
@@ -34,7 +34,7 @@ services:
     volumes:
       # settings.yml (with a generated secret_key and the json format Odysseus needs)
       # is written by pre-install-cmd
-      - /DATA/AppData/odysseus/searxng/:/etc/searxng/
+      - ${DATA_ROOT:-/DATA}/AppData/odysseus/searxng/:/etc/searxng/
     cap_drop:
       - ALL
     cap_add:
@@ -55,7 +55,7 @@ services:
     networks:
       - odysseus-internal
 
-  nginxhashlock:
+  odysseus-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: odysseus
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
@@ -66,7 +66,6 @@ services:
     restart: unless-stopped
     user: "root"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "odysseus-backend"
       BACKEND_PORT: "7000"
       LISTEN_PORT: "80"
@@ -92,6 +91,7 @@ services:
           memory: 128M
     cpu_shares: 80
     networks:
+      # Only `pcs`: Caddy reaches it here, and so is its backend.
       - pcs
     privileged: true
     cap_add:
@@ -156,11 +156,11 @@ services:
       DATA_BRAVE_API_KEY: ""
       TAVILY_API_KEY: ""
     volumes:
-      - /DATA/AppData/odysseus/data/:/app/data/
-      - /DATA/AppData/odysseus/logs/:/app/logs/
-      - /DATA/AppData/odysseus/data/ssh/:/app/.ssh/
-      - /DATA/AppData/odysseus/data/huggingface/:/app/.cache/huggingface/
-      - /DATA/AppData/odysseus/data/local/:/app/.local/
+      - ${DATA_ROOT:-/DATA}/AppData/odysseus/data/:/app/data/
+      - ${DATA_ROOT:-/DATA}/AppData/odysseus/logs/:/app/logs/
+      - ${DATA_ROOT:-/DATA}/AppData/odysseus/data/ssh/:/app/.ssh/
+      - ${DATA_ROOT:-/DATA}/AppData/odysseus/data/huggingface/:/app/.cache/huggingface/
+      - ${DATA_ROOT:-/DATA}/AppData/odysseus/data/local/:/app/.local/
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:7000/api/health', timeout=5).read(1)\""]
       interval: 30s
@@ -172,6 +172,9 @@ services:
         limits:
           memory: 3G
     networks:
+      # odysseus-internal carries the chromadb / searxng traffic. `pcs` is kept
+      # because OLLAMA_BASE_URL / RESEARCH_LLM_ENDPOINT are meant to be pointed at
+      # a model server running as another app on this box.
       - odysseus-internal
       - pcs
 
@@ -179,17 +182,17 @@ networks:
   odysseus-internal:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  main: nginxhashlock
+  main: odysseus-proxy
   store_app_id: odysseus
   webui_port: 80
-  index: /?hash=$AUTH_HASH
+  index: /
   scheme: https
   port_map: "443"
   hostname: odysseus-${APP_DOMAIN}

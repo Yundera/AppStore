@@ -13,11 +13,6 @@ services:
       WEB_PORT: "9300"
       LOG_LEVEL: info
       PUBLIC_URL: "https://beacon-${APP_DOMAIN}/mcp"
-      # Persistent auth token sourced from /DATA/AppData/beacon/.env (created by
-      # pre-install-cmd, symlinked into the compose dir). Survives uninstall, so
-      # the token shown to the user no longer rotates on reinstall. NOT $AUTH_HASH,
-      # which CasaOS regenerates on every install.
-      AUTH_HASH: ${BEACON_AUTH}
       # Surfaces a "Manage remote access" link in the Beacon dashboard pointing
       # at the AppShield-hosted OAuth admin page. Beacon itself does no OAuth.
       OAUTH_ADMIN_URL: "https://beacon-${APP_DOMAIN}/AppShield/oauth"
@@ -34,9 +29,11 @@ services:
       # Without this it is all recreated empty on every redeploy, which means
       # re-adding external servers and re-authorizing each one by hand after
       # every app update.
-      - /DATA/AppData/beacon/data:/app/data
+      - ${DATA_ROOT:-/DATA}/AppData/beacon/data:/app/data
     networks:
       - pcs
+    # 80 — user-facing API backend (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 80
     deploy:
       resources:
         limits:
@@ -74,11 +71,6 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: 0:0
     environment:
-      # env mode: take the persistent token from the env (interpolated from the
-      # symlinked .env) instead of letting AppShield generate/manage its own, so
-      # the proxy and the backend share the exact same value.
-      AUTH_HASH_MODE: "env"
-      AUTH_HASH: ${BEACON_AUTH}
       BACKEND_HOST: "beacon-backend"
       BACKEND_PORT: "9300"
       LISTEN_PORT: "80"
@@ -98,11 +90,14 @@ services:
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
       # Persist DCR/manual clients, signing keys and grants across redeploys.
-      - /DATA/AppData/beacon/oauth:/data/oauth
+      - ${DATA_ROOT:-/DATA}/AppData/beacon/oauth:/data/oauth
     depends_on:
       - beacon-backend
     networks:
       - pcs
+    # 80 — reverse proxy in front of a user-facing app (CONTRIBUTING
+    # "CPU Share Allocation").
+    cpu_shares: 80
     deploy:
       resources:
         limits:
@@ -110,29 +105,22 @@ services:
           memory: 256M
 
 networks:
+  # The deployment's shared network, under whatever name it carries there.
+  # ${APP_NET} comes from the app's .env; the `:-pcs` default keeps a hand-run
+  # `docker compose up -d` working. Maison copies this file byte-for-byte and
+  # never rewrites it, so the reference has to be written here.
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
-  main: beacon-backend
+  # The served service: beacon-proxy is what carries the caddy_N labels and what
+  # webui-host resolves to. beacon-backend is reachable only from inside `pcs`.
+  main: beacon-proxy
   index: /
 
-  # Generate a persistent auth token once and keep it in user space so it does
-  # not rotate on uninstall/reinstall. The real file lives under the app's
-  # AppData (which survives uninstall); a symlink exposes it as the compose
-  # project .env so ${BEACON_AUTH} interpolates for both services.
-  # Idempotent: only generates if not already present.
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID /DATA/AppData/$AppID/oauth /DATA/AppData/$AppID/data /DATA/AppData/casaos/apps/$AppID &&
-    ENV_FILE=/DATA/AppData/$AppID/.env &&
-    if ! grep -q '^BEACON_AUTH=' "$ENV_FILE" 2>/dev/null; then
-      echo "BEACON_AUTH=$(openssl rand -hex 64)" >> "$ENV_FILE";
-    fi &&
-    ln -sf "$ENV_FILE" /DATA/AppData/casaos/apps/$AppID/.env
-
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/thumbnail.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/screenshot-1.png
 
@@ -187,8 +175,13 @@ x-casaos:
 
         Beacon automatically discovers MCP servers on the `pcs` Docker network.
 
-        **Authentication:**
-        The web dashboard is protected by your Yundera single sign-on — no extra login.
+        **Authentication (on by default):**
+        - **Humans** — the web dashboard is behind your Yundera single sign-on. Opening the
+          app redirects you to the Yundera login; there is no separate Beacon password.
+        - **Machines** — the `/mcp` endpoint is behind OAuth 2.1. AI clients get a token by
+          logging in with the same Yundera account (see Option 1 below).
+
+        Nothing is reachable unauthenticated from the public URL.
 
         **How it works:**
         1. The aggregator broadcasts UDP discovery packets on port 9099
@@ -200,20 +193,24 @@ x-casaos:
 
         Connect your AI assistant to the aggregated endpoint to access all discovered MCP tools at once.
 
-        **Option 1: Public URL (with hash auth)**
+        **Option 1: Public URL (OAuth)**
 
-        Replace `YOUR_TOKEN` with the auth token shown in the Beacon dashboard.
-        The token is persistent — it stays the same across reinstalls.
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the URL below —
+        clients that support OAuth discovery (claude.ai, Claude Desktop) register themselves
+        and open a browser for you to approve with your Yundera login.
         ```json
         {
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=YOUR_TOKEN"
+              "url": "https://beacon-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        For clients that need a pre-created client_id/client_secret (n8n, custom scripts),
+        open **https://beacon-${APP_DOMAIN}/AppShield/oauth** and create one there. The same
+        page is linked from the Beacon dashboard as "Manage remote access".
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -250,8 +247,14 @@ x-casaos:
 
         Beacon decouvre automatiquement les serveurs MCP sur le reseau Docker `pcs`.
 
-        **Authentification:**
-        Le tableau de bord web est protege par votre authentification unique Yundera (SSO) — aucune connexion supplementaire.
+        **Authentification (active par defaut):**
+        - **Humains** — le tableau de bord web est protege par votre authentification unique
+          Yundera (SSO). Ouvrir l'application redirige vers la connexion Yundera; il n'y a pas
+          de mot de passe Beacon separe.
+        - **Machines** — l'endpoint `/mcp` est protege par OAuth 2.1. Les clients IA obtiennent
+          un jeton en se connectant avec le meme compte Yundera (voir Option 1 ci-dessous).
+
+        Rien n'est accessible sans authentification depuis l'URL publique.
 
         **Comment ca marche:**
         1. L'aggregateur envoie des paquets de decouverte UDP sur le port 9099
@@ -263,21 +266,25 @@ x-casaos:
 
         Connectez votre assistant IA a l'endpoint agrege pour acceder a tous les outils MCP decouverts.
 
-        **Option 1: URL publique (avec hash auth)**
+        **Option 1: URL publique (OAuth)**
 
-        Remplacez `YOUR_TOKEN` par le token d'authentification affiche dans le
-        tableau de bord Beacon. Le token est persistant — il reste identique
-        apres une reinstallation.
+        L'endpoint `/mcp` est protege par OAuth 2.1. Pointez votre client vers l'URL
+        ci-dessous — les clients qui gerent la decouverte OAuth (claude.ai, Claude Desktop)
+        s'enregistrent seuls et ouvrent un navigateur pour que vous approuviez avec votre
+        connexion Yundera.
         ```json
         {
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "https://beacon-${APP_DOMAIN}/mcp?hash=YOUR_TOKEN"
+              "url": "https://beacon-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        Pour les clients qui exigent un client_id/client_secret pre-cree (n8n, scripts),
+        ouvrez **https://beacon-${APP_DOMAIN}/AppShield/oauth** et creez-en un. La meme page
+        est accessible depuis le tableau de bord Beacon via "Manage remote access".
 
         **Option 2: Connexion Docker locale (sans auth)**
         ```json
@@ -301,4 +308,17 @@ x-casaos:
         - Les identifiants OAuth pre-enregistres et les scopes personnalises sont dans **Advanced**, ou l'on peut aussi coller un bundle JSON pour en ajouter plusieurs a la fois.
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
+  # the two bind-mount sources above. Declared here rather than mkdir'd in a
+  # hook: a hook's mkdir runs inside the Maison container, so it would create
+  # the directory in the wrong place.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/oauth
+      user: $PUID
+      group: $PGID
   webui-host: beacon-${domain}
+  webui-path: "/"

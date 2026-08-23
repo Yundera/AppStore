@@ -1,7 +1,7 @@
 name: searxng
 
 services:
-  nginxhashlock:
+  searxng-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: searxng
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
@@ -12,7 +12,6 @@ services:
     restart: unless-stopped
     user: "root"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "searxng-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
@@ -37,7 +36,10 @@ services:
           memory: 128M
     cpu_shares: 80
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own
+      # network because that is where its backend lives.
       - pcs
+      - searxng-internal
     privileged: true
     cap_add:
       - SYS_ADMIN
@@ -66,8 +68,8 @@ services:
     volumes:
       # settings.yml is generated here on first start (with a random secret_key)
       # and is the file to edit to enable engines, rename the instance, etc.
-      - /DATA/AppData/searxng/config/:/etc/searxng/
-      - /DATA/AppData/searxng/cache/:/var/cache/searxng/
+      - ${DATA_ROOT:-/DATA}/AppData/searxng/config/:/etc/searxng/
+      - ${DATA_ROOT:-/DATA}/AppData/searxng/cache/:/var/cache/searxng/
 
     cap_drop:
       - ALL
@@ -96,18 +98,23 @@ services:
           memory: 256M
 
     networks:
-      - pcs
+      # App-private: reached only by this app's own services, so it
+      # has no business on the shared network.
+      - searxng-internal
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between this app's own services.
+  searxng-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  main: nginxhashlock
+  main: searxng-proxy
   author: Yundera
   developer: searxng
   category: WEB
@@ -201,7 +208,7 @@ x-casaos:
     zh_cn: SearXNG
     fr_fr: SearXNG
     es_es: SearXNG
-  index: /?hash=$AUTH_HASH
+  index: /
   webui_port: 80
   store_app_id: searxng
   tips:

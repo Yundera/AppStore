@@ -30,7 +30,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

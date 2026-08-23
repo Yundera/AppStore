@@ -37,8 +37,8 @@ services:
       - PSITRANSFER_IFACE=0.0.0.0
     
     volumes:
-      - /DATA/AppData/psitransfer/data/:/data
-      - /DATA/AppData/psitransfer/config/:/app/config
+      - ${DATA_ROOT:-/DATA}/AppData/psitransfer/data/:/data
+      - ${DATA_ROOT:-/DATA}/AppData/psitransfer/config/:/app/config
 
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
@@ -49,7 +49,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

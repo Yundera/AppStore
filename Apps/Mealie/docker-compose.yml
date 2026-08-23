@@ -37,11 +37,11 @@ services:
         reservations:
           memory: 512M
     volumes:
-      - /DATA/AppData/$AppID/data/:/app/data
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/app/data
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

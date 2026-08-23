@@ -45,14 +45,14 @@ services:
       SMTP_FROM: vaultwarden@$APP_DOMAIN
       SMTP_FROM_NAME: Vaultwarden
     volumes:
-      - /DATA/AppData/vaultwarden/data/:/data/
+      - ${DATA_ROOT:-/DATA}/AppData/vaultwarden/data/:/data/
     restart: unless-stopped
     networks:
       - pcs
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

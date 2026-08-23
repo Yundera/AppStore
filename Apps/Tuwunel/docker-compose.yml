@@ -53,13 +53,13 @@ services:
       TUWUNEL_ALLOW_FEDERATION: "true"
       TUWUNEL_TRUSTED_SERVERS: '["matrix.org"]'
     volumes:
-      - /DATA/AppData/tuwunel/db/:/var/lib/tuwunel/
+      - ${DATA_ROOT:-/DATA}/AppData/tuwunel/db/:/var/lib/tuwunel/
     networks:
       - pcs
 
   # Element Web — bundled Matrix client, preconfigured to this homeserver.
   # This is the app's WebUI; the homeserver itself has no UI.
-  element:
+  tuwunel-element:
     image: vectorim/element-web:v1.12.24
     container_name: tuwunel-element
     restart: unless-stopped
@@ -100,20 +100,20 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 8080}}"
     volumes:
       # Written by pre-install-cmd with the PCS domain substituted
-      - /DATA/AppData/tuwunel/element/config.json:/app/config.json:ro
+      - ${DATA_ROOT:-/DATA}/AppData/tuwunel/element/config.json:/app/config.json:ro
     networks:
       - pcs
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  main: element
+  main: tuwunel-element
   webui_port: 8080
   author: Yundera Team
   category: Chat

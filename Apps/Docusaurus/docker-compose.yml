@@ -19,7 +19,6 @@ services:
       caddy_2: docusaurus-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "docusaurus-backend"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
@@ -29,7 +28,10 @@ services:
       - docusaurus-backend
     cpu_shares: 80
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own
+      # network because that is where its backend lives.
       - pcs
+      - docusaurus-internal
 
   docusaurus-init:
     image: node:20-alpine3.20
@@ -39,8 +41,8 @@ services:
     cpu_shares: 50
     working_dir: /tmp
     volumes:
-      - /DATA/AppData/$AppID/src/:/output
-      - /DATA/AppData/$AppID/build/:/build-output
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/src/:/output
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/build/:/build-output
     entrypoint: ["sh", "-c"]
     command:
       - |
@@ -65,18 +67,23 @@ services:
     expose:
       - "80"
     volumes:
-      - /DATA/AppData/$AppID/build/:/usr/share/nginx/html/:ro
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/build/:/usr/share/nginx/html/:ro
     depends_on:
       docusaurus-init:
         condition: service_completed_successfully
     cpu_shares: 50
     networks:
-      - pcs
+      # App-private: reached only by this app's own services, so it
+      # has no business on the shared network.
+      - docusaurus-internal
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between this app's own services.
+  docusaurus-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
@@ -85,7 +92,7 @@ x-casaos:
   main: docusaurus
   store_app_id: docusaurus
   webui_port: 80
-  index: /?hash=${AUTH_HASH}
+  index: /
   scheme: https
   author: Yundera Team
   category: Utilities

@@ -1,6 +1,6 @@
 name: spliit
 services:
-  nginxhashlock:
+  spliit-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: spliit
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
@@ -11,7 +11,6 @@ services:
     restart: unless-stopped
     user: "root"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "spliit-backend"
       BACKEND_PORT: "3000"
       LISTEN_PORT: "80"
@@ -31,7 +30,7 @@ services:
     depends_on:
       spliit-backend:
         condition: service_started
-      db:
+      spliit-db:
         condition: service_healthy
     deploy:
       resources:
@@ -39,13 +38,16 @@ services:
           memory: 128M
     cpu_shares: 80
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own network
+      # because that is where its backend and database live.
       - pcs
+      - spliit-internal
     privileged: true
     cap_add:
       - SYS_ADMIN
       - NET_ADMIN
 
-  db:
+  spliit-db:
     image: postgres:16.13-alpine
     container_name: spliit-db
     user: 0:0
@@ -56,7 +58,7 @@ services:
       POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
       TZ: UTC
     volumes:
-      - /DATA/AppData/spliit/pgdata/:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/DATA}/AppData/spliit/pgdata/:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d spliit"]
@@ -65,7 +67,9 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - pcs
+      # App-private only. A service named `db` on the shared network would answer
+      # to every other app's `db` lookups — and theirs to ours.
+      - spliit-internal
     deploy:
       resources:
         limits:
@@ -79,13 +83,14 @@ services:
     cpu_shares: 50
     environment:
       TZ: $TZ
-      POSTGRES_PRISMA_URL: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
-      POSTGRES_URL_NON_POOLING: postgresql://postgres:$APP_DEFAULT_PASSWORD@db:5432/spliit
+      POSTGRES_PRISMA_URL: postgresql://postgres:$APP_DEFAULT_PASSWORD@spliit-db:5432/spliit
+      POSTGRES_URL_NON_POOLING: postgresql://postgres:$APP_DEFAULT_PASSWORD@spliit-db:5432/spliit
     depends_on:
-      db:
+      spliit-db:
         condition: service_healthy
     networks:
-      - pcs
+      # App-private only: reached solely by spliit-proxy.
+      - spliit-internal
     deploy:
       resources:
         limits:
@@ -93,14 +98,17 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between the proxy, the app and its database.
+  spliit-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  main: nginxhashlock
+  main: spliit-proxy
   webui_port: 80
   author: Yundera Team
   category: Finance
@@ -112,7 +120,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Spliit/thumbnail.png
-  index: /?hash=$AUTH_HASH
+  index: /
   store_app_id: Spliit
   title:
     en_us: Spliit
@@ -250,4 +258,4 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: spliit-${domain}
-  webui-path: "/?hash=$AUTH_HASH"
+  webui-path: "/"

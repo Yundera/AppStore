@@ -22,7 +22,7 @@ services:
     environment:
       TZ: $TZ
     volumes:
-      - /DATA/AppData/prowlarr/config:/config   # dedicated Prowlarr config
+      - ${DATA_ROOT:-/DATA}/AppData/prowlarr/config:/config   # dedicated Prowlarr config
     cpu_shares: 50
     deploy:
       resources:
@@ -31,7 +31,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

@@ -16,11 +16,11 @@ services:
     environment:
       TZ: $TZ
     volumes:
-      - /DATA/AppData/$AppID/backups:/crafty/backups
-      - /DATA/AppData/$AppID/logs:/crafty/logs
-      - /DATA/AppData/$AppID/servers:/crafty/servers
-      - /DATA/AppData/$AppID/config:/crafty/app/config
-      - /DATA/AppData/$AppID/import:/crafty/import
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/backups:/crafty/backups
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/logs:/crafty/logs
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/servers:/crafty/servers
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config:/crafty/app/config
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/import:/crafty/import
     labels:
       # Crafty has its own login, so it carries the Caddy labels directly (Docmost pattern, no auth sidecar).
       # Upstream is the panel's self-signed HTTPS on 8443: https upstream + skip cert verification.
@@ -63,7 +63,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

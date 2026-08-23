@@ -25,7 +25,7 @@ services:
       RW: "true"
     volumes:
       - type: bind
-        source: /DATA
+        source: ${DATA_ROOT:-/DATA}
         target: /storage
         bind:
           # Needed for FUSE support

@@ -1,12 +1,14 @@
 name: chronosmcp
 services:
-  # Main server — reachable at chronosmcp-backend:9054 on the pcs network
+  # Main server — reachable at chronosmcp-backend:9054 on this app's private
+  # network only; the launcher detaches it from the shared pcs network.
   chronosmcp-backend:
     image: ghcr.io/worph/chronos-mcp:1.0.7
     container_name: chronosmcp-backend
     hostname: chronosmcp-backend
     user: $PUID:$PGID
     restart: unless-stopped
+    cpu_shares: 70
     expose:
       - 9054
     environment:
@@ -16,9 +18,15 @@ services:
       - CONFIG_PATH=/app/data/config.json
     volumes:
       - type: bind
-        source: /DATA/AppData/chronosmcp/
+        source: ${DATA_ROOT:-/DATA}/AppData/chronosmcp/
         target: /app/data
     networks:
+      # chronosmcp-internal is the app-private link that carries proxy -> backend
+      # traffic.
+      - chronosmcp-internal
+      # `pcs` is what makes the "local Docker connection" of tips.before_install
+      # work: a same-host MCP client on the shared network reaches this backend
+      # directly at chronosmcp-backend:8000, bypassing the public OAuth route.
       - pcs
 
   # AppShield provides perimeter authentication for the web UI (Yundera SSO) and
@@ -46,18 +54,21 @@ services:
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       # OAuth 2.1 broker: AppShield runs an OAuth/OIDC authorization server
       # fronting Dex and gates the path named by the resource URL (/mcp) on
-      # Bearer tokens. This is the machine/API path, replacing hash auth —
-      # clients like claude.ai self-register via DCR, others get a manual client
+      # Bearer tokens. This is the machine/API path: clients like claude.ai
+      # self-register via DCR, others get a manual client
       # from the admin page at https://chronosmcp-${APP_DOMAIN}/AppShield/oauth.
       OAUTH_RESOURCE: "https://chronosmcp-${APP_DOMAIN}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
       # Persist DCR/manual clients, signing keys and grants across redeploys.
-      - /DATA/AppData/chronosmcp/oauth:/data/oauth
+      - ${DATA_ROOT:-/DATA}/AppData/chronosmcp/oauth:/data/oauth
     depends_on:
       - chronosmcp-backend
     networks:
+      # Shared with the backend and never rewritten by the launcher — this is the
+      # link the sidecar proxies over. See the note on the backend's networks.
+      - chronosmcp-internal
       - pcs
     labels:
       caddy_0: chronosmcp-${APP_DOMAIN}
@@ -70,16 +81,25 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
 
 networks:
+  # App-private link between the sidecar and the backend.
+  chronosmcp-internal:
+    driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
   architectures:
+    # amd64 only: the backend image ghcr.io/worph/chronos-mcp:1.0.7 publishes an
+    # amd64 manifest only (the AppShield sidecar does ship arm64, but the app
+    # cannot run without its backend). Re-add arm64 when the backend does.
     - amd64
-    - arm64
-  main: chronosmcp-backend
-  # The Web UI is behind Yundera SSO — no hash in the URL.
+  # The AppShield sidecar, i.e. the service every caddy_N label points at. It has
+  # to be this one and not the backend: the launcher attaches the deployment's app
+  # network to the main service only, so naming the backend leaves the sidecar
+  # off the network Caddy routes over (503). It also makes the tile's health
+  # reflect the service the user actually reaches.
+  main: chronosmcp-proxy
   index: /
   author: Yundera
   category: Utilities
@@ -170,9 +190,10 @@ x-casaos:
         scripts), open **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** and
         create one there.
 
-        **Option 2: Local Docker connection (no auth required)**
+        **Option 2: Local Docker connection (no auth required) — not available on Yundera PCS**
 
-        For AI assistants running on the same server, connect directly via the Docker network:
+        On a plain Docker host you could reach the backend directly over the
+        shared network:
         ```json
         {
           "mcpServers": {
@@ -183,7 +204,10 @@ x-casaos:
           }
         }
         ```
-        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+        *Not available here.* On Yundera PCS the launcher attaches the backend to
+        this app's private network only, so `chronosmcp-backend` cannot be
+        resolved from the shared `pcs` network — a client on `pcs` will not reach
+        it. Use **Option 1** above, which is OAuth-gated and works from anywhere.
 
         **Available MCP Tools:**
         | Tool | Description |
@@ -237,9 +261,9 @@ x-casaos:
         对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
         **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** 创建。
 
-        **选项 2：本地 Docker 连接（无需认证）**
+        **选项 2：本地 Docker 连接（无需认证）— 在 Yundera PCS 上不可用**
 
-        对于在同一服务器上运行的 AI 助手，通过 Docker 网络直接连接：
+        在普通 Docker 主机上，可以通过共享网络直接连接后端：
         ```json
         {
           "mcpServers": {
@@ -250,7 +274,9 @@ x-casaos:
           }
         }
         ```
-        *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+        *此方式在 Yundera PCS 上不可用*：启动器只把后端接入本应用的专用网络，
+        因此共享 `pcs` 网络上的客户端无法解析 `chronosmcp-backend`。请使用上面的
+        **选项 1**（OAuth 保护，任何位置均可访问）。
 
         **可用 MCP 工具：**
         | 工具 | 描述 |

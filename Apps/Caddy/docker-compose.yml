@@ -21,19 +21,19 @@ services:
       - pcs
     volumes:
       - type: bind
-        source: /DATA/AppData/caddy/www/
+        source: ${DATA_ROOT:-/DATA}/AppData/caddy/www/
         target: /srv
         read_only: false
       - type: bind
-        source: /DATA/AppData/caddy/Caddyfile
+        source: ${DATA_ROOT:-/DATA}/AppData/caddy/Caddyfile
         target: /etc/caddy/Caddyfile
         read_only: true
       - type: bind
-        source: /DATA/AppData/caddy/data/
+        source: ${DATA_ROOT:-/DATA}/AppData/caddy/data/
         target: /data
         read_only: false
       - type: bind
-        source: /DATA/AppData/caddy/config/
+        source: ${DATA_ROOT:-/DATA}/AppData/caddy/config/
         target: /config
         read_only: false
     environment:
@@ -47,7 +47,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -137,6 +137,7 @@ x-casaos:
       只需将您的 HTML、CSS、JavaScript 和资源上传到 `/DATA/AppData/caddy/www/`，您的网站就会立即上线并启用 HTTPS。无需数据库，无需复杂配置，只需带有自动 TLS 的纯静态文件托管。
   developer: Caddy
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/thumbnail.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/screenshot-2.png
@@ -147,6 +148,12 @@ x-casaos:
   tips:
     before_install:
       en_us: |
+        **Warning:** This is a public website server with no login or authentication.
+        Anyone with the address can read every file you place in `www/`. Publish only
+        content you are happy to share publicly — never private notes, credentials or
+        personal data. If you need a private site, add `basic_auth` to
+        `/DATA/AppData/caddy/Caddyfile` after installing.
+
         **Setup Instructions**
         After installation, add your website files to:
         `/DATA/AppData/caddy/www/`
@@ -173,14 +180,17 @@ x-casaos:
     en_us: Caddy
   index: /
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/caddy/{www,data,config} &&
+    # Only the two seeded files are chmod'ed, and only when this hook creates
+    # them. The directories themselves are owned by x-compose-app.folders, and a
+    # recursive chmod would rewrite the whole AppData tree including user content.
     if [ ! -f /DATA/AppData/caddy/www/index.html ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/pre-install/index.html -O /DATA/AppData/caddy/www/index.html
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/pre-install/index.html -O /DATA/AppData/caddy/www/index.html &&
+      chmod 644 /DATA/AppData/caddy/www/index.html
     fi &&
     if [ ! -f /DATA/AppData/caddy/Caddyfile ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/pre-install/Caddyfile -O /DATA/AppData/caddy/Caddyfile
-    fi &&
-    chmod -R 755 /DATA/AppData/caddy
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/pre-install/Caddyfile -O /DATA/AppData/caddy/Caddyfile &&
+      chmod 644 /DATA/AppData/caddy/Caddyfile
+    fi
 
 x-compose-app:
   schema_version: 2

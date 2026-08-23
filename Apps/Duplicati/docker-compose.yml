@@ -33,15 +33,15 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/duplicati/config/
+        source: ${DATA_ROOT:-/DATA}/AppData/duplicati/config/
         target: /config
       - type: bind
-        source: /DATA/
+        source: ${DATA_ROOT:-/DATA}/
         target: /source/DATA
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

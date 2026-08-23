@@ -27,8 +27,8 @@ services:
       TZ: $TZ
       MAVEN_OPTS: "-Xmx1024m"
     volumes:
-      - /DATA/AppData/tincatan/app/:/app
-      - /DATA/AppData/tincatan/m2/:/root/.m2
+      - ${DATA_ROOT:-/DATA}/AppData/tincatan/app/:/app
+      - ${DATA_ROOT:-/DATA}/AppData/tincatan/m2/:/root/.m2
     working_dir: /app
     command: >
       sh -c "
@@ -49,7 +49,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

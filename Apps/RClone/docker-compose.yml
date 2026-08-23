@@ -27,9 +27,9 @@ services:
       caddy_2: rclone-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
-      - /DATA/AppData/rclone/config/:/config/rclone/
-      - /DATA/AppData/rclone/cache/:/cache/
-      - /DATA/Rclone/:/data/:rshared,z
+      - ${DATA_ROOT:-/DATA}/AppData/rclone/config/:/config/rclone/
+      - ${DATA_ROOT:-/DATA}/AppData/rclone/cache/:/cache/
+      - ${DATA_ROOT:-/DATA}/Rclone/:/data/:rshared,z
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
       - /etc/fuse.conf:/etc/fuse.conf:ro
@@ -58,7 +58,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

@@ -32,7 +32,7 @@ services:
       # their normal internet stays direct. Comma-separated; seeds on first init only.
       INIT_ALLOWED_IPS: '10.9.0.0/24'
     volumes:
-      - /DATA/AppData/wgeasyhost/wireguard/:/etc/wireguard
+      - ${DATA_ROOT:-/DATA}/AppData/wgeasyhost/wireguard/:/etc/wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -70,13 +70,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - /DATA/AppData/$AppID/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/nginx.conf:/etc/nginx/nginx.conf:ro
     cpu_shares: 80
     mem_limit: 64m
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

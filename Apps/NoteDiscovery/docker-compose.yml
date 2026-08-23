@@ -20,7 +20,7 @@ services:
       caddy_2: notediscovery-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
-      - /DATA/AppData/$AppID/data/:/app/data
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/app/data
     environment:
       TZ: $TZ
       PORT: 80
@@ -40,7 +40,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

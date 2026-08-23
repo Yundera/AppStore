@@ -35,7 +35,10 @@ services:
     depends_on:
       - tribler-fwd
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own
+      # network because that is where its backend lives.
       - pcs
+      - tribler-internal
     logging:
       driver: json-file
       options:
@@ -88,10 +91,12 @@ services:
       LANG: C.UTF-8
       TZ: $TZ
     volumes:
-      - /DATA/AppData/$AppID/state:/state
-      - /DATA/Downloads:/state/Downloads
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/state:/state
+      - ${DATA_ROOT:-/DATA}/Downloads:/state/Downloads
     networks:
-      - pcs
+      # App-private: reached only by this app's own services, so it
+      # has no business on the shared network.
+      - tribler-internal
     logging:
       driver: json-file
       options:
@@ -105,8 +110,11 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between this app's own services.
+  tribler-internal:
+    driver: bridge
 
 x-casaos:
   architectures:

@@ -24,22 +24,30 @@ services:
       # Kill idle Chrome after this many ms (default 2h); respawns on next use.
       - IDLE_TTL_MS=7200000
     volumes:
+      # Must live INSIDE /DATA/AppData/$AppID (= browsermcp): that folder is the
+      # unit Maison archives on uninstall and restores from a backup. A sibling
+      # directory (the old /DATA/AppData/browser-mcp) is left on disk but is not
+      # in the archive, so a restore-from-backup came back without any app data.
       - type: bind
-        source: /DATA/AppData/browser-mcp/
+        source: ${DATA_ROOT:-/DATA}/AppData/browsermcp/data/
         target: /app/data
     networks:
       - pcs
+    cpu_shares: 50
     deploy:
       resources:
         limits:
           cpus: "2"
           memory: 2G
 
-  # Nginx-hash-lock provides perimeter authentication for the web UI.
+  # AppShield provides perimeter authentication: the Yundera SSO (OIDC) gate for the
+  # web UI and noVNC viewer, and the OAuth 2.1 broker for /mcp (machine clients).
   # The app itself trusts the network (auth is delegated to this sidecar), so the
   # browsermcp-backend container is never exposed directly — only this proxy gets caddy labels.
   browsermcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
+    # OAUTH_SCOPE names and a configurable protected path.
+    image: ghcr.io/yundera/appshield:2.0.7
     container_name: browsermcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -51,19 +59,26 @@ services:
     expose:
       - 80
     environment:
-      # /mcp is reachable with just the hash (AI clients); everything else
-      # (web UI, noVNC, /api) sits behind the ADMIN basic-auth prompt.
-      ALLOWED_PATHS: "mcp"
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: browsermcp-backend
       BACKEND_PORT: "9746"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
+      # authorization server fronting Dex and gates exactly the path named by the
+      # resource URL (/mcp) on Bearer tokens; everything else stays behind the
+      # Yundera SSO gate.
+      OAUTH_RESOURCE: "https://browsermcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/browsermcp/oauth/:/data/oauth
     depends_on:
       - browsermcp-backend
     networks:
       - pcs
+    cpu_shares: 80
     labels:
       caddy_0: browsermcp-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -80,15 +95,23 @@ services:
           memory: 256M
 
 networks:
+  # The deployment's shared network, under whatever name it carries there.
+  # ${APP_NET} comes from the app's .env; the `:-pcs` default keeps a hand-run
+  # `docker compose up -d` working. Maison copies this file byte-for-byte and
+  # never rewrites it, so the reference has to be written here.
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
   architectures:
     - amd64
-  main: browsermcp-backend
-  index: /?hash=$AUTH_HASH
+  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # point at and the one users actually reach, so the dashboard tile's health now
+  # tracks what is served instead of staying green while the served container is
+  # unreachable. It is also the service Maison attaches ${APP_NET} to.
+  main: browsermcp-proxy
+  index: /
   author: Yundera
   developer: Worph
   category: Developer
@@ -165,17 +188,25 @@ x-casaos:
 
         Connect your AI assistant to control the browser.
 
-        **Option 1: Public URL (with hash auth)**
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your Yundera login.
         ```json
         {
           "mcpServers": {
             "browser-mcp": {
               "type": "http",
-              "url": "https://browsermcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://browsermcp-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -219,7 +250,11 @@ x-casaos:
 
         **Security:**
         - The Web UI, live noVNC viewer, and `/api` endpoints sit behind your Yundera
-          single sign-on. Only `/mcp` is reachable with the hash token.
+          single sign-on.
+        - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
+          public URL is reachable without a credential. Only the in-network address
+          `http://browsermcp-backend:9746/mcp` (Option 2) is unauthenticated, and it
+          is not published outside the `pcs` Docker network.
       zh_cn: |
         **快速开始**
 
@@ -230,17 +265,22 @@ x-casaos:
 
         **MCP 集成（用于 AI/LLM）：**
 
-        **选项 1：公共 URL（使用 hash 认证）**
+        **选项 1：公共 URL（OAuth 2.1）**
+
+        `/mcp` 端点受 OAuth 2.1 保护。将客户端指向下面的 URL——支持 OAuth 发现的客户端
+        （claude.ai、Claude Desktop）会自动注册并打开浏览器，使用您的 Yundera 账号授权。
         ```json
         {
           "mcpServers": {
             "browser-mcp": {
               "type": "http",
-              "url": "https://browsermcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://browsermcp-${APP_DOMAIN}/mcp"
             }
           }
         }
         ```
+        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
+        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 创建。
 
         **选项 2：本地 Docker 连接（无需认证）**
         ```json
@@ -285,8 +325,11 @@ x-compose-app:
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.
   folders:
-    - path: /DATA/AppData/browser-mcp
+    - path: /DATA/AppData/browsermcp/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/browsermcp/oauth
       user: $PUID
       group: $PGID
   webui-host: browsermcp-${domain}
-  webui-path: "/?hash=$AUTH_HASH"
+  webui-path: "/"

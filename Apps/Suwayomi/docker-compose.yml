@@ -37,8 +37,8 @@ services:
       FLARESOLVERR_ENABLED: true
       FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
     volumes:
-      - /DATA/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
-      - /DATA/AppData/$AppID/data/:/home/suwayomi/.local/share/Tachidesk
+      - ${DATA_ROOT:-/DATA}/Media/Mangas/:/home/suwayomi/.local/share/Tachidesk/downloads
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/home/suwayomi/.local/share/Tachidesk
     depends_on:
       - flaresolverr
     cpu_shares: 50
@@ -62,7 +62,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

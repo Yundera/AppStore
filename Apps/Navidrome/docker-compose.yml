@@ -20,8 +20,8 @@ services:
     networks:
       - pcs
     volumes:
-      - /DATA/AppData/navidrome/data/:/data        # Navidrome database and configuration directory
-      - /DATA/Media/Music/:/music:ro            # Music library directory (read-only)
+      - ${DATA_ROOT:-/DATA}/AppData/navidrome/data/:/data        # Navidrome database and configuration directory
+      - ${DATA_ROOT:-/DATA}/Media/Music/:/music:ro            # Music library directory (read-only)
     environment:
       TZ: $TZ                                  # Timezone for the Navidrome service
       ND_MUSICFOLDER: /music                   # Path to your music library inside the container
@@ -44,7 +44,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

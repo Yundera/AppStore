@@ -10,8 +10,8 @@ services:
         limits:
           memory: 2G
     volumes:
-      - /DATA/Downloads:/data/media/Downloads:ro
-      - /DATA/Media:/data/media/Media:ro
+      - ${DATA_ROOT:-/DATA}/Downloads:/data/media/Downloads:ro
+      - ${DATA_ROOT:-/DATA}/Media:/data/media/Media:ro
     environment:
       # SEGMENT_DURATION is deliberately not set here: supervisord pins it to "4" in the
       # image's [program:transcoder] block, which overrides the container environment, and
@@ -63,7 +63,7 @@ networks:
   segment-internal:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

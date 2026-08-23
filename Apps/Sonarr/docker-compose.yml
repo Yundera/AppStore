@@ -22,9 +22,9 @@ services:
     environment:
       TZ: $TZ
     volumes:
-      - /DATA/AppData/sonarr/config:/config   # dedicated Sonarr config
-      - /DATA/Media/TV Shows:/tv              # shared TV library (same folder Jellyfin reads)
-      - /DATA/Downloads:/downloads            # shared downloads folder
+      - ${DATA_ROOT:-/DATA}/AppData/sonarr/config:/config   # dedicated Sonarr config
+      - ${DATA_ROOT:-/DATA}/Media/TV Shows:/tv              # shared TV library (same folder Jellyfin reads)
+      - ${DATA_ROOT:-/DATA}/Downloads:/downloads            # shared downloads folder
     cpu_shares: 50
     deploy:
       resources:
@@ -33,7 +33,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

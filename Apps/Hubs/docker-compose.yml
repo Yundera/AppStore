@@ -66,7 +66,7 @@ services:
     expose:
       - 5432
     volumes:
-      - /DATA/AppData/hubs/pgdata:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/DATA}/AppData/hubs/pgdata:/var/lib/postgresql/data
     networks:
       - hubs-net
 
@@ -110,8 +110,8 @@ services:
       - 4000
       - 4001
     volumes:
-      - /DATA/AppData/hubs/retstorage:/storage
-      - /DATA/AppData/hubs/config.toml.template:/home/ret/config.toml.template:ro
+      - ${DATA_ROOT:-/DATA}/AppData/hubs/retstorage:/storage
+      - ${DATA_ROOT:-/DATA}/AppData/hubs/config.toml.template:/home/ret/config.toml.template:ro
     depends_on:
       db:
         condition: service_healthy
@@ -159,7 +159,7 @@ services:
     networks:
       - hubs-net
 
-  spoke:
+  hubs-spoke:
     image: hubsfoundation/spoke:stable-95
     container_name: hubs-spoke
     restart: unless-stopped
@@ -202,7 +202,7 @@ services:
       caddy_2.reverse_proxy.transport.tls: ""
       caddy_2.reverse_proxy.transport.tls_insecure_skip_verify: ""
 
-  dialog:
+  hubs-dialog:
     image: hubsfoundation/dialog:stable-331
     container_name: hubs-dialog
     restart: unless-stopped
@@ -221,7 +221,7 @@ services:
       PGID: $PGID
       TZ: UTC
     volumes:
-      - /DATA/AppData/hubs/perms.pub.pem:/app/certs/perms.pub.pem:ro
+      - ${DATA_ROOT:-/DATA}/AppData/hubs/perms.pub.pem:/app/certs/perms.pub.pem:ro
     command: ["node", "index.js"]
     expose:
       - 4443
@@ -250,7 +250,7 @@ services:
       caddy_2.reverse_proxy.transport.tls: ""
       caddy_2.reverse_proxy.transport.tls_insecure_skip_verify: ""
 
-  nearspark:
+  hubs-nearspark:
     image: hubsfoundation/nearspark:stable-28
     container_name: hubs-nearspark
     restart: unless-stopped
@@ -292,7 +292,7 @@ networks:
   hubs-net:
     name: hubs-net
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

@@ -18,8 +18,8 @@ services:
       caddy_0.1_handle: "/logout"
       caddy_0.1_handle.reverse_proxy: "{{upstreams 9090}}"
       # /mcp — no forward_auth, MCP server has its own Bearer auth
-      caddy_0.2_handle_path: "/mcp*"
-      caddy_0.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      caddy_0.2_handle: "/mcp*"
+      caddy_0.2_handle.reverse_proxy: "{{upstreams 9090}}"
       # Everything else — forward_auth via MCP, then proxy to ttyd
       caddy_0.3_handle: ""
       caddy_0.3_handle.forward_auth: "{{upstreams 9090}}"
@@ -35,8 +35,8 @@ services:
       caddy_1.0_handle.reverse_proxy: "{{upstreams 9090}}"
       caddy_1.1_handle: "/logout"
       caddy_1.1_handle.reverse_proxy: "{{upstreams 9090}}"
-      caddy_1.2_handle_path: "/mcp*"
-      caddy_1.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      caddy_1.2_handle: "/mcp*"
+      caddy_1.2_handle.reverse_proxy: "{{upstreams 9090}}"
       caddy_1.3_handle: ""
       caddy_1.3_handle.forward_auth: "{{upstreams 9090}}"
       caddy_1.3_handle.forward_auth.uri: /auth
@@ -50,8 +50,8 @@ services:
       caddy_2.0_handle.reverse_proxy: "{{upstreams 9090}}"
       caddy_2.1_handle: "/logout"
       caddy_2.1_handle.reverse_proxy: "{{upstreams 9090}}"
-      caddy_2.2_handle_path: "/mcp*"
-      caddy_2.2_handle_path.reverse_proxy: "{{upstreams 9090}}"
+      caddy_2.2_handle: "/mcp*"
+      caddy_2.2_handle.reverse_proxy: "{{upstreams 9090}}"
       caddy_2.3_handle: ""
       caddy_2.3_handle.forward_auth: "{{upstreams 9090}}"
       caddy_2.3_handle.forward_auth.uri: /auth
@@ -70,15 +70,15 @@ services:
     volumes:
       # Claude Code workspace persistence
       - type: bind
-        source: /DATA/AppData/claude/workspace/
+        source: ${DATA_ROOT:-/DATA}/AppData/claude/workspace/
         target: /home/claude/workspace
       # Claude config persistence (contains credentials, settings, and other important data)
       - type: bind
-        source: /DATA/AppData/claude/config/
+        source: ${DATA_ROOT:-/DATA}/AppData/claude/config/
         target: /home/claude/.claude
       # Claude session state file (required for auth persistence across restarts)
       - type: bind
-        source: /DATA/AppData/claude/config/.claude.json
+        source: ${DATA_ROOT:-/DATA}/AppData/claude/config/.claude.json
         target: /home/claude/.claude.json
     networks:
       pcs: null
@@ -90,7 +90,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -193,12 +193,14 @@ x-casaos:
         | `query_claude` | Send a prompt and get a response |
         | `check_status` | Check if Claude is available |
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/claude/workspace /DATA/AppData/claude/config &&
+    # workspace/ and config/ are declared under x-compose-app.folders — Maison
+    # creates and chowns them before this hook runs; don't mkdir or chown them here.
     touch /DATA/AppData/claude/config/.claude.json &&
+    chown $PUID:$PGID /DATA/AppData/claude/config/.claude.json &&
     if [ ! -f /DATA/AppData/claude/workspace/CLAUDE.md ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude/workspace/CLAUDE.md
-    fi &&
-    chown -R 1000:1000 /DATA/AppData/claude
+      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude/workspace/CLAUDE.md &&
+      chown $PUID:$PGID /DATA/AppData/claude/workspace/CLAUDE.md
+    fi
 
 x-compose-app:
   schema_version: 2

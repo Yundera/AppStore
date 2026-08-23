@@ -47,8 +47,8 @@ services:
       POSTGRES_USER: 'guacamole_user'
       POSTGRES_DB: 'guacamole_db'
     volumes:
-      - /DATA/AppData/guacamole/postgresql:/var/lib/postgresql/data
-      - /DATA/AppData/guacamole/init:/init
+      - ${DATA_ROOT:-/DATA}/AppData/guacamole/postgresql:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/DATA}/AppData/guacamole/init:/init
     command: /init/init-db.sh
     networks:
       - guacamole-internal
@@ -57,7 +57,7 @@ networks:
   guacamole-internal:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

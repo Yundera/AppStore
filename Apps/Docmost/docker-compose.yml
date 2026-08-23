@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/docmost/pgdata/:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/DATA}/AppData/docmost/pgdata/:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: docmost
       POSTGRES_USER: docmost
@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/docmost/redis/:/data
+      - ${DATA_ROOT:-/DATA}/AppData/docmost/redis/:/data
     deploy:
       resources:
         limits:
@@ -70,7 +70,7 @@ services:
       caddy_2: docmost-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
-      - /DATA/AppData/docmost/storage/:/app/data/storage
+      - ${DATA_ROOT:-/DATA}/AppData/docmost/storage/:/app/data/storage
     environment:
       APP_URL: https://docmost-${APP_DOMAIN}
       APP_SECRET: ${DOCMOST_APP_SECRET}
@@ -100,7 +100,7 @@ networks:
   docmost-network:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

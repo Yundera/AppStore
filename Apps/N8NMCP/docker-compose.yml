@@ -30,12 +30,13 @@ services:
       # level CONFIG_PATH env is ignored because supervisord's program `environment=`
       # block wins.
       - type: bind
-        source: /DATA/AppData/n8nmcp/
+        source: ${DATA_ROOT:-/DATA}/AppData/n8nmcp/
         target: /app/wrapper-data
     networks:
       - pcs
 
-  # AppShield provides perimeter authentication (human SSO + machine hash) for the web UI
+  # AppShield gates the web UI with Yundera SSO. /mcp is exempt via
+  # ALLOWED_PATHS and uncredentialed — migrate to OAUTH_RESOURCE.
   n8nmcp-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: n8nmcp
@@ -51,7 +52,6 @@ services:
     user: "root"
     environment:
       ALLOWED_PATHS: "mcp"
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: n8nmcp-backend
       BACKEND_PORT: "9640"
       LISTEN_PORT: "80"
@@ -73,7 +73,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -81,7 +81,7 @@ x-casaos:
     - amd64
     - arm64
   main: n8nmcp-backend
-  index: /?hash=$AUTH_HASH
+  index: /
   author: Aptero
   category: Developer
   tags: ["developer", "ai"]
@@ -149,13 +149,13 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL (with hash auth)**
+        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
         ```json
         {
           "mcpServers": {
             "n8n-mcp": {
               "type": "http",
-              "url": "https://n8nmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://n8nmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
@@ -209,4 +209,4 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: n8nmcp-${domain}
-  webui-path: "/?hash=$AUTH_HASH"
+  webui-path: "/"

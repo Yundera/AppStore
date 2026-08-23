@@ -19,13 +19,13 @@ services:
     networks:
       - pcs
     volumes:
-      - /DATA/AppData/$AppID/tessdata/:/usr/share/tessdata/
-      - /DATA/AppData/$AppID/configs/:/configs/
-      - /DATA/AppData/$AppID/logs/:/logs/
-      - /DATA/AppData/$AppID/customFiles/:/customFiles/
-      - /DATA/AppData/$AppID/pipeline/:/pipeline/
-      - /DATA/Downloads/:/downloads/
-      - /DATA/AppData/$AppID/tmp/:/tmp/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/tessdata/:/usr/share/tessdata/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/configs/:/configs/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/logs/:/logs/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/customFiles/:/customFiles/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/pipeline/:/pipeline/
+      - ${DATA_ROOT:-/DATA}/Downloads/:/downloads/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/tmp/:/tmp/
     user: "0:0"  # Root user required for Java runtime and PDF tools - see rationale.md
     environment:
       PGID: 0
@@ -53,7 +53,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

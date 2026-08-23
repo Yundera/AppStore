@@ -21,7 +21,7 @@ services:
       caddy_2: wordpress-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
-      - /DATA/AppData/$AppID/html/:/var/www/html
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/html/:/var/www/html
     environment:
       WORDPRESS_DB_HOST: wordpress-db:3306
       WORDPRESS_DB_USER: wordpress
@@ -47,7 +47,7 @@ services:
     networks:
       - wordpress-network
     volumes:
-      - /DATA/AppData/$AppID/db/:/var/lib/mysql
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/db/:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
       MYSQL_DATABASE: wordpress
@@ -71,7 +71,7 @@ networks:
   wordpress-network:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

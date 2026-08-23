@@ -25,15 +25,14 @@ services:
       # config.json (bot token + MCP target) is created here on first start
       # — CONFIG_PATH=/app/data/config.json is baked into the image.
       - type: bind
-        source: /DATA/AppData/telegrammcp/
+        source: ${DATA_ROOT:-/DATA}/AppData/telegrammcp/
         target: /app/data
     networks:
       - pcs
 
-  # Nginx-hash-lock provides perimeter authentication for the web UI.
-  # /mcp and /webhook are listed in ALLOWED_PATHS so they bypass the login
-  # flow: MCP clients and Telegram's webhook callers cannot do the cookie
-  # dance. Everything else (the config UI at /) sits behind hash + password.
+  # AppShield provides perimeter authentication (Yundera SSO) for the web UI.
+  # /mcp and /webhook are in ALLOWED_PATHS: they bypass the login flow and are
+  # uncredentialed — migrate to OAUTH_RESOURCE. The config UI at / stays gated.
   telegrammcp-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: telegrammcp
@@ -49,7 +48,6 @@ services:
     user: "root"
     environment:
       ALLOWED_PATHS: "mcp,webhook"
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: telegrammcp-backend
       BACKEND_PORT: "9634"
       LISTEN_PORT: "80"
@@ -71,7 +69,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -81,7 +79,7 @@ x-casaos:
   hostname: telegrammcp-${APP_DOMAIN}
   scheme: https
   port_map: "443"
-  index: /?hash=${AUTH_HASH}
+  index: /
   author: Aptero
   category: Chat
   tags: ["developer", "ai"]
@@ -149,13 +147,13 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL (with hash auth)**
+        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
         ```json
         {
           "mcpServers": {
             "telegram": {
               "type": "http",
-              "url": "https://telegrammcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://telegrammcp-${APP_DOMAIN}/mcp"
             }
           }
         }
@@ -191,7 +189,7 @@ x-casaos:
         **Security:**
         - The bot token is stored only in `/DATA/AppData/telegrammcp/config.json` on this server and is never logged or returned via the API
         - The Web UI is protected by your Yundera single sign-on — no extra login needed
-        - `/mcp` and `/webhook` are intentionally reachable without the login flow (MCP clients and Telegram's servers can't perform it); keep the app domain private and rely on the URL hash for the MCP endpoint
+        - `/mcp` and `/webhook` are intentionally reachable without the login flow (MCP clients and Telegram's servers can't perform it) and carry no credential of their own — keep the app domain private
 
 x-compose-app:
   schema_version: 2
@@ -203,4 +201,4 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: telegrammcp-${domain}
-  webui-path: "/?hash=${AUTH_HASH}"
+  webui-path: "/"

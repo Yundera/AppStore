@@ -25,7 +25,7 @@ services:
       WEBUI_URL: https://ollama-nvidia-${APP_DOMAIN}
       WEBUI_SECRET_KEY: $APP_DEFAULT_PASSWORD
     volumes:
-      - /DATA/AppData/ollama-nvidia/webui:/app/backend/data
+      - ${DATA_ROOT:-/DATA}/AppData/ollama-nvidia/webui:/app/backend/data
     depends_on:
       - ollama-api
     cpu_shares: 50
@@ -48,7 +48,7 @@ services:
       OLLAMA_NUM_PARALLEL: "1"
       OLLAMA_MAX_LOADED_MODELS: "1"
     volumes:
-      - /DATA/AppData/ollama-nvidia/data:/root/.ollama
+      - ${DATA_ROOT:-/DATA}/AppData/ollama-nvidia/data:/root/.ollama
     cpu_shares: 20
     # No memory limit: model size varies and inference needs all available VRAM/RAM (see rationale.md).
     # GPU passthrough requires the NVIDIA Container Toolkit on the host (see before_install tip).
@@ -65,7 +65,7 @@ networks:
   default:
     name: ollama-nvidia_default
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

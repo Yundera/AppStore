@@ -28,7 +28,7 @@ services:
       start_period: 15s
     volumes:
       - type: bind
-        source: /DATA/AppData/ntfy/cache/
+        source: ${DATA_ROOT:-/DATA}/AppData/ntfy/cache/
         target: /var/cache/ntfy
     networks:
       - pcs
@@ -44,7 +44,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

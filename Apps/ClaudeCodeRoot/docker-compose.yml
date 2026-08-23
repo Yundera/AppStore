@@ -77,19 +77,19 @@ services:
         target: /host_ssh/
       # Used for PCS integration
       - type: bind
-        source: /DATA/
+        source: ${DATA_ROOT:-/DATA}/
         target: /DATA/
       # Claude Code workspace persistence
       - type: bind
-        source: /DATA/AppData/clauderoot/workspace/
+        source: ${DATA_ROOT:-/DATA}/AppData/clauderoot/workspace/
         target: /home/claude/workspace
       # Claude config persistence (contains credentials, settings, and other important data)
       - type: bind
-        source: /DATA/AppData/clauderoot/config/
+        source: ${DATA_ROOT:-/DATA}/AppData/clauderoot/config/
         target: /home/claude/.claude
       # Claude session state file (required for auth persistence across restarts)
       - type: bind
-        source: /DATA/AppData/clauderoot/config/.claude.json
+        source: ${DATA_ROOT:-/DATA}/AppData/clauderoot/config/.claude.json
         target: /home/claude/.claude.json
     networks:
       pcs: null
@@ -101,7 +101,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

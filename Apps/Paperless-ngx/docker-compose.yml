@@ -20,10 +20,10 @@ services:
       caddy_2: paperlessngx-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 8000}}"
     volumes:
-      - /DATA/AppData/$AppID/data:/usr/src/paperless/data
-      - /DATA/AppData/$AppID/media:/usr/src/paperless/media
-      - /DATA/AppData/$AppID/export:/usr/src/paperless/export
-      - /DATA/AppData/$AppID/consume:/usr/src/paperless/consume
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/usr/src/paperless/data
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/media:/usr/src/paperless/media
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/export:/usr/src/paperless/export
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/consume:/usr/src/paperless/consume
     environment:
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
@@ -88,7 +88,7 @@ services:
     networks:
       - paperless-network
     volumes:
-      - /DATA/AppData/$AppID/redisdata:/data
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/redisdata:/data
     environment:
       TZ: $TZ
     deploy:
@@ -104,7 +104,7 @@ services:
     networks:
       - paperless-network
     volumes:
-      - /DATA/AppData/$AppID/pgdata:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: paperless
       POSTGRES_USER: paperless
@@ -125,7 +125,7 @@ networks:
   paperless-network:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

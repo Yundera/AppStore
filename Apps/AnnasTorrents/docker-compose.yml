@@ -30,8 +30,6 @@ services:
       caddy_2: annas-torrents-webui-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
-      # No AUTH_HASH: Maison injects no such token, so it would resolve to an
-      # empty string. The only way in is the OIDC/Authelia gate.
       BACKEND_HOST: "annas-torrents-webui-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"

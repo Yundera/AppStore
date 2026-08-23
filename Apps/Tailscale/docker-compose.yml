@@ -25,7 +25,7 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     volumes:
-      - /DATA/AppData/tailscale/state/:/var/lib/tailscale/
+      - ${DATA_ROOT:-/DATA}/AppData/tailscale/state/:/var/lib/tailscale/
       - /dev/net/tun:/dev/net/tun
     restart: unless-stopped
 

@@ -7,7 +7,10 @@ services:
     restart: unless-stopped
     user: "1000:1000"
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own network
+      # because that is where its database lives.
       - pcs
+      - n8n-internal
     expose:
       - 80
     labels:
@@ -20,7 +23,7 @@ services:
       caddy_2: n8n-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
-      - /DATA/AppData/$AppID/data/:/home/node/.n8n
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/home/node/.n8n
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -38,7 +41,7 @@ services:
       DB_POSTGRESDB_USER: n8n
       DB_POSTGRESDB_PASSWORD: $APP_DEFAULT_PASSWORD
     depends_on:
-      - postgres
+      - n8n-postgres
     deploy:
       resources:
         limits:
@@ -48,15 +51,17 @@ services:
           memory: 512M
     cpu_shares: 70
 
-  postgres:
+  n8n-postgres:
     image: postgres:16.13-alpine
     container_name: n8n-postgres
     restart: unless-stopped
     user: "0:0"
     networks:
-      - pcs
+      # App-private only: nothing outside this compose project talks to the
+      # database, so it has no business on the shared network.
+      - n8n-internal
     volumes:
-      - /DATA/AppData/$AppID/pgdata/:/var/lib/postgresql/data
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/pgdata/:/var/lib/postgresql/data
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -75,8 +80,11 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between n8n and its database.
+  n8n-internal:
+    driver: bridge
 
 x-casaos:
   architectures:

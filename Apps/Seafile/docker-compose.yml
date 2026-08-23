@@ -13,7 +13,7 @@ services:
       - MARIADB_AUTO_UPGRADE=1
       - TZ=$TZ
     volumes:
-      - /DATA/AppData/seafile/mysql/:/var/lib/mysql
+      - ${DATA_ROOT:-/DATA}/AppData/seafile/mysql/:/var/lib/mysql
     networks:
       - seafile-net
     healthcheck:
@@ -61,7 +61,7 @@ services:
       - 80
       - 8080
     volumes:
-      - /DATA/AppData/seafile/shared/:/shared
+      - ${DATA_ROOT:-/DATA}/AppData/seafile/shared/:/shared
     environment:
       - INIT_SEAFILE_ADMIN_EMAIL=admin@$APP_DOMAIN
       - INIT_SEAFILE_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
@@ -159,14 +159,14 @@ services:
 
   notification-server:
     image: seafileltd/notification-server:13.0.10
-    container_name: notification-server
+    container_name: seafile-notification-server
     restart: unless-stopped
     user: 0:0
     cpu_shares: 30
     expose:
       - 8083
     volumes:
-      - /DATA/AppData/seafile/shared/seafile/logs/:/shared/seafile/logs
+      - ${DATA_ROOT:-/DATA}/AppData/seafile/shared/seafile/logs/:/shared/seafile/logs
     environment:
       - SEAFILE_SERVER_HOSTNAME=seafile-$APP_DOMAIN
       - SEAFILE_SERVER_PROTOCOL=https
@@ -184,8 +184,9 @@ services:
       db:
         condition: service_healthy
     networks:
+      # App-private: reached only through the seafile service, which owns the
+      # published routes, so it stays off the shared network.
       - seafile-net
-      - pcs
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8083'"]
       interval: 20s
@@ -203,7 +204,7 @@ services:
     expose:
       - 80
     volumes:
-      - /DATA/AppData/seafile/seadoc-data/:/shared
+      - ${DATA_ROOT:-/DATA}/AppData/seafile/seadoc-data/:/shared
     environment:
       - DB_HOST=db
       - DB_PORT=3306
@@ -222,8 +223,9 @@ services:
       seafile:
         condition: service_healthy
     networks:
+      # App-private: reached only through the seafile service, which owns the
+      # published routes, so it stays off the shared network.
       - seafile-net
-      - pcs
 
   rclone:
     image: rclone/rclone:1.73.3
@@ -254,8 +256,8 @@ services:
       --uid $PUID
       --gid $PGID
     volumes:
-      - /DATA/Seafile/:/data/seafile:shared
-      - /DATA/AppData/seafile/rclone/:/config
+      - ${DATA_ROOT:-/DATA}/Seafile/:/data/seafile:shared
+      - ${DATA_ROOT:-/DATA}/AppData/seafile/rclone/:/config
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -269,7 +271,7 @@ networks:
   seafile-net:
     name: seafile-net
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

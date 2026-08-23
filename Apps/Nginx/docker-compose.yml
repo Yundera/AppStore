@@ -21,11 +21,11 @@ services:
       - pcs
     volumes:
       - type: bind
-        source: /DATA/AppData/Nginx/www/
+        source: ${DATA_ROOT:-/DATA}/AppData/Nginx/www/
         target: /usr/share/nginx/html
         read_only: false
       - type: bind
-        source: /DATA/AppData/Nginx/nginx.conf
+        source: ${DATA_ROOT:-/DATA}/AppData/Nginx/nginx.conf
         target: /etc/nginx/conf.d/default.conf
         read_only: true
     environment:
@@ -43,7 +43,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

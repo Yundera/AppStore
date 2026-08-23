@@ -22,11 +22,11 @@ services:
     volumes:
       # Mount the Docusaurus project source (from the companion Docusaurus app)
       - type: bind
-        source: /DATA/AppData/docusaurus/src/
+        source: ${DATA_ROOT:-/DATA}/AppData/docusaurus/src/
         target: /app/docusaurus-src
       # Mount the build output directory (shared with the Docusaurus nginx backend)
       - type: bind
-        source: /DATA/AppData/docusaurus/build/
+        source: ${DATA_ROOT:-/DATA}/AppData/docusaurus/build/
         target: /app/docusaurus-build
     networks:
       - pcs
@@ -50,8 +50,8 @@ services:
     networks:
       - pcs
 
-  # AppShield provides perimeter authentication for the MCP endpoint:
-  # human SSO via OIDC for the admin panel, plus machine/API hash auth.
+  # AppShield gates the admin panel with Yundera SSO. /mcp is exempt via
+  # ALLOWED_PATHS and uncredentialed — migrate to OAUTH_RESOURCE.
   docusaurusmcp-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: docusaurusmcp
@@ -63,7 +63,6 @@ services:
     user: "root"
     environment:
       ALLOWED_PATHS: "mcp,sse,messages"
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: docusaurusmcp-backend
       BACKEND_PORT: "9750"
       LISTEN_PORT: "80"
@@ -85,7 +84,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -97,7 +96,7 @@ x-casaos:
   hostname: docusaurusmcp-${APP_DOMAIN}
   scheme: https
   port_map: "443"
-  index: /?hash=${AUTH_HASH}
+  index: /
   author: Yundera Team
   category: Developer
   tags: ["developer", "ai"]
@@ -141,13 +140,13 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL (with hash auth)**
+        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
         ```json
         {
           "mcpServers": {
             "docusaurus-mcp": {
               "type": "http",
-              "url": "https://docusaurusmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://docusaurusmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
@@ -213,4 +212,4 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: docusaurusmcp-${domain}
-  webui-path: "/?hash=${AUTH_HASH}"
+  webui-path: "/"

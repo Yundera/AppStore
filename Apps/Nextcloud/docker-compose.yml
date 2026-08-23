@@ -50,13 +50,13 @@ services:
       - NC_maintenance_window_start=4
     volumes:
       # nextcloud root directory, Contains the core application files
-      - /DATA/AppData/nextcloud/root/:/var/www/html/:z
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/root/:/var/www/html/:z
       # Stores all user files, uploads, and app data
-      - /DATA/AppData/nextcloud/data/:/var/www/html/data/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/data/:/var/www/html/data/
       # Essential for maintaining settings between container updates
-      - /DATA/AppData/nextcloud/config/:/var/www/html/config/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/config/:/var/www/html/config/
       # Stores manually installed apps that aren't part of the base image, Preserves custom apps during updates
-      - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/apps/:/var/www/html/apps/
     networks:
       - nextcloud-network
       - pcs
@@ -90,7 +90,7 @@ services:
       - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
       - MARIADB_AUTO_UPGRADE=1
     volumes:
-      - /DATA/AppData/nextcloud/db/:/var/lib/mysql/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/db/:/var/lib/mysql/
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -114,7 +114,7 @@ services:
     environment:
       - TZ=$TZ
     volumes:
-      - /DATA/AppData/nextcloud/redis/:/data/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/redis/:/data/
     restart: unless-stopped
     networks:
       - nextcloud-network
@@ -139,10 +139,10 @@ services:
       nextcloud:
         condition: service_healthy
     volumes:
-      - /DATA/AppData/nextcloud/root/:/var/www/html/:z
-      - /DATA/AppData/nextcloud/data/:/var/www/html/data/
-      - /DATA/AppData/nextcloud/config/:/var/www/html/config/
-      - /DATA/AppData/nextcloud/apps/:/var/www/html/apps/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/root/:/var/www/html/:z
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/data/:/var/www/html/data/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/config/:/var/www/html/config/
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloud/apps/:/var/www/html/apps/
     networks:
       - nextcloud-network
     logging:
@@ -155,7 +155,7 @@ networks:
   nextcloud-network:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

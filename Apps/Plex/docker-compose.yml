@@ -1,13 +1,12 @@
 name: plex
 
 services:
-  nginxhashlock:
+  plex-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.7
     container_name: plex-nginxhashlock
     restart: unless-stopped
     user: "0:0"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "plex"
       BACKEND_PORT: "32400"
       LISTEN_PORT: "80"
@@ -32,6 +31,7 @@ services:
           memory: 128M
     cpu_shares: 80
     networks:
+      # Only `pcs`: Caddy reaches it here, and so is its backend.
       - pcs
 
   plex:
@@ -40,12 +40,12 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/$AppID:/config
-      - /DATA/AppData/$AppID/transcode:/transcode
-      - /DATA/Media/Movies:/data/movies
-      - /DATA/Media/TV Shows:/data/tvshows
-      - /DATA/Media/Music:/data/music
-      - /DATA/Downloads:/data/downloads
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID:/config
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/transcode:/transcode
+      - ${DATA_ROOT:-/DATA}/Media/Movies:/data/movies
+      - ${DATA_ROOT:-/DATA}/Media/TV Shows:/data/tvshows
+      - ${DATA_ROOT:-/DATA}/Media/Music:/data/music
+      - ${DATA_ROOT:-/DATA}/Downloads:/data/downloads
     environment:
       PGID: $PGID
       PUID: $PUID
@@ -60,11 +60,13 @@ services:
           memory: 1G
     cpu_shares: 50
     networks:
+      # Kept on the shared network: a media server is something other apps on
+      # this box legitimately address by name, not only through its public URL.
       - pcs
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -121,7 +123,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/screenshot-3.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/thumbnail.png
-  index: /?hash=$AUTH_HASH
+  index: /
   tagline:
     en_us: Your personal streaming service for all your media
     zh_cn: 您的个人媒体流媒体服务
@@ -133,7 +135,7 @@ x-casaos:
     zh_cn: Plex
     ko_kr: Plex
   store_app_id: plex
-  main: nginxhashlock
+  main: plex-proxy
   is_uncontrolled: false
   webui_port: 80
   tips:

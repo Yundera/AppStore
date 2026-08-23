@@ -12,10 +12,10 @@ services:
     restart: unless-stopped
     volumes:
       - type: bind
-        source: /DATA/AppData/$AppID/db/
+        source: ${DATA_ROOT:-/DATA}/AppData/$AppID/db/
         target: /db/
       - type: bind
-        source: /DATA/
+        source: ${DATA_ROOT:-/DATA}/
         target: /srv/
     expose:
       - 80
@@ -59,7 +59,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -156,26 +156,76 @@ x-casaos:
   tips:
     before_install:
       en_us: |
+        What this app can reach
+
+        FileBrowser mounts the whole of `/DATA` read-write. That includes
+        `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
+        `/DATA/AppData` - the last one holding the databases, configuration and
+        secrets of every other app installed on this server. Anyone who signs in,
+        including any extra user you create here, can browse, edit, delete and
+        share all of it. Change the default password right after install and only
+        hand out accounts you trust with your whole server.
+
         Default Account
         | Username   | Password       |
         | --------   | ------------   |
         | `admin`    | `$APP_DEFAULT_PASSWORD` |
       ko_kr: |
+        이 앱이 접근할 수 있는 범위
+
+        FileBrowser는 `/DATA` 전체를 읽기/쓰기로 마운트합니다. 여기에는
+        `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`,
+        그리고 다른 모든 앱의 데이터베이스, 설정, 비밀 정보가 들어 있는
+        `/DATA/AppData`가 포함됩니다. 여기에 로그인하는 사람은 누구나(직접 추가한
+        사용자 포함) 이 모든 것을 탐색, 편집, 삭제, 공유할 수 있습니다. 설치 후
+        기본 비밀번호를 즉시 변경하고, 서버 전체를 맡길 수 있는 사람에게만 계정을
+        제공하세요.
+
         기본 계정
         | 사용자명   | 비밀번호       |
         | --------   | ------------   |
         | `admin`    | `$APP_DEFAULT_PASSWORD` |
       zh_cn: |
+        此应用可以访问的范围
+
+        FileBrowser 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
+        `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
+        数据库、配置和密钥的 `/DATA/AppData`。任何登录此应用的人（包括你在这里创建
+        的其他用户）都可以浏览、编辑、删除和分享这些内容。安装后请立即修改默认密码，
+        并且只把账户交给你愿意托付整台服务器的人。
+
         默认账户
         | 用户名     | 密码           |
         | --------   | ------------   |
         | `admin`    | `$APP_DEFAULT_PASSWORD` |
       fr_fr: |
+        Ce à quoi cette application a accès
+
+        FileBrowser monte l'intégralité de `/DATA` en lecture-écriture : cela inclut
+        `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
+        `/DATA/AppData`, qui contient les bases de données, configurations et secrets
+        de toutes les autres applications du serveur. Toute personne qui s'y connecte,
+        y compris un utilisateur que vous créez ici, peut parcourir, modifier,
+        supprimer et partager l'ensemble. Changez le mot de passe par défaut dès
+        l'installation et ne donnez un compte qu'aux personnes à qui vous confieriez
+        tout le serveur.
+
         Compte par défaut
         | Nom d'utilisateur | Mot de passe   |
         | --------          | ------------   |
         | `admin`           | `$APP_DEFAULT_PASSWORD` |
       es_es: |
+        A qué puede acceder esta aplicación
+
+        FileBrowser monta todo `/DATA` en modo lectura-escritura: incluye
+        `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` y
+        `/DATA/AppData`, que contiene las bases de datos, la configuración y los
+        secretos de todas las demás aplicaciones del servidor. Cualquiera que inicie
+        sesión aquí, incluido cualquier usuario que crees, puede explorar, editar,
+        eliminar y compartir todo ello. Cambia la contraseña por defecto justo
+        después de instalar y crea cuentas solo para personas a las que confiarías
+        el servidor entero.
+
         Cuenta predeterminada
         | Usuario    | Contraseña     |
         | --------   | ------------   |

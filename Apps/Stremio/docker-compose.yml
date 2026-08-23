@@ -38,7 +38,10 @@ services:
                 max-file: "3"
                 max-size: 50m
         networks:
+            # On `pcs` because Caddy must reach it, and on the app's own
+            # network because that is where its backend lives.
             pcs: {}
+            stremio-internal: {}
         restart: unless-stopped
         tmpfs:
             - /var/cache/nginx:size=50M
@@ -72,12 +75,14 @@ services:
                 max-file: "3"
                 max-size: 50m
         networks:
-            pcs: null
+            # App-private: reached only by the AppShield proxy, so it has no
+            # business on the shared network.
+            stremio-internal: {}
         restart: unless-stopped
         user: "0:0"
         volumes:
             - type: bind
-              source: /DATA/AppData/stremio/server/
+              source: ${DATA_ROOT:-/DATA}/AppData/stremio/server/
               target: /root/.stremio-server
               bind:
                 create_host_path: true
@@ -97,8 +102,11 @@ networks:
     default:
         name: stremio_default
     pcs:
-        name: pcs
+        name: ${APP_NET:-pcs}
         external: true
+    # App-private link between the proxy and the Stremio server.
+    stremio-internal:
+        driver: bridge
 x-casaos:
     architectures:
         - amd64

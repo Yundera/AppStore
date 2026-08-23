@@ -1,7 +1,7 @@
 name: dokuwiki
 
 services:
-  nginxhashlock:
+  dokuwiki-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.7
     container_name: dokuwiki-nginxhashlock
     restart: unless-stopped
@@ -29,14 +29,17 @@ services:
           memory: 128M
     cpu_shares: 80
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own
+      # network because that is where its backend lives.
       - pcs
+      - dokuwiki-internal
   dokuwiki:
     image: dokuwiki/dokuwiki:2025-05-14b
     container_name: dokuwiki
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - /DATA/AppData/$AppID/storage/:/storage
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/storage/:/storage
     environment:
       PHP_TIMEZONE: ${TZ:-UTC}
       PHP_MEMORYLIMIT: 256M
@@ -48,12 +51,17 @@ services:
           cpus: '0.5'
     cpu_shares: 50
     networks:
-      - pcs
+      # App-private: reached only by this app's own services, so it
+      # has no business on the shared network.
+      - dokuwiki-internal
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between this app's own services.
+  dokuwiki-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
@@ -79,7 +87,7 @@ x-casaos:
   title:
     en_us: DokuWiki
   store_app_id: dokuwiki
-  main: nginxhashlock
+  main: dokuwiki-proxy
   webui_port: 80
   description:
     en_us: |

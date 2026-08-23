@@ -30,6 +30,7 @@ services:
     depends_on:
       - jellyfin
     networks:
+      # Only `pcs`: Caddy reaches it here, and so is its backend.
       - pcs
 
   jellyfin:
@@ -37,12 +38,12 @@ services:
     container_name: jellyfin
     restart: unless-stopped
     volumes:
-      - /DATA/AppData/$AppID/config/:/config
-      - /DATA/AppData/$AppID/cache/:/cache
-      - /DATA/Media/Movies/:/media/movies
-      - /DATA/Media/TV Shows/:/media/tvshows
-      - /DATA/Media/Music/:/media/music
-      - /DATA/Downloads/:/media/downloads
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config/:/config
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/cache/:/cache
+      - ${DATA_ROOT:-/DATA}/Media/Movies/:/media/movies
+      - ${DATA_ROOT:-/DATA}/Media/TV Shows/:/media/tvshows
+      - ${DATA_ROOT:-/DATA}/Media/Music/:/media/music
+      - ${DATA_ROOT:-/DATA}/Downloads/:/media/downloads
     user: $PUID:$PGID
     environment:
       PGID: $PGID
@@ -54,11 +55,13 @@ services:
         limits:
           memory: 1024M
     networks:
+      # Kept on the shared network: a media server is something other apps on
+      # this box legitimately address by name, not only through its public URL.
       - pcs
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

@@ -2,8 +2,7 @@ name: nextcloudmcp
 services:
   # Main MCP wrapper — exposes /mcp (Nextcloud tools), /talk-mcp (Talk tools),
   # and the Web UI on 9650. Reachable at nextcloudmcp-backend:9650 inside the pcs
-  # network so Beacon and other MCP clients can call it directly (no hash
-  # auth needed for container-to-container traffic).
+  # network so Beacon and other MCP clients can call it directly.
   nextcloudmcp-backend:
     image: ghcr.io/worph/nextcloud-mcp:1.0.2
     container_name: nextcloudmcp-backend
@@ -31,7 +30,7 @@ services:
       - NEXTCLOUD_HOST=http://nextcloud:80
     volumes:
       - type: bind
-        source: /DATA/AppData/nextcloudmcp/
+        source: ${DATA_ROOT:-/DATA}/AppData/nextcloudmcp/
         target: /app/wrapper-data
     deploy:
       resources:
@@ -75,15 +74,15 @@ services:
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       # OAuth 2.1 broker: AppShield runs an OAuth/OIDC authorization server
       # fronting Dex and gates the path named by the resource URL (/mcp) on
-      # Bearer tokens. This is the machine/API path, replacing hash auth —
-      # clients like claude.ai self-register via DCR, others get a manual client
+      # Bearer tokens. This is the machine/API path: clients like claude.ai
+      # self-register via DCR, others get a manual client
       # from the admin page at https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth.
       OAUTH_RESOURCE: "https://nextcloudmcp-${APP_DOMAIN}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
       # Persist DCR/manual clients, signing keys and grants across redeploys.
-      - /DATA/AppData/nextcloudmcp/oauth:/data/oauth
+      - ${DATA_ROOT:-/DATA}/AppData/nextcloudmcp/oauth:/data/oauth
     depends_on:
       - nextcloudmcp-backend
     networks:
@@ -100,7 +99,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -108,7 +107,6 @@ x-casaos:
     - amd64
     - arm64
   main: nextcloudmcp-backend
-  # The Web UI is behind Yundera SSO — no hash in the URL.
   index: /
   author: Aptero
   category: Utilities

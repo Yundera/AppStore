@@ -23,22 +23,24 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "0:0"
     environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: "ttyd"
+      BACKEND_HOST: "terminal-ttyd"
       BACKEND_PORT: "7681"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
     depends_on:
-      - ttyd
+      - terminal-ttyd
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own
+      # network because that is where its backend lives.
       - pcs
+      - terminal-internal
     privileged: true
     cap_add:
       - SYS_ADMIN
       - NET_ADMIN
 
-  ttyd:
+  terminal-ttyd:
     image: tsl0922/ttyd:1.7.7
     container_name: terminaltty
     restart: unless-stopped
@@ -49,7 +51,9 @@ services:
         source: /
         target: /host
     networks:
-      - pcs
+      # App-private: reached only by this app's own services, so it
+      # has no business on the shared network.
+      - terminal-internal
     privileged: true
     cap_add:
       - SYS_ADMIN
@@ -57,8 +61,11 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between this app's own services.
+  terminal-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
@@ -81,9 +88,9 @@ x-casaos:
   store_app_id: terminal
   is_uncontrolled: false
   # nginxhashlock handles the hash validation automatically
-  index: /?hash=$AUTH_HASH
+  index: /
   webui_port: 80
 
 x-compose-app:
   webui-host: terminal-${domain}
-  webui-path: "/?hash=$AUTH_HASH"
+  webui-path: "/"

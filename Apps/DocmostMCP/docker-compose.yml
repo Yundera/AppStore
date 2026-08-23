@@ -26,7 +26,7 @@ services:
       # (cached JWT) live here. Once /data/config.json exists, the entrypoint
       # leaves it alone — manual edits persist.
       - type: bind
-        source: /DATA/AppData/docmostmcp/
+        source: ${DATA_ROOT:-/DATA}/AppData/docmostmcp/
         target: /data
     networks:
       - pcs
@@ -50,8 +50,8 @@ services:
     networks:
       - pcs
 
-  # AppShield provides perimeter authentication for the MCP endpoint:
-  # human SSO via OIDC for the admin panel, plus machine/API hash auth.
+  # AppShield gates the admin panel with Yundera SSO. /mcp is exempt via
+  # ALLOWED_PATHS and uncredentialed — migrate to OAUTH_RESOURCE.
   docmostmcp-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: docmostmcp
@@ -67,7 +67,6 @@ services:
     user: "root"
     environment:
       ALLOWED_PATHS: "mcp,sse,messages"
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: docmostmcp-backend
       BACKEND_PORT: "8000"
       LISTEN_PORT: "80"
@@ -89,7 +88,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:
@@ -100,7 +99,7 @@ x-casaos:
   hostname: docmostmcp-${APP_DOMAIN}
   scheme: https
   port_map: "443"
-  index: /?hash=${AUTH_HASH}
+  index: /
   envs:
     - container: DOCMOST_BASE_URL
       description:
@@ -156,7 +155,7 @@ x-casaos:
       en_us: |
         **Fill the install form with your Docmost credentials**
 
-        On the install screen, you'll see fields for `DOCMOST_EMAIL` and `DOCMOST_PASSWORD`. The first time the container starts it bakes those into `/DATA/AppData/docmostmcp/config.json`. After that, the bundled **config UI** at `/` is the easiest way to update them: click **Open** on the app card to land on the UI, where you can edit credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL with the auth hash baked in.
+        On the install screen, you'll see fields for `DOCMOST_EMAIL` and `DOCMOST_PASSWORD`. The first time the container starts it bakes those into `/DATA/AppData/docmostmcp/config.json`. After that, the bundled **config UI** at `/` is the easiest way to update them: click **Open** on the app card to land on the UI, where you can edit credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL.
 
         **Prerequisites:**
         1. A running **Docmost** instance reachable from the `pcs` Docker network (typically the companion Docmost app installed from this store)
@@ -164,13 +163,13 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL (with hash auth)**
+        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
         ```json
         {
           "mcpServers": {
             "docmost-mcp": {
               "type": "http",
-              "url": "https://docmostmcp-${APP_DOMAIN}/mcp?hash=${AUTH_HASH}"
+              "url": "https://docmostmcp-${APP_DOMAIN}/mcp"
             }
           }
         }
@@ -212,7 +211,7 @@ x-casaos:
 
         **Security:**
         - Docmost credentials are stored only in `/DATA/AppData/docmostmcp/config.json` on this server and never logged or returned via the API
-        - The MCP endpoint is gated by the URL hash token; the config UI is protected by your Yundera single sign-on
+        - The config UI is protected by your Yundera single sign-on. The `/mcp` endpoint is **not** — it is reachable by anyone who knows the URL, so treat the app domain as a secret
 
 x-compose-app:
   schema_version: 2
@@ -224,4 +223,4 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: docmostmcp-${domain}
-  webui-path: "/?hash=${AUTH_HASH}"
+  webui-path: "/"

@@ -34,7 +34,7 @@ services:
         published: 51820
         protocol: udp
     volumes:
-      - /DATA/AppData/$AppID/wireguard:/etc/wireguard
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/wireguard:/etc/wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -45,7 +45,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

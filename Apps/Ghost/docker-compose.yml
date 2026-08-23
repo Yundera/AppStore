@@ -22,7 +22,7 @@ services:
       caddy_2: ghost-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 2368}}"
     volumes:
-      - /DATA/AppData/$AppID/content:/var/lib/ghost/content
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/content:/var/lib/ghost/content
     environment:
       NODE_ENV: production
       url: https://ghost-${APP_DOMAIN}
@@ -57,7 +57,7 @@ services:
     networks:
       - ghost-network
     volumes:
-      - /DATA/AppData/$AppID/db:/var/lib/mysql
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/db:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
       MYSQL_DATABASE: ghost
@@ -81,7 +81,7 @@ networks:
   ghost-network:
     driver: bridge
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

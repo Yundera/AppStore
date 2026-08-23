@@ -1,7 +1,7 @@
 name: netdata
 
 services:
-  nginxhashlock:
+  netdata-proxy:
     image: ghcr.io/yundera/appshield:2.0.6
     container_name: netdata
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
@@ -12,7 +12,6 @@ services:
     restart: unless-stopped
     user: "root"
     environment:
-      AUTH_HASH: $AUTH_HASH
       BACKEND_HOST: "netdata-backend"
       BACKEND_PORT: "19999"
       LISTEN_PORT: "80"
@@ -37,7 +36,10 @@ services:
           memory: 128M
     cpu_shares: 80
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own
+      # network because that is where its backend lives.
       - pcs
+      - netdata-internal
     privileged: true
     cap_add:
       - SYS_ADMIN
@@ -55,9 +57,9 @@ services:
     security_opt:
       - apparmor:unconfined
     volumes:
-      - /DATA/AppData/$AppID/config/:/etc/netdata/
-      - /DATA/AppData/$AppID/lib/:/var/lib/netdata/
-      - /DATA/AppData/$AppID/cache/:/var/cache/netdata/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config/:/etc/netdata/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/lib/:/var/lib/netdata/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/cache/:/var/cache/netdata/
       - /etc/passwd:/host/etc/passwd:ro
       - /etc/group:/host/etc/group:ro
       - /etc/localtime:/etc/localtime:ro
@@ -74,7 +76,9 @@ services:
           memory: 512M
           cpus: '1.0'
     networks:
-      - pcs
+      # App-private: reached only by this app's own services, so it
+      # has no business on the shared network.
+      - netdata-internal
     privileged: true
     cap_add:
       - SYS_PTRACE
@@ -83,14 +87,17 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between this app's own services.
+  netdata-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  main: nginxhashlock
+  main: netdata-proxy
   author: Yundera Team
   category: Utilities
   tags: ["developer", "privacy"]
@@ -187,7 +194,7 @@ x-casaos:
         **Acceso**: Después de la instalación, accede en `https://netdata-${APP_DOMAIN}`
 
         **Nota**: Netdata requiere privilegios elevados para monitorear recursos del sistema.
-  index: /?hash=$AUTH_HASH
+  index: /
   webui_port: 80
   scheme: https
   store_app_id: netdata
@@ -208,4 +215,4 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: netdata-${domain}
-  webui-path: "/?hash=$AUTH_HASH"
+  webui-path: "/"
