@@ -22,9 +22,9 @@ services:
     environment:
       TZ: $TZ
     volumes:
-      - ${DATA_ROOT:-/DATA}/AppData/lidarr/config:/config   # dedicated Lidarr config
-      - ${DATA_ROOT:-/DATA}/Media/Music:/music              # shared music library (same folder Jellyfin reads)
-      - ${DATA_ROOT:-/DATA}/Downloads:/downloads            # shared downloads folder
+      - ${DATA_ROOT:-/DATA}/AppData/lidarr/config/:/config   # dedicated Lidarr config
+      - ${DATA_ROOT:-/DATA}/Media/Music/:/music              # shared music library (same folder Jellyfin reads)
+      - ${DATA_ROOT:-/DATA}/Downloads/:/downloads            # shared downloads folder
     cpu_shares: 50
     deploy:
       resources:
@@ -39,8 +39,6 @@ networks:
 x-casaos:
   main: lidarr
   index: /
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/lidarr/config "/DATA/Media/Music" /DATA/Downloads
   tips:
     before_install:
       en_us: |
@@ -78,4 +76,18 @@ x-casaos:
   is_uncontrolled: false
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  # Derived from the trailing-slash bind mounts in `volumes:` above — the
+  # container runs as $PUID:$PGID and cannot create or chown them itself.
+  folders:
+    - path: /DATA/AppData/lidarr/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/Music
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
   webui-host: lidarr-${domain}

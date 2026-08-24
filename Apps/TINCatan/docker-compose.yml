@@ -1,73 +1,135 @@
 name: tincatan
 services:
   tincatan:
-    image: maven:3.8-openjdk-8
-    user: $PUID:$PGID
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-          cpus: '1.0'
+    # AppShield sidecar — the only publicly reachable container. Basic-auth mode
+    # (no OIDC_REGISTRAR_URL): TINC is a 2-4 player game whose other players are
+    # guests on this PCS, so a shared credential the owner can hand out is the
+    # gate that keeps the app usable. See Apps/Stremio for the same pattern.
+    image: ghcr.io/yundera/appshield:2.0.9
+    container_name: tincatan
+    # OIDC identity / redirect attestation: hostname must equal container_name.
+    hostname: tincatan
+    restart: unless-stopped
+    user: "root"
+    cpu_shares: 80
     expose:
-      - 4567
+      - 80
     labels:
       caddy_0: tincatan-${APP_DOMAIN}
       caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 4567}}"
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
       caddy_1: tincatan-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 4567}}"
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: tincatan-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 4567}}"
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      BACKEND_HOST: "tincatan-backend"
+      BACKEND_PORT: "4567"
+      LISTEN_PORT: "80"
+      USER: "admin"
+      PASSWORD: $APP_DEFAULT_PASSWORD
+    depends_on:
+      tincatan-backend:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own network
+      # because that is where the game server lives.
       - pcs
+      - tincatan-internal
+
+  tincatan-backend:
+    image: maven:3.8-openjdk-8
+    container_name: tincatan-backend
+    user: $PUID:$PGID
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+          cpus: '1.0'
+    expose:
+      - 4567
+    networks:
+      # App-private only: reached solely by the tincatan sidecar. No Caddy
+      # labels — the game server is never publicly reachable on its own.
+      - tincatan-internal
     environment:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-      MAVEN_OPTS: "-Xmx1024m"
+      # The image runs as $PUID:$PGID, which has no entry in /etc/passwd, so
+      # Docker would set HOME=/ and Maven would target a root-owned /.m2.
+      # Point HOME at the writable app volume and the repo at its own mount.
+      HOME: /app
+      MAVEN_OPTS: "-Xmx768m"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/tincatan/app/:/app
-      - ${DATA_ROOT:-/DATA}/AppData/tincatan/m2/:/root/.m2
+      # Mounted outside /root: /root is 0700 root-owned in this image, so a
+      # cache at /root/.m2 is unreachable for the uid the container runs as.
+      - ${DATA_ROOT:-/DATA}/AppData/tincatan/m2/:/opt/maven-repo
     working_dir: /app
-    command: >
-      sh -c "
-      if [ ! -f /app/pom.xml ]; then
-        echo 'Cloning TINC repository...';
-        apt-get update && apt-get install -y git;
-        git clone https://github.com/seansegal/tincisnotcatan.git /tmp/tinc;
-        cp -r /tmp/tinc/* /app/;
-      fi;
-      echo 'Building with Maven...';
-      mvn clean compile;
-      echo 'Generating classpath...';
-      mvn dependency:build-classpath -Dmdep.outputFile=.mvn-classpath;
-      echo 'Starting TINC server...';
-      java -cp \"target/classes:\$(cat .mvn-classpath)\" edu.brown.cs.catan.Main 4567
-      "
+    # Bypass the image's mvn-entrypoint.sh: it unsets MAVEN_CONFIG and copies
+    # into $HOME, neither of which is wanted here.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        # Source is pinned to one commit of the upstream repository, so every
+        # install compiles and runs the same reviewed code. Bump the SHA (and
+        # the two sentinel filenames) to move to a newer upstream revision.
+        if [ ! -f /app/.source-f7d098c5 ]; then
+          echo "Fetching TINC source at pinned commit f7d098c5..."
+          rm -rf /tmp/tinc
+          git clone --quiet https://github.com/seansegal/tincisnotcatan.git /tmp/tinc
+          git -C /tmp/tinc checkout --quiet f7d098c51037cb586147c1bbd5b18c2239df7b32
+          rm -rf /tmp/tinc/.git
+          cp -a /tmp/tinc/. /app/
+          rm -rf /tmp/tinc
+          touch /app/.source-f7d098c5
+        fi
+        # Built once. The compiled classes, the classpath file and the Maven
+        # repository all live on persistent volumes, so later starts skip
+        # straight to the server.
+        if [ ! -f /app/.build-f7d098c5 ]; then
+          echo "Building TINC — first start only, this takes several minutes..."
+          mvn -B -Dmaven.repo.local=/opt/maven-repo compile
+          mvn -B -Dmaven.repo.local=/opt/maven-repo dependency:build-classpath -Dmdep.outputFile=/app/.mvn-classpath
+          touch /app/.build-f7d098c5
+        fi
+        echo "Starting TINC server on 4567..."
+        exec java -cp "target/classes:$$(cat /app/.mvn-classpath)" edu.brown.cs.catan.Main
     restart: unless-stopped
 
 networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
+  # App-private link between the AppShield sidecar and the game server.
+  tincatan-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
+    # maven:3.8-openjdk-8 publishes linux/amd64 and linux/arm64 only —
+    # there is no 32-bit arm variant.
     - amd64
     - arm64
-    - arm
   main: tincatan
-  webui_port: 4567
+  webui_port: 80
   category: Games
   tags: ["games", "personal", "family"]
   author: CasaOS Team
   developer: Sean Segal & Contributors
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/icon.png
-  screenshot_1: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-1.png
-  screenshot_2: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-2.png
-  screenshot_3: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/thumbnail.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-3.png
   title:
     en_us: TINC - Settlers of Catan
   tagline:
@@ -80,7 +142,7 @@ x-casaos:
     en_us: |
       TINC (This Is Not Catan) is a full-featured web implementation of Settlers of Catan.
       Play directly in your browser with no downloads required!
-      
+
       Features:
       - 🌐 100% browser-based gameplay
       - 👥 2-4 player multiplayer support
@@ -89,7 +151,7 @@ x-casaos:
       - 📱 Mobile-friendly interface
       - 🎯 AI bots for practice games
       - ⚡ Real-time gameplay with WebSockets
-      
+
       Game Modes:
       - Standard Catan (10 victory points)
       - Custom victory point goals
@@ -98,7 +160,7 @@ x-casaos:
     fr_fr: |
       TINC (This Is Not Catan) est une implémentation web complète de Colons de Catane.
       Jouez directement dans votre navigateur sans téléchargement!
-      
+
       Caractéristiques:
       - Gameplay 100% basé sur navigateur
       - Support multijoueur 2-4 joueurs
@@ -107,7 +169,7 @@ x-casaos:
     ko_kr: |
       TINC (This Is Not Catan)는 카탄의 완전한 웹 구현입니다.
       다운로드 없이 브라우저에서 바로 플레이하세요!
-      
+
       특징:
       - 100% 브라우저 기반 게임플레이
       - 2-4명 멀티플레이어 지원
@@ -117,7 +179,7 @@ x-casaos:
     zh_cn: |
       TINC（This Is Not Catan）是卡坦岛的完整网络实现。
       无需下载，直接在浏览器中游戏！
-      
+
       特点：
       - 100%基于浏览器的游戏
       - 2-4人多人游戏支持
@@ -126,7 +188,7 @@ x-casaos:
     es_es: |
       TINC (This Is Not Catan) es una implementación web completa de Colonos de Catán.
       ¡Juega directamente en tu navegador sin descargas!
-      
+
       Características:
       - Juego 100% basado en navegador
       - Soporte multijugador para 2-4 jugadores
@@ -135,82 +197,52 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        ## 🎮 How to Access
-        
-        Open your browser and navigate to:
-        - **Clean URL**: `https://tincatan-username.nsl.sh/`
-        - **Local Access**: `http://[server-ip]:4567/`
-        
-        ## ⚠️ First Run Setup
-        
-        **IMPORTANT**: The first run will take 5-10 minutes to:
-        1. Download the source code
-        2. Download Maven dependencies
-        3. Compile the Java project
-        4. Start the server
-        
-        Subsequent starts will be much faster (under 1 minute).
-        
-        ## 🚀 Quick Start Guide
-        
-        1. **Enter Username**: Type your name on the home screen
-        2. **Create or Join**: 
-           - Click "Create Game" for a new room
-           - Click "Join Game" to enter an existing room
-        3. **Game Setup**:
-           - Choose number of players (2-4)
-           - Select victory points (default: 10)
-           - Optional: Enable advanced economic features
-        4. **Start Playing**: Game begins when all players are ready
-        
-        ## 🎯 Game Features
-        
-        ### Standard Game
-        - Classic Settlers of Catan rules
-        - Build settlements, cities, and roads
-        - Trade resources with players and bank
-        - Development cards (Knight, Victory Point, etc.)
-        - Longest Road and Largest Army bonuses
-        - Robber mechanics on rolling 7
-        
-        ### Advanced Economic Mode
-        - Decimal resource values
-        - Dynamic exchange rates
-        - Market-based trading
-        - Enhanced strategic depth
-        
-        ## 📱 Device Support
-        
-        - **Desktop**: Chrome, Firefox, Safari, Edge
-        - **Mobile**: iOS Safari, Chrome Mobile
-        - **Tablet**: Full touch support
-        
-        ## 🔧 Troubleshooting
-        
-        If you see Maven errors:
-        1. Wait for the full build to complete (5-10 minutes first time)
-        2. Check logs: `docker logs tincatan-tincatan-1`
-        3. If build fails, try restarting: `docker-compose restart`
-        4. Maven dependencies are cached in `/DATA/AppData/tincatan/m2`
-        
-        ## 💡 Pro Tips
-        
-        - First run is slow due to Maven downloads - be patient!
-        - Dependencies are cached, so restarts are fast
-        - Use Chrome for best performance
-        - The game saves state between sessions
+        **Sign-in** — the game is protected by a shared login. Give these to the
+        friends you want to play with; anyone without them cannot reach the board.
+
+        | Username | Password                |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        -----------------------------
+        **First start takes a few minutes.** TINC is compiled from source the first
+        time it runs. The tile turns healthy on its own once the build finishes —
+        there is nothing to do but wait, and later starts come up in seconds.
+        -----------------------------
+        **How to play**
+
+        1. Type your name on the home screen
+        2. "Create Game" for a new room, or "Join Game" to enter one
+        3. Pick the number of players (2-4) and the victory-point goal (default 10)
+        4. Optionally enable the advanced economy — decimal resources, dynamic
+           exchange rates, market-based trading
+        5. The game starts once every player is ready
+
+        Classic rules throughout: settlements, cities and roads, player and bank
+        trading, development cards, Longest Road and Largest Army, and the robber
+        on a roll of 7. Works on desktop, tablet and mobile browsers.
       fr_fr: |
-        Accédez au jeu: `https://tincatan-username.nsl.sh/`
-        Premier démarrage: 5-10 minutes pour compiler avec Maven.
+        **Connexion** — le jeu est protégé par un identifiant partagé :
+        `admin` / `$APP_DEFAULT_PASSWORD`. Communiquez-le à vos joueurs.
+        -----------------------------
+        Le premier démarrage prend quelques minutes : TINC est compilé depuis les
+        sources. Attendez simplement — les démarrages suivants sont immédiats.
       ko_kr: |
-        게임 접속: `https://tincatan-username.nsl.sh/`
-        첫 실행: Maven 컴파일에 5-10분 소요.
+        **로그인** — 게임은 공유 계정으로 보호됩니다:
+        `admin` / `$APP_DEFAULT_PASSWORD`. 함께 플레이할 친구에게 알려주세요.
+        -----------------------------
+        첫 실행은 몇 분 걸립니다. TINC를 소스에서 컴파일하기 때문입니다.
+        기다리기만 하면 되며, 이후 실행은 즉시 시작됩니다.
       zh_cn: |
-        访问游戏：`https://tincatan-username.nsl.sh/`
-        首次运行：Maven编译需要5-10分钟。
+        **登录** — 游戏由共享账号保护：`admin` / `$APP_DEFAULT_PASSWORD`。
+        请将其告知一起游戏的朋友。
+        -----------------------------
+        首次启动需要几分钟：TINC 从源码编译。稍候即可，之后的启动会很快。
       es_es: |
-        Accede al juego: `https://tincatan-username.nsl.sh/`
-        Primera ejecución: 5-10 minutos para compilar con Maven.
+        **Acceso** — el juego está protegido por una credencial compartida:
+        `admin` / `$APP_DEFAULT_PASSWORD`. Compártela con tus jugadores.
+        -----------------------------
+        El primer arranque tarda unos minutos: TINC se compila desde el código
+        fuente. Solo hay que esperar; los arranques posteriores son inmediatos.
   index: /home
 
 x-compose-app:
@@ -226,4 +258,6 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: tincatan-${domain}
+  # The URL port, not the container port: the gateway serves this on 443.
+  webui-port: ""
   webui-path: "/home"

@@ -15,15 +15,23 @@ services:
             BACKEND_HOST: stremiocommunity
             BACKEND_PORT: "8080"
             LISTEN_PORT: "80"
-            USER: admin
-            PASSWORD: $DEFAULT_PWD
+            # Auth gate: the presence of OIDC_REGISTRAR_URL puts AppShield in OIDC
+            # mode, so it self-registers with the PCS auth-registrar and every human
+            # request is sent through the built-in Authelia SSO. No client id/secret
+            # to configure, and no static credentials (USER/PASSWORD would be ignored
+            # in this mode anyway).
+            OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+            REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+            # Stremio streams torrent content from /<40-hex-chars>/... paths where the
+            # hash itself is the capability; external players and casting devices cannot
+            # carry the SSO session cookie. Everything else stays behind the gate.
             ALLOW_HASH_CONTENT_PATHS: "true"
         expose:
             - "80"
         hostname: stremio
-        image: ghcr.io/yundera/appshield:2.0.3
+        image: ghcr.io/yundera/appshield:2.0.9
         labels:
-            icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/stremio.png
+            icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/icon.png
             caddy_0: stremio-${APP_DOMAIN}
             caddy_0.import: gateway_tls
             caddy_0.reverse_proxy: '{{upstreams 80}}'
@@ -64,11 +72,9 @@ services:
         environment:
             AUTO_SERVER_URL: "1"
             NO_CORS: "1"
-            USERNAME: admin
-            PASSWORD: $DEFAULT_PWD
         image: tsaridas/stremio-docker:v1.2.12
         labels:
-            icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/stremio.png
+            icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/icon.png
         logging:
             driver: json-file
             options:
@@ -87,13 +93,6 @@ services:
               bind:
                 create_host_path: true
         x-casaos:
-            envs:
-                - container: USERNAME
-                  description:
-                    en_us: Username for Stremio web UI
-                - container: PASSWORD
-                  description:
-                    en_us: Password for Stremio web UI
             volumes:
                 - container: /root/.stremio-server
                   description:
@@ -120,10 +119,10 @@ x-casaos:
             Features:
             - Clean subdomain (no port prefix)
             - All-in-one streaming server with FFmpeg transcoding
-            - Login with your Yundera default password
+            - Protected by your Yundera single sign-on (Authelia SSO)
     developer: Yundera
     hostname: stremio-${APP_DOMAIN}
-    icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/stremio.png
+    icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/icon.png
     index: /
     is_uncontrolled: false
     main: stremio
@@ -139,7 +138,8 @@ x-casaos:
     tips:
         before_install:
             en_us: |
-                Login with username `admin` and your Yundera default password.
+                Access is protected by your Yundera single sign-on: opening the app
+                sends you to the usual Yundera login page, no extra credentials needed.
                 You can find Stremio addons at https://addons.strem.io/
     title:
         en_us: Stremio

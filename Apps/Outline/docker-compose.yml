@@ -418,16 +418,29 @@ x-casaos:
 
         **Documentacion:** [https://docs.getoutline.com](https://docs.getoutline.com)
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/outline/dex &&
-    ENV_FILE="/DATA/AppData/casaos/apps/outline/.env" &&
-    if [ ! -s "$ENV_FILE" ]; then
-      OUTLINE_SECRET_KEY=$(openssl rand -hex 32) &&
-      OUTLINE_UTILS_SECRET=$(openssl rand -hex 32) &&
-      OUTLINE_OIDC_SECRET=$(openssl rand -hex 32) &&
+    # Directories are created and chowned by x-compose-app.folders before this
+    # hook runs — there is nothing to mkdir here.
+    #
+    # Outline's three signing/encryption secrets are state, not config: SECRET_KEY
+    # encrypts the authentications table, so a restore that comes back with a
+    # different key cannot decrypt the stored OIDC credentials. Generate them once
+    # into the app's own data tree (so the backup archive carries them), then
+    # publish them into the env file compose actually reads — $APP_DIR/.env.
+    # There is no /DATA/AppData/casaos/apps/<id>/.env under Maison.
+    SECRET_FILE="/DATA/AppData/outline/secrets.env" &&
+    ENV_FILE="${APP_DIR:-.}/.env" &&
+    if [ ! -s "$SECRET_FILE" ]; then
       printf 'OUTLINE_SECRET_KEY=%s\nOUTLINE_UTILS_SECRET=%s\nOUTLINE_OIDC_SECRET=%s\n' \
-        "$OUTLINE_SECRET_KEY" "$OUTLINE_UTILS_SECRET" "$OUTLINE_OIDC_SECRET" > "$ENV_FILE"
+        "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > "$SECRET_FILE" &&
+      chmod 600 "$SECRET_FILE"
     fi &&
-    . "$ENV_FILE" &&
+    . "$SECRET_FILE" &&
+    # Append only our own three keys — never truncate: Maison has already written
+    # APP_DOMAIN, PUID, PGID, APP_DEFAULT_PASSWORD and APP_NET into this file.
+    touch "$ENV_FILE" &&
+    sed -i '/^OUTLINE_SECRET_KEY=/d;/^OUTLINE_UTILS_SECRET=/d;/^OUTLINE_OIDC_SECRET=/d' "$ENV_FILE" &&
+    printf 'OUTLINE_SECRET_KEY=%s\nOUTLINE_UTILS_SECRET=%s\nOUTLINE_OIDC_SECRET=%s\n' \
+      "$OUTLINE_SECRET_KEY" "$OUTLINE_UTILS_SECRET" "$OUTLINE_OIDC_SECRET" >> "$ENV_FILE" &&
     DEX_CONFIG="/DATA/AppData/outline/dex/config.yaml" &&
     if [ ! -f "$DEX_CONFIG" ]; then
       BCRYPT_HASH=$(docker run --rm ghcr.io/dexidp/dex:v2.45.1 dex hash "$APP_DEFAULT_PASSWORD" 2>/dev/null || true) &&

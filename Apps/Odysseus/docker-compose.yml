@@ -93,10 +93,6 @@ services:
     networks:
       # Only `pcs`: Caddy reaches it here, and so is its backend.
       - pcs
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
 
   odysseus-backend:
     image: ghcr.io/worph/odysseus:1.0.2-dev.7c8070f
@@ -409,7 +405,9 @@ x-casaos:
 
         **Recursos:** cuatro contenedores, hasta ~4,6 GB de RAM en total.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/odysseus/data /DATA/AppData/odysseus/logs /DATA/AppData/odysseus/chroma /DATA/AppData/odysseus/searxng &&
+    # data/, logs/, chroma/ and searxng/ are declared under x-compose-app.folders
+    # and are created and chowned before this hook runs — there is nothing to
+    # mkdir here.
     if [ ! -s /DATA/AppData/odysseus/searxng/settings.yml ]; then
       printf 'use_default_settings: true\n\nserver:\n  secret_key: "%s"\n  limiter: false\n  image_proxy: false\n\nsearch:\n  formats:\n    - html\n    - json\n' "$(openssl rand -hex 32)" > /DATA/AppData/odysseus/searxng/settings.yml
     fi &&

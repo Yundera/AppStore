@@ -34,11 +34,18 @@ services:
         target: /app/wrapper-data
     networks:
       - pcs
+    # 80 — user-facing API backend + Web UI (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 80
 
-  # AppShield gates the web UI with Yundera SSO. /mcp is exempt via
-  # ALLOWED_PATHS and uncredentialed — migrate to OAUTH_RESOURCE.
+  # AppShield provides perimeter authentication: the Yundera SSO (OIDC) gate for the
+  # Web UI, and the OAuth 2.1 broker for /mcp (machine clients). The backend trusts
+  # the network, so it is never exposed directly — only this proxy gets caddy labels.
   n8nmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    # 2.0.7+ is required for the generic OAUTH_RESOURCE / OAUTH_SCOPE names and a
+    # configurable protected path; 2.0.9+ advertises offline_access and sends
+    # prompt=consent, without which no refresh token is issued and every client has
+    # to be re-authorized by hand once the 1h access token expires.
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: n8nmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -46,17 +53,28 @@ services:
     # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
     hostname: n8nmcp
     restart: unless-stopped
-    cpu_shares: 50
+    # 80 — reverse proxy / user-facing interactive (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 80
     expose:
       - 80
     user: "root"
     environment:
-      ALLOWED_PATHS: "mcp"
       BACKEND_HOST: n8nmcp-backend
       BACKEND_PORT: "9640"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
+      # authorization server fronting Dex and gates exactly the path named by the
+      # resource URL (/mcp) on Bearer tokens; everything else stays behind the
+      # Yundera SSO gate. Replaces ALLOWED_PATHS, which exempted /mcp from the gate
+      # and — with AUTH_HASH inert under Maison — left it uncredentialed.
+      OAUTH_RESOURCE: "https://n8nmcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/n8nmcp/oauth/:/data/oauth
     depends_on:
       - n8nmcp-backend
     networks:
@@ -80,7 +98,11 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: n8nmcp-backend
+  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # point at and the one users actually reach, and it is the service Maison
+  # attaches ${APP_NET} to. The tile's health follows main, so pointing it at the
+  # backend reported "unhealthy" while the app was serving correctly.
+  main: n8nmcp-proxy
   index: /
   author: Aptero
   category: Developer
@@ -149,7 +171,12 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your Yundera login.
         ```json
         {
           "mcpServers": {
@@ -160,6 +187,9 @@ x-casaos:
           }
         }
         ```
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://n8nmcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -169,7 +199,7 @@ x-casaos:
           "mcpServers": {
             "n8n-mcp": {
               "type": "http",
-              "url": "http://n8nmcp:9640/mcp"
+              "url": "http://n8nmcp-backend:9640/mcp"
             }
           }
         }
@@ -197,7 +227,11 @@ x-casaos:
 
         **Security:**
         - The API key is stored only in `/DATA/AppData/n8nmcp/config.json` and is never logged or returned via the API
-        - The Web UI is protected by your Yundera single sign-on — no extra login needed
+        - The Web UI and `/api` endpoints sit behind your Yundera single sign-on — no extra login needed
+        - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
+          public URL is reachable without a credential. Only the in-network address
+          `http://n8nmcp-backend:9640/mcp` (Option 2) is unauthenticated, and it is
+          not published outside the `pcs` Docker network.
 
 x-compose-app:
   schema_version: 2
@@ -206,6 +240,9 @@ x-compose-app:
   # in `volumes:` above — re-run it instead of editing this block by hand.
   folders:
     - path: /DATA/AppData/n8nmcp
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/n8nmcp/oauth
       user: $PUID
       group: $PGID
   webui-host: n8nmcp-${domain}

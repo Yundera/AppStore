@@ -2,9 +2,10 @@ name: samba
 services:
   samba:
     container_name: samba
-    image: dockurr/samba:4.23.5
+    image: dockurr/samba:4.23.10
     network_mode: bridge
     restart: unless-stopped
+    cpu_shares: 50
     user: 0:0  # Run as root for full permissions
 
     # Needed for FUSE support
@@ -31,6 +32,8 @@ services:
           # Needed for FUSE support
           propagation: rslave
     ports:
+      # SMB/CIFS - not HTTP, so it cannot be carried by Caddy and must be
+      # published for clients to mount the share. See the needs-public-ip tag.
       - "0.0.0.0:445:445"
     deploy:
       resources:
@@ -52,7 +55,7 @@ x-casaos:
     - arm
   author: Yundera Team
   category: Cloud
-  tags: ["files", "personal", "business"]
+  tags: ["files", "personal", "business", "needs-public-ip"]
   description:
     en_us: |
       SMB File Server - Universal Network File Sharing

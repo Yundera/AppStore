@@ -42,10 +42,6 @@ services:
       # because that is where its backend and database live.
       - pcs
       - spliit-internal
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
 
   spliit-db:
     image: postgres:16.13-alpine
@@ -158,14 +154,9 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Default Login (for guests visiting shared links):**
-
-        | Field    | Value   |
-        |----------|---------|
-        | Username | `admin` |
-        | Password | `spliit`|
-
-        You can change these in the app's environment settings before installing.
+        **Sign-in:** Spliit is protected by your Yundera single sign-on. There is no
+        separate app password to set or share - everyone who opens the app, including
+        guests you send a group link to, signs in with a Yundera account on this server.
         -----------------------------
         **How to use:**
         1. Click "Create a group"
@@ -174,16 +165,10 @@ x-casaos:
         4. Start adding expenses
         5. Check "Balances" to see who owes whom
         -----------------------------
-        Share the group link with friends - they will need the credentials above to access it.
+        Share the group link with friends - they sign in with their Yundera account to open it.
       ko_kr: |
-        **기본 로그인 (공유 링크 방문자용):**
-
-        | 항목     | 값      |
-        |----------|---------|
-        | 사용자명 | `admin` |
-        | 비밀번호 | `spliit`|
-
-        설치 전 앱의 환경 설정에서 변경할 수 있습니다.
+        **로그인:** Spliit은 Yundera 통합 로그인(SSO)으로 보호됩니다. 별도의 앱 비밀번호는 없으며,
+        공유 링크로 접속하는 사람을 포함해 모든 사용자가 이 서버의 Yundera 계정으로 로그인합니다.
         -----------------------------
         **사용 방법:**
         1. "그룹 만들기" 클릭
@@ -192,16 +177,10 @@ x-casaos:
         4. 비용 추가 시작
         5. "잔액"을 확인하여 누가 누구에게 빚졌는지 확인
         -----------------------------
-        그룹 링크를 친구와 공유하세요 - 위 자격증명이 필요합니다.
+        그룹 링크를 친구와 공유하세요 - 친구는 Yundera 계정으로 로그인하여 접속합니다.
       zh_cn: |
-        **默认登录（访问共享链接的访客）：**
-
-        | 字段   | 值      |
-        |--------|---------|
-        | 用户名 | `admin` |
-        | 密码   | `spliit`|
-
-        您可以在安装前在应用的环境设置中更改这些。
+        **登录：** Spliit 由您的 Yundera 单点登录（SSO）保护。没有单独的应用密码；
+        包括通过共享链接访问的访客在内，所有人都使用本服务器上的 Yundera 账户登录。
         -----------------------------
         **使用方法：**
         1. 点击"创建群组"
@@ -210,16 +189,11 @@ x-casaos:
         4. 开始添加费用
         5. 查看"余额"了解谁欠谁
         -----------------------------
-        与朋友分享群组链接 - 他们需要上面的凭据才能访问。
+        与朋友分享群组链接 - 他们使用 Yundera 账户登录即可访问。
       es_es: |
-        **Inicio de sesión predeterminado (para invitados con enlaces compartidos):**
-
-        | Campo      | Valor   |
-        |------------|---------|
-        | Usuario    | `admin` |
-        | Contraseña | `spliit`|
-
-        Puedes cambiarlos en la configuración de entorno de la app antes de instalar.
+        **Inicio de sesión:** Spliit está protegido por el inicio de sesión único (SSO) de
+        Yundera. No hay una contraseña propia de la aplicación: todos, incluidos los invitados
+        que abren un enlace compartido, inician sesión con una cuenta de Yundera de este servidor.
         -----------------------------
         **Cómo usar:**
         1. Haz clic en "Crear un grupo"
@@ -228,16 +202,11 @@ x-casaos:
         4. Empieza a añadir gastos
         5. Revisa "Saldos" para ver quién debe a quién
         -----------------------------
-        Comparte el enlace del grupo con amigos - necesitarán las credenciales anteriores.
+        Comparte el enlace del grupo con amigos - iniciarán sesión con su cuenta de Yundera.
       fr_fr: |
-        **Connexion par défaut (pour les invités avec liens partagés) :**
-
-        | Champ         | Valeur  |
-        |---------------|---------|
-        | Utilisateur   | `admin` |
-        | Mot de passe  | `spliit`|
-
-        Vous pouvez les modifier dans les paramètres d'environnement de l'app avant l'installation.
+        **Connexion :** Spliit est protégé par l'authentification unique (SSO) Yundera.
+        Il n'y a pas de mot de passe propre à l'application : tout le monde, y compris les
+        invités qui ouvrent un lien partagé, se connecte avec un compte Yundera de ce serveur.
         -----------------------------
         **Comment utiliser:**
         1. Cliquez sur "Créer un groupe"
@@ -246,8 +215,7 @@ x-casaos:
         4. Commencez à ajouter des dépenses
         5. Vérifiez "Soldes" pour voir qui doit à qui
         -----------------------------
-        Partagez le lien du groupe avec vos amis - ils auront besoin des identifiants ci-dessus.
-
+        Partagez le lien du groupe avec vos amis - ils se connectent avec leur compte Yundera.
 x-compose-app:
   schema_version: 2
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.

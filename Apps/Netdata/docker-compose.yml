@@ -2,7 +2,7 @@ name: netdata
 
 services:
   netdata-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: netdata
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -33,17 +33,13 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M
     cpu_shares: 80
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own
       # network because that is where its backend lives.
       - pcs
       - netdata-internal
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
   netdata-backend:
     image: netdata/netdata:v2.10.3
     container_name: netdata-backend
@@ -79,11 +75,13 @@ services:
       # App-private: reached only by this app's own services, so it
       # has no business on the shared network.
       - netdata-internal
-    privileged: true
+    # Not privileged. These are the two capabilities upstream Netdata documents
+    # for its container, and every host mount above is read-only. Both caps, the
+    # apparmor exception and the docker.sock mount are justified in rationale.md
+    # next to this file.
     cap_add:
       - SYS_PTRACE
       - SYS_ADMIN
-      - NET_ADMIN
 
 networks:
   pcs:

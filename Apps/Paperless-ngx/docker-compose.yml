@@ -54,7 +54,7 @@ services:
     cpu_shares: 70
 
   tika:
-    image: docker.io/apache/tika:2.9.1.0
+    image: docker.io/apache/tika:2.9.2.1
     container_name: paperless-tika
     restart: unless-stopped
     networks:
@@ -66,7 +66,7 @@ services:
     cpu_shares: 10
 
   gotenberg:
-    image: docker.io/gotenberg/gotenberg:8
+    image: docker.io/gotenberg/gotenberg:8.36.0
     container_name: paperless-gotenberg
     restart: unless-stopped
     networks:
@@ -82,7 +82,7 @@ services:
     cpu_shares: 10
 
   broker:
-    image: docker.io/valkey/valkey:9-alpine
+    image: docker.io/valkey/valkey:9.1.1-alpine
     container_name: paperless-broker
     restart: unless-stopped
     networks:
@@ -98,7 +98,7 @@ services:
     cpu_shares: 10
 
   db:
-    image: docker.io/library/postgres:17
+    image: docker.io/library/postgres:17.11
     container_name: paperless-db
     restart: unless-stopped
     networks:
@@ -129,8 +129,6 @@ networks:
     external: true
 
 x-casaos:
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/data /DATA/AppData/$AppID/media /DATA/AppData/$AppID/export /DATA/AppData/$AppID/consume /DATA/AppData/$AppID/pgdata /DATA/AppData/$AppID/redisdata
   architectures:
     - amd64
     - arm64
@@ -236,7 +234,7 @@ x-casaos:
 
         **Add documents:**
         - **Web upload:** Drag and drop files directly in the browser
-        - **Consume folder:** Place files in `/DATA/AppData/paperless-ngx/consume/` for automatic import
+        - **Consume folder:** Place files in `/DATA/AppData/paperlessngx/consume/` for automatic import
         - **Email import:** Configure an email account in Settings → Mail
 
         **Tips:**
@@ -252,7 +250,7 @@ x-casaos:
 
         **문서 추가:**
         - **웹 업로드:** 브라우저에서 파일을 드래그 앤 드롭
-        - **소비 폴더:** `/DATA/AppData/paperless-ngx/consume/`에 파일을 넣으면 자동 가져오기
+        - **소비 폴더:** `/DATA/AppData/paperlessngx/consume/`에 파일을 넣으면 자동 가져오기
         - **이메일 가져오기:** 설정 → 메일에서 이메일 계정 구성
 
         **팁:**
@@ -260,4 +258,31 @@ x-casaos:
         - 태그, 발신자, 문서 유형으로 보관소를 정리하세요
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before images are
+  # pulled and before any container starts - on the first boot and every one
+  # after it. Declared here rather than mkdir'd in a hook: a hook runs inside
+  # the Maison container, so it would create root-owned directories, and
+  # paperless drops to $PUID:$PGID through USERMAP_UID/USERMAP_GID.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/media
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/export
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/consume
+      user: $PUID
+      group: $PGID
+    # postgres and valkey both re-chown their own data dir to their internal
+    # uid on start, so $PUID:$PGID here is only the pre-creation owner.
+    - path: /DATA/AppData/$AppID/pgdata
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/redisdata
+      user: $PUID
+      group: $PGID
   webui-host: paperlessngx-${domain}

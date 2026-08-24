@@ -93,6 +93,24 @@ the mode unset it logs `AUTH_HASH_MODE=off: ignoring AUTH_HASH from environment`
 runs `oidc_only`. `index: /?hash=$AUTH_HASH` is kept for consistency with the other
 store apps — the hash is simply ignored and the user is signed in via SSO.
 
+## Capabilities: no `privileged`, no `SYS_ADMIN`/`NET_ADMIN`
+
+No service in this app runs `privileged`, and none adds `SYS_ADMIN` or `NET_ADMIN`.
+Earlier revisions of this file carried `privileged: true` plus those two capabilities
+on the AppShield proxy, copied from other store apps; nothing in AppShield needs
+them — it is nginx plus a Node auth service listening on port 80, which is why the
+other AppShield-fronted apps (Docusaurus, Beacon) run it with no extra privilege.
+They are removed.
+
+`odysseus-searxng` is the one service with an explicit capability set, and it is a
+net *reduction*: `cap_drop: ALL` followed by `cap_add` of only `CHOWN`, `SETGID`,
+`SETUID` and `DAC_OVERRIDE`. The SearXNG image's entrypoint starts as root, fixes
+ownership of the bind-mounted `/etc/searxng/` and then drops to the `searxng` user
+with `su-exec`; those four capabilities are exactly what that sequence needs
+(`CHOWN` + `DAC_OVERRIDE` to repair the mount, `SETGID`/`SETUID` to drop). Every
+other capability the Docker default set would grant — `NET_RAW`, `MKNOD`,
+`SYS_CHROOT` and the rest — is dropped.
+
 ## Authentication: `AUTH_ENABLED=false`, AppShield is the only layer
 
 Leaving the app's own auth on is not an option behind the shield, and the reason is a

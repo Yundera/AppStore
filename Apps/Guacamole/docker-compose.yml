@@ -2,6 +2,7 @@ name: guacamole
 services:
   guacamole:
     image: guacamole/guacamole:1.6.0
+    container_name: guacamole
     restart: unless-stopped
     user: 0:0
     cpu_shares: 70
@@ -12,8 +13,10 @@ services:
       POSTGRESQL_USER: guacamole_user
       POSTGRESQL_PASSWORD: '$APP_DEFAULT_PASSWORD'
     depends_on:
-      - guacd
-      - postgres
+      guacd:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     expose:
       - 8080
     labels:
@@ -46,10 +49,20 @@ services:
       POSTGRES_PASSWORD: '$APP_DEFAULT_PASSWORD'
       POSTGRES_USER: 'guacamole_user'
       POSTGRES_DB: 'guacamole_db'
+      # Consumed by 002-create-admin-user.sh below - the administrator account
+      # is created with this deployment's generated password, never a constant.
+      GUACAMOLE_ADMIN_PASSWORD: '$APP_DEFAULT_PASSWORD'
     volumes:
-      - ${DATA_ROOT:-/DATA}/AppData/guacamole/postgresql:/var/lib/postgresql/data
-      - ${DATA_ROOT:-/DATA}/AppData/guacamole/init:/init
-    command: /init/init-db.sh
+      - ${DATA_ROOT:-/DATA}/AppData/guacamole/postgresql/:/var/lib/postgresql/data/
+      # Schema + admin bootstrap, fetched by pre-install-cmd. The stock postgres
+      # entrypoint runs these once, only when the data directory is empty.
+      - ${DATA_ROOT:-/DATA}/AppData/guacamole/init/:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U guacamole_user -d guacamole_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
     networks:
       - guacamole-internal
 
@@ -100,37 +113,36 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-3.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-4.png
   pre-install-cmd: |
-    echo "Preparing Guacamole database initialization..."
-    
-    # Create AppData directory structure
-    mkdir -p /DATA/AppData/guacamole/postgresql
-    mkdir -p /DATA/AppData/guacamole/init
-    
-    # Check if database is already initialized by looking for schema files
-    if [ ! -f "/DATA/AppData/guacamole/init/.initialized" ]; then
-      echo "Downloading Guacamole initialization script..."
-      
-      # Download the initialization script from the repository
-      wget -O /DATA/AppData/guacamole/init/init-db.sh "https://raw.githubusercontent.com/Yundera/AppStore/main/Apps/Guacamole/pre-install/init.sh"
-      
-      # Download the required database schema scripts
-      wget -O /DATA/AppData/guacamole/init/001-create-schema.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/001-create-schema.sql"
-      wget -O /DATA/AppData/guacamole/init/002-create-admin-user.sql "https://raw.githubusercontent.com/apache/guacamole-client/main/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/002-create-admin-user.sql"
-      
-      chmod +x /DATA/AppData/guacamole/init/init-db.sh
-      touch /DATA/AppData/guacamole/init/.initialized
-      echo "Guacamole initialization scripts downloaded successfully!"
-    else
-      echo "Guacamole initialization scripts already prepared."
-    fi
+    set -e
+    # The two directories below are created and chowned by x-compose-app.folders
+    # before this hook runs - there is nothing to mkdir here.
+    echo "Fetching Guacamole database initialization scripts..."
+
+    # Upstream schema, pinned to the same release as the images above. An
+    # unpinned branch would run tomorrow's data model against a 1.6.0 webapp.
+    wget -O /DATA/AppData/guacamole/init/001-create-schema.sql \
+      "https://raw.githubusercontent.com/apache/guacamole-client/1.6.0/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/001-create-schema.sql"
+
+    # Administrator bootstrap. Replaces upstream 002-create-admin-user.sql,
+    # which seeds the publicly-known guacadmin/guacadmin credential; this one
+    # hashes $APP_DEFAULT_PASSWORD with a per-install random salt instead.
+    wget -O /DATA/AppData/guacamole/init/002-create-admin-user.sh \
+      "https://raw.githubusercontent.com/Yundera/AppStore/main/Apps/Guacamole/pre-install/002-create-admin-user.sh"
+
+    # Idempotent: both fetches overwrite in place, and the postgres entrypoint
+    # only replays them when the data directory is still empty.
+    echo "Guacamole initialization scripts ready."
   tips:
     before_install:
       en_us: |
         Default Account
 
-        | Username | Password |
-        | -------- | -------- |
-        | `guacadmin`    | `guacadmin`    |
+        | Username    | Password                |
+        | --------    | ----------------------- |
+        | `guacadmin` | `$APP_DEFAULT_PASSWORD` |
+
+        The administrator password is generated for your server at install time.
+        Change it from **Settings -> Preferences** after your first login.
 
         For better performance, you can access Guacamole directly at
         https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io/guacamole/ instead of going
@@ -138,10 +150,24 @@ x-casaos:
       zh_cn: |
         默认账号
 
-        | 用户名 | 密码 |
-        | -------- | -------- |
-        | `guacadmin`    | `guacadmin`    |
+        | 用户名      | 密码                    |
+        | --------    | ----------------------- |
+        | `guacadmin` | `$APP_DEFAULT_PASSWORD` |
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up` -
+  # the two bind-mount sources above. Declared here rather than mkdir'd in the
+  # hook: a hook's mkdir runs inside the Maison container, so the directories
+  # would land root-owned and postgres (which runs as $PUID:$PGID) could not
+  # initdb into its own data volume.
+  folders:
+    - path: /DATA/AppData/guacamole/postgresql
+      user: $PUID
+      group: $PGID
+      mode: "0750"
+    - path: /DATA/AppData/guacamole/init
+      user: $PUID
+      group: $PGID
   webui-host: guacamole-${domain}
   webui-path: "/guacamole"

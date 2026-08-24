@@ -2,7 +2,7 @@ name: suwayomi
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:v2.1.2087
+    image: ghcr.io/suwayomi/tachidesk:v2.3.2333
     user: $PUID:$PGID
     container_name: suwayomi
     restart: unless-stopped
@@ -33,8 +33,8 @@ services:
       AUTO_DOWNLOAD_CHAPTERS: false
       WEB_UI_CHANNEL: bundled
       WEB_UI_UPDATE_INTERVAL: 0.0
-      EXTENSION_REPOS: >-
-        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]
+      EXTENSION_STORES: >-
+        ["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb"]
       FLARESOLVERR_ENABLED: true
       FLARESOLVERR_URL: http://suwayomi-flaresolverr:8191
     volumes:

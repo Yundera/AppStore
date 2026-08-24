@@ -39,14 +39,14 @@ networks:
 x-casaos:
   main: sonarr
   index: /
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/sonarr/config "/DATA/Media/TV Shows" /DATA/Downloads
   tips:
     before_install:
       en_us: |
         📺 **Sonarr** is a TV series collection manager — it monitors, downloads and organises your shows automatically as new episodes air.
 
         📂 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.
+
+        🔐 **Set your login on first launch.** Sonarr ships with no account: the first page it shows is a non-dismissible *Authentication Required* form. Choose **Forms (Login Page)** and set a username and password there before doing anything else — until you do, anyone who reaches the app's URL can use it.
 
         🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
 
@@ -78,4 +78,19 @@ x-casaos:
   is_uncontrolled: false
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
+  # before the image is pulled, before any hook, before the container starts.
+  # Derived from the bind mounts in `volumes:` above; the container drops to
+  # $PUID:$PGID, so each of these must be user-owned or Sonarr cannot write.
+  folders:
+    - path: /DATA/AppData/$AppID/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/TV Shows
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
   webui-host: sonarr-${domain}

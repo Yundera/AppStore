@@ -19,14 +19,14 @@ nginx provides a simple way to host static websites, HTML pages, JavaScript appl
 
 After installation:
 
-1. Navigate to `/DATA/AppData/Nginx/www/`
+1. Navigate to `/DATA/AppData/nginx/www/`
 2. Upload your website files (HTML, CSS, JavaScript, images, etc.)
 3. Access your site at `https://nginx-username.nsl.sh/`
 
 ### File Structure
 
 ```
-/DATA/AppData/Nginx/
+/DATA/AppData/nginx/
 ├── www/              # Your website files
 │   ├── index.html   # Main page
 │   ├── css/         # Stylesheets
@@ -37,15 +37,23 @@ After installation:
 
 ## Configuration
 
-The included `nginx.conf` provides:
+`/DATA/AppData/nginx/nginx.conf` is nginx's **main** configuration file (mounted at
+`/etc/nginx/nginx.conf`). It is seeded on first install and never overwritten, so
+your edits survive reinstalls and upgrades. It provides:
 
 - Gzip compression for faster loading
 - Security headers (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection)
 - Asset caching (1 year for static files)
 - SPA routing support (serves index.html for all routes)
 - Hidden file protection
+- `user root;` — nginx's workers run as root so that any file you add to `www/`
+  is served regardless of the mode it was created with. Without it the workers
+  drop to uid 101 and a file written by the file manager (mode 0640) returns a
+  bare 403. See `rationale.md`.
 
-To customize, edit `/DATA/AppData/Nginx/nginx.conf` and restart the app.
+To customize, edit `/DATA/AppData/nginx/nginx.conf` and restart the app. The file
+and its folder are owned by your PCS user, so the built-in file manager or SSH
+both work.
 
 ## Perfect For
 
@@ -58,51 +66,17 @@ To customize, edit `/DATA/AppData/Nginx/nginx.conf` and restart the app.
 
 ## Technical Details
 
-- **Image**: `nginx:1.27-alpine`
+- **Image**: `nginx:1.29.3-alpine`
 - **Memory**: 64MB limit
 - **CPU**: 0.25 cores
 - **Port**: 80 (exposed via Caddy)
 - **Category**: WEB
 
-## TODO: Required Files
+## Assets
 
-To complete this app submission, the following files are still needed:
-
-### Required Files
-
-1. **icon.png** - App icon
-   - Format: PNG
-   - Size: 192x192 pixels recommended
-   - Should represent nginx or static web hosting
-
-2. **screenshot-1.png** - Screenshot showing the app in action
-   - Format: PNG
-   - Size: 1280x720 pixels (16:9 aspect ratio)
-   - Suggestion: Show the default welcome page or a sample website
-
-3. **screenshot-2.png** (optional but recommended)
-   - Show file structure in file browser
-   - Or show a different example website
-
-4. **thumbnail.png** (if this becomes a featured app)
-   - Format: PNG
-   - Size: 784x442 pixels
-   - Use PSD templates from `/psd-source/` directory
-
-### Creating Assets
-
-You can find PSD templates for creating proper icons and screenshots in:
-`/d/workspace/yundera/AppStoreLab/psd-source/`
-
-For the nginx icon, consider:
-- Official nginx logo (green square with "nginx" text)
-- A simple icon representing web hosting/servers
-- HTML/web-related imagery
-
-For screenshots:
-- Capture the default welcome page after installation
-- Show a sample static website being served
-- Display the file structure in a file manager
+`icon.png`, `screenshot-1.png` and `thumbnail.png` all ship with this app.
+Outstanding: `thumbnail.png` is currently a copy of `icon.png` and still needs a
+distinct store-tile image (784x442).
 
 ## Testing
 

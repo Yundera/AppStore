@@ -1,31 +1,56 @@
 name: openclaw
 
 services:
-  # Nginx-hash-lock provides perimeter authentication
-  # IMPORTANT: This service MUST be named "openclaw" (matching the app name)
-  # because Caddy routes based on the service name in the labels
+  # AppShield sidecar — the only publicly reachable service. It fronts the OpenClaw
+  # gateway with the PCS's built-in Authelia SSO (OIDC) and self-registers with
+  # auth-registrar on first login: no client id, no secret, no issuer to configure.
+  # No AUTH_HASH anywhere — Maison injects no such variable, so it would be empty.
   openclaw:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.5
+    image: ghcr.io/yundera/appshield:2.0.9
+    container_name: openclaw
+    # OIDC identity: AppShield's auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal
+    # container_name, or Docker defaults the hostname to the random container ID.
+    hostname: openclaw
     restart: unless-stopped
+    user: "root"
     cpu_shares: 50
     expose:
       - 80
     labels:
-      - "caddy=openclaw-${APP_DOMAIN}"
-      - "caddy.reverse_proxy={{upstreams 80}}"
-    user: "root"
+      caddy_0: openclaw-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: openclaw-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: openclaw-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
-      AUTH_HASH: $AUTH_HASH
-      BACKEND_HOST: openclaw-backend
+      BACKEND_HOST: "openclaw-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
     depends_on:
       - openclaw-backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     networks:
+      # On `pcs` because Caddy must reach it, and on the app's own network
+      # because that is where its backend lives.
       - pcs
+      - openclaw-internal
 
+  # The gateway itself. It executes shell commands and reads/writes files by design,
+  # so it is deliberately NOT on the shared `pcs` network: only the AppShield sidecar
+  # can reach it, and every request therefore passes the SSO gate first.
   openclaw-backend:
-    image: alpine/openclaw:2026.2.2
+    image: alpine/openclaw:2026.6.9
+    container_name: openclaw-backend
     init: true
     deploy:
       resources:
@@ -38,28 +63,38 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    expose:
+      - 8080
     environment:
       TZ: $TZ
       NODE_ENV: production
       # AI Provider API Keys (configure at least one)
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      # Gateway token (matches AUTH_HASH for nginx-hash-lock)
-      OPENCLAW_GATEWAY_TOKEN: $AUTH_HASH
-      # Control UI settings for reverse proxy deployment
+      # The Control UI's own device-pairing flow is disabled because authentication is
+      # delegated to the AppShield sidecar in front of it. Safe only because this
+      # service sits on an app-private bridge and has no route of its own.
       OPENCLAW_GATEWAY_CONTROL_UI_ALLOW_INSECURE_AUTH: "true"
       OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_DISABLE_DEVICE_AUTH: "true"
-    # Gateway with token auth (perimeter auth handled by nginx-hash-lock)
     command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "8080", "--allow-unconfigured"]
     volumes:
-      - /DATA/AppData/openclaw:/home/node/.openclaw
+      - ${DATA_ROOT:-/DATA}/AppData/openclaw:/home/node/.openclaw
     restart: unless-stopped
     networks:
-      - pcs
+      # App-private only: reached solely by the AppShield sidecar.
+      - openclaw-internal
 
 networks:
+  # The deployment's shared network, under whatever name it carries there.
+  # ${APP_NET} comes from the app's .env; the `:-pcs` default keeps a hand-run
+  # `docker compose up -d` working. Maison copies this file byte-for-byte and
+  # never rewrites it, so the reference has to be written here.
   pcs:
+    name: ${APP_NET:-pcs}
     external: true
+  # App-private link between the sidecar and the gateway.
+  openclaw-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
@@ -211,7 +246,7 @@ x-casaos:
 
         **First-Time Setup**
 
-        1. **Access the Web UI**: Click the app icon from your dashboard (authentication is automatic)
+        1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your Yundera account (single sign-on)
         2. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
         3. **Start chatting**: Use the built-in WebChat or connect messaging platforms
 
@@ -232,7 +267,7 @@ x-casaos:
 
         **Configuration initiale**
 
-        1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app (authentification automatique)
+        1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte Yundera (authentification unique)
         2. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
 
         **Documentation :** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
@@ -248,7 +283,7 @@ x-casaos:
 
         **Ersteinrichtung**
 
-        1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol (automatische Authentifizierung)
+        1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Yundera-Konto an (Single Sign-on)
         2. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
 
         **Dokumentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
@@ -264,7 +299,7 @@ x-casaos:
 
         **Configuracion inicial**
 
-        1. **Acceder a la interfaz Web**: Haz clic en el icono de la app (autenticacion automatica)
+        1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta Yundera (inicio de sesion unico)
         2. **Configurar clave API**: Agrega tu clave API en la seccion Config
 
         **Documentacion:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
@@ -280,7 +315,7 @@ x-casaos:
 
         **首次设置**
 
-        1. **访问Web界面**：点击应用图标（自动认证）
+        1. **访问Web界面**：点击应用图标，使用您的 Yundera 账户登录（单点登录）
         2. **配置API密钥**：在Config部分添加您的API密钥
 
         **文档：** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
@@ -296,15 +331,21 @@ x-casaos:
 
         **최초 설정**
 
-        1. **웹 UI 접속**: 앱 아이콘 클릭 (자동 인증)
+        1. **웹 UI 접속**: 앱 아이콘을 클릭하고 Yundera 계정으로 로그인 (통합 인증)
         2. **API 키 구성**: Config 섹션에서 API 키 추가
 
         **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
-  index: /?hash=$AUTH_HASH&token=$AUTH_HASH
+  index: /
   webui_port: 80
   port_map: "80"
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/openclaw 2>/dev/null || true
+    # Idempotent: openclaw.json is the LIVE gateway config the user edits from the
+    # Config section of the UI, and it lives in the app's only mapped volume. This
+    # hook reruns on every reinstall and every version upgrade, so it must only ever
+    # seed the file when it does not already exist -- never overwrite it.
+    # The directory itself is created and chowned by x-compose-app.folders below,
+    # before this hook runs, so there is nothing to mkdir here.
+    if [ ! -f /DATA/AppData/openclaw/openclaw.json ]; then
     cat > /DATA/AppData/openclaw/openclaw.json << 'OCEOF'
     {
       "gateway": {
@@ -317,4 +358,22 @@ x-casaos:
       }
     }
     OCEOF
-    chmod 644 /DATA/AppData/openclaw/openclaw.json
+    chmod 0644 /DATA/AppData/openclaw/openclaw.json
+    # Hand the seeded file to the user the app runs as, so the gateway can rewrite
+    # its own config. Best-effort: a filesystem that cannot chown must not make a
+    # fatal pre-hook leave the app installed but stopped.
+    chown "$PUID:$PGID" /DATA/AppData/openclaw/openclaw.json 2>/dev/null || true
+    fi
+
+x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before any image is pulled
+  # and before any hook runs. Declared here rather than mkdir'd in the hook: a hook
+  # mkdir runs inside the Maison container and lands root-owned, which is exactly
+  # what leaves the gateway unable to write its own config volume.
+  folders:
+    - path: /DATA/AppData/openclaw
+      user: $PUID
+      group: $PGID
+  webui-host: openclaw-${domain}
+  webui-path: "/"

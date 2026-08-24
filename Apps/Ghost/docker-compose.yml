@@ -193,7 +193,7 @@ x-casaos:
 
         **Public site URL:** Your blog is available at `https://ghost-<your-domain>` (without `/ghost` at the end). Share this URL with your readers.
 
-        **Email/Newsletter:** To enable newsletter sending, configure your SMTP settings in PCS Settings before installing. Ghost needs an email provider (Mailgun, SendGrid, etc.) for sending newsletters.
+        **Email:** Ghost 6 emails a one-time code every time you sign in to `/ghost`, and uses the same transport for password resets and newsletters. This app is pre-wired to Yundera's built-in SMTP relay, so sign-in and recovery work out of the box — nothing to configure. For large newsletter sends you can still point Ghost at an external provider (Mailgun, SendGrid, etc.) from **Settings > Email newsletter**.
       ko_kr: |
         # 설정 가이드
 
@@ -203,7 +203,7 @@ x-casaos:
 
         **블로그 주소:** 일반 방문자용 블로그는 `https://ghost-<도메인>` 입니다 (뒤에 `/ghost` 없이). 이 주소를 독자에게 공유하세요.
 
-        **이메일/뉴스레터:** 뉴스레터 발송을 활성화하려면 설치 전에 PCS 설정에서 SMTP를 구성하세요. Ghost는 뉴스레터 발송을 위해 이메일 프로바이더(Mailgun, SendGrid 등)가 필요합니다.
+        **이메일:** Ghost 6는 `/ghost`에 로그인할 때마다 일회용 코드를 이메일로 보내며, 비밀번호 재설정과 뉴스레터도 같은 전송 경로를 사용합니다. 이 앱은 Yundera 내장 SMTP 릴레이에 미리 연결되어 있어 로그인과 계정 복구가 별도 설정 없이 동작합니다. 대량 뉴스레터 발송이 필요하면 **Settings > Email newsletter**에서 외부 제공자(Mailgun, SendGrid 등)를 지정할 수 있습니다.
       zh_cn: |
         # 设置指南
 
@@ -213,7 +213,7 @@ x-casaos:
 
         **博客地址:** 访客可通过 `https://ghost-<您的域名>` 访问博客（末尾不带 `/ghost`）。请将此地址分享给读者。
 
-        **邮件/新闻通讯:** 要启用新闻通讯发送，请在安装前在 PCS 设置中配置 SMTP。Ghost 需要邮件提供商（Mailgun、SendGrid 等）来发送新闻通讯。
+        **邮件:** Ghost 6 每次登录 `/ghost` 都会通过邮件发送一次性验证码，密码重置和新闻通讯也使用同一发信通道。本应用已预先接入 Yundera 内置的 SMTP 中继，登录与账号找回开箱即用，无需配置。若需大量发送新闻通讯，可在 **Settings > Email newsletter** 中改用外部服务商（Mailgun、SendGrid 等）。
       fr_fr: |
         # Guide de configuration
 
@@ -223,7 +223,7 @@ x-casaos:
 
         **URL du blog:** Votre blog est accessible a `https://ghost-<votre-domaine>` (sans `/ghost` a la fin). Partagez cette URL avec vos lecteurs.
 
-        **Email/Newsletter:** Pour activer l'envoi de newsletters, configurez vos parametres SMTP dans les parametres PCS avant l'installation. Ghost a besoin d'un fournisseur email (Mailgun, SendGrid, etc.) pour envoyer les newsletters.
+        **Email:** Ghost 6 envoie un code a usage unique par email a chaque connexion a `/ghost`, et utilise le meme transport pour la reinitialisation du mot de passe et les newsletters. Cette application est deja reliee au relais SMTP integre de Yundera : la connexion et la recuperation de compte fonctionnent sans configuration. Pour des envois massifs de newsletters, vous pouvez toujours choisir un fournisseur externe (Mailgun, SendGrid, etc.) depuis **Settings > Email newsletter**.
       es_es: |
         # Guia de configuracion
 
@@ -233,7 +233,7 @@ x-casaos:
 
         **URL del blog:** Su blog esta disponible en `https://ghost-<su-dominio>` (sin `/ghost` al final). Comparta esta URL con sus lectores.
 
-        **Email/Newsletter:** Para habilitar el envio de newsletters, configure sus ajustes SMTP en la configuracion PCS antes de instalar. Ghost necesita un proveedor de email (Mailgun, SendGrid, etc.) para enviar newsletters.
+        **Email:** Ghost 6 envia un codigo de un solo uso por email cada vez que inicia sesion en `/ghost`, y usa el mismo transporte para el restablecimiento de contrasena y las newsletters. Esta aplicacion ya esta conectada al relay SMTP integrado de Yundera, asi que el inicio de sesion y la recuperacion funcionan sin configurar nada. Para envios masivos de newsletters puede apuntar Ghost a un proveedor externo (Mailgun, SendGrid, etc.) desde **Settings > Email newsletter**.
 
 x-compose-app:
   schema_version: 2

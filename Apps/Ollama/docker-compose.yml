@@ -63,9 +63,6 @@ x-casaos:
   main: ollama
   index: /
   store_app_id: ollama
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/ollama/data &&
-    mkdir -p /DATA/AppData/ollama/webui
   post-install-cmd: |
     docker exec ollama curl -fsS --retry 90 --retry-delay 2 --retry-connrefused http://ollama-api:11434/api/version && docker exec ollama-api ollama pull llama3.2:1b
   architectures:
@@ -214,4 +211,15 @@ x-casaos:
         **참고:** 이메일 기반 비밀번호 재설정이 없습니다 — 자격 증명을 안전하게 보관하세요. 기본적으로 CPU에서 실행되며, 작은 모델(1–3B)부터 시작하세요.
 
 x-compose-app:
+  schema_version: 2
+  folders:
+    - path: /DATA/AppData/ollama
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/ollama/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/ollama/webui
+      user: $PUID
+      group: $PGID
   webui-host: ollama-${domain}

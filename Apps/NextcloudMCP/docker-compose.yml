@@ -13,6 +13,7 @@ services:
     # configured in /etc/supervisord.conf.
     user: "0:0"
     restart: unless-stopped
+    cpu_shares: 70
     expose:
       - 9650
     environment:
@@ -40,6 +41,13 @@ services:
         reservations:
           memory: 256M
     networks:
+      # nextcloudmcp-internal is the app-private link that carries proxy -> backend
+      # traffic. It survives the launcher's rewrite of the shared network, which
+      # only re-attaches `pcs` to x-casaos.main (the sidecar).
+      - nextcloudmcp-internal
+      # `pcs` is what makes the "local Docker connection" of tips.before_install
+      # work: a same-host MCP client on the shared network reaches this backend
+      # directly at nextcloudmcp-backend:9650, bypassing the public OAuth route.
       - pcs
 
   # AppShield gates the Web UI behind Yundera SSO, so the Nextcloud app-password
@@ -86,6 +94,9 @@ services:
     depends_on:
       - nextcloudmcp-backend
     networks:
+      # Shared with the backend and never rewritten by the launcher — this is the
+      # link the sidecar proxies over. See the note on the backend's networks.
+      - nextcloudmcp-internal
       - pcs
     labels:
       caddy_0: nextcloudmcp-${APP_DOMAIN}
@@ -98,6 +109,9 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
 
 networks:
+  # App-private link between the sidecar and the backend.
+  nextcloudmcp-internal:
+    driver: bridge
   pcs:
     name: ${APP_NET:-pcs}
     external: true
@@ -106,7 +120,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: nextcloudmcp-backend
+  main: nextcloudmcp-proxy
   index: /
   author: Aptero
   category: Utilities

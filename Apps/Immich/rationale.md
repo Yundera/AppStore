@@ -24,3 +24,17 @@ Immich already operates entirely in UTC — the `database` service hardcodes `TZ
 The `database` healthcheck uses inline command substitution — `[ "$$(psql … SUM(checksum_failures) …)" = '0' ]` — rather than assigning the result to a `Chksum` shell variable and testing `$$Chksum`.
 
 Immich's upstream healthcheck stores the count in a `$$Chksum` variable. On Yundera, CasaOS re-serializes the compose file when it imports the app and collapses `$$Chksum` down to `$Chksum`. Docker Compose then treats `$Chksum` as an (unset) interpolation variable and substitutes an empty string, so the test becomes `[ "" = '0' ]`, which always fails — the Postgres container is reported **unhealthy** even though the database is fine (and CasaOS surfaces the whole app as unhealthy). Command substitution `$$(...)` contains no bare `$VAR`, so it survives the collapse and the check evaluates correctly. Functionally identical to upstream: healthy when `checksum_failures = 0`, unhealthy otherwise.
+
+## Database password (`$APP_DEFAULT_PASSWORD` + a `post_up` re-assert)
+
+The Postgres credential is `$APP_DEFAULT_PASSWORD`, the per-PCS secret Yundera injects, rather than
+a literal baked into the compose file. `POSTGRES_USER` / `DB_USERNAME` stay `postgres`: the role name
+is not a secret, and renaming it would not match the role that already owns an existing cluster.
+
+Postgres reads `POSTGRES_PASSWORD` only during `initdb`. An install whose `/DATA/AppData/immich/pgdata`
+was created by an earlier revision of this app therefore keeps the password it was initialised with,
+while the `immich` service now presents `$APP_DEFAULT_PASSWORD` — the server would fail to authenticate
+after the update. The `post_up` hook closes that gap by re-asserting the role password over the Postgres
+unix socket, which the image's `pg_hba.conf` grants as `local all all trust`, so no knowledge of the old
+password is required. It is idempotent, a no-op on a fresh install where `initdb` already set the same
+value, and `post_up` failures are logged and swallowed, so a slow or missing database cannot block the app.

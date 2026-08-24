@@ -78,7 +78,9 @@ x-casaos:
       * Step-by-step guides for popular apps (Immich, Jellyfin, Docmost, Odoo,
         Suwayomi) with more added over time
       * Zero-configuration — install and open it, that's it
-      * Runs fully offline once installed; no external calls at runtime
+      * No server-side outbound calls and no telemetry — the only external
+        request is one web font the page loads from Google Fonts, which falls
+        back to a system font when it is unreachable
       * Small footprint (64 MB memory cap)
 
       Best installed right after your PCS is set up — new users get oriented in
@@ -97,7 +99,9 @@ x-casaos:
       * Guides pas à pas pour les apps populaires (Immich, Jellyfin, Docmost,
         Odoo, Suwayomi) et d'autres à venir
       * Aucune configuration — installez et ouvrez, c'est tout
-      * Fonctionne entièrement hors-ligne une fois installé
+      * Aucun appel sortant côté serveur ni télémétrie — la seule requête
+        externe est une police web chargée depuis Google Fonts, avec repli sur
+        une police système si elle est inaccessible
       * Empreinte réduite (limite de 64 Mo de mémoire)
 
       À installer juste après la configuration de votre PCS — les nouveaux
@@ -115,7 +119,8 @@ x-casaos:
       * 영어·프랑스어·한국어 지원
       * Immich, Jellyfin, Docmost, Odoo, Suwayomi 등 인기 앱의 단계별 안내
       * 별도 설정 불필요 — 설치 후 바로 사용
-      * 설치 후에는 완전히 오프라인으로 동작
+      * 서버 측 외부 통신·텔레메트리 없음 — 외부 요청은 페이지가 Google Fonts에서
+        불러오는 웹폰트 하나뿐이며, 연결할 수 없으면 시스템 글꼴로 대체됩니다
       * 가벼운 리소스 사용 (메모리 64MB 제한)
 
       PCS를 처음 설정한 뒤 바로 설치하기에 좋아요 — 몇 분 만에 오리엔테이션을

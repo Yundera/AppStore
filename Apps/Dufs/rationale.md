@@ -23,8 +23,6 @@ and the user already has `/DATA/AppDataShared` if that is all they want.
 - The mount is disclosed **before install**, in `x-casaos.tips.before_install`
   (English and Chinese), and again in the app `description`, so the user sees the
   full extent of the access on the install screen rather than after installing.
-- The `/srv` mount also carries a per-volume description under the service's own
-  `x-casaos.volumes`, which is what the dashboard shows for the running app.
 - Authentication is on by default and enforced by dufs itself: `--auth
   admin:$APP_DEFAULT_PASSWORD@/:rw` seeds a single `admin` account with the
   per-server password, never a hardcoded one. There is no anonymous access — an

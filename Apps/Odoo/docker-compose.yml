@@ -211,14 +211,24 @@ x-casaos:
         - La configuration initiale peut prendre quelques minutes
         - Après la création de la base de données, vous pouvez vous connecter avec votre compte administrateur
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/odoo/config/ /DATA/AppData/odoo/odoo-data/ /DATA/AppData/odoo/addons/ /DATA/AppData/odoo/postgres-data/
+    # config/, odoo-data/, addons/ and postgres-data/ are created and chowned by
+    # x-compose-app.folders before this hook runs — nothing to mkdir here.
+    # The config bind mount masks the image's own /etc/odoo, so this file is the
+    # ONLY config Odoo reads: admin_passwd must be set here or Odoo falls back to
+    # its upstream default of the literal 'admin' and /web/database/manager (which
+    # needs no session) lets anyone dump, restore or drop the user's database.
     if [ ! -f /DATA/AppData/odoo/config/odoo.conf ]; then
-      cat > /DATA/AppData/odoo/config/odoo.conf <<'CONF'
+      cat > /DATA/AppData/odoo/config/odoo.conf <<CONF
     [options]
+    admin_passwd = $APP_DEFAULT_PASSWORD
     addons_path = /mnt/extra-addons/
     data_dir = /var/lib/odoo/
     CONF
     fi
+    # Idempotent repair for installs made before admin_passwd was written, and a
+    # no-op on a config the user has already set it in.
+    grep -q '^[[:space:]]*admin_passwd[[:space:]]*=' /DATA/AppData/odoo/config/odoo.conf ||
+      printf 'admin_passwd = %s\n' "$APP_DEFAULT_PASSWORD" >> /DATA/AppData/odoo/config/odoo.conf
   index: /
   scheme: https
 

@@ -72,9 +72,6 @@ x-casaos:
   main: ollama
   index: /
   store_app_id: ollama-nvidia
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/ollama-nvidia/data &&
-    mkdir -p /DATA/AppData/ollama-nvidia/webui
   post-install-cmd: |
     docker exec ollama-nvidia curl -fsS --retry 90 --retry-delay 2 --retry-connrefused http://ollama-api:11434/api/version && docker exec ollama-nvidia-api ollama pull llama3.2:1b
   architectures:
@@ -247,4 +244,19 @@ x-casaos:
         **참고:** 이메일 기반 비밀번호 재설정이 없습니다 — 자격 증명을 안전하게 보관하세요.
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
+  # the two bind-mount sources above. Declared here rather than mkdir'd in a
+  # hook: a hook's mkdir runs inside the Maison container, so it would create
+  # the directory in the wrong place.
+  folders:
+    - path: /DATA/AppData/ollama-nvidia
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/ollama-nvidia/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/ollama-nvidia/webui
+      user: $PUID
+      group: $PGID
   webui-host: ollama-nvidia-${domain}

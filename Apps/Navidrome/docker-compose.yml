@@ -90,9 +90,6 @@ x-casaos:
       • Multi-user support with playlists
       • Last.fm scrobbling support
       • Public share links for albums and playlists
-
-      **Sample Music Included:**
-      This installation includes sample tracks to get you started immediately.
     ko_kr: |
       **개인 음악 스트리밍 서버**
       Navidrome은 Subsonic/Airsonic 클라이언트와 호환되는 현대적인 음악 서버입니다. 아름다운 웹 인터페이스와 모바일 앱으로 어디서나 음악을 스트리밍하세요.
@@ -105,9 +102,6 @@ x-casaos:
       • 플레이리스트 지원
       • Last.fm 스크로블링 지원
       • 앨범 및 플레이리스트용 공개 공유 링크
-
-      **샘플 음악 포함:**
-      즉시 시작할 수 있도록 샘플 트랙이 포함되어 있습니다.
     fr_fr: |
       **Votre Serveur de Streaming Musical Personnel**
       Navidrome est un serveur musical moderne et un streamer compatible avec les clients Subsonic/Airsonic. Diffusez votre collection musicale depuis n'importe où avec une interface web magnifique et des applications mobiles.
@@ -120,9 +114,6 @@ x-casaos:
       • Support multi-utilisateur avec playlists
       • Support du scrobbling Last.fm
       • Liens de partage publics pour albums et playlists
-
-      **Musique d'Exemple Incluse:**
-      Cette installation inclut des pistes d'exemple pour commencer immédiatement.
     zh_cn: |
       **您的个人音乐流媒体服务器**
       Navidrome是一个现代音乐服务器和流媒体播放器，兼容Subsonic/Airsonic客户端。通过美观的网页界面和移动应用程序，随时随地播放您的音乐收藏。
@@ -135,9 +126,6 @@ x-casaos:
       • 多用户支持和播放列表
       • Last.fm记录支持
       • 专辑和播放列表的公开共享链接
-
-      **包含示例音乐:**
-      此安装包含示例音轨，让您立即开始使用。
     es_es: |
       **Tu Servidor Personal de Streaming Musical**
       Navidrome es un servidor de música moderno y streamer compatible con clientes Subsonic/Airsonic. Reproduce tu colección musical desde cualquier lugar con una hermosa interfaz web y aplicaciones móviles.
@@ -150,9 +138,6 @@ x-casaos:
       • Soporte multiusuario con listas de reproducción
       • Soporte de scrobbling Last.fm
       • Enlaces públicos para compartir álbumes y listas
-
-      **Música de Muestra Incluida:**
-      Esta instalación incluye pistas de muestra para comenzar inmediatamente.
   tips:
     before_install:
       en_us: |

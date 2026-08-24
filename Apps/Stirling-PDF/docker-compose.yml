@@ -2,7 +2,7 @@ name: stirlingpdf
 
 services:
   stirlingpdf:
-    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.10.0
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.14.3
     container_name: stirling-pdf
     restart: unless-stopped
     expose:
@@ -213,13 +213,11 @@ x-casaos:
         **🌐 Access:**
         Once ready, your app will be available at `https://stirlingpdf-username.nsl.sh`
 
-        **💡 New in V2.8.0:**
-        • PDF Commenting - View and add comments to PDFs
-        • RFC 3161 PDF Timestamps - Cryptographic timestamping for documents
-        • Enhanced PDF Rendering - Improved performance with Pdfium engine
-        • Advanced Multi-Page Layout - Expanded customization for page arrangements
-        • Desktop login removal - Authentication now optional
-        • Improved text selection and form handling
+        **📁 Folder access:**
+        This app can read **and write** your `Downloads` folder (`/DATA/Downloads`), so you can open PDFs you already saved and write results straight back to it. Everything else it stores stays inside its own app folder.
+
+        **💡 Version:**
+        Ships Stirling PDF **2.14.3** — PDF commenting, RFC 3161 timestamps, Pdfium rendering and advanced multi-page layouts. Login stays enabled on Yundera, so use the credentials above.
 
         **How to use:**
         Upload PDF files through your web browser and start editing them right away!
@@ -243,13 +241,11 @@ x-casaos:
         **🌐 접근:**
         준비가 되면 `https://stirlingpdf-username.nsl.sh`로 앱에 접근할 수 있습니다!
 
-        **💡 V2.8.0 새로운 기능:**
-        • PDF 댓글 - PDF에 댓글 보기 및 추가
-        • RFC 3161 PDF 타임스탬프 - 문서에 대한 암호화 타임스탬프
-        • 향상된 PDF 렌더링 - Pdfium 엔진으로 성능 개선
-        • 고급 다중 페이지 레이아웃 - 페이지 배열 사용자 정의 확장
-        • 데스크톱 로그인 제거 - 인증이 이제 선택 사항
-        • 향상된 텍스트 선택 및 양식 처리
+        **📁 폴더 접근:**
+        이 앱은 `Downloads` 폴더(`/DATA/Downloads`)를 **읽고 쓸 수** 있습니다. 이미 저장한 PDF를 열고 결과를 바로 저장할 수 있습니다. 그 외 데이터는 모두 앱 전용 폴더에 저장됩니다.
+
+        **💡 버전:**
+        Stirling PDF **2.14.3** 제공 — PDF 댓글, RFC 3161 타임스탬프, Pdfium 렌더링, 고급 다중 페이지 레이아웃. Yundera에서는 로그인이 활성화되어 있으므로 위의 자격 증명을 사용하세요.
 
         **사용 방법:**
         웹 브라우저를 통해 PDF 파일을 업로드하고 바로 편집을 시작할 수 있습니다!
@@ -273,13 +269,11 @@ x-casaos:
         **🌐 访问:**
         准备就绪后,您的应用将通过`https://stirlingpdf-username.nsl.sh`可用!
 
-        **💡 V2.8.0 新功能:**
-        • PDF评论 - 查看和添加PDF评论
-        • RFC 3161 PDF时间戳 - 文档加密时间戳
-        • 增强PDF渲染 - 使用Pdfium引擎提升性能
-        • 高级多页面布局 - 扩展页面排列自定义选项
-        • 桌面登录移除 - 身份验证现在可选
-        • 改进的文本选择和表单处理
+        **📁 文件夹访问:**
+        此应用可以**读写**您的 `Downloads` 文件夹(`/DATA/Downloads`),因此您可以打开已保存的PDF并将结果直接写回。其他所有数据都保存在应用自己的文件夹中。
+
+        **💡 版本:**
+        提供 Stirling PDF **2.14.3** — PDF评论、RFC 3161 时间戳、Pdfium 渲染和高级多页面布局。Yundera 上登录保持启用,请使用上面的凭据。
 
         **如何使用:**
         通过网页浏览器上传PDF文件并立即开始编辑!
@@ -303,13 +297,11 @@ x-casaos:
         **🌐 Accès :**
         Une fois prêt, votre application sera disponible à `https://stirlingpdf-username.nsl.sh` !
 
-        **💡 Nouveautés V2.8.0 :**
-        • Commentaires PDF - Afficher et ajouter des commentaires aux PDF
-        • Horodatage PDF RFC 3161 - Horodatage cryptographique des documents
-        • Rendu PDF amélioré - Performance accrue avec le moteur Pdfium
-        • Mise en page multi-pages avancée - Options de personnalisation étendues
-        • Suppression de la connexion bureau - Authentification désormais optionnelle
-        • Sélection de texte et gestion des formulaires améliorées
+        **📁 Accès aux dossiers :**
+        Cette application peut **lire et écrire** dans votre dossier `Downloads` (`/DATA/Downloads`), afin d'ouvrir les PDF déjà enregistrés et d'y réécrire les résultats. Toutes ses autres données restent dans son propre dossier d'application.
+
+        **💡 Version :**
+        Fournit Stirling PDF **2.14.3** — commentaires PDF, horodatage RFC 3161, rendu Pdfium et mises en page multi-pages avancées. La connexion reste activée sur Yundera : utilisez les identifiants ci-dessus.
 
         **Comment utiliser :**
         Téléchargez des fichiers PDF via votre navigateur web et commencez à les éditer immédiatement !
@@ -333,13 +325,11 @@ x-casaos:
         **🌐 Acceso:**
         Una vez listo, tu aplicación estará disponible en `https://stirlingpdf-username.nsl.sh`!
 
-        **💡 Novedades V2.8.0:**
-        • Comentarios PDF - Ver y agregar comentarios a PDFs
-        • Marcas de tiempo PDF RFC 3161 - Sellado criptográfico de documentos
-        • Renderizado PDF mejorado - Mayor rendimiento con el motor Pdfium
-        • Diseño multi-página avanzado - Opciones de personalización ampliadas
-        • Eliminación de inicio de sesión de escritorio - Autenticación ahora opcional
-        • Selección de texto y manejo de formularios mejorados
+        **📁 Acceso a carpetas:**
+        Esta aplicación puede **leer y escribir** en tu carpeta `Downloads` (`/DATA/Downloads`), para abrir los PDF que ya guardaste y escribir los resultados directamente allí. Todos sus demás datos permanecen en su propia carpeta de aplicación.
+
+        **💡 Versión:**
+        Incluye Stirling PDF **2.14.3** — comentarios PDF, marcas de tiempo RFC 3161, renderizado Pdfium y diseños multipágina avanzados. El inicio de sesión permanece habilitado en Yundera: usa las credenciales de arriba.
 
         **Cómo usar:**
         ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!

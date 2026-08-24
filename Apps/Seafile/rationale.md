@@ -10,7 +10,7 @@ This Seafile deployment uses root containers for several services due to technic
 
 ### Redis Service
 - **Reason**: Redis runs as root for consistency with other services in the stack
-- **Mitigation**: Limited to internal networking, no external exposure, resource limited
+- **Mitigation**: Limited to the app-private `seafile-net` network, no external exposure, password-protected (`--requirepass`)
 
 ### Seafile Application Services
 - **Reason**: Seafile-mc container requires root for internal service management and initialization
@@ -23,24 +23,23 @@ This Seafile deployment uses root containers for several services due to technic
   - `/dev/fuse` device access
 - **Mitigation**: File ownership is properly managed via `--uid $PUID --gid $PGID` flags, ensuring mounted files at `/DATA/Seafile` have correct user permissions
 
-### Caddy Reverse Proxy
-- **Reason**: Caddy-docker-proxy requires Docker socket access for dynamic configuration
-- **Mitigation**: Limited to reverse proxy functionality, no direct data access
+## CPU Share Allocation
 
-## Resource Limits Justification
+The compose sets no hard memory or CPU limits — Seafile's own footprint varies too
+much with library size and indexing for a fixed cap to be safe. What it does set is
+`cpu_shares`, a relative scheduling weight that decides who wins when the host is
+contended:
 
-Resource limits are set based on typical usage patterns:
+- **Seafile App** (`seafile`): 80 — user-facing web UI
+- **Database** (`db`): 70 — serves the interactive app
+- **Seadoc** (`seadoc`): 70 — interactive document editing
+- **Redis** (`redis`): 30 — cache, not on the critical path
+- **Notification Server** (`notification-server`): 30 — lightweight background service
+- **RClone** (`rclone`): 30 — background FUSE mount
 
-- **Database**: 1GB memory, 1 CPU - handles metadata and user data
-- **Seafile App**: 2GB memory, 1.5 CPU - main application processing
-- **Redis**: 256MB memory, 0.25 CPU - caching layer
-- **Notification Server**: 128MB memory, 0.1 CPU - lightweight service
-- **Seadoc**: 512MB memory, 0.5 CPU - document editing service
-- **RClone**: 256MB memory, 0.25 CPU - file system mounting
-- **Caddy**: 128MB memory, 0.1 CPU - lightweight reverse proxy
-
-These limits provide adequate performance while preventing resource exhaustion on shared systems.
+`cpu_shares` caps nothing; it only orders contention. If a deployment needs a hard
+ceiling, add `deploy.resources.limits.memory` per service.
 
 ## Network Isolation
 
-All services communicate through the isolated `seafile-net` network, with only the main web interface exposed via NSL Router integration.
+All services communicate through the app-private `seafile-net` bridge network. Only the `seafile` service is additionally attached to the shared `pcs` network, where Caddy — shared platform infrastructure, not part of this app — picks up its `caddy_*` labels and publishes the web UI. The database, Redis, Seadoc, the notification server and RClone are unreachable from outside the app.

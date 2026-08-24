@@ -2,7 +2,7 @@ name: searxng
 
 services:
   searxng-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: searxng
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -40,13 +40,12 @@ services:
       # network because that is where its backend lives.
       - pcs
       - searxng-internal
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
+    # No privileged flag and no added capabilities: AppShield only terminates HTTP
+    # and proxies to the backend, so it runs with Docker's default capability set
+    # (matching CONTRIBUTING's AppShield reference and Apps/Beacon).
 
   searxng-backend:
-    image: searxng/searxng:2026.7.31-057a77168
+    image: searxng/searxng:2026.8.22-9fea41204
     container_name: searxng-backend
     restart: unless-stopped
     cpu_shares: 50
@@ -321,10 +320,6 @@ x-casaos:
         El limitador anti-bots propio de SearXNG está desactivado, ya que AppShield autentica cada petición.
 
         **Recursos:** dos contenedores, hasta ~1,1 GB de RAM.
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/searxng/config /DATA/AppData/searxng/cache &&
-    chmod -R 755 /DATA/AppData/searxng
-
 x-compose-app:
   schema_version: 2
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.

@@ -37,8 +37,6 @@ networks:
 x-casaos:
   main: prowlarr
   index: /
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/prowlarr/config
   tips:
     before_install:
       en_us: |
@@ -79,4 +77,13 @@ x-casaos:
   is_uncontrolled: false
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
+  # before the image is pulled, before any hook, before the container starts.
+  # Derived from the bind mounts in `volumes:` above; the container drops to
+  # $PUID:$PGID, so this must be user-owned or Prowlarr cannot write.
+  folders:
+    - path: /DATA/AppData/prowlarr/config
+      user: $PUID
+      group: $PGID
   webui-host: prowlarr-${domain}

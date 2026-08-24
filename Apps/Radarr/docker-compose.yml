@@ -22,9 +22,9 @@ services:
     environment:
       TZ: $TZ
     volumes:
-      - ${DATA_ROOT:-/DATA}/AppData/radarr/config:/config   # dedicated Radarr config
-      - ${DATA_ROOT:-/DATA}/Media/Movies:/movies            # shared movie library
-      - ${DATA_ROOT:-/DATA}/Downloads:/downloads            # shared downloads folder
+      - ${DATA_ROOT:-/DATA}/AppData/radarr/config/:/config   # dedicated Radarr config
+      - ${DATA_ROOT:-/DATA}/Media/Movies/:/movies            # shared movie library
+      - ${DATA_ROOT:-/DATA}/Downloads/:/downloads            # shared downloads folder
     cpu_shares: 50
     deploy:
       resources:
@@ -39,8 +39,6 @@ networks:
 x-casaos:
   main: radarr
   index: /
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/radarr/config "/DATA/Media/Movies" /DATA/Downloads
   tips:
     before_install:
       en_us: |
@@ -78,4 +76,17 @@ x-casaos:
   is_uncontrolled: false
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  # Derived from the trailing-slash bind mounts in `volumes:` above.
+  folders:
+    - path: /DATA/AppData/radarr/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/Movies
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
   webui-host: radarr-${domain}
