@@ -683,9 +683,40 @@ author fields.
 
 #### Pre-Installation Commands
 
-You can specify commands to run before container startup using `pre-install-cmd`. It executes on the host before any of the app's services start. Two styles are acceptable — pick whichever is simpler for your needs:
+You can specify commands to run before container startup using `pre-install-cmd`.
 
-**Style A — plain shell on the host.** Good for downloading static assets or seeding config files with tools that already exist on the host. (For *directories*, use `x-compose-app.folders` instead — see [Maison and `x-compose-app`](#maison-and-x-compose-app).)
+> **It does not run on the host.** This document used to say it did; that was
+> wrong, and it is the reason several published apps silently did nothing. The
+> hook runs `/bin/bash` **inside the Maison container**, with the app's folder as
+> the working directory — but its `docker` client talks to the **host** daemon, so
+> every container the hook starts is a real container on the real machine. That
+> seam is how a hook reaches the host, and it is the only way it does.
+
+**The command set.** A hook may call these, and nothing else:
+
+```
+bash sh docker
+cat chmod chown cp cut date dirname echo env expr find grep head id install
+ln ls md5sum mkdir mktemp mv od printf readlink realpath rm rmdir sed seq
+sha256sum sleep sort stat tail tee test timeout touch tr uniq wc wget xargs
+```
+
+Anything else fails the install with a message naming the alternative. Two groups
+are deliberately excluded, both because without this they failed *silently*:
+
+- **`openssl`, `curl`, `python`, `jq`, `git`, `unzip`** — not in the container.
+  A missing command inside `"$(...)"` is not an error in bash: it yields an empty
+  string and the hook still exits 0. Apps shipped empty secrets this way.
+- **`sysctl`, `ip`, `mount`, `adduser`, `modprobe`, `chroot`, `reboot`** and
+  ~25 other busybox applets — present, but scoped to the container, whose
+  namespaces and user database vanish on restart. They appear to work and change
+  nothing.
+
+Two authoring styles are acceptable — pick whichever is simpler:
+
+**Style A — plain shell.** Good for seeding config files with the tools above.
+(For *directories*, use `x-compose-app.folders` instead — see [Maison and
+`x-compose-app`](#maison-and-x-compose-app).)
 
 ```yaml
 x-casaos:
@@ -702,7 +733,8 @@ x-casaos:
 
 Static assets the script needs can live under `Apps/[AppName]/pre-install/` in this repo and be fetched via jsDelivr or `raw.githubusercontent.com` (see `Apps/Guacamole/pre-install/` for a real example).
 
-**Style B — one-shot `docker run` containers.** Good when the setup needs a binary that isn't on the host (for example, the app's own CLI to initialise its database).
+**Style B — one-shot `docker run` containers.** Good when the setup needs a binary
+that isn't in the command set above — including `openssl` and `curl`.
 
 ```yaml
 x-casaos:
@@ -718,17 +750,38 @@ x-casaos:
     fi
 ```
 
+Prefer Style B for anything that generates a credential. `docker run` fails loudly
+when the image or command is wrong; a missing host tool does not.
+
 > The guard is not decoration. Chaining one-shot initialisers with `&&` and no
 > existence check is the single most common way an app passes a fresh install and
 > then fails every reinstall and upgrade afterwards — the hook exits non-zero, and
 > the app is left installed but **stopped**, with its data intact but unreachable
 > until someone presses Start by hand.
 
+**Changing the host.** Legitimate and supported — it goes through the Docker
+socket the hook already holds. Pin the image tag, and justify the access in the
+app's `rationale.md`; a reviewer will ask.
+
+| To change | Recipe |
+|---|---|
+| Kernel parameters | `docker run --rm --privileged --network=host <image> sysctl -w <key>=<value>` |
+| Network state | `docker run --rm --privileged --network=host <image> ip ...` |
+| Files, users, `/etc` | `docker run --rm -v /:/host <image> chroot /host sh -c '...'` |
+| Filesystems, devices | `docker run --rm --privileged -v /:/host <image> chroot /host mount ...` |
+| Kernel modules | `docker run --rm --privileged <image> modprobe ...` |
+
+`sysctl` needs **both** flags: `--privileged` for a writable `/proc/sys`, and
+`--network=host` because `net.*` keys are per-namespace. Host *service* management
+(`systemctl`, `snap`) has no verified recipe — don't rely on it from a hook.
+
 **Requirements (apply to both styles):**
 - [ ] **Specific version tags**: Never use `:latest` — always pin exact versions (e.g. `alpine:3.19`, `ubuntu:22.04`).
 - [ ] **Idempotent**: Safe to rerun. Guard destructive / one-shot work behind a sentinel file (`touch /DATA/AppData/$AppID/.initialized`) or an existence check.
 - [ ] **Non-interactive**: Must not prompt.
 - [ ] **No hardcoded credentials**: Use `$APP_DEFAULT_PASSWORD` and friends.
+- [ ] **Only the command set above**, or a pinned `docker run`. Anything else fails the install.
+- [ ] **Host changes justified** in `rationale.md`, using one of the recipes above.
 - [ ] **User permissions when touching user directories**: Use `--user $PUID:$PGID` (Style B) whenever files will live under `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, or `/DATA/Gallery`. To *own a directory*, declare it under `x-compose-app.folders` rather than chowning it here — Maison creates and chowns it before this hook runs.
 
 **Common use cases:**
@@ -736,6 +789,7 @@ x-casaos:
 - Set up initial data structures
 - Generate certificates or keys
 - Prepare the environment with sensible defaults
+
 
 #### Caddy Integration (Web UI Access)
 
