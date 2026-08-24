@@ -122,11 +122,13 @@ x-casaos:
   main: tribler
   webui_port: 80
   index: /ui/
-  # Ensure the state dir (and TMPDIR) exist and are owned by the app user before first boot.
+  # The state/ and state/.tmp directories are declared in x-compose-app.folders below,
+  # so Maison creates and chowns them before every `up` — there is nothing to mkdir here.
+  # This hook only re-applies ownership recursively to state that already exists, which
+  # folders does not do for files left behind by an earlier install.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/state/.tmp &&
     docker run --rm -e PUID -e PGID \
-      -v /DATA/AppData/$AppID/state:/state \
+      -v ${DATA_ROOT:-/DATA}/AppData/$AppID/state:/state \
       busybox:1.36 sh -c 'chown -R "$PUID:$PGID" /state'
   tips:
     before_install:
@@ -159,9 +161,21 @@ x-casaos:
     ko_kr: 내장 어니언 네트워크를 갖춘 익명 분산형 BitTorrent 클라이언트.
   title:
     en_us: Tribler
-  store_app_id: tribler
-  is_uncontrolled: false
 
 x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  folders:
+    - path: /DATA/AppData/tribler/state
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/tribler/state/.tmp
+      user: $PUID
+      group: $PGID
+    # Tribler resets its save path to $HOME/Downloads on every boot, so the shared
+    # user Downloads dir is written on first run and must be owned by the PCS user.
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
   webui-host: tribler-${domain}
   webui-path: "/ui/"

@@ -18,8 +18,8 @@ services:
       DISABLE_IPV6: 'true'
       INIT_ENABLED: 'true'
       INIT_USERNAME: admin
-      INIT_PASSWORD: $PCS_DEFAULT_PASSWORD
-      INIT_HOST: $PCS_PUBLIC_IP   # endpoint written into client configs
+      INIT_PASSWORD: $APP_DEFAULT_PASSWORD
+      INIT_HOST: $APP_PUBLIC_IP   # endpoint written into client configs
       INIT_PORT: '51820'          # WireGuard UDP port on the host
       INIT_DNS: '9.9.9.9'
       # VPN subnet. Uses 10.9.0.0/24 to avoid colliding with the bridge-mode WireGuardEasy
@@ -45,7 +45,7 @@ services:
   # to the host-mode web UI via the docker host-gateway (host.docker.internal:51821).
   # nginx.conf is fetched onto the host by pre-install-cmd and bind-mounted read-only.
   wgeasyhost-proxy:
-    image: nginx:alpine
+    image: nginx:1.29.3-alpine
     container_name: wgeasyhost-proxy
     restart: unless-stopped
     # Must be root: the CasaOS installer injects `user: $PUID:$PGID` into any service
@@ -93,7 +93,6 @@ x-casaos:
   store_app_id: wgeasyhost
   index: /
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/wgeasyhost/wireguard &&
     wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/nginx.conf -O /DATA/AppData/wgeasyhost/nginx.conf &&
     chown -R $PUID:$PGID /DATA/AppData/wgeasyhost &&
     sysctl -w net.ipv4.ip_forward=1 &&
@@ -113,7 +112,7 @@ x-casaos:
   developer: WeejeWel
   author: Yundera Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/thumbnail.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasyHost/screenshot-2.png
@@ -151,7 +150,7 @@ x-casaos:
 
         | Username | Password                |
         | -------- | ----------------------- |
-        | `admin`  | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
 
         This is **WireGuard Easy v15 in host-networking mode**. The admin account is auto-configured; VPN settings can be changed from the web UI after login.
 
@@ -172,7 +171,7 @@ x-casaos:
 
         | Nom d'utilisateur | Mot de passe            |
         | ----------------- | ----------------------- |
-        | `admin`           | `$PCS_DEFAULT_PASSWORD` |
+        | `admin`           | `$APP_DEFAULT_PASSWORD` |
 
         Ceci est **WireGuard Easy v15 en mode reseau hote**. Le compte admin est configure automatiquement ; les parametres VPN sont modifiables depuis l'interface web apres connexion.
 

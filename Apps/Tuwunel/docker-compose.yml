@@ -120,6 +120,7 @@ x-casaos:
   tags: ["privacy", "personal", "communication"]
   developer: Matrix Construct
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/thumbnail.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tuwunel/screenshot-2.png
@@ -181,9 +182,10 @@ x-casaos:
         **📱 Connecting a client**
 
         The app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix-<your-domain>`.
+  # element/ is created and chowned by x-compose-app.folders before this hook runs —
+  # there is nothing to mkdir here.
   pre-install-cmd: |
-    mkdir -p /DATA/AppData/tuwunel/element &&
-    ELEMENT_CONFIG="/DATA/AppData/tuwunel/element/config.json" &&
+    ELEMENT_CONFIG="${DATA_ROOT:-/DATA}/AppData/tuwunel/element/config.json" &&
     cat > "$ELEMENT_CONFIG" << EOF
     {
       "default_server_config": {
@@ -209,3 +211,10 @@ x-compose-app:
     - path: /DATA/AppData/tuwunel/db
       user: $PUID
       group: $PGID
+    # Holds the Element config.json the pre-install hook writes. The bind mount is the
+    # file itself, so gen-folders.py cannot infer this one — keep it when re-running.
+    - path: /DATA/AppData/tuwunel/element
+      user: $PUID
+      group: $PGID
+  # Mirrors the caddy_0 label on the main service, so the tile renders an open action.
+  webui-host: tuwunel-${domain}

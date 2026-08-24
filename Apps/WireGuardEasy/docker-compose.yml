@@ -24,7 +24,7 @@ services:
       INIT_ENABLED: 'true'
       INIT_USERNAME: admin
       INIT_PASSWORD: $APP_DEFAULT_PASSWORD
-      INIT_HOST: $PCS_PUBLIC_IP
+      INIT_HOST: $APP_PUBLIC_IP
       INIT_PORT: '51820'
       INIT_DNS: '9.9.9.9'
     expose:
@@ -60,7 +60,7 @@ x-casaos:
   developer: WeejeWel
   author: Yundera Team
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/thumbnail.png
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/WireGuardEasy/screenshot-2.png
