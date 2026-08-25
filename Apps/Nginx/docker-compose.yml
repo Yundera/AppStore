@@ -159,17 +159,6 @@ x-casaos:
   title:
     en_us: Nginx
   index: /
-  pre-install-cmd: |
-    # www/ and the app folder itself are created and chowned by
-    # x-compose-app.folders before this hook runs - nothing to mkdir or chmod.
-    # Both writes are guarded so a reinstall or upgrade never clobbers the
-    # user's site or their edited nginx.conf.
-    if [ ! -f /DATA/AppData/nginx/www/index.html ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/pre-install/index.html -O /DATA/AppData/nginx/www/index.html
-    fi &&
-    if [ ! -f /DATA/AppData/nginx/nginx.conf ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/pre-install/nginx.conf -O /DATA/AppData/nginx/nginx.conf
-    fi
 
 x-compose-app:
   schema_version: 2

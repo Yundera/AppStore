@@ -122,14 +122,6 @@ x-casaos:
   main: tribler
   webui_port: 80
   index: /ui/
-  # The state/ and state/.tmp directories are declared in x-compose-app.folders below,
-  # so Maison creates and chowns them before every `up` — there is nothing to mkdir here.
-  # This hook only re-applies ownership recursively to state that already exists, which
-  # folders does not do for files left behind by an earlier install.
-  pre-install-cmd: |
-    docker run --rm -e PUID -e PGID \
-      -v ${DATA_ROOT:-/DATA}/AppData/$AppID/state:/state \
-      busybox:1.36 sh -c 'chown -R "$PUID:$PGID" /state'
   tips:
     before_install:
       en_us: |
@@ -169,6 +161,9 @@ x-compose-app:
     - path: /DATA/AppData/tribler/state
       user: $PUID
       group: $PGID
+      # Reclaim state an earlier install left behind, which is what the busybox
+      # `chown -R` in the old pre-install hook was for.
+      recursive: true
     - path: /DATA/AppData/tribler/state/.tmp
       user: $PUID
       group: $PGID

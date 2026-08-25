@@ -44,13 +44,6 @@ networks:
 x-casaos:
   main: qbittorrent
   webui_port: 80
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/qbittorrent/config/qBittorrent &&
-    docker run --rm \
-      -v /DATA/AppData/qbittorrent/config/qBittorrent:/output \
-      -e QB_PASSWORD="${APP_DEFAULT_PASSWORD:-adminadmin}" \
-      -e QB_USERNAME=admin \
-      ghcr.io/worph/qbittorrent-config:1.0.2
   tips:
     before_install:
       en_us: |
@@ -97,7 +90,22 @@ x-compose-app:
     - path: /DATA/AppData/qbittorrent/config
       user: $PUID
       group: $PGID
+    - path: /DATA/AppData/qbittorrent/config/qBittorrent
+      user: $PUID
+      group: $PGID
     - path: /DATA/Downloads
       user: $PUID
       group: $PGID
+  # Seeding the config needs the seeder image, so it stays a container — declared,
+  # not shelled out to. The directory it writes into is declared under folders
+  # above, which is what the hook's `mkdir -p` was doing.
+  init:
+    - name: seed-config
+      image: ghcr.io/worph/qbittorrent-config:1.0.2
+      volumes:
+        - /DATA/AppData/qbittorrent/config/qBittorrent:/output
+      environment:
+        QB_USERNAME: admin
+        QB_PASSWORD: ${APP_DEFAULT_PASSWORD:-adminadmin}
+      when: once
   webui-host: qbittorrent-${domain}

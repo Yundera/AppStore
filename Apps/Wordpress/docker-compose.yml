@@ -75,8 +75,6 @@ networks:
     external: true
 
 x-casaos:
-  pre-install-cmd: |
-    mkdir -p /DATA/AppData/$AppID/html /DATA/AppData/$AppID/db
   architectures:
     - amd64
     - arm64

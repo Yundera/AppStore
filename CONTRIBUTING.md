@@ -10,9 +10,9 @@ Before submitting your PR, ensure your app meets these requirements:
 
 ### Tech Checklist
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
-- [ ] **Pre-install and Post-install commands security**: If using `pre-install-cmd` or `post-install-cmd`, ensure specific version tags (no `:latest`) and proper user permissions (`--user $PUID:$PGID` when writing to user directories)
-- [ ] **Install hooks are idempotent**: a hook is rerun on every reinstall and every version upgrade, so guard one-shot work behind an existence check or a sentinel. A hook that exits non-zero leaves the app installed but **stopped**. See [Pre-Installation Commands](#pre-installation-commands)
+- [ ] **First-run setup is declared, not scripted**: files the app needs ship in `seed/`, generated credentials go under `x-compose-app.secrets`, and one-shot containers under `x-compose-app.init`. A `pre-install-cmd` is a last resort for genuinely imperative work. See [First-run setup](#first-run-setup)
 - [ ] **Directories the app needs are declared** under `x-compose-app.folders` with `schema_version: 2`, not created by a hook. See [Maison and `x-compose-app`](#maison-and-x-compose-app)
+- [ ] **If an install hook survives**, it is idempotent (it reruns on every reinstall and upgrade), pins every image tag, and uses `--user $PUID:$PGID` when writing to user directories. A hook that exits non-zero leaves the app installed but **stopped**
 - [ ] **Deployment values are references, not literals**: the shared network is declared as `name: ${APP_NET:-pcs}` (never a bare `name: pcs`), and every bind source starts with `${DATA_ROOT:-/DATA}`. Maison copies the compose byte-for-byte and never rewrites it, so a literal freezes the app to one deployment. See [System Variables](#system-variables)
 - [ ] **Only services that need outside reachability are on the shared network**, and each of them has an app-prefixed service name and `container_name`. Siblings that only talk to each other belong on an app-internal `driver: bridge` network. See [Shared-network hygiene](#caddy-integration-web-ui-access)
 
@@ -27,7 +27,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Specific version tag (no `:latest`)
 
 ### Functionality Checklist
-- [ ] Works immediately after installation - no need to check logs or run commands - pre-install scripts create sensible defaults
+- [ ] Works immediately after installation - no need to check logs or run commands - the app's `seed/` tree and declared secrets provide sensible defaults
 - [ ] Data is mapped to appropriate `/DATA` subdirectories - if things are mapped outside of /DATA, this should be explained in rationale.md
 - [ ] No manual configuration required for basic functionality - should work out of the box
 - [ ] Data persistence requirements are met - see [Data Persistence](#data-persistence) section for details
@@ -52,7 +52,7 @@ To ensure easy testing, please follow these steps:
 
 1. Start with a regular compose app, which is a directory containing a `docker-compose.yml` file. Test it on your own machine to ensure you can start it successfully. In your instance, you can edit the compose file with a text editor and restart the app to check if the changes work. Use SSH to do `docker compose up -d` if needed.
 
-2. Copy the compose onto a PCS under the app's own folder, e.g. `/DATA/AppData/MyApp/docker-compose.yml`, add the required metadata (`x-casaos`, `x-compose-app`), and test it there over SSH with `docker compose up -d`. A hand-run `docker compose up -d` in the app's folder is exactly what Maison does — it copies your `docker-compose.yml` byte-for-byte and never edits it; the only things it adds are the app's `.env` (the deployment's variables) and `docker-compose.override.yml` (the extra domains it publishes on). So if it works by hand with a real `.env`, it works as an installed app. Step 4 still proves the listing itself — metadata, icon, pre-install assets.
+2. Copy the compose onto a PCS under the app's own folder, e.g. `/DATA/AppData/MyApp/docker-compose.yml`, add the required metadata (`x-casaos`, `x-compose-app`), and test it there over SSH with `docker compose up -d`. A hand-run `docker compose up -d` in the app's folder is exactly what Maison does — it copies your `docker-compose.yml` byte-for-byte and never edits it; the only things it adds are the app's `.env` (the deployment's variables) and `docker-compose.override.yml` (the extra domains it publishes on). So if it works by hand with a real `.env`, it works as an installed app. Step 4 still proves the listing itself — metadata, icon, `seed/` tree.
 
 3. When the local setup is stable, push to your forked repo. Create a new directory under `Apps` with your app name (along with logo, screenshot, and description files), e.g., `MyApp`.
 
@@ -353,6 +353,7 @@ App-Name
 ├─ screenshot-2.png     # (Optional) More screenshots to demonstrate different functionalities are highly recommended
 ├─ screenshot-3.png     # (Optional) ...
 ├─ thumbnail.png        # (Required) Tile image shown in the AppStore listing (see specification at bottom)
+├─ seed/                # (Optional) The app's initial data tree, mirroring /DATA/AppData/<app>/
 └─ rationale.md         # (Conditional) Required when the app needs a documented exception — see "Rationale" below
 ```
 
@@ -487,10 +488,15 @@ new apps.** They survive in a handful of older apps (`Apps/FileBrowser`,
 Anything a user genuinely needs to know before installing belongs in the app
 `description`, in `tips.before_install`, or in `rationale.md`.
 
-Most apps in this store already carry an `x-compose-app` block. Two of its keys are
-load-bearing and both require `schema_version: 2`: **`folders`** and **`hooks`**.
-Declare `schema_version: 2` when your app *needs* them, so an older Maison refuses
-the app outright instead of silently starting it without its directories.
+Most apps in this store already carry an `x-compose-app` block. Its load-bearing
+keys are **`folders`**, **`secrets`**, **`variables`**, **`files`**, **`init`** and
+**`hooks`** — plus the `seed/` folder beside the compose file, which needs no key at
+all. Declare `schema_version: 2`, which is what `folders` and `hooks` ask for; the
+rest are additive and do not raise it.
+
+`folders` is documented below; the other four are in
+[First-run setup](#first-run-setup), which is where to start when your app needs
+anything on its first boot.
 
 ##### The stack-up sequence
 
@@ -499,15 +505,19 @@ runs goes through it — install, start from the tile, store update, and saving 
 app's config alike:
 
 ```
-ensure folders  →  pre_up  →  docker compose up -d  →  post_up
+folders → secrets → variables → init(pre_up) → seed → files
+        → pre_up  →  docker compose up -d  →  init(post_up) → post_up
 ```
 
 `pre_install` / `post_install` bracket that sequence, but only on the install itself:
 
 ```
-write compose + .env  →  ensure folders  →  pull images
+write compose + .env + the seed tree  →  ensure folders  →  pull images
                       →  pre_install  →  [ the up sequence ]  →  post_install
 ```
+
+Everything before `docker compose up` is **fatal** on failure: an app whose secret
+could not be generated or whose config could not be rendered must not start.
 
 The ordering is the part to internalise: **a directory declared under `folders`
 exists, owned correctly, before any image is pulled, before any hook runs, and
@@ -583,19 +593,20 @@ x-compose-app:
   schema_version: 2
   hooks:
     pre_install: |
-      # No openssl in the Maison container — use od(1), which busybox and
-      # coreutils both provide. Anything beyond a POSIX shell toolbox should go
-      # through a pinned `docker run` (Style B below) rather than be assumed.
-      od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /DATA/AppData/$AppID/secrets/key
+      # Generating a key here is exactly what `secrets:` is for — see First-run
+      # setup. What belongs in a hook is imperative work: waiting on a program,
+      # patching what it wrote, or reaching the host.
+      docker exec other-stack /usr/bin/reload-config
     post_up: |
       echo "$AppID up at $(date)" >> /var/log/maison-apps.log
 ```
 
 `pre_install` / `post_install` generalise the CasaOS `pre-install-cmd` /
 `post-install-cmd` and **win over them** when both are present. An app carrying only
-`x-casaos` keeps working with no change, which is why most of this store still uses
-`pre-install-cmd` — both run through the same machinery and the requirements below
-apply identically.
+`x-casaos` keeps working with no change, which is why the few hooks left in this
+store are still written as `pre-install-cmd` — both run through the same machinery
+and the requirements in
+[Install hooks](#install-hooks-pre-install-cmd--the-last-resort) apply identically.
 
 **Failure semantics.** `pre_install` and `pre_up` are **fatal**: a pre-hook is the
 app's precondition, and if it doesn't hold the stack must not start. Note what that
@@ -681,16 +692,116 @@ should leave `view` alone.
 override file. They are Maison's own bookkeeping — don't use those names for
 author fields.
 
-#### Pre-Installation Commands
+#### First-run setup
 
-You can specify commands to run before container startup using `pre-install-cmd`.
+Most of what an app needs on its first start is a **declaration**, not a script.
+Reach for a hook only when nothing below fits.
 
-> **It does not run on the host.** This document used to say it did; that was
-> wrong, and it is the reason several published apps silently did nothing. The
-> hook runs `/bin/bash` **inside the Maison container**, with the app's folder as
-> the working directory — but its `docker` client talks to the **host** daemon, so
-> every container the hook starts is a real container on the real machine. That
-> seam is how a hook reaches the host, and it is the only way it does.
+**1. Files — ship them in `seed/`.**
+
+`Apps/[AppName]/seed/` mirrors the app's own folder, so a path in the store *is*
+the path on disk. Nothing is declared anywhere: Maison copies the tree into the
+app folder at install and writes each file out **create-if-absent on every up**,
+so a missing file is restored and a file the app or the user edited is left alone.
+
+```
+Apps/MyApp/seed/config/init.sql          → /DATA/AppData/myapp/config/init.sql
+Apps/MyApp/seed/config/app.yml.tmpl      → /DATA/AppData/myapp/config/app.yml
+```
+
+A `.tmpl` suffix is rendered with the app's variables (and stripped from the
+name); anything else is copied byte-for-byte, so binaries and SQL dumps are safe.
+The exec bit survives. An unresolved `${VAR}` **fails the install** rather than
+writing the literal into a config file. `docker-compose.yml`, its override and
+`.env` may not appear in a seed tree.
+
+This replaces fetching assets over jsDelivr or `raw.githubusercontent.com`: the
+store is already downloaded and extracted on the box, so a seed file needs no
+network, no CDN purge, and no wait for the commit to land on `main`.
+
+**2. Credentials — declare them under `secrets`.**
+
+```yaml
+x-compose-app:
+  schema_version: 2
+  secrets:
+    MYAPP_SECRET_KEY: hex:32                        # 32 bytes → 64 hex chars
+    MYAPP_ADMIN_HASH: bcrypt:${APP_DEFAULT_PASSWORD}
+  variables:
+    MYAPP_URL: https://myapp-${APP_DOMAIN}          # re-rendered on every up
+```
+
+Generators: `hex:N`, `base64:N`, `alnum:N`, `password:N`, `uuid`,
+`bcrypt:TEXT`. A secret is generated **once** into the app's `.env` and never
+regenerated, so it survives restarts, updates and restores; from there it is an
+ordinary variable that compose resolves and a `.tmpl` can reference.
+
+Do not generate credentials in a shell hook. `openssl` is not in the runtime, and
+`"$(openssl rand -hex 32)"` yields an empty string while the hook still exits 0 —
+that is how apps shipped empty secrets.
+
+**3. A file that must track the deployment — `files`.**
+
+`seed/` is create-if-absent, which is right for almost everything. When a config
+embeds a deployment value that can change (a domain, a URL), declare it instead so
+it is re-rendered on every up:
+
+```yaml
+x-compose-app:
+  files:
+    - path: /DATA/AppData/myapp/element/config.json
+      from: element/config.json.tmpl    # a path in the app's seed/ tree
+      ensure: always                    # `once` (default) = create-if-absent
+      mode: "0640"                      # quote the octal
+```
+
+**4. Work that needs a container — `init`.**
+
+Seeding a database with the app's own binary, or computing a value only some tool
+can produce. Declared, not shelled out to:
+
+```yaml
+x-compose-app:
+  init:
+    - name: init-db
+      image: filebrowser/filebrowser:v2.63.2
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/db:/db      # host-spelled, like any bind mount
+      command: config init --database /db/database.db
+      when: absent:/DATA/AppData/$AppID/db/database.db   # or `once` / `always`
+    - name: obscure-password
+      image: rclone/rclone:1.73.3
+      command: ["obscure", "$APP_DEFAULT_PASSWORD"]
+      capture: RCLONE_PASS      # stdout → usable in a .tmpl and in `files`
+```
+
+`when:` replaces the hand-written `if [ ! -f ]` every one of these used to open
+with, and `when: once` is remembered inside the app folder, so it travels with the
+app's backup. A failing step before the stack starts **fails the install**, loudly.
+Add `phase: post_up` (and `network:`) for a seeder that needs the app running.
+
+**Requirements:**
+- [ ] **Specific version tags** on every `init` image — never `:latest`.
+- [ ] **No hardcoded credentials**: use `$APP_DEFAULT_PASSWORD` and friends.
+- [ ] **Directories** come from `x-compose-app.folders`, not from a seed file's
+      parent or a `mkdir` — folders is the one place a directory's owner is stated.
+- [ ] **`--user`/`user:`** whenever files land under `/DATA/Documents`,
+      `/DATA/Downloads`, `/DATA/Media` or `/DATA/Gallery`.
+
+#### Install hooks (`pre-install-cmd`) — the last resort
+
+Everything above exists because the work these hooks were doing was declarative
+all along. What is left for a hook is genuinely imperative: waiting on another
+program to write its own config and then patching it (`Apps/Seafile`), merging a
+key set nobody can name in advance (`Apps/Hubs`), or changing the **host**
+(`Apps/ClaudeCodeRoot`). If your app is not one of those, you do not need a hook.
+
+> **It does not run on the host.** The hook runs `/bin/bash` **inside the Maison
+> container**, with the app's folder as the working directory — but its `docker`
+> client talks to the **host** daemon, so every container the hook starts is a real
+> container on the real machine. That seam is how a hook reaches the host, and it
+> is the only way it does.
 
 **The command set.** A hook may call these, and nothing else:
 
@@ -706,58 +817,17 @@ are deliberately excluded, both because without this they failed *silently*:
 
 - **`openssl`, `curl`, `python`, `jq`, `git`, `unzip`** — not in the container.
   A missing command inside `"$(...)"` is not an error in bash: it yields an empty
-  string and the hook still exits 0. Apps shipped empty secrets this way.
+  string and the hook still exits 0. Apps shipped empty secrets this way — which
+  is what `secrets:` above is for.
 - **`sysctl`, `ip`, `mount`, `adduser`, `modprobe`, `chroot`, `reboot`** and
   ~25 other busybox applets — present, but scoped to the container, whose
   namespaces and user database vanish on restart. They appear to work and change
   nothing.
 
-Two authoring styles are acceptable — pick whichever is simpler:
-
-**Style A — plain shell.** Good for seeding config files with the tools above.
-(For *directories*, use `x-compose-app.folders` instead — see [Maison and
-`x-compose-app`](#maison-and-x-compose-app).)
-
-```yaml
-x-casaos:
-  pre-install-cmd: |
-    # config/ is created and chowned by x-compose-app.folders before this hook
-    # runs — there is nothing to mkdir here.
-    # Idempotency: guard work behind a sentinel file so reruns are no-ops
-    if [ ! -f /DATA/AppData/$AppID/.initialized ]; then
-      wget -O /DATA/AppData/$AppID/config/init.sql \
-        https://raw.githubusercontent.com/Yundera/AppStore/main/Apps/MyApp/pre-install/init.sql
-      touch /DATA/AppData/$AppID/.initialized
-    fi
-```
-
-Static assets the script needs can live under `Apps/[AppName]/pre-install/` in this repo and be fetched via jsDelivr or `raw.githubusercontent.com` (see `Apps/Guacamole/pre-install/` for a real example).
-
-**Style B — one-shot `docker run` containers.** Good when the setup needs a binary
-that isn't in the command set above — including `openssl` and `curl`.
-
-```yaml
-x-casaos:
-  pre-install-cmd: |
-    # db/ is created and chowned by x-compose-app.folders, which Maison guarantees
-    # before this hook runs — don't mkdir or chown it here.
-    # Idempotency: seed the database only on a first install. `config init` refuses
-    # an existing database and exits non-zero, which would abort the whole hook on
-    # every reinstall and every version upgrade.
-    if [ ! -f /DATA/AppData/$AppID/db/database.db ]; then
-      docker run --rm --user $PUID:$PGID -v /DATA/AppData/$AppID/db/:/db/ filebrowser/filebrowser:v2.63.2 config init --database /db/database.db &&
-      docker run --rm --user $PUID:$PGID -v /DATA/AppData/$AppID/db/:/db/ filebrowser/filebrowser:v2.63.2 users add admin $APP_DEFAULT_PASSWORD --perm.admin --database /db/database.db
-    fi
-```
-
-Prefer Style B for anything that generates a credential. `docker run` fails loudly
-when the image or command is wrong; a missing host tool does not.
-
-> The guard is not decoration. Chaining one-shot initialisers with `&&` and no
-> existence check is the single most common way an app passes a fresh install and
-> then fails every reinstall and upgrade afterwards — the hook exits non-zero, and
-> the app is left installed but **stopped**, with its data intact but unreachable
-> until someone presses Start by hand.
+A hook that writes into `/DATA` has one more trap: its `/DATA` is rewritten to the
+**host** spelling, while the shell itself runs in the Maison container. Use `seed/`
+or `files` for anything that is just a file; they are written container-side and
+are correct on both sides of the socket.
 
 **Changing the host.** Legitimate and supported — it goes through the Docker
 socket the hook already holds. Pin the image tag, and justify the access in the
@@ -775,21 +845,14 @@ app's `rationale.md`; a reviewer will ask.
 `--network=host` because `net.*` keys are per-namespace. Host *service* management
 (`systemctl`, `snap`) has no verified recipe — don't rely on it from a hook.
 
-**Requirements (apply to both styles):**
-- [ ] **Specific version tags**: Never use `:latest` — always pin exact versions (e.g. `alpine:3.19`, `ubuntu:22.04`).
-- [ ] **Idempotent**: Safe to rerun. Guard destructive / one-shot work behind a sentinel file (`touch /DATA/AppData/$AppID/.initialized`) or an existence check.
-- [ ] **Non-interactive**: Must not prompt.
-- [ ] **No hardcoded credentials**: Use `$APP_DEFAULT_PASSWORD` and friends.
-- [ ] **Only the command set above**, or a pinned `docker run`. Anything else fails the install.
+**If you do ship a hook:**
+- [ ] **Idempotent**: it reruns on every reinstall and every version upgrade. Guard
+      one-shot work behind an existence check — a hook that exits non-zero leaves
+      the app installed but **stopped**.
+- [ ] **Non-interactive**: it must not prompt.
+- [ ] **Pinned images**, no `:latest`, and `--user $PUID:$PGID` when writing to
+      user directories.
 - [ ] **Host changes justified** in `rationale.md`, using one of the recipes above.
-- [ ] **User permissions when touching user directories**: Use `--user $PUID:$PGID` (Style B) whenever files will live under `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, or `/DATA/Gallery`. To *own a directory*, declare it under `x-compose-app.folders` rather than chowning it here — Maison creates and chowns it before this hook runs.
-
-**Common use cases:**
-- Create default configuration files
-- Set up initial data structures
-- Generate certificates or keys
-- Prepare the environment with sensible defaults
-
 
 #### Caddy Integration (Web UI Access)
 

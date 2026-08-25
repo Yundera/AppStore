@@ -192,15 +192,6 @@ x-casaos:
         |------|-------------|
         | `query_claude` | Send a prompt and get a response |
         | `check_status` | Check if Claude is available |
-  pre-install-cmd: |
-    # workspace/ and config/ are declared under x-compose-app.folders — Maison
-    # creates and chowns them before this hook runs; don't mkdir or chown them here.
-    touch /DATA/AppData/claude/config/.claude.json &&
-    chown $PUID:$PGID /DATA/AppData/claude/config/.claude.json &&
-    if [ ! -f /DATA/AppData/claude/workspace/CLAUDE.md ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/pre-install/CLAUDE.md -O /DATA/AppData/claude/workspace/CLAUDE.md &&
-      chown $PUID:$PGID /DATA/AppData/claude/workspace/CLAUDE.md
-    fi
 
 x-compose-app:
   schema_version: 2

@@ -54,7 +54,7 @@ services:
       GUACAMOLE_ADMIN_PASSWORD: '$APP_DEFAULT_PASSWORD'
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/guacamole/postgresql/:/var/lib/postgresql/data/
-      # Schema + admin bootstrap, fetched by pre-install-cmd. The stock postgres
+      # Schema + admin bootstrap, shipped in the app's seed/ tree. The stock postgres
       # entrypoint runs these once, only when the data directory is empty.
       - ${DATA_ROOT:-/DATA}/AppData/guacamole/init/:/docker-entrypoint-initdb.d/
     healthcheck:
@@ -112,26 +112,6 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-3.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Guacamole/screenshot-4.png
-  pre-install-cmd: |
-    set -e
-    # The two directories below are created and chowned by x-compose-app.folders
-    # before this hook runs - there is nothing to mkdir here.
-    echo "Fetching Guacamole database initialization scripts..."
-
-    # Upstream schema, pinned to the same release as the images above. An
-    # unpinned branch would run tomorrow's data model against a 1.6.0 webapp.
-    wget -O /DATA/AppData/guacamole/init/001-create-schema.sql \
-      "https://raw.githubusercontent.com/apache/guacamole-client/1.6.0/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-postgresql/schema/001-create-schema.sql"
-
-    # Administrator bootstrap. Replaces upstream 002-create-admin-user.sql,
-    # which seeds the publicly-known guacadmin/guacadmin credential; this one
-    # hashes $APP_DEFAULT_PASSWORD with a per-install random salt instead.
-    wget -O /DATA/AppData/guacamole/init/002-create-admin-user.sh \
-      "https://raw.githubusercontent.com/Yundera/AppStore/main/Apps/Guacamole/pre-install/002-create-admin-user.sh"
-
-    # Idempotent: both fetches overwrite in place, and the postgres entrypoint
-    # only replays them when the data directory is still empty.
-    echo "Guacamole initialization scripts ready."
   tips:
     before_install:
       en_us: |

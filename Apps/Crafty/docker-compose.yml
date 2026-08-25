@@ -132,15 +132,6 @@ x-casaos:
         Your server must be reachable from the internet on that port. If your
         PCS is behind CGNAT or the port is not forwarded, players outside your
         network may be unable to connect.
-  pre-install-cmd: |
-    # Directories are created and chowned by x-compose-app.folders before this hook runs.
-    # Idempotency: seed the admin credential once, behind a sentinel, so a reinstall,
-    # a restore or a store update never overwrites an existing admin account.
-    if [ ! -f /DATA/AppData/$AppID/.initialized ]; then
-      printf '{"username":"admin","password":"%s!"}' "$APP_DEFAULT_PASSWORD" > /DATA/AppData/$AppID/config/default.json
-      chown $PUID:$PGID /DATA/AppData/$AppID/config/default.json
-      touch /DATA/AppData/$AppID/.initialized
-    fi
 
 x-compose-app:
   schema_version: 2

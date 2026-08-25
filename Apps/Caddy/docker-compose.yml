@@ -179,18 +179,6 @@ x-casaos:
   title:
     en_us: Caddy
   index: /
-  pre-install-cmd: |
-    # Only the two seeded files are chmod'ed, and only when this hook creates
-    # them. The directories themselves are owned by x-compose-app.folders, and a
-    # recursive chmod would rewrite the whole AppData tree including user content.
-    if [ ! -f /DATA/AppData/caddy/www/index.html ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/pre-install/index.html -O /DATA/AppData/caddy/www/index.html &&
-      chmod 644 /DATA/AppData/caddy/www/index.html
-    fi &&
-    if [ ! -f /DATA/AppData/caddy/Caddyfile ]; then
-      wget -q https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/pre-install/Caddyfile -O /DATA/AppData/caddy/Caddyfile &&
-      chmod 644 /DATA/AppData/caddy/Caddyfile
-    fi
 
 x-compose-app:
   schema_version: 2
