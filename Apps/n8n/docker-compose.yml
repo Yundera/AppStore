@@ -5,7 +5,7 @@ services:
     image: n8nio/n8n:2.14.2
     container_name: n8n
     restart: unless-stopped
-    user: "1000:1000"
+    user: $PUID:$PGID
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own network
       # because that is where its database lives.

@@ -1,7 +1,10 @@
 name: chronosmcp
 services:
   # Main server — reachable at chronosmcp-backend:9054 on this app's private
-  # network only; the launcher detaches it from the shared pcs network.
+  # network only. It ships no authentication of its own, so it must never join
+  # the shared `pcs` network: any co-tenant container there could read and
+  # rewrite the cron rules and trigger arbitrary MCP tool calls unauthenticated.
+  # The perimeter is chronosmcp-proxy (AppShield) and nothing else.
   chronosmcp-backend:
     image: ghcr.io/worph/chronos-mcp:1.0.7
     container_name: chronosmcp-backend
@@ -21,13 +24,9 @@ services:
         source: ${DATA_ROOT:-/DATA}/AppData/chronosmcp/
         target: /app/data
     networks:
-      # chronosmcp-internal is the app-private link that carries proxy -> backend
-      # traffic.
+      # App-private only — the link that carries proxy -> backend traffic.
+      # Deliberately not on `pcs`; see the note above and tips Option 2.
       - chronosmcp-internal
-      # `pcs` is what makes the "local Docker connection" of tips.before_install
-      # work: a same-host MCP client on the shared network reaches this backend
-      # directly at chronosmcp-backend:8000, bypassing the public OAuth route.
-      - pcs
 
   # AppShield provides perimeter authentication for the web UI (Yundera SSO) and
   # for the /mcp endpoint (OAuth 2.1 broker — see OAUTH_RESOURCE below).

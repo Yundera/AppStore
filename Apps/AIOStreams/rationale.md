@@ -51,7 +51,10 @@ not separable by prefix.
 
 ## Data protection
 
-All configuration lives in `/DATA/AppData/aiostreams/` (SQLite database plus the
-generated `secret_key`). The `SECRET_KEY` is generated once and kept in AppData, so
-it survives uninstall/reinstall with "keep data" and previously saved configurations
-remain decryptable. No user media is mounted; the app stores only add-on settings.
+The SQLite database lives in `/DATA/AppData/aiostreams/`. The secret is *not* a
+file in AppData: `x-compose-app.secrets` declares `AIOSTREAMS_SECRET_KEY: hex:32`,
+so Maison generates it once and keeps it in the app's `.env`. Uninstall always
+archives — there is no "keep data" choice to make — and restoring from that archive
+brings back both the database and the same secret, so previously saved
+configurations remain decryptable. No user media is mounted; the app stores only
+add-on settings.

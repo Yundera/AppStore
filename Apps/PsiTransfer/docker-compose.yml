@@ -38,7 +38,6 @@ services:
     
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/psitransfer/data/:/data
-      - ${DATA_ROOT:-/DATA}/AppData/psitransfer/config/:/app/config
 
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
@@ -233,9 +232,6 @@ x-compose-app:
   # in `volumes:` above — re-run it instead of editing this block by hand.
   folders:
     - path: /DATA/AppData/psitransfer/data
-      user: $PUID
-      group: $PGID
-    - path: /DATA/AppData/psitransfer/config
       user: $PUID
       group: $PGID
   webui-host: psitransfer-${domain}

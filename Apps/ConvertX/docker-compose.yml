@@ -36,10 +36,6 @@ services:
       # network because that is where its backend lives.
       - pcs
       - convertx-internal
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
 
   convertx-backend:
     image: ghcr.io/c4illin/convertx:v0.17.0
@@ -70,10 +66,6 @@ services:
       # App-private: reached only by this app's own services, so it
       # has no business on the shared network.
       - convertx-internal
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
     cpu_shares: 70
 
 networks:
@@ -98,7 +90,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-1.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-1.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/thumbnail.png
   title:
     en_us: ConvertX
   tagline:

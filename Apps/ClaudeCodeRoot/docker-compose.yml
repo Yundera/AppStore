@@ -126,6 +126,7 @@ x-casaos:
       - Persistent workspace volume
       - Claude starts automatically on connection
       - Full administrative power: Docker socket access + SSH access (dedicated `claude` host user with NOPASSWD sudo) to host VM
+      - Mounts the whole of /DATA read-write, including every other app's data
       - Can perform any maintenance task on the VM
 
       Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
@@ -167,7 +168,7 @@ x-casaos:
 
         Default login password: `$APP_DEFAULT_PASSWORD`
 
-        **This is the privileged (root) app for PCS administration and debugging.** It has full control of the host VM (Docker socket + SSH admin/sudo).
+        **This is the privileged (root) app for PCS administration and debugging.** It has full control of the host VM (Docker socket + SSH admin/sudo) and mounts the whole of `/DATA` read-write, so it can read and modify every other app's data. Install it only on a PCS you administer yourself, and change the default password immediately.
 
         **MCP automation is disabled on this app.** The programmatic MCP endpoint is intentionally not exposed here. If you want to drive Claude Code from n8n or other agents via MCP, install the standard "Claude Code" app instead.
       zh_cn: |
