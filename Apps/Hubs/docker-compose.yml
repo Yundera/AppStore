@@ -303,7 +303,9 @@ x-casaos:
   author: Hubs Foundation
   developer: Hubs Foundation
   category: Communication
-  tags: ["personal", "family", "games"]
+  # `needs-public-ip`: hubs-dialog publishes the mediasoup 40000-40050 range that
+  # remote participants dial in on directly. See the ports: block on that service.
+  tags: ["personal", "family", "games", "needs-public-ip"]
 
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Hubs/icon.png
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Hubs/thumbnail.png
@@ -333,23 +335,6 @@ x-casaos:
       Hubs 是 Hubs Foundation 推出的开源社交 VR 平台。创建持久化的虚拟房间，用于会议、课程、活动或聚会 —— 直接通过浏览器访问，无需安装，并完整支持 WebXR VR 头显。
     ko_kr: |
       Hubs는 Hubs Foundation의 오픈소스 소셜 VR 플랫폼입니다. 회의·수업·이벤트·모임을 위한 영구 가상 룸을 만들 수 있으며, 어떤 브라우저에서도 설치 없이 접속할 수 있고 VR 헤드셋용 WebXR을 완벽 지원합니다.
-
-  pre-install-cmd: |
-    # What is left here is the merge, not the seeding: hubs-seed (declared under
-    # x-compose-app.init, which runs before this hook) writes its generated
-    # credentials to secrets/.env, and they have to reach the app's own .env —
-    # the only env file the platform passes to `docker compose`.
-    #
-    # It stays a hook because the key set is whatever hubs-seed decided to
-    # generate: `variables:` can ensure keys an author names, and nobody can name
-    # these. Each key is added only when absent and `>` is never used — Maison has
-    # already written APP_DOMAIN, APP_NET, PUID/PGID and the rest into that file,
-    # and the framework passthroughs hubs-seed re-emits must not shadow them.
-    while IFS='=' read -r key value; do
-      case "$key" in ''|\#*) continue ;; esac
-      grep -q "^$key=" $APP_DIR/.env 2>/dev/null ||
-        printf '%s=%s\n' "$key" "$value" >> $APP_DIR/.env
-    done < /DATA/AppData/hubs/secrets/.env
 
   tips:
     before_install:
@@ -443,9 +428,31 @@ x-compose-app:
         RET_PUBLIC_URL: https://hubs-${APP_DOMAIN}
         APP_EMAIL: ${APP_EMAIL}
       when: once
-  # Created and owned by Maison before images are pulled, before the pre-install
-  # hook runs and before any container starts - on the first boot and every one
-  # after it.
+  # The merge, not the seeding: the `bootstrap` init step above writes hubs-seed's
+  # generated credentials to secrets/.env, and they have to reach the app's own
+  # .env — the only env file the platform passes to `docker compose`.
+  #
+  # It is `pre_up` and not `pre_install` because the stack-up sequence is
+  # `... -> init(pre_up) -> ... -> pre_up -> docker compose up -d`, while
+  # pre_install runs strictly *before* that whole sequence: a pre_install hook
+  # would read secrets/.env before bootstrap has written it. post_up is too late —
+  # the first `up` would already have started the stack without the credentials.
+  #
+  # It stays a hook because the key set is whatever hubs-seed decided to generate:
+  # `variables:` can ensure keys an author names, and nobody can name these. Each
+  # key is added only when absent and `>` is never used — Maison has already
+  # written APP_DOMAIN, APP_NET, PUID/PGID and the rest into that file, and the
+  # framework passthroughs hubs-seed re-emits must not shadow them. That also makes
+  # it idempotent, which is what a hook running before *every* up has to be.
+  hooks:
+    pre_up: |
+      while IFS='=' read -r key value; do
+        case "$key" in ''|\#*) continue ;; esac
+        grep -q "^$key=" $APP_DIR/.env 2>/dev/null ||
+          printf '%s=%s\n' "$key" "$value" >> $APP_DIR/.env
+      done < /DATA/AppData/hubs/secrets/.env
+  # Created and owned by Maison before images are pulled, before any hook runs and
+  # before any container starts - on the first boot and every one after it.
   folders:
     - path: /DATA/AppData/hubs
       user: $PUID

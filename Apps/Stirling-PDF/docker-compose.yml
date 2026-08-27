@@ -36,7 +36,7 @@ services:
       SECURITY_INITIALLOGIN_USERNAME: admin
       SECURITY_INITIALLOGIN_PASSWORD: $APP_DEFAULT_PASSWORD
       DISABLE_ADDITIONAL_FEATURES: true
-      SYSTEM_DEFAULTLOCALE: en_US
+      SYSTEM_DEFAULTLOCALE: en-US
       INSTALL_BOOK_AND_ADVANCED_HTML_OPS: false
       TMPDIR: /tmp
       # Optimized Java memory management - prevents OOM errors and improves stability

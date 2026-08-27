@@ -136,6 +136,7 @@ x-casaos:
         | Username | Password |
         |----------|----------|
         | `admin`  | `$APP_DEFAULT_PASSWORD` |
+  index: /
   main: rclone
   webui_port: 80
 
@@ -154,3 +155,5 @@ x-compose-app:
     - path: /DATA/Rclone
       user: $PUID
       group: $PGID
+  webui-host: rclone-${domain}
+  webui-path: "/"

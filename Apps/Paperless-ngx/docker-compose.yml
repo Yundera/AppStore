@@ -152,7 +152,7 @@ x-casaos:
     en_us: Paperless-ngx
   store_app_id: paperless-ngx
   main: paperless
-  webui_port: 80
+  webui_port: 8000
   description:
     en_us: |
       **Go paperless. Find any document in seconds.**

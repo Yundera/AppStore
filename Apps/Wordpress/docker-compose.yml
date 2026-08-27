@@ -255,3 +255,4 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/db
       user: $PUID
       group: $PGID
+  webui-host: wordpress-${domain}

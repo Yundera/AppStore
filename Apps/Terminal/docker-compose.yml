@@ -35,10 +35,7 @@ services:
       # network because that is where its backend lives.
       - pcs
       - terminal-internal
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
+    cpu_shares: 80
 
   terminal-ttyd:
     image: tsl0922/ttyd:1.7.7
@@ -54,6 +51,9 @@ services:
       # App-private: reached only by this app's own services, so it
       # has no business on the shared network.
       - terminal-internal
+    cpu_shares: 70
+    # Full host privilege: this app IS a root shell on the host filesystem.
+    # See rationale.md.
     privileged: true
     cap_add:
       - SYS_ADMIN
@@ -78,16 +78,32 @@ x-casaos:
   screenshot_link:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Terminal/screenshot-1.png
   tagline:
-    en_us: "Secure hash-locked terminal access"
+    en_us: "Root shell on your server, in the browser"
   category: Utilities
   tags: ["developer"]
   description:
-    en_us: "A secure terminal with hash-based authentication using nginxhashlock"
+    en_us: |
+      Terminal gives you a full root shell on your Personal Cloud Server from any browser, using ttyd.
+
+      This is an administration tool, and it is not sandboxed. The session opens as **root on the host filesystem** (the host root `/` is mounted read-write and the shell chroots into it), so it can read and modify everything on the server: `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, every other app's data under `/DATA/AppData`, and the system files outside `/DATA`. Anything you could do over SSH as root, this app can do.
+
+      Access is protected by Yundera single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in Yundera account reaches the shell. There is no separate app password to set.
+
+      Install it only on a PCS you administer yourself. See rationale.md for the full privilege and mitigation write-up.
   title:
     en_us: "Terminal"
+  tips:
+    before_install:
+      en_us: |
+        **This app is a root shell on your server.**
+
+        - It mounts the host root `/` read-write and opens the session as `root`, so it can read and change **every** file on the PCS — all of `/DATA` (Documents, Downloads, Media, Gallery, and every other app's data) as well as system files outside `/DATA`.
+        - The container runs `privileged`, which is what makes host administration tasks work.
+        - Access is gated by Yundera single sign-on (AppShield OIDC) — sign in with your Yundera account; there is no separate password.
+
+        Treat access to this app as equivalent to root SSH access to the server. If you only need to browse or edit files, install **FileBrowser** instead.
   store_app_id: terminal
   is_uncontrolled: false
-  # nginxhashlock handles the hash validation automatically
   index: /
   webui_port: 80
 

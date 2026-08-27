@@ -5,7 +5,7 @@
 The bundled image (`ghcr.io/yundera/docmost-mcp`) starts a small FastAPI
 config-UI process and `mcp-proxy` as siblings, both reading and writing
 `/data/config.json` and `/data/token.json` on the bind-mounted
-`/DATA/AppData/docmostmcp/` directory. The cached JWT is rewritten on
+`/DATA/AppData/docmostmcp/data/` directory. The cached JWT is rewritten on
 every Docmost re-auth and the config file may be regenerated from env
 vars on first start, so the container needs write access to that
 directory without requiring the user to fix ownership before first

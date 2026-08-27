@@ -17,7 +17,9 @@ services:
       caddy_0.0_handle.reverse_proxy: "{{upstreams 9090}}"
       caddy_0.1_handle: "/logout"
       caddy_0.1_handle.reverse_proxy: "{{upstreams 9090}}"
-      # /mcp — no forward_auth, MCP server has its own Bearer auth
+      # /mcp — no forward_auth, MCP server has its own Bearer auth.
+      # MCP automation itself is disabled via MCP_ENABLED=false below; with that
+      # set, the 9090 server returns 404 for /mcp (auth/login still served).
       caddy_0.2_handle: "/mcp*"
       caddy_0.2_handle.reverse_proxy: "{{upstreams 9090}}"
       # Everything else — forward_auth via MCP, then proxy to ttyd
@@ -61,11 +63,18 @@ services:
       caddy_2.3_handle.reverse_proxy: "{{upstreams 8080}}"
     environment:
       - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
-      # MCP automation enabled — this is the n8n/automation-facing app.
-      - MCP_ENABLED=true
+      # MCP automation disabled. With MCP_ENABLED=true the image also starts a UDP
+      # discovery responder (mcp-announce.js: binds 0.0.0.0:9099, joins multicast
+      # 239.255.99.1) that replies to ANY unauthenticated datagram with a manifest
+      # carrying auth:{type:bearer,token:$AUTH_PASSWORD} — i.e. it hands
+      # $APP_DEFAULT_PASSWORD, which is both the /mcp bearer token and the terminal
+      # login password, to every other container on the shared pcs network. The image
+      # offers no way to keep /mcp while suppressing that announcement, so MCP stays
+      # off until that is fixed upstream. See rationale.md.
+      # The 9090 auth layer (login/auth/logout) keeps running; only /mcp is turned off.
+      - MCP_ENABLED=false
     # SANDBOXED variant: NO docker.sock, NO host /home/admin/.ssh mount, and NO
-    # full /DATA mount. This container has no path to the host VM — it is meant
-    # to be driven programmatically (e.g. n8n) via the MCP endpoint and is
+    # full /DATA mount. This container has no path to the host VM — it is
     # confined to its own workspace.
     volumes:
       # Claude Code workspace persistence
@@ -115,7 +124,6 @@ x-casaos:
       - Persistent workspace volume
       - Claude starts automatically on connection
       - No host access — runs fully sandboxed
-      - Bonus: MCP endpoint for programmatic automation (n8n, other AI agents)
 
       Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
     zh_cn: |
@@ -123,7 +131,7 @@ x-casaos:
 
       这是标准的沙盒版 Claude Code 应用，仅限于自己的工作区运行：没有 Docker 套接字、没有主机 SSH 访问、也没有 sudo 账户，无法触及主机虚拟机。如需对 PCS 进行管理和调试（具备主机控制权），请改装 “Claude Code (root)”。
 
-      附加功能：MCP 端点，可用于程序化自动化（n8n 等 AI 代理）。
+      注意：本版本已禁用 MCP 自动化端点。
   developer: Anthropic / Yundera
   icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/icon.png
   screenshot_link:
@@ -131,8 +139,8 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-2.png
     - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-3.png
   tagline:
-    en_us: Web terminal for Claude Code - Anthropic's AI coding assistant (sandboxed, with bonus MCP)
-    zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手（沙盒化，附带 MCP）
+    en_us: Web terminal for Claude Code - Anthropic's AI coding assistant (sandboxed)
+    zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手（沙盒化）
   thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/thumbnail.png
   title:
     en_us: Claude Code
@@ -148,50 +156,9 @@ x-casaos:
 
         Default login password: `$APP_DEFAULT_PASSWORD`
 
-        **Sandboxed variant:** This app has no Docker socket, no host SSH, and no sudo account. It cannot perform host maintenance — use "Claude Code (root)" for that. This variant is for automation via MCP.
+        **Sandboxed variant:** This app has no Docker socket, no host SSH, and no sudo account. It cannot perform host maintenance — use "Claude Code (root)" for that.
 
-        **MCP Integration (for AI/LLMs):**
-
-        Claude Code includes a Model Context Protocol (MCP) server that allows other AI assistants (e.g. n8n) to send prompts and interact with this instance programmatically.
-
-        **Option 1: Public URL (with Bearer auth)**
-        ```json
-        {
-          "mcpServers": {
-            "claude-code": {
-              "type": "http",
-              "url": "https://claude-${APP_DOMAIN}/mcp",
-              "headers": {
-                "Authorization": "Bearer ${AUTH_PASSWORD}"
-              }
-            }
-          }
-        }
-        ```
-
-        **Option 2: Local Docker connection**
-
-        For AI assistants running on the same server, connect directly via the Docker network:
-        ```json
-        {
-          "mcpServers": {
-            "claude-code": {
-              "type": "http",
-              "url": "http://claude:9090/mcp",
-              "headers": {
-                "Authorization": "Bearer ${AUTH_PASSWORD}"
-              }
-            }
-          }
-        }
-        ```
-        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
-
-        **Available MCP Tools:**
-        | Tool | Description |
-        |------|-------------|
-        | `query_claude` | Send a prompt and get a response |
-        | `check_status` | Check if Claude is available |
+        **MCP automation is turned off in this listing** (`MCP_ENABLED=false`), so `/mcp` answers 404 and there is no endpoint for another AI assistant (n8n, an aggregator) to drive. The image's MCP mode also starts a UDP discovery responder that hands this app's login password — the same `$APP_DEFAULT_PASSWORD` other apps on the server use — to any container that asks for it on the shared Docker network, and the image gives no way to keep one without the other. See `rationale.md`.
 
 x-compose-app:
   schema_version: 2

@@ -338,32 +338,6 @@ x-casaos:
   index: /
   webui_port: 80
   port_map: "80"
-  pre-install-cmd: |
-    # Idempotent: openclaw.json is the LIVE gateway config the user edits from the
-    # Config section of the UI, and it lives in the app's only mapped volume. This
-    # hook reruns on every reinstall and every version upgrade, so it must only ever
-    # seed the file when it does not already exist -- never overwrite it.
-    # The directory itself is created and chowned by x-compose-app.folders below,
-    # before this hook runs, so there is nothing to mkdir here.
-    if [ ! -f /DATA/AppData/openclaw/openclaw.json ]; then
-    cat > /DATA/AppData/openclaw/openclaw.json << 'OCEOF'
-    {
-      "gateway": {
-        "controlUi": {
-          "enabled": true,
-          "allowInsecureAuth": true,
-          "dangerouslyDisableDeviceAuth": true
-        },
-        "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
-      }
-    }
-    OCEOF
-    chmod 0644 /DATA/AppData/openclaw/openclaw.json
-    # Hand the seeded file to the user the app runs as, so the gateway can rewrite
-    # its own config. Best-effort: a filesystem that cannot chown must not make a
-    # fatal pre-hook leave the app installed but stopped.
-    chown "$PUID:$PGID" /DATA/AppData/openclaw/openclaw.json 2>/dev/null || true
-    fi
 
 x-compose-app:
   schema_version: 2
@@ -375,5 +349,15 @@ x-compose-app:
     - path: /DATA/AppData/openclaw
       user: $PUID
       group: $PGID
+  # openclaw.json is the LIVE gateway config the user edits from the Config section
+  # of the UI. Declared rather than heredoc'd in a hook: `ensure: once` is
+  # create-if-absent on every up, so a reinstall or a version upgrade never
+  # overwrites what the gateway or the user wrote, and Maison chowns it to
+  # $PUID:$PGID so the gateway can rewrite its own config.
+  files:
+    - path: /DATA/AppData/openclaw/openclaw.json
+      from: openclaw.json
+      ensure: once
+      mode: "0644"
   webui-host: openclaw-${domain}
   webui-path: "/"

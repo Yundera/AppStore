@@ -25,9 +25,11 @@ services:
     volumes:
       # config.json (generated from env vars on first start) and token.json
       # (cached JWT) live here. Once /data/config.json exists, the entrypoint
-      # leaves it alone — manual edits persist.
+      # leaves it alone — manual edits persist. A state subdirectory, not the
+      # app folder root: the root also holds the rendered compose and the
+      # deployment .env, which this container has no business writing.
       - type: bind
-        source: ${DATA_ROOT:-/DATA}/AppData/docmostmcp/
+        source: ${DATA_ROOT:-/DATA}/AppData/docmostmcp/data/
         target: /data
     networks:
       - pcs
@@ -51,10 +53,15 @@ services:
     networks:
       - pcs
 
-  # AppShield gates the admin panel with Yundera SSO. /mcp is exempt via
-  # ALLOWED_PATHS and uncredentialed — migrate to OAUTH_RESOURCE.
+  # AppShield gates the config UI with Yundera SSO (humans) and the /mcp
+  # endpoint with its OAuth 2.1 broker (machines). Nothing is reachable
+  # unauthenticated from the public URL.
   docmostmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    # 2.0.7+ turns AppShield into a generic OAuth 2.1 broker (oidc-provider
+    # fronting Dex) that protects whatever path OAUTH_RESOURCE names.
+    # 2.0.9+ additionally advertises offline_access and adds prompt=consent, so
+    # clients get a refresh token instead of needing re-authorization each hour.
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: docmostmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -67,12 +74,22 @@ services:
       - 80
     user: "root"
     environment:
-      ALLOWED_PATHS: "mcp,sse,messages"
       BACKEND_HOST: docmostmcp-backend
       BACKEND_PORT: "8000"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
+      # authorization server fronting Dex and gates exactly the path named by the
+      # resource URL (/mcp) on Bearer tokens; everything else stays behind the
+      # Yundera SSO gate. Replaces ALLOWED_PATHS, which exempted /mcp from the gate
+      # and — with AUTH_HASH inert under Maison — left it uncredentialed.
+      OAUTH_RESOURCE: "https://docmostmcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/docmostmcp/oauth/:/data/oauth
     depends_on:
       - docmostmcp-backend
     networks:
@@ -96,7 +113,9 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  main: docmostmcp-backend
+  # The served service: docmostmcp-proxy carries the caddy_N labels and is what
+  # webui-host resolves to. docmostmcp-backend is reachable only inside `pcs`.
+  main: docmostmcp-proxy
   hostname: docmostmcp-${APP_DOMAIN}
   scheme: https
   port_map: "443"
@@ -112,8 +131,8 @@ x-casaos:
         fr_fr: Email de l'utilisateur Docmost que le MCP utilise pour s'authentifier. Utilisez un compte de service dedie, pas votre compte admin.
     - container: DOCMOST_PASSWORD
       description:
-        en_us: Password for the Docmost user above. Stored in /DATA/AppData/docmostmcp/config.json.
-        fr_fr: Mot de passe pour l'utilisateur Docmost ci-dessus. Stocke dans /DATA/AppData/docmostmcp/config.json.
+        en_us: Password for the Docmost user above. Stored in /DATA/AppData/docmostmcp/data/config.json.
+        fr_fr: Mot de passe pour l'utilisateur Docmost ci-dessus. Stocke dans /DATA/AppData/docmostmcp/data/config.json.
     - container: DOCMOST_TIMEOUT
       description:
         en_us: HTTP timeout (seconds) for Docmost API calls. Default 30.
@@ -164,7 +183,12 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the URL
+        below — clients that support OAuth discovery (claude.ai, Claude Desktop)
+        register themselves and open a browser for you to approve with your Yundera
+        login.
         ```json
         {
           "mcpServers": {
@@ -175,6 +199,9 @@ x-casaos:
           }
         }
         ```
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://docmostmcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -184,7 +211,7 @@ x-casaos:
           "mcpServers": {
             "docmost-mcp": {
               "type": "http",
-              "url": "http://docmostmcp:8000/mcp"
+              "url": "http://docmostmcp-backend:8000/mcp"
             }
           }
         }
@@ -211,8 +238,8 @@ x-casaos:
         | `resolve_comment` | Resolve a comment with a note |
 
         **Security:**
-        - Docmost credentials are stored only in `/DATA/AppData/docmostmcp/config.json` on this server and never logged or returned via the API
-        - The config UI is protected by your Yundera single sign-on. The `/mcp` endpoint is **not** — it is reachable by anyone who knows the URL, so treat the app domain as a secret
+        - Docmost credentials are stored only in `/DATA/AppData/docmostmcp/data/config.json` on this server and never logged or returned via the API
+        - Authentication is on by default: the config UI is behind your Yundera single sign-on, and `/mcp` is behind OAuth 2.1. Nothing is reachable unauthenticated from the public URL
 
 x-compose-app:
   schema_version: 2
@@ -220,7 +247,10 @@ x-compose-app:
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.
   folders:
-    - path: /DATA/AppData/docmostmcp
+    - path: /DATA/AppData/docmostmcp/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/docmostmcp/oauth
       user: $PUID
       group: $PGID
   webui-host: docmostmcp-${domain}

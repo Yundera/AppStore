@@ -2,14 +2,21 @@ name: dokuwiki
 
 services:
   dokuwiki-proxy:
-    image: ghcr.io/yundera/nginx-hash-lock:1.0.7
-    container_name: dokuwiki-nginxhashlock
+    image: ghcr.io/yundera/appshield:2.0.9
+    container_name: dokuwiki
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: dokuwiki
     restart: unless-stopped
     user: "0:0"
     environment:
-      BACKEND_HOST: "dokuwiki"
+      BACKEND_HOST: "dokuwiki-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
     expose:
       - 80
     labels:
@@ -22,7 +29,7 @@ services:
       caddy_2: dokuwiki-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
-      - dokuwiki
+      - dokuwiki-backend
     deploy:
       resources:
         limits:
@@ -33,11 +40,15 @@ services:
       # network because that is where its backend lives.
       - pcs
       - dokuwiki-internal
-  dokuwiki:
+  dokuwiki-backend:
     image: dokuwiki/dokuwiki:2025-05-14b
-    container_name: dokuwiki
+    container_name: dokuwiki-backend
     restart: unless-stopped
-    user: "0:0"
+    # Non-root on purpose: the image entrypoint runs `chown -R www-data:www-data /storage`
+    # only when it starts as root, which would undo the PUID:PGID ownership Maison sets and
+    # leave the wiki config unreadable to the PCS user in a file manager. Started as
+    # PUID:PGID the entrypoint skips the chown and Apache serves on 8080 unchanged.
+    user: $PUID:$PGID
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/storage/:/storage
     environment:
@@ -165,55 +176,55 @@ x-casaos:
       en_us: |
         # Go to /install.php to set up your wiki
 
-        After opening the app, the main page will load directly. You **must** manually go to `/install.php` in the URL bar to run the setup wizard.
+        The wiki sits behind your PCS sign-in, so nobody else can reach the installer. After opening the app, the main page will load directly. You **must** manually go to `/install.php` in the URL bar to run the setup wizard.
 
-        1. Go to [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
+        1. Go to [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — this link pre-selects the recommended ACL policy
         2. Set your wiki name, superuser account, and password
-        3. Choose your ACL policy (recommended: **Public Wiki**)
+        3. **Check the ACL policy dropdown before saving.** Opened without the link above, the installer pre-selects *Open Wiki (read, write, upload for everyone)*, which is more permissive than we recommend. Pick **Public Wiki**, or **Closed Wiki** to keep the wiki private
         4. Click Save — done!
 
         No database needed. All data is stored as plain text files.
       ko_kr: |
         # /install.php 에 직접 접속하여 위키를 설정하세요
 
-        앱을 열면 메인 페이지가 바로 표시됩니다. 설정 마법사를 실행하려면 URL 주소창에 **직접** `/install.php`를 입력해야 합니다.
+        이 위키는 PCS 로그인 뒤에 있으므로 다른 사람은 설치 마법사에 접근할 수 없습니다. 앱을 열면 메인 페이지가 바로 표시됩니다. 설정 마법사를 실행하려면 URL 주소창에 **직접** `/install.php`를 입력해야 합니다.
 
-        1. [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php) 로 이동
+        1. [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) 로 이동 — 이 링크는 권장 ACL 정책을 미리 선택합니다
         2. 위키 이름, 관리자 계정, 비밀번호 설정
-        3. ACL 정책 선택 (권장: **Public Wiki**)
+        3. **저장 전에 ACL 정책 드롭다운을 확인하세요.** 위 링크 없이 설치 마법사를 열면 *Open Wiki (모두에게 읽기, 쓰기, 업로드 허용)* 가 미리 선택되어 있으며, 이는 권장 설정보다 더 개방적입니다. **Public Wiki** 를 선택하거나, 비공개 위키를 원하면 **Closed Wiki** 를 선택하세요
         4. 저장 클릭 — 완료!
 
         데이터베이스 불필요. 모든 데이터는 텍스트 파일로 저장됩니다.
       zh_cn: |
         # 请手动访问 /install.php 来设置您的维基
 
-        打开应用后，主页会直接加载。您**必须**在地址栏中手动输入 `/install.php` 来运行设置向导。
+        本维基位于您的 PCS 登录之后，其他人无法访问安装向导。打开应用后，主页会直接加载。您**必须**在地址栏中手动输入 `/install.php` 来运行设置向导。
 
-        1. 访问 [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
+        1. 访问 [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — 此链接会预先选中推荐的 ACL 策略
         2. 设置维基名称、超级用户账户和密码
-        3. 选择 ACL 策略（推荐：**Public Wiki**）
+        3. **保存前请检查 ACL 策略下拉框。** 若未通过上面的链接打开安装向导，它会预选 *Open Wiki（所有人可读、可写、可上传）*，这比我们的推荐设置更开放。请选择 **Public Wiki**，或选择 **Closed Wiki** 使维基保持私有
         4. 点击保存 — 完成！
 
         无需数据库。所有数据以纯文本文件存储。
       fr_fr: |
         # Allez sur /install.php pour configurer votre wiki
 
-        Apres l'ouverture de l'app, la page principale s'affiche directement. Vous **devez** saisir manuellement `/install.php` dans la barre d'adresse pour lancer l'assistant de configuration.
+        Le wiki est protege par la connexion de votre PCS: personne d'autre ne peut atteindre l'assistant d'installation. Apres l'ouverture de l'app, la page principale s'affiche directement. Vous **devez** saisir manuellement `/install.php` dans la barre d'adresse pour lancer l'assistant de configuration.
 
-        1. Allez sur [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
+        1. Allez sur [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — ce lien preselectionne la politique ACL recommandee
         2. Definissez le nom du wiki, le compte super-utilisateur et le mot de passe
-        3. Choisissez votre politique ACL (recommande: **Public Wiki**)
+        3. **Verifiez la liste deroulante ACL avant d'enregistrer.** Ouvert sans le lien ci-dessus, l'assistant preselectionne *Open Wiki (lecture, ecriture, envoi pour tout le monde)*, plus permissif que ce que nous recommandons. Choisissez **Public Wiki**, ou **Closed Wiki** pour un wiki prive
         4. Cliquez sur Enregistrer — termine!
 
         Aucune base de donnees necessaire. Toutes les donnees sont stockees en fichiers texte.
       es_es: |
         # Vaya a /install.php para configurar su wiki
 
-        Al abrir la app, la pagina principal se carga directamente. **Debe** escribir manualmente `/install.php` en la barra de direcciones para ejecutar el asistente de configuracion.
+        El wiki esta detras del inicio de sesion de su PCS, asi que nadie mas puede llegar al instalador. Al abrir la app, la pagina principal se carga directamente. **Debe** escribir manualmente `/install.php` en la barra de direcciones para ejecutar el asistente de configuracion.
 
-        1. Vaya a [https://dokuwiki-${APP_DOMAIN}/install.php](https://dokuwiki-${APP_DOMAIN}/install.php)
+        1. Vaya a [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — este enlace preselecciona la politica ACL recomendada
         2. Configure el nombre del wiki, cuenta de superusuario y contrasena
-        3. Elija su politica ACL (recomendado: **Public Wiki**)
+        3. **Revise la lista desplegable de ACL antes de guardar.** Si abre el instalador sin el enlace anterior, preselecciona *Open Wiki (lectura, escritura y subida para todos)*, mas permisivo de lo que recomendamos. Elija **Public Wiki**, o **Closed Wiki** para mantener el wiki privado
         4. Haga clic en Guardar — listo!
 
         No se necesita base de datos. Todos los datos se almacenan como archivos de texto.
@@ -227,4 +238,6 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/storage
       user: $PUID
       group: $PGID
+      # Reclaim the tree an earlier root-running version left owned by www-data (33:33).
+      recursive: true
   webui-host: dokuwiki-${domain}

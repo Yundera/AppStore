@@ -184,9 +184,10 @@ services:
       db:
         condition: service_healthy
     networks:
-      # App-private: reached only through the seafile service, which owns the
-      # published routes, so it stays off the shared network.
+      # Also on the shared network: the caddy_N label groups proxy
+      # /notification/* straight to this hostname, and Caddy runs on pcs.
       - seafile-net
+      - pcs
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8083'"]
       interval: 20s
@@ -223,9 +224,10 @@ services:
       seafile:
         condition: service_healthy
     networks:
-      # App-private: reached only through the seafile service, which owns the
-      # published routes, so it stays off the shared network.
+      # Also on the shared network: the caddy_N label groups proxy /sdoc-server/*
+      # and /socket.io/* straight to this hostname, and Caddy runs on pcs.
       - seafile-net
+      - pcs
 
   rclone:
     image: rclone/rclone:1.73.3

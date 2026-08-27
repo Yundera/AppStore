@@ -163,11 +163,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
-  # before images are pulled, before the pre-install hook runs, and before any
+  # before images are pulled, before the seed/ tree is applied, and before any
   # container starts, on the first boot and every one after it.
   folders:
     # The app folder itself: Maison's backup/restore unit, and the parent the
-    # pre-install hook writes nginx.conf into. Declared so it is owned by the
+    # seed/ tree writes nginx.conf into. Declared so it is owned by the
     # PCS user and the user can edit that file from FileBrowser or SSH.
     - path: /DATA/AppData/nginx
       user: $PUID

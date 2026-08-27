@@ -102,10 +102,33 @@ x-compose-app:
   init:
     - name: seed-config
       image: ghcr.io/worph/qbittorrent-config:1.0.2
+      # Writes qBittorrent.conf as $PUID:$PGID, matching the user: the service
+      # runs as — a root-owned conf/lock file is what stopped qBittorrent from
+      # ever opening its WebUI.
+      user: $PUID:$PGID
       volumes:
         - /DATA/AppData/qbittorrent/config/qBittorrent:/output
       environment:
         QB_USERNAME: admin
-        QB_PASSWORD: ${APP_DEFAULT_PASSWORD:-adminadmin}
-      when: once
+        QB_PASSWORD: ${APP_DEFAULT_PASSWORD}
+      # Keyed on the config file itself, not on `once`: the `once` marker lives
+      # with the compose, which is removed by an uninstall-keep-data, so a
+      # reinstall would re-run the seeder and reset the WebUI password and every
+      # preference the user had changed.
+      when: absent:/DATA/AppData/qbittorrent/config/qBittorrent/qBittorrent.conf
+    # The seeder image writes `WebUI\CSRFProtection=false` unconditionally and
+    # offers no switch for it. qBittorrent's Origin/Referer check compares host
+    # and port only (scheme is explicitly not compared) and honours
+    # X-Forwarded-Host, so it is satisfied by the Caddy routes as shipped — the
+    # flag is not a reverse-proxy workaround, and off it leaves a cross-site POST
+    # to /api/v2/app/setPreferences (which can set autorun_program) with nothing
+    # but the browser's SameSite default in front of it. Turn it back on once,
+    # then leave the user's preferences alone.
+    - name: enable-csrf-protection
+      image: busybox:1.37.0
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/qbittorrent/config/qBittorrent:/output
+      command: ["sh", "-c", "sed -i 's/CSRFProtection=false/CSRFProtection=true/' /output/qBittorrent.conf; touch /output/.csrf-protection-enabled"]
+      when: absent:/DATA/AppData/qbittorrent/config/qBittorrent/.csrf-protection-enabled
   webui-host: qbittorrent-${domain}

@@ -1,16 +1,16 @@
 # Plex — Rationale
 
 ## What deviation / exception is being requested
-Runs as `user: 0:0` (root) while accessing user media directories (`/DATA/Media/Movies`, `/DATA/Media/TV Shows`, `/DATA/Media/Music`, `/DATA/Downloads`). Also mounts `/dev/dri` for GPU hardware transcoding.
+Runs as `user: 0:0` (root) while accessing user media directories (`/DATA/Media/Movies`, `/DATA/Media/TV Shows`, `/DATA/Media/Music`, `/DATA/Downloads`).
 
 ## Why it is necessary
-The LinuxServer Plex image starts as root to perform internal setup (setting permissions, configuring hardware transcoding), then drops privileges to PUID:PGID internally via the LSIO s6-overlay init system. The `devices: /dev/dri` mount requires the container to start as root to access GPU device nodes for hardware-accelerated video transcoding.
+The LinuxServer Plex image starts as root to perform internal setup (setting permissions, laying out `/config`), then drops privileges to PUID:PGID internally via the LSIO s6-overlay init system.
 
 ## Security mitigations in place
 - PUID/PGID environment variables ensure file operations run as the non-root user internally
 - Memory limited to 1GB via `deploy.resources.limits`
 - cpu_shares set to 50 (standard)
-- `privileged: true` removed — only `/dev/dri` device pass-through is used
+- No `privileged: true` and no device pass-through: the container gets no host devices. `/dev/dri` is deliberately not mapped, because a PCS without an Intel/AMD render node cannot create the container at all; Plex transcodes in software, and hardware transcoding is a Plex Pass extra a user can add locally if their host has a GPU.
 - Web access gated by nginx-hash-lock sidecar
 
 ## Alternatives considered and rejected

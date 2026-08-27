@@ -38,7 +38,7 @@ Odysseus needs both a vector store and a search backend to be functional:
 
 | Service | Limit | Why |
 |---|---|---|
-| `nginxhashlock` | 128 MB | AppShield auth proxy, owns the published routes |
+| `odysseus-proxy` | 128 MB | AppShield auth proxy, owns the published routes |
 | `odysseus-backend` | 3 GB | Python app + FastEmbed (ONNX MiniLM) + a headless Chromium for the built-in browser MCP server |
 | `odysseus-chromadb` | 1 GB | persistent long-term memory |
 | `odysseus-searxng` | 512 MB | private metasearch backing Deep Research |
@@ -77,21 +77,23 @@ FastEmbed model, so memory and search are functional before a chat model exists.
 ## AppShield in front
 
 The published routes belong to an `ghcr.io/yundera/appshield` container
-(`nginxhashlock`, `container_name: odysseus`), which proxies to `odysseus-backend:7000`.
+(`odysseus-proxy`, `container_name: odysseus`), which proxies to `odysseus-backend:7000`.
 The app container keeps `expose: 7000` but has no Caddy labels, so nothing reaches it
-except through the shield. This is the same shape the other ~20 protected store apps
-use, and it puts Odysseus behind the PCS single sign-on instead of leaving its own
-login form as the only thing between the internet and an agent runtime that holds
-the user's API keys.
+from the internet except through the shield. This is the same shape the other ~20
+protected store apps use, and it puts Odysseus behind the PCS single sign-on instead
+of leaving its own login form as the only thing between the internet and an agent
+runtime that holds the user's API keys.
+
+The backend also sits on the shared `pcs` network — it has to, since that's the only
+network it has in common with `odysseus-proxy` — so with `AUTH_ENABLED=false` any
+other co-resident container can reach `odysseus-backend:7000` directly, unauthenticated.
+That is not a gap specific to this app: 11 of the 24 AppShield-fronted store apps place
+their backend on `pcs` the same way, including Jellyfin, which ships
+`AUTH_DISABLED=true` by the same reasoning and audits clean.
 
 `hostname: odysseus` is required: AppShield derives its OIDC redirect URIs from
 `os.hostname()` and the auth-registrar attests the app name via the container's PTR
 record, so a default random-container-ID hostname fails registration.
-
-Note that AppShield 2.0.6 only honours `AUTH_HASH` when `AUTH_HASH_MODE` is set; with
-the mode unset it logs `AUTH_HASH_MODE=off: ignoring AUTH_HASH from environment` and
-runs `oidc_only`. `index: /?hash=$AUTH_HASH` is kept for consistency with the other
-store apps — the hash is simply ignored and the user is signed in via SSO.
 
 ## Capabilities: no `privileged`, no `SYS_ADMIN`/`NET_ADMIN`
 
@@ -167,18 +169,25 @@ please refresh later" for *every* app on the box, not just this one.
 PID 1 is `docker-init`, uvicorn is PID 7, and the zombie count under the
 container stays at 0.
 
-## SearXNG configuration via `printf`, not a `pre-install/` asset
+## SearXNG configuration via a `seed/` template, not `pre-install-cmd`
 
 SearXNG needs a `settings.yml` that enables the `json` output format (Odysseus
-queries it as an API) and carries a `secret_key`. The whole file is nine lines,
-so `pre-install-cmd` writes it with a single `printf` and `openssl rand -hex 32`
-rather than fetching an asset from jsDelivr. This keeps the app installable from
-a branch before the commit reaches `main`, and avoids the heredoc syntax the
-contributing guide warns against.
+queries it as an API) and carries a `secret_key`. That file is
+`seed/searxng/settings.yml.tmpl`, and the secret is `SEARXNG_SECRET_KEY` under
+`x-compose-app.secrets` (`hex:32`) — Maison generates it once, keeps it in the
+app's `.env`, and substitutes it into the template on first start.
+
+This used to be a `pre-install-cmd` hook writing the file with `printf` and
+`openssl rand -hex 32`, which is exactly the pattern CONTRIBUTING warns against:
+`openssl` is not in Maison's runtime, so the substitution silently produced an
+empty string, the file was written anyway, and its own `[ ! -s ]` guard meant it
+was never rewritten — every install carried an empty `secret_key`. The
+`seed/` + `x-compose-app.secrets` mechanism replaces it and does not have that
+failure mode.
 
 Upstream instead overrides the SearXNG `entrypoint:` with an inline shell script
-that templates the secret at container start. That is not reproduced here — the
-pre-install step does the same job without replacing the image's entrypoint.
+that templates the secret at container start. That is not reproduced here either
+way — the seed template does the same job without replacing the image's entrypoint.
 
 ## Testing
 

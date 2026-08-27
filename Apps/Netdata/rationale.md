@@ -129,7 +129,21 @@ and are removed with it.
 
 That telemetry is still sensitive: process names, usernames and container names
 describe what the owner runs. It is protected the same way the rest of the app is —
-the agent is unreachable except through the SSO-gated sidecar, nothing is sent off
-the machine, and no third-party account is involved. The read-only host mounts mean
-the app can observe the system but cannot alter it; the one exception to that
-statement is the Docker socket, which is documented above.
+the agent is unreachable except through the SSO-gated sidecar, and no third-party
+account is involved. The read-only host mounts mean the app can observe the system
+but cannot alter it; the one exception to that statement is the Docker socket, which
+is documented above.
+
+**Two off-box contacts, both upstream Netdata defaults, left untouched by this
+compose.** No collected metric or machine data leaves the box through either of
+them, but both are third-party network contacts enabled by default with no
+`netdata.conf` override shipped here:
+
+- **Anonymous usage statistics** (`anonymous_statistics: true`) — the agent reports
+  its own version, OS and enabled plugins to Netdata Inc.'s telemetry endpoint.
+  Opt out per-install with the `DO_NOT_TRACK` environment variable or an
+  `.opt-out-from-anonymous-statistics` file in the config directory.
+- **The public node registry** (`https://registry.my-netdata.io`) — opening the
+  dashboard makes the browser call it (`GET /api/v1/registry?action=hello`) to sync
+  the "visited nodes" menu. Disable with `[registry]` / `enabled = no` in
+  `netdata.conf`.

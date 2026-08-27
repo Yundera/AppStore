@@ -38,7 +38,15 @@ knowingly rather than inheriting it.
 - **The sysctls cannot be set on the container.** `net.ipv4.ip_forward` and
   `net.ipv4.conf.all.src_valid_mark` are namespaced settings, and a host-mode container
   shares the host's namespace — Docker therefore refuses a `sysctls:` block here, since
-  it would be mutating the host. They are set on the host by `pre-install-cmd` instead.
+  it would be mutating the host. They are set on the host by `pre-install-cmd`, using the
+  supported recipe: `docker run --rm --privileged --network=host alpine:3.20 sysctl -w …`.
+  A hook runs *inside* the Maison container, where `/proc/sys` is read-only, so a bare
+  `sysctl -w` changes nothing and (being `pre_install`, which is fatal) would leave the
+  app installed but stopped. The one-shot container is pinned to `alpine:3.20`, lives for
+  the two writes and exits; nothing privileged stays running. The step is idempotent and
+  **best-effort** — the hook ends with `exit 0`, because reaching host services at
+  `10.9.0.1` does not need IP forwarding (only peer-to-peer and full-tunnel routing do),
+  so a host that refuses the writes should still get a working app.
 - **A host-mode container cannot be a Caddy upstream**, which is why the web UI is not
   served directly. `wgeasyhost` binds the UI on host port `51821`, and the bridged
   `wgeasyhost-proxy` sidecar on the `pcs` network carries the gateway labels and
@@ -62,8 +70,8 @@ knowingly rather than inheriting it.
   `x-compose-app.folders` so Maison creates and chowns it. No user directory is mounted.
 - **Resource limits are enforced** on both services (`256m` / `cpu_shares: 50` for the
   VPN, `64m` / `cpu_shares: 80` for the proxy).
-- **The proxy image is pinned** to `nginx:1.29.3-alpine`, and its config is bind-mounted
-  read-only.
+- **The proxy image is pinned** to `nginx:1.29.3-alpine`, and its config ships in `seed/`
+  (no CDN fetch at install time) and is bind-mounted read-only.
 - **Host port exposure is disclosed before install.** `tips.before_install` tells the
   user that UDP `51820` must be open on their firewall and that the management UI also
   binds host port `51821` over plain HTTP, with the advice to reach it through the

@@ -480,11 +480,11 @@ x-casaos:
       timeout=$((timeout-5))
     done &&
     docker exec nextcloud bash -c '
-      php occ config:system:set memcache.distributed --value "\OC\Memcache\Redis"
-      php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
       php occ config:system:set redis host --value redis
       php occ config:system:set redis port --value 6379 --type=integer
       php occ config:system:set redis password --value "$REDIS_HOST_PASSWORD"
+      php occ config:system:set memcache.distributed --value "\OC\Memcache\Redis"
+      php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
       a2enmod headers 2>/dev/null || true
       if [ -f /var/www/html/.htaccess ] && ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then
         echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess

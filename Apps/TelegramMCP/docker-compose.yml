@@ -29,12 +29,19 @@ services:
         target: /app/data
     networks:
       - pcs
+    # 80 — user-facing API backend + Web UI (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 80
 
-  # AppShield provides perimeter authentication (Yundera SSO) for the web UI.
-  # /mcp and /webhook are in ALLOWED_PATHS: they bypass the login flow and are
-  # uncredentialed — migrate to OAUTH_RESOURCE. The config UI at / stays gated.
+  # AppShield provides perimeter authentication: the Yundera SSO (OIDC) gate for the
+  # Web UI, and the OAuth 2.1 broker for /mcp (machine clients). Only /webhook stays
+  # exempt — Telegram's servers cannot perform any of those flows and carry their own
+  # per-registration secret token instead; see rationale.md.
   telegrammcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    # 2.0.7+ is required for the generic OAUTH_RESOURCE / OAUTH_SCOPE names and a
+    # configurable protected path; 2.0.9+ advertises offline_access and sends
+    # prompt=consent, without which no refresh token is issued and every client has
+    # to be re-authorized by hand once the 1h access token expires.
+    image: ghcr.io/yundera/appshield:2.0.9
     container_name: telegrammcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -42,17 +49,39 @@ services:
     # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
     hostname: telegrammcp
     restart: unless-stopped
-    cpu_shares: 50
+    # 80 — reverse proxy in front of a user-facing app (CONTRIBUTING
+    # "CPU Share Allocation").
+    cpu_shares: 80
     expose:
       - 80
     user: "root"
     environment:
-      ALLOWED_PATHS: "mcp,webhook"
+      # Telegram's servers POST bot updates here as a plain HTTP client: they cannot
+      # follow an SSO redirect and cannot acquire an OAuth token, so /webhook is the
+      # one path exempt from the gate. It is not uncredentialed — the bot registers
+      # the webhook with a random per-registration `secret_token` and grammY rejects
+      # any POST whose X-Telegram-Bot-Api-Secret-Token header does not match. This is
+      # a documented deviation from "use OAUTH_RESOURCE, not ALLOWED_PATHS"; see
+      # rationale.md. /mcp is NOT listed: AppShield's `location ^~ <oauth path>`
+      # outranks this bypass regex, and it is gated on Bearer tokens below.
+      ALLOWED_PATHS: "webhook"
       BACKEND_HOST: telegrammcp-backend
       BACKEND_PORT: "9634"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
+      # authorization server fronting Dex and gates exactly the path named by the
+      # resource URL (/mcp) on Bearer tokens; everything else stays behind the
+      # Yundera SSO gate. Replaces ALLOWED_PATHS: "mcp", which exempted /mcp from the
+      # gate and — with AUTH_HASH inert under Maison — left it uncredentialed, so an
+      # anonymous caller could drive send_message / send_photo / get_chat_history.
+      OAUTH_RESOURCE: "https://telegrammcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/telegrammcp/oauth/:/data/oauth
     depends_on:
       - telegrammcp-backend
     networks:
@@ -75,7 +104,11 @@ networks:
 x-casaos:
   architectures:
     - amd64
-  main: telegrammcp-backend
+  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # point at and the one users actually reach, and it is the service Maison
+  # attaches ${APP_NET} to. The tile's health follows main, so pointing it at the
+  # backend tracked a container nobody reaches from outside.
+  main: telegrammcp-proxy
   hostname: telegrammcp-${APP_DOMAIN}
   scheme: https
   port_map: "443"
@@ -147,7 +180,12 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        **Option 1: Public URL** — `/mcp` is exempt from the SSO gate, so this URL works from any client. Keep the app domain private.
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your Yundera login.
         ```json
         {
           "mcpServers": {
@@ -174,6 +212,10 @@ x-casaos:
         ```
         *Note: Requires the AI assistant to be on the `pcs` Docker network.*
 
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://telegrammcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
+
         **Option 3: Via Beacon (aggregated)**
 
         If you have **Beacon** installed, Telegram MCP auto-registers there via its built-in UDP discovery and its tools show up under the `telegram__*` namespace — no extra config.
@@ -189,7 +231,13 @@ x-casaos:
         **Security:**
         - The bot token is stored only in `/DATA/AppData/telegrammcp/config.json` on this server and is never logged or returned via the API
         - The Web UI is protected by your Yundera single sign-on — no extra login needed
-        - `/mcp` and `/webhook` are intentionally reachable without the login flow (MCP clients and Telegram's servers can't perform it) and carry no credential of their own — keep the app domain private
+        - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
+          public URL is reachable without a credential. Only the in-network address
+          `http://telegrammcp-backend:9634/mcp` (Option 2) is unauthenticated, and it
+          is not published outside the `pcs` Docker network
+        - `/webhook` is exempt from the login flow because Telegram's servers cannot
+          perform it, but it is not open: the bot registers its webhook with a random
+          per-registration secret token and rejects any update that does not present it
 
 x-compose-app:
   schema_version: 2
@@ -198,6 +246,9 @@ x-compose-app:
   # in `volumes:` above — re-run it instead of editing this block by hand.
   folders:
     - path: /DATA/AppData/telegrammcp
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/telegrammcp/oauth
       user: $PUID
       group: $PGID
   webui-host: telegrammcp-${domain}

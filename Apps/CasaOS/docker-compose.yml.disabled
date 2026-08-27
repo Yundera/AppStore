@@ -26,7 +26,7 @@ services:
       # Used by casaos to configure the reverse proxy in the app settings
       # (not used by the casaos system itself).
       REF_DOMAIN: "${APP_DOMAIN}"
-      REF_NET: "pcs"
+      REF_NET: "${APP_NET:-pcs}"
       REF_PORT: "443"
       REF_SCHEME: "https"
 
@@ -55,7 +55,7 @@ services:
       APP_PUBLIC_IPV6: "${APP_PUBLIC_IPV6}"
       APP_PUBLIC_IPV6_DASH: "${APP_PUBLIC_IPV6_DASH}"
       APP_EMAIL: "${APP_EMAIL}"
-      APP_NET: pcs
+      APP_NET: ${APP_NET:-pcs}
 
       # Passwordless email sign-in: casaos enables the magic-link login option
       # only when USER_EMAIL + SMTP_HOST + SMTP_PORT are all set.
@@ -89,7 +89,7 @@ services:
           memory: 1G
     volumes:
       - type: bind
-        source: /DATA
+        source: ${DATA_ROOT:-/DATA}
         target: /DATA
         # Bind propagation for FUSE mounts
         bind:
@@ -103,7 +103,7 @@ services:
 
 networks:
   pcs:
-    name: pcs
+    name: ${APP_NET:-pcs}
     external: true
 
 x-casaos:

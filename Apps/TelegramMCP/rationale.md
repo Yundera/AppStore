@@ -21,19 +21,53 @@ UDP discovery responder (`mcp-announce.cjs`, `DISCOVERY_PORT=9099`).
 The main container answers Beacon's discovery broadcast directly, so the
 service simply exposes `9099` — same approach as N8NMCP. No sidecar.
 
-## `ALLOWED_PATHS: "mcp,webhook"` on the hash-lock
+## `ALLOWED_PATHS: "webhook"` alongside `OAUTH_RESOURCE`
 
-`nginx-hash-lock` lists ALLOWED_PATHS as the paths that bypass the
-login/cookie flow entirely. Two paths must be reachable without it:
+CONTRIBUTING says machine/API clients must be gated with `OAUTH_RESOURCE`, and
+that the `ALLOWED_PATHS` pattern must not be copied — an exempted path bypasses
+the SSO gate with nothing put in its place, because `AUTH_HASH` is inert under
+Maison. `/mcp` follows that rule: AppShield 2.0.9 runs its OAuth 2.1 broker over
+`https://telegrammcp-${APP_DOMAIN}/mcp` and every MCP request must carry a
+Bearer token. (The earlier listing exempted `/mcp` via `ALLOWED_PATHS` and
+claimed a URL-hash mitigation; that hash never existed under Maison, so the
+endpoint was reachable anonymously. It is gated now.)
 
-- `/mcp` — MCP HTTP clients can't perform the hash-lock session dance; a
-  302-to-login would break the transport. The endpoint is gated instead
-  by the URL hash documented in `tips.before_install`.
-- `/webhook` — Telegram's servers POST update callbacks here with no
-  credentials and no way to add the hash, so the path must be open.
+`/webhook` is a deliberate, single-path exception.
 
-The web UI at `/` stays behind both the hash and the `ADMIN` password
-(AUTH_MODE `both`), because that is where the bot token is entered.
+**Why it is necessary.** In webhook mode the client is *Telegram itself*.
+Telegram's servers POST update callbacks to `${PUBLIC_URL}/webhook` as a plain
+HTTP client: no browser session, no redirect following, no token acquisition.
+They cannot complete the Authelia OIDC login, and they are not an OAuth client —
+there is no way to attach a Bearer token to a Telegram callback. Putting either
+gate in front of `/webhook` would return a 302 or a 401 to every update and the
+bot would receive nothing, disabling webhook mode entirely.
+
+**The path still requires a credential.** The exemption is from the *platform*
+SSO, not from authentication. When the bot switches to webhook mode it generates
+a random `secret_token` (`crypto.randomUUID()`) per registration and passes it to
+`setWebhook`; Telegram then sends it back on every callback in the
+`X-Telegram-Bot-Api-Secret-Token` header, and grammY's `webhookCallback` rejects
+any request whose header does not match. The token is regenerated on each
+restart and is never published. In polling mode no webhook is registered at all
+and `/webhook` answers `404 Webhook not active`.
+
+**Ordering is safe.** AppShield renders the OAuth resource as `location ^~ /mcp`,
+an nginx prefix match that suppresses regex evaluation, so it outranks the
+`location ~ ^/(webhook)(/|$)` bypass. Listing `webhook` cannot widen the
+exemption to `/mcp`.
+
+**Alternatives rejected.**
+- *Removing `ALLOWED_PATHS` entirely* — webhook mode stops working; every update
+  gets the SSO redirect instead of reaching the bot.
+- *`OAUTH_RESOURCE` on `/webhook`* — Telegram cannot obtain or send a Bearer
+  token; the endpoint would 401 on every callback.
+- *Dropping webhook mode and shipping polling-only* — polling is the default and
+  needs no inbound path, but webhook mode is the low-latency option for users on
+  a publicly reachable PCS, and it is upstream functionality this listing has no
+  reason to remove when the callback already authenticates itself.
+
+The Web UI at `/`, where the bot token is entered, and every `/api` route stay
+fully behind the AppShield OIDC gate.
 
 ## `user: $PUID:$PGID`
 

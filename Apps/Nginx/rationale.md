@@ -45,23 +45,18 @@ This document explains deviations from standard AppStore guidelines for the ngin
   nothing outside its own AppData folder, running the workers as root too widens
   no boundary and is what makes the advertised workflow actually work.
 
-## Pre-Install Script Approach
+## First-Run Seeding Approach
 
-**Implementation**: Style A (plain shell on the host). The hook runs two guarded
-`wget` calls that seed `www/index.html` and `nginx.conf`; it creates no directories
-and changes no permissions.
+**Implementation**: Declarative `seed/` tree, mirroring `/DATA/AppData/nginx/`.
+`seed/www/index.html` and `seed/nginx.conf` are copied onto the host the first
+time the app is installed; no hook and no `pre-install-cmd` are involved.
 
 **Reason**:
-- Seeding two static files doesn't require containerized tooling.
-- Directories are declared under `x-compose-app.folders` instead, so Maison creates
-  and chowns them before the hook runs — per CONTRIBUTING, a hook must not `mkdir`,
-  because the hook executes inside the Maison container and would leave a
-  root-owned directory on the host.
-- Idempotent: each fetch is guarded by an existence check, so a reinstall or a
-  version upgrade never overwrites the user's site or their edited `nginx.conf`.
-
-**Downloads**: both assets are fetched from
-`cdn.jsdelivr.net/gh/Yundera/AppStore/Apps/Nginx/pre-install/` — this repository
-itself, over HTTPS, which is the pattern CONTRIBUTING documents for Style A. No
-third-party host is contacted, no credential is baked in, and the hook is
-non-interactive.
+- Seeding two static files doesn't require containerized tooling or imperative
+  scripting — the `seed/` tree is exactly what CONTRIBUTING recommends for this
+  case.
+- Directories are declared under `x-compose-app.folders`, so Maison creates and
+  chowns them before the seed tree is applied.
+- Create-if-absent: Maison only writes a seed file when the destination path
+  doesn't already exist, so a reinstall or a version upgrade never overwrites
+  the user's site or their edited `nginx.conf`.

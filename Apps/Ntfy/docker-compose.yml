@@ -21,7 +21,10 @@ services:
       - NTFY_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
       - NTFY_BASE_URL=https://ntfy-${APP_DOMAIN}
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/v1/health"]
+      # 127.0.0.1, not localhost: nginx binds IPv4 only while busybox wget tries
+      # ::1 first, so http://localhost:80/ is refused inside the container and the
+      # app never became healthy. -O /dev/null also forces a GET.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/v1/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -133,6 +136,8 @@ x-casaos:
         ```
         *Note: Requires the AI assistant to be on the `pcs` Docker network.*
 
+        *Security: this in-network endpoint is unauthenticated — any container on the `pcs` network can send notifications and read cached messages through it. It is not published to the internet (no public `/mcp` route). See `rationale.md`.*
+
         **Available MCP Tools:**
         | Tool | Description |
         |------|-------------|
@@ -174,6 +179,8 @@ x-casaos:
         }
         ```
         *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+
+        *安全提示：该内网端点无需认证 — `pcs` 网络上的任何容器都可以通过它发送通知并读取缓存消息。它不会暴露到公网（公共域名下没有 `/mcp` 路由）。详见 `rationale.md`。*
 
         **可用 MCP 工具：**
         | 工具 | 描述 |

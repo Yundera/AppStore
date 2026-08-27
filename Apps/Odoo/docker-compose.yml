@@ -221,8 +221,15 @@ x-casaos:
     # /web/database/manager (which needs no session) lets anyone dump, restore or
     # drop the user's database. Appending a key to a file the app also writes is
     # the one shape the declarative sections deliberately do not express.
-    grep -q '^[[:space:]]*admin_passwd[[:space:]]*=' /DATA/AppData/odoo/config/odoo.conf 2>/dev/null ||
+    #
+    # It must NOT create the file. pre_install runs before the seed step, so a
+    # bare '>>' leaves a headerless odoo.conf that the create-if-absent seed
+    # template then skips, and Odoo dies on MissingSectionHeaderError. Hence the
+    # -f guard, wrapped in an `if` so a fresh install still exits 0.
+    if [ -f /DATA/AppData/odoo/config/odoo.conf ] &&
+       ! grep -q '^[[:space:]]*admin_passwd[[:space:]]*=' /DATA/AppData/odoo/config/odoo.conf; then
       printf 'admin_passwd = %s\n' "$APP_DEFAULT_PASSWORD" >> /DATA/AppData/odoo/config/odoo.conf
+    fi
   index: /
   scheme: https
 

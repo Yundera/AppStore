@@ -38,8 +38,8 @@ services:
       PHP_INI_MEMORY_LIMIT: 256M
       PHP_INI_UPLOAD_MAX_FILESIZE: 128M
       PHP_INI_POST_MAX_SIZE: 128M
-      WWW_USER_ID: 0
-      WWW_GROUP_ID: 0
+      WWW_USER_ID: $PUID
+      WWW_GROUP_ID: $PGID
     depends_on:
       db:
         condition: service_healthy

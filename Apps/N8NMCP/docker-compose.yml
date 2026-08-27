@@ -24,6 +24,16 @@ services:
       # Pre-seed the companion n8n app's in-network hostname.
       # The API key is left blank — paste it in the Web UI on first launch.
       - N8N_BASE_URL=http://n8n:80
+    # The image inherits HEALTHCHECK CMD-SHELL "curl ... /health" from the upstream
+    # n8n-mcp stage, but the wrapper never implements a /health route (only
+    # /api/status), so the container permanently reports unhealthy even while
+    # serving correctly. Override with an endpoint the wrapper actually has.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:${PORT:-9640}/api/status || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     volumes:
       # The image's supervisord.conf hard-codes CONFIG_PATH=/app/wrapper-data/config.json
       # for the wrapper program, so the persistent bind MUST land there — a container-

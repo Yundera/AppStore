@@ -52,8 +52,6 @@ services:
       TZ: $TZ
       PLEX_CLAIM: ""
       VERSION: docker
-    devices:
-      - /dev/dri:/dev/dri
     deploy:
       resources:
         limits:
