@@ -58,7 +58,11 @@ services:
           memory: 2048M
     cpu_shares: 90
     healthcheck:
-      test: ["CMD", "sh", "-c", "wget -q --spider http://127.0.0.1:8080/ || exit 1"]
+      # curl, not wget: despite the `alpine/` namespace (a Docker Hub org name, not a
+      # base image) this image is Debian bookworm and ships no wget, so the old
+      # `wget --spider` probe exited 127 every time and the container sat permanently
+      # `unhealthy` while the gateway was serving perfectly well.
+      test: ["CMD", "sh", "-c", "curl -fsS -o /dev/null http://127.0.0.1:8080/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -71,6 +75,16 @@ services:
       # AI Provider API Keys (configure at least one)
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Required, or the gateway REFUSES TO START. From 2026.6.x the image guards a
+      # non-loopback bind: "Refusing to bind gateway to lan without auth. Set
+      # OPENCLAW_GATEWAY_TOKEN or OPENCLAW_GATEWAY_PASSWORD" — it then exits and
+      # restarts on a ~10s loop, never listening on 8080, so AppShield answers 502
+      # behind a tile that reports `running`. The two control-UI flags below do NOT
+      # satisfy the guard; only a token or password does. $APP_DEFAULT_PASSWORD is the
+      # per-install random value Maison injects, so this is a distinct secret per PCS
+      # and never a shipped literal. It gates the gateway's own API as a second layer
+      # behind the sidecar; it is not what the browser authenticates with.
+      OPENCLAW_GATEWAY_TOKEN: $APP_DEFAULT_PASSWORD
       # The Control UI's own device-pairing flow is disabled because authentication is
       # delegated to the AppShield sidecar in front of it. Safe only because this
       # service sits on an app-private bridge and has no route of its own.

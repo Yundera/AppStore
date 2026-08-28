@@ -47,6 +47,14 @@ will start at all.
 - **The sidecar's OIDC identity is pinned.** `container_name` and `hostname` both
   equal `openclaw`, which is what `auth-registrar` attests via the container's PTR
   record; a mismatch fails registration rather than falling open.
+- **The gateway still holds a credential of its own.** `OPENCLAW_GATEWAY_TOKEN` is
+  set to `$APP_DEFAULT_PASSWORD` — the per-install random value Maison injects, so it
+  is distinct on every PCS and is never a shipped literal. It is *required*: from
+  2026.6.x the image refuses to bind to a non-loopback interface without a token or
+  password, and the two control-UI flags above do not satisfy that guard. So the
+  arrangement is not "auth off" but "auth moved": the browser authenticates once
+  against the PCS SSO at the sidecar, and the gateway keeps a second, non-interactive
+  credential behind it.
 - **Blast radius is the app's own AppData.** The gateway executes shell commands and
   reads and writes files *by design* — that is the product — but its only bind mount
   is `${DATA_ROOT:-/DATA}/AppData/openclaw`. No user directory (`/DATA/Documents`,
