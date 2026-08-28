@@ -123,6 +123,7 @@ x-casaos:
     developer: Yundera
     hostname: stremio-${APP_DOMAIN}
     index: /
+    icon: icon.png
     is_uncontrolled: false
     main: stremio
     port_map: "443"

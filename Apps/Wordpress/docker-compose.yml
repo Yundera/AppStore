@@ -82,6 +82,7 @@ x-casaos:
   category: Web
   developer: WordPress Foundation
   icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
     - screenshot-1.png
     - screenshot-2.png

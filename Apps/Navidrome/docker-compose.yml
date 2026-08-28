@@ -60,6 +60,7 @@ x-casaos:
   tags: ["media", "personal", "family"]
   developer: Deluan Quintão
   icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
     - screenshot-1.png
     - screenshot-2.png

@@ -148,6 +148,7 @@ x-casaos:
       **Parfait si vous:** Voulez que Claude / Cursor / tout client MCP construise et pilote vos automatisations n8n, ou combiner avec d'autres apps MCP (Beacon, Ntfy, Chronos) pour des workflows pilotes par IA de bout en bout.
   developer: Aptero
   icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
     - screenshot-1.png
     - screenshot-2.png

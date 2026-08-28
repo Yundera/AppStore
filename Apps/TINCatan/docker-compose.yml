@@ -126,6 +126,7 @@ x-casaos:
   author: CasaOS Team
   developer: Sean Segal & Contributors
   icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
     - screenshot-1.png
     - screenshot-2.png

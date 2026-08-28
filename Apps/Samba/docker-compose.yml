@@ -101,6 +101,7 @@ x-casaos:
       非常适合家庭网络、小型办公室或任何需要可靠文件共享而无需云依赖的地方。基于成熟的 Samba 技术构建，资源使用最少，兼容性最大。
   developer: Dockur
   icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
     - screenshot-1.png
     - screenshot-2.png
