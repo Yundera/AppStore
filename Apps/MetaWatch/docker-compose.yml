@@ -278,12 +278,12 @@ x-casaos:
   # make outbound connections.
   tags: ["media", "personal", "needs-public-ip"]
   developer: Aptero Team
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/MetaWatch/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/MetaWatch/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/MetaWatch/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/MetaWatch/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/MetaWatch/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   title:
     en_us: MetaWatch
   tagline:

@@ -55,12 +55,12 @@ x-casaos:
   tags: ["productivity", "files", "personal"]
   developer: gamosoft
   store_app_id: notediscovery
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NoteDiscovery/screenshot-1.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: screenshot-1.png
   description:
     en_us: |
       **Your private, self-hosted knowledge base**

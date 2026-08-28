@@ -68,11 +68,11 @@ x-casaos:
     sv_se: Duplicati är en gratis, öppen källkod, backup-klient som säkert lagrar krypterade, inkrementella, komprimerade säkerhetskopior på molntjänster och fjärrfiler.
     uk_ua: Duplicati - це безкоштовний клієнт резервного копіювання з відкритим вихідним кодом, який безпечно зберігає зашифровані, інкрементні, стиснені резервні копії на хмарних службах зберігання та віддалених файлових серверах.
   developer: Duplicati Team
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Your Backup App. Encrypt and back up your data to the cloud, safely and automatically. Setup guide available on our website
     zh_cn: 您的备份应用。安全自动地加密并备份您的数据到云端。网站上提供设置指南
@@ -87,7 +87,7 @@ x-casaos:
     pt_br: Seu aplicativo de backup. Criptografe e faça backup de seus dados na nuvem, com segurança e automaticamente. Guia de configuração disponível em nosso site
     sv_se: Din backup-app. Kryptera och säkerhetskopiera dina data till molnet, säkert och automatiskt. Installationsguide tillgänglig på vår webbplats
     uk_ua: Ваш додаток для резервного копіювання. Шифруйте та створюйте резервні копії ваших даних у хмарі безпечно та автоматично. Посібник з налаштування доступний на нашому веб-сайті
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png
+  thumbnail: thumbnail.png
   tips:
     before_install:
       en_us: |

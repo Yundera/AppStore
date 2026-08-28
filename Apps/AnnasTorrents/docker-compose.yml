@@ -107,10 +107,10 @@ x-casaos:
   tags: ["files", "personal", "needs-public-ip"]
   developer: cparthiv
   store_app_id: annas-torrents-webui
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AnnasTorrents/screenshot-1.png
+    - screenshot-1.png
   title:
     en_us: Anna's Torrents
   tagline:

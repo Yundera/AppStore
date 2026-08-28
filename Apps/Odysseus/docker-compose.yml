@@ -197,12 +197,12 @@ x-casaos:
   developer: Odysseus
   category: Chat
   tags: ["ai", "productivity", "automation"]
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/screenshot-1.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: screenshot-1.png
   title:
     en_us: Odysseus
     ko_kr: Odysseus

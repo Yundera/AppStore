@@ -136,12 +136,12 @@ x-casaos:
 
       只需将您的 HTML、CSS、JavaScript 和资源上传到 `/DATA/AppData/caddy/www/`，您的网站就会立即上线并启用 HTTPS。无需数据库，无需复杂配置，只需带有自动 TLS 的纯静态文件托管。
   developer: Caddy
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Caddy/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Secure static website hosting with automatic HTTPS
     zh_cn: 具有自动 HTTPS 的安全静态网站托管

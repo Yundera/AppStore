@@ -62,10 +62,10 @@ x-casaos:
     fr_fr: Prowlarr est un gestionnaire et proxy d'indexeurs construit sur la suite *arr. Il s'intègre parfaitement avec Radarr, Sonarr, Lidarr et Readarr, gérant tous vos trackers et indexeurs depuis une seule interface et les gardant synchronisés. S'associe aux apps Radarr, Sonarr et Lidarr autonomes de ce store.
     es_es: Prowlarr es un gestor y proxy de indexadores construido sobre el stack *arr. Se integra perfectamente con Radarr, Sonarr, Lidarr y Readarr, gestionando todos tus trackers e indexadores desde una sola interfaz y manteniéndolos sincronizados. Se combina con las apps Radarr, Sonarr y Lidarr independientes de esta tienda.
     zh_cn: Prowlarr 是基于 *arr 堆栈构建的索引器管理器和代理。它与 Radarr、Sonarr、Lidarr 和 Readarr 无缝集成，在单一界面中管理您的所有跟踪器和索引器并保持同步。与本商店中的 Radarr、Sonarr 和 Lidarr 独立应用配合使用。
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Prowlarr/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Prowlarr/screenshot-1.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Prowlarr/thumbnail.png
+    - screenshot-1.png
+  thumbnail: thumbnail.png
   tagline:
     en_us: Manage all your indexers in one place and sync them to every *arr app.
     fr_fr: Gérez tous vos indexeurs en un seul endroit et synchronisez-les avec chaque app *arr.

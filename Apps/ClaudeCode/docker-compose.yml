@@ -133,15 +133,15 @@ x-casaos:
 
       注意：本版本已禁用 MCP 自动化端点。
   developer: Anthropic / Yundera
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Web terminal for Claude Code - Anthropic's AI coding assistant (sandboxed)
     zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手（沙盒化）
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCode/thumbnail.png
+  thumbnail: thumbnail.png
   title:
     en_us: Claude Code
     zh_cn: Claude Code

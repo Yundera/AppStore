@@ -78,10 +78,10 @@ x-casaos:
   tags: ["games", "personal", "family", "needs-public-ip"]
   developer: Arcadia Technology
   store_app_id: crafty
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Crafty/screenshot-1.png
+    - screenshot-1.png
   title:
     en_us: Crafty - Minecraft Server Manager
   tagline:

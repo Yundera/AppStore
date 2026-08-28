@@ -61,10 +61,10 @@ x-casaos:
     fr_fr: Radarr est un gestionnaire de collection de films pour les utilisateurs Usenet et BitTorrent. Il surveille plusieurs flux RSS pour les nouveaux films, les récupère, les trie et les renomme, et s'intègre aux clients de téléchargement comme qBittorrent et aux indexeurs via Prowlarr. Écrit dans la même bibliothèque `/DATA/Media/Movies` que Jellyfin lit.
     es_es: Radarr es un gestor de colección de películas para usuarios de Usenet y BitTorrent. Monitorea múltiples fuentes RSS de nuevas películas, las descarga, ordena y renombra, e se integra con clientes de descarga como qBittorrent e indexadores vía Prowlarr. Escribe en la misma biblioteca `/DATA/Media/Movies` que lee Jellyfin.
     zh_cn: Radarr 是面向 Usenet 和 BitTorrent 用户的电影收藏管理器。它监控多个 RSS 源以获取新电影，抓取、整理并重命名，并通过 Prowlarr 与 qBittorrent 等下载客户端和索引器集成。写入 Jellyfin 读取的同一 /DATA/Media/Movies 媒体库。
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Radarr/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Radarr/screenshot-1.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Radarr/thumbnail.png
+    - screenshot-1.png
+  thumbnail: thumbnail.png
   tagline:
     en_us: Automatically find, download and organise your movie collection.
     fr_fr: Trouvez, téléchargez et organisez automatiquement votre collection de films.

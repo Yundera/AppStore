@@ -74,10 +74,10 @@ x-casaos:
   developer: Viren070
   category: Media
   tags: ["media", "stremio", "personal"]
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AIOStreams/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AIOStreams/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/AIOStreams/screenshot-1.png
+    - screenshot-1.png
   title:
     en_us: AIOStreams
   tagline:

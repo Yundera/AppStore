@@ -157,16 +157,16 @@ x-casaos:
       - 在浏览器上下文中执行 JavaScript 进行高级自动化
       - 通过内置 noVNC 网页查看器实时查看浏览器
       - 访问 Web UI 仪表板进行状态监控
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/BrowserMCP/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/BrowserMCP/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/BrowserMCP/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/BrowserMCP/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: AI-controlled web browser via MCP
     fr_fr: Navigateur web controle par l'IA via MCP
     zh_cn: 通过 MCP 由 AI 控制的网页浏览器
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/BrowserMCP/thumbnail.png
+  thumbnail: thumbnail.png
   title:
     en_us: Browser MCP
   chips:

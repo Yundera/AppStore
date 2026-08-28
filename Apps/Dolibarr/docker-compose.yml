@@ -94,12 +94,12 @@ x-casaos:
   author: Yundera Team
   category: Business
   developer: Dolibarr Foundation
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dolibarr/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   index: /
   tagline:
     en_us: Open source ERP & CRM for business management

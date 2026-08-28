@@ -59,12 +59,11 @@ x-casaos:
   category: Media
   tags: ["media", "personal", "family"]
   developer: Deluan Quintão
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Navidrome/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   title:
     en_us: Navidrome
     ko_kr: Navidrome

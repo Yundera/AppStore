@@ -125,15 +125,15 @@ x-casaos:
       
       非常适合个人云存储、团队文件共享、媒体库，或作为复杂文件管理系统的轻量级替代方案。使用 Rust 构建，具有卓越的性能和最小的资源使用。
   developer: Sigoden
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Modern file server with WebDAV support - access your files anywhere, anytime
     zh_cn: 支持 WebDAV 的现代文件服务器 - 随时随地访问您的文件
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Dufs/thumbnail.png
+  thumbnail: thumbnail.png
   tips:
     before_install:
       en_us: |

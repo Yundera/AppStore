@@ -160,7 +160,7 @@ x-casaos:
 
       **Parfait si vous:** Avez un Docmost auto-heberge et voulez que des assistants IA lisent, ecrivent ou maintiennent son contenu sans payer le plan Enterprise de Docmost (le seul niveau avec support MCP integre).
   developer: Aptero
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocmostMCP/icon.png
+  icon: icon.png
   tagline:
     en_us: MCP server for Docmost — read, write, search, move pages
     fr_fr: Serveur MCP pour Docmost — lire, ecrire, rechercher, deplacer des pages

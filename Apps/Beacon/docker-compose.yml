@@ -119,10 +119,10 @@ x-casaos:
   main: beacon-proxy
   index: /
 
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Beacon/screenshot-1.png
+    - screenshot-1.png
 
   architectures:
     - amd64

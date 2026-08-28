@@ -177,12 +177,11 @@ x-casaos:
       • **Calidad profesional**: Obtén los mismos resultados que el software PDF caro
 
       Perfecto para estudiantes, profesionales o cualquiera que trabaje regularmente con documentos PDF. No más pagar por software PDF caro o preocuparse por subir documentos sensibles a servicios en línea.
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stirling-PDF/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stirling-PDF/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stirling-PDF/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stirling-PDF/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stirling-PDF/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Your complete PDF toolkit in your browser
     ko_kr: 브라우저 안의 완전한 PDF 툴킷

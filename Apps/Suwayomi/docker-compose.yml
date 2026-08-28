@@ -81,12 +81,12 @@ x-casaos:
   category: Media
   tags: ["media", "personal"]
   developer: Suwayomi Project
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Suwayomi/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   title:
     en_us: Suwayomi
   tagline:

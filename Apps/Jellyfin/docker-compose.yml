@@ -78,12 +78,12 @@ x-casaos:
     es_es: Jellyfin - El sistema multimedia de software libre que te da control total sobre la gestión y transmisión de tus medios. Transmite a cualquier dispositivo desde tu propio servidor.
     zh_cn: Jellyfin - 免费开源媒体系统，让您完全控制媒体的管理和流媒体播放。从您自己的服务器流式传输到任何设备。
     ko_kr: Jellyfin - 미디어 관리 및 스트리밍을 완전히 제어할 수 있는 무료 오픈소스 미디어 시스템입니다. 자체 서버에서 모든 기기로 스트리밍하세요.
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Jellyfin/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   index: /
   tagline:
     en_us: This is your Movie Hub. Watch your own movies, shows, and live TV - just like a streaming app, but fully hosted by you.

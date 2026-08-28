@@ -125,13 +125,13 @@ x-casaos:
 
       Installez dans Stremio ou sur https://web.strem.io/ en utilisant l'URL du manifest affichée sur la page de l'addon.
   developer: Worph
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/screenshot-1.png
+    - screenshot-1.png
   tagline:
     en_us: Stremio addon to browse and stream your local media with built-in HLS transcoding
     fr_fr: Addon Stremio pour parcourir et diffuser vos médias locaux avec transcodage HLS intégré
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentStremioAddon/icon.png
+  thumbnail: icon.png
   tips:
     before_install:
       en_us: |

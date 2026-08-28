@@ -348,13 +348,13 @@ x-casaos:
   webui_port: 80
   main: seafile
 
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-3.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Seafile/screenshot-4.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+    - screenshot-4.png
   architectures:
     - amd64
     - arm64

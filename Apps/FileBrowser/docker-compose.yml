@@ -122,11 +122,11 @@ x-casaos:
     sv_se: File Browser - Webbaserad filbläddrare inklusive delningsfunktioner etc.
     uk_ua: File Browser - Webbased File Browser, включаючи функції обміну, тощо
   developer: File Browser
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: This is your Cloud. Your own Drive alternative - upload, organize, and share files with full control and privacy.
     zh_cn: 上传，删除，预览，重命名，编辑和共享您的文件。
@@ -142,7 +142,7 @@ x-casaos:
     sv_se: Ladda upp, ta bort, förhandsgranska, byt namn, redigera och dela dina filer.
     uk_ua: Завантажте, видаліть, перегляньте, перейменуйте, відредагуйте і поділіться своїми файлами.
     ko_kr: 파일을 업로드, 삭제, 미리보기, 이름 변경, 편집 및 공유하세요.
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/FileBrowser/thumbnail.png
+  thumbnail: thumbnail.png
   tips:
     before_install:
       en_us: |

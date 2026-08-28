@@ -115,12 +115,12 @@ x-casaos:
       **Configuracion necesaria para medios personales:** Para conectar Plex a tu cuenta y transmitir tus propios archivos, debes ingresar un **token Plex claim** durante la instalacion. Sigue nuestra guia paso a paso aqui: 👉Como configurar Plex en Yundera (https://www.yundera.com/blog/tutorial-1/how-to-setup-plex-17)
       💡 Para una alternativa completamente gratuita y de codigo abierto sin necesidad de cuenta ni suscripcion, prueba **Jellyfin**.
       ℹ️ Yundera no esta afiliado con Plex y no controla sus servicios ni precios.
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Plex/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   index: /
   tagline:
     en_us: Your personal streaming service for all your media

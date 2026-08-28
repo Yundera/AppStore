@@ -85,14 +85,14 @@ x-casaos:
       - 附加图片、设置优先级、添加操作按钮和点击 URL
       - 从主题读取缓存消息
   developer: Worph
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/screenshot-2.png
+    - screenshot-1.png
+    - screenshot-2.png
   tagline:
     en_us: Push notifications for AI assistants via ntfy
     zh_cn: 通过 ntfy 为 AI 助手提供推送通知
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ntfy/thumbnail.png
+  thumbnail: thumbnail.png
   title:
     en_us: Ntfy
   chips:

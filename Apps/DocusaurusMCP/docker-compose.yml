@@ -110,12 +110,12 @@ x-casaos:
   category: Developer
   tags: ["developer", "ai"]
   developer: Yundera Team
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DocusaurusMCP/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   chips:
     - key: mcp
       name:

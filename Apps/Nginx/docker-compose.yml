@@ -128,13 +128,13 @@ x-casaos:
 
       只需将您的 HTML、CSS、JavaScript 和资源上传到 `/DATA/AppData/nginx/www/`，您的网站就会立即上线。无需数据库，无需复杂配置，只需纯静态文件托管。
   developer: nginx
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/screenshot-1.png
+    - screenshot-1.png
   tagline:
     en_us: Lightning-fast static website hosting powered by nginx
     zh_cn: 由 nginx 提供支持的闪电般快速静态网站托管
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Nginx/thumbnail.png
+  thumbnail: thumbnail.png
   tips:
     before_install:
       en_us: |

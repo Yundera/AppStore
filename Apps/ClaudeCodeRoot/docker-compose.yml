@@ -145,15 +145,15 @@ x-casaos:
 
       默认密码为自动生成，请在应用设置中查看 AUTH_PASSWORD 的值。
   developer: Anthropic / Yundera
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCodeRoot/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCodeRoot/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCodeRoot/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCodeRoot/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Web terminal for Claude Code - Anthropic's AI coding assistant
     zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ClaudeCodeRoot/thumbnail.png
+  thumbnail: thumbnail.png
   title:
     en_us: Claude Code (root)
     zh_cn: Claude Code (root)

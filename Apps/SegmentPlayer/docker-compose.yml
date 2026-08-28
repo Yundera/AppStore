@@ -113,13 +113,13 @@ x-casaos:
 
       Déposez simplement vos fichiers vidéo dans vos dossiers Downloads ou Media et ils deviennent instantanément streamables!
   developer: Worph
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/screenshot-1.png
+    - screenshot-1.png
   tagline:
     en_us: Stream any video file as HLS on-the-fly with live transcoding
     fr_fr: Diffusez n'importe quel fichier vidéo en HLS à la volée avec transcodage live
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SegmentPlayer/thumbnail.png
+  thumbnail: thumbnail.png
   tips:
     before_install:
       en_us: |

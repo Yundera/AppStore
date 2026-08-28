@@ -147,17 +147,16 @@ x-casaos:
 
       **Parfait si vous:** Voulez que Claude / Cursor / tout client MCP construise et pilote vos automatisations n8n, ou combiner avec d'autres apps MCP (Beacon, Ntfy, Chronos) pour des workflows pilotes par IA de bout en bout.
   developer: Aptero
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-3.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-4.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/screenshot-5.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+    - screenshot-4.png
+    - screenshot-5.png
   tagline:
     en_us: Expose your n8n workflows to LLMs via MCP
     fr_fr: Exposez vos workflows n8n aux LLMs via MCP
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/N8NMCP/thumbnail.png
   title:
     en_us: n8n MCP
   chips:

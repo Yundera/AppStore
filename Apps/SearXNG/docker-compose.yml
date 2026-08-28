@@ -189,12 +189,12 @@ x-casaos:
       - **API JSON opcional** - actívala para conectar SearXNG con scripts, agentes o herramientas LLM
 
       Como la instancia corre en tu propio servidor, los buscadores ven tu servidor, no a ti.
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/SearXNG/screenshot-1.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: screenshot-1.png
   tagline:
     en_us: Privacy-respecting metasearch across 200+ engines
     ko_kr: 200개 이상의 엔진을 아우르는 프라이버시 존중 메타 검색

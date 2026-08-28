@@ -122,19 +122,18 @@ x-casaos:
             - Protected by your Yundera single sign-on (Authelia SSO)
     developer: Yundera
     hostname: stremio-${APP_DOMAIN}
-    icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/icon.png
     index: /
     is_uncontrolled: false
     main: stremio
     port_map: "443"
     scheme: https
     screenshot_link:
-        - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-1.png
-        - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/screenshot-2.png
+        - screenshot-1.png
+        - screenshot-2.png
     store_app_id: stremio
     tagline:
         en_us: Stream movies & series (Community Edition)
-    thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Stremio/thumbnail.png
+    thumbnail: thumbnail.png
     tips:
         before_install:
             en_us: |

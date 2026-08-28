@@ -85,12 +85,12 @@ x-casaos:
   category: Utilities
   tags: ["files", "personal"]
   developer: C4illin
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ConvertX/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   title:
     en_us: ConvertX
   tagline:

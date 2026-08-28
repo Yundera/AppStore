@@ -170,16 +170,16 @@ x-casaos:
 
       **118 个 Nextcloud 工具 + 6 个 Talk 工具。** 一次应用密码设置。基于轮询（无需管理员 CLI）。详见内置文档。
   developer: Aptero
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NextcloudMCP/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NextcloudMCP/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NextcloudMCP/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NextcloudMCP/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: AI-powered Nextcloud — read, write, chat, all via MCP
     fr_fr: Nextcloud pilote par IA — lire, ecrire, discuter, le tout via MCP
     zh_cn: AI 驱动的 Nextcloud — 通过 MCP 读取、写入、聊天
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NextcloudMCP/thumbnail.png
+  thumbnail: thumbnail.png
   title:
     en_us: Nextcloud MCP
   chips:

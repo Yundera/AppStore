@@ -129,15 +129,15 @@ x-casaos:
       - 从 Web 仪表板监控执行历史和结果
       - 通过 Web UI 或内置 MCP 服务器直接从 AI 助手管理规则
   developer: Worph
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Cron-based scheduler for MCP tool calls
     zh_cn: 基于 cron 的 MCP 工具调用调度器
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/ChronosMCP/thumbnail.png
+  thumbnail: thumbnail.png
   title:
     en_us: Chronos MCP
   chips:

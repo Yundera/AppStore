@@ -54,12 +54,12 @@ x-casaos:
   developer: Louis Lam
   store_app_id: uptimekuma
   tags: ["monitoring", "uptime", "status"]
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/UptimeKuma/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   description:
     en_us: |
       **Self-hosted monitoring tool for websites, APIs, and services**

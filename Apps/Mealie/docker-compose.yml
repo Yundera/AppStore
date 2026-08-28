@@ -49,12 +49,12 @@ x-casaos:
   store_app_id: mealie
   webui_port: 80
   index: /
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Mealie/screenshot-1.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: screenshot-1.png
   architectures:
     - amd64
     - arm64

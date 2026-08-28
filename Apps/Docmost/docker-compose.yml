@@ -114,12 +114,12 @@ x-casaos:
   tags: ["productivity", "files", "business", "personal"]
   developer: Docmost
   store_app_id: docmost
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Docmost/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   description:
     en_us: |
       **Open-source collaborative wiki and documentation software**

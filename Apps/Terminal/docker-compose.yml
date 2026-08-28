@@ -74,9 +74,9 @@ x-casaos:
   main: terminal
   author: yundera
   developer: yundera
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Terminal/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Terminal/screenshot-1.png
+    - screenshot-1.png
   tagline:
     en_us: "Root shell on your server, in the browser"
   category: Utilities

@@ -139,12 +139,12 @@ x-casaos:
     es_es: Tribler es un cliente BitTorrent descentralizado y centrado en la privacidad. Enruta las descargas a través de su propia red onion integrada (similar a Tor), para que puedas buscar y descargar torrents de forma anónima sin servidor central, VPN ni rastreadores.
     zh_cn: Tribler 是一个去中心化、注重隐私的 BitTorrent 客户端。它通过内置的洋葱网络（类似 Tor）路由下载，让您无需任何中心服务器、VPN 或 Tracker 即可匿名搜索和下载种子。
     ko_kr: Tribler는 분산형 프라이버시 중심 BitTorrent 클라이언트입니다. 자체 내장 어니언 네트워크(Tor 유사)를 통해 다운로드를 라우팅하여 중앙 서버, VPN, 트래커 없이도 익명으로 토렌트를 검색하고 다운로드할 수 있습니다.
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Tribler/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   tagline:
     en_us: Anonymous, decentralized BitTorrent client with a built-in onion network.
     fr_fr: Client BitTorrent anonyme et décentralisé avec un réseau onion intégré.

@@ -93,12 +93,12 @@ x-casaos:
   author: Yundera Team
   category: Blog
   developer: Ghost Foundation
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Ghost/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   index: /ghost
   tagline:
     en_us: Professional publishing platform for newsletters and blogs

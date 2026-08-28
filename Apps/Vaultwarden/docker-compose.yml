@@ -257,12 +257,12 @@ x-casaos:
       **📧 Integración de Email:**
       Esta versión utiliza el servicio SMTP integrado de Yundera - ¡la recuperación de contraseñas y las notificaciones funcionan automáticamente!
   developer: Vaultwarden Community
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Vaultwarden/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   tagline:
     en_us: Secure, self-hosted password manager
     ko_kr: 안전한 셀프 호스팅 비밀번호 관리자

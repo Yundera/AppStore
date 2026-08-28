@@ -181,8 +181,19 @@ services:
     expose:
       - 8080
     networks:
-      - hubs-net
-      - pcs
+      hubs-net:
+        # reticulum's config.toml.template (ghcr.io/worph/hubs-seed) hardcodes
+        # `spoke_page_origin = https://spoke:8080/spoke/pages` — upstream turkey's
+        # service name. This service is app-prefixed for shared-network hygiene,
+        # so `spoke` resolves only through this alias. Without it the name does
+        # not resolve, Ret.PageOriginWarmer.get_aggregated_etag/0 blocks on its
+        # 15s Task.await, the cachex warmer GenServer crashes on every cycle and
+        # the page cache is never populated — so EVERY reticulum page answers
+        # 503 "Missing file <page>.html", including the two pages whose origin
+        # (hubs-client) is perfectly healthy. Verified on demostaging1.
+        aliases:
+          - spoke
+      pcs: {}
     labels:
       caddy_0: hubsspoke-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -262,8 +273,15 @@ services:
     expose:
       - 5000
     networks:
-      - hubs-net
-      - pcs
+      hubs-net:
+        # Same upstream-name / app-prefix mismatch as hubs-spoke above: the
+        # template's `[...Endpoint.imgproxy_url] host = "nearspark"` names the
+        # thumbnail service, which is `hubs-nearspark` here. Not fatal the way
+        # the spoke one is — it is a separate subsystem from the page warmer —
+        # but without the alias reticulum cannot reach the thumbnailer at all.
+        aliases:
+          - nearspark
+      pcs: {}
     labels:
       caddy_0: hubsnearspark-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -307,12 +325,12 @@ x-casaos:
   # remote participants dial in on directly. See the ports: block on that service.
   tags: ["personal", "family", "games", "needs-public-ip"]
 
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Hubs/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Hubs/thumbnail.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Hubs/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Hubs/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Hubs/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
 
   title:
     en_us: Hubs

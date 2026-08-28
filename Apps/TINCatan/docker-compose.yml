@@ -125,11 +125,11 @@ x-casaos:
   tags: ["games", "personal", "family"]
   author: CasaOS Team
   developer: Sean Segal & Contributors
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TINCatan/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   title:
     en_us: TINC - Settlers of Catan
   tagline:

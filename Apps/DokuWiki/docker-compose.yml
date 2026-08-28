@@ -82,12 +82,12 @@ x-casaos:
   category: Wiki
   tags: ["productivity", "files", "personal", "business"]
   developer: DokuWiki Community
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DokuWiki/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DokuWiki/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DokuWiki/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DokuWiki/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/DokuWiki/thumbnail.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
   index: /
   tagline:
     en_us: Simple wiki that doesn't require a database

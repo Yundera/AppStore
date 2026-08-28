@@ -148,15 +148,15 @@ x-casaos:
 
       **Parfait si vous:** Voulez que Claude / Cursor / tout client MCP vous joigne sur Telegram, ou piloter un LLM depuis un bot Telegram — et le combiner avec d'autres apps MCP (Beacon, n8n, Chronos) pour des workflows IA de bout en bout.
   developer: Worph
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/screenshot-3.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
   tagline:
     en_us: Bidirectional Telegram-MCP bridge for AI assistants
     fr_fr: Pont Telegram-MCP bidirectionnel pour les assistants IA
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/TelegramMCP/thumbnail.png
+  thumbnail: thumbnail.png
   title:
     en_us: Telegram MCP
   chips:

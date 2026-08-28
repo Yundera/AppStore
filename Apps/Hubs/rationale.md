@@ -2,6 +2,44 @@
 
 ## What deviation / exception is being requested
 
+### 1. The instance is public by design — anyone can create a room without an account
+
+`CONTRIBUTING.md` requires an authentication method enabled by default and names
+"a public website that does not require authentication" as a valid exception. Hubs
+claims that exception, deliberately and for the whole room-creation surface:
+
+- An anonymous, cookie-free `POST /api/v1/hubs` returns `200` with a
+  `creator_assignment_token` and an `embed_token`. That is not a hole — it is the
+  **Create Room** button on the landing page, which is the entire product. A Hubs
+  instance that requires an account before anyone can open a room is a Hubs
+  instance nobody can be invited to.
+- Sign-in exists and is Hubs' own (magic link to the address the user enters). It
+  buys *persistence and ownership* — saved avatars, scenes, room ownership across
+  devices — not access. This is the same shape as the built-in-auth exception
+  `CONTRIBUTING.md` grants Jellyfin and Immich, except that here the un-signed-in
+  state is a supported end state rather than a window that closes.
+
+**What is *not* public**, verified on demostaging1 from a jar that never signed in:
+
+| Surface | Anonymous result |
+|---|---|
+| `POST /api/v1/hubs` (create a room) | `200` — deliberate, this is the product |
+| `GET /api/v1/meta` (server version/metadata) | `200` — upstream, discloses nothing but the build |
+| `GET /api/postgrest/*` (the admin data plane) | **`401`** |
+| Admin rights | Held only by `${APP_EMAIL}`, the address `tips.before_install` names |
+
+`/admin` serves its client-rendered shell to anyone, as client-rendered admin panels
+do; every datum it renders comes from the PostgREST plane above, which is gated by a
+Guardian JWT and answers `401` without one.
+
+**What the operator is accepting** by installing this app: a room-creation endpoint
+open to anyone who learns the URL, and therefore storage and bandwidth consumed by
+uninvited rooms. Anyone who wants a private instance should front the app with the
+AppShield sidecar, at the cost of making invite links useless to anyone without a
+PCS account — which for most deployments defeats the purpose.
+
+### 2. Six of the eight services run as root
+
 Six of the eight services in the Hubs stack run as `user: "0:0"`:
 
 - `db` (`postgres:14-alpine`)
@@ -30,7 +68,7 @@ Forcing these images to run unprivileged would require maintaining a downstream 
 - **Caddy gateway termination.** All HTTP/HTTPS traffic is terminated by the PCS's `mesh-router-caddy`, not the Hubs containers themselves. Public Caddy labels point at internal `expose:` ports on the `pcs` network, so direct host-port exposure is limited to the SFU media range.
 - **Per-service `cpu_shares`** prevent a runaway service (e.g. compromised `nearspark` thumbnail proxy) from starving the host.
 - **Bootstrap secrets are mode `0600`**, owned by `PUID:PGID`. The compose `.env`, `perms.key.pem`, and `perms.pub.pem` are not world-readable.
-- **Postgres data dir is owned by uid 70** (the in-image postgres user), enforced on every install by an `chown -R 70:70` in `pre-install-cmd` so a stray framework-level chown can't relock it and crashloop the database.
+- **Postgres data dir is owned by uid 70** (the in-image postgres user), declared as `x-compose-app.folders` → `/DATA/AppData/hubs/pgdata` with `user: 70`, `group: 70`, `recursive: true`. Maison applies it before images are pulled and before every `up`, so a stray framework-level chown can't relock the cluster directory and crashloop the database.
 
 ## Alternatives considered and rejected
 
@@ -40,7 +78,7 @@ Forcing these images to run unprivileged would require maintaining a downstream 
 
 ## Data protection
 
-- All persistent state lives under `/DATA/AppData/hubs/` and survives uninstall/reinstall. The compose's `pre-install-cmd` calls `hubs-seed bootstrap` which is **idempotent** — on re-run it preserves existing secrets in `.env` (DB password, NODE_COOKIE, GUARDIAN_KEY, PHX_KEY, DASHBOARD_ACCESS_KEY, POSTGREST_PASSWORD, PERMS_KEY) and reuses the existing RSA keypair. Regenerating the keypair would invalidate every minted Guardian admin token.
+- All persistent state lives under `/DATA/AppData/hubs/` and survives uninstall/reinstall. The `x-compose-app.init` step `bootstrap` (`when: once`) runs `hubs-seed bootstrap`, which is **idempotent** — on re-run it preserves existing secrets in `secrets/.env` (DB password, NODE_COOKIE, GUARDIAN_KEY, PHX_KEY, DASHBOARD_ACCESS_KEY, POSTGREST_PASSWORD, PERMS_KEY) and reuses the existing RSA keypair. Regenerating the keypair would invalidate every minted Guardian admin token.
 - Framework-passthrough env vars (`APP_DOMAIN`, `APP_PUBLIC_IP_DASH`, `APP_PUBLIC_IPV4`, `APP_EMAIL`, `PUID`, `PGID`) **are** refreshed on every install — that is intentional, so a redeploy fixes drifted Caddy labels (the original outage's root cause).
 - The compose's `.env` file is mode `0600`. The RSA private key (`perms.key.pem`) is mode `0600`. Both are owned by `PUID:PGID`.
 - No user-owned content (Documents/Downloads/Media/Gallery) is touched by any Hubs container; the blast radius of a root container escape is bounded to `/DATA/AppData/hubs/`.
