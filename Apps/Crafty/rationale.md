@@ -34,4 +34,4 @@ This app deviates from the default AppStore requirements in three ways:
 
 - All persistent state is mapped under `/DATA/AppData/$AppID/` (`backups`, `logs`, `servers`, `config`, `import`), so user worlds, server configs, and backups survive uninstall and reinstall.
 - The app's data directories are declared under `x-compose-app.folders` and are created and owned as `$PUID:$PGID` by Maison before every `up`, so the user can manage or remove them from the Files app.
-- First-run credential seeding is guarded by a `.initialized` sentinel, so reinstalling over existing data never overwrites an existing admin account or configuration.
+- First-run credential seeding is guarded by `when: absent:/DATA/AppData/$AppID/config/credits.json` on the `seed-config` init step, so reinstalling over existing data never overwrites an existing admin account or configuration. It is keyed on a config file rather than on `once` deliberately: the `once` marker lives with the compose, which an uninstall-keep-data removes, so `once` would re-run on reinstall and reset a password the user had changed.

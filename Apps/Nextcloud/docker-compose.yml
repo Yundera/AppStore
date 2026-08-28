@@ -111,6 +111,9 @@ services:
     image: redis:8.6.2-alpine3.23
     container_name: nextcloud_redis
     cpu_shares: 70
+    # Stated explicitly per the Permission Strategy, and it matches the ownership
+    # `x-compose-app.folders` gives /DATA/AppData/nextcloud/redis.
+    user: $PUID:$PGID
     command: redis-server --requirepass $APP_DEFAULT_PASSWORD
     logging:
       driver: "json-file"
@@ -136,6 +139,13 @@ services:
     container_name: nextcloud_cron
     restart: unless-stopped
     cpu_shares: 30
+    # Must match the `nextcloud` service exactly. Without it the image's own default
+    # (www-data, uid 33) runs /cron.sh against a tree Maison owns as $PUID:$PGID, and
+    # every run dies on `Cannot write into config directory!` ->
+    # fopen(/var/www/html/config/config.php): Permission denied, on a 5-minute loop.
+    # Nextcloud's admin overview then reports "Last background job execution ran 56
+    # years ago" — the epoch, i.e. never once — so no cron job has ever run.
+    user: $PUID:$PGID
     entrypoint: /cron.sh
     depends_on:
       db:
