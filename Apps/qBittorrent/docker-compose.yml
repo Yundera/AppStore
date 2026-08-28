@@ -65,6 +65,7 @@ x-casaos:
     zh_cn: qBittorrent是一个跨平台的免费开源BitTorrent客户端，具有简洁的界面和强大的功能，包括顺序下载、带宽调度和RSS源支持。
     ko_kr: qBittorrent는 깔끔하고 간단한 인터페이스와 순차 다운로드, 대역폭 스케줄링, RSS 피드 지원을 포함한 강력한 기능을 가진 크로스 플랫폼 무료 오픈소스 BitTorrent 클라이언트입니다.
   icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
     - screenshot-1.png
     - screenshot-2.png

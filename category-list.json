@@ -1,5 +1,10 @@
 [
   {
+    "name": "AI",
+    "font": "robot-outline",
+    "description": "AI Assistants and Model Runners"
+  },
+  {
     "name": "Analytics",
     "font": "chart-areaspline",
     "description": "Analysis Apps"

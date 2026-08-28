@@ -103,6 +103,7 @@ x-casaos:
   main: openclaw
   author: Yundera Team
   category: AI
+  tags: ["ai", "personal", "developer"]
   description:
     en_us: |
       **What is OpenClaw?**
@@ -220,9 +221,10 @@ x-casaos:
 
       데이터는 서버에 보관됩니다. OpenClaw는 로컬에서 실행되며 추론을 위해서만 AI 제공업체에 연결됩니다.
   developer: OpenClaw Community
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OpenClaw/icon.png
+  icon: icon.png
+  thumbnail: thumbnail.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/OpenClaw/screenshot-1.png
+    - screenshot-1.png
   tagline:
     en_us: Open-source AI assistant that actually does things
     fr_fr: Assistant IA open-source qui agit vraiment
