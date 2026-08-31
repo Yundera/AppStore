@@ -3,19 +3,17 @@
   <Port>9696</Port>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>False</LaunchBrowser>
-  <!-- Auth is enabled before the app is ever reachable. Without an
-       AuthenticationMethod other than None, Prowlarr serves its full UI and
-       its admin API - including /initialize.json, which hands out the API
-       key - to anonymous callers. The first-run modal is a client-side
-       overlay and does not gate either. -->
-  <AuthenticationMethod>Forms</AuthenticationMethod>
+  <!-- External: Prowlarr performs no login of its own and trusts the reverse
+       proxy in front of it, which is the AppShield OIDC gate (prowlarr-gate).
+       Anything the internet can reach has already passed the PCS SSO.
+
+       Forms auth is deliberately NOT used here. Sonarr, Radarr and Lidarr
+       consume <Username>/<Password> from this file on first boot and create the
+       user row; Prowlarr does NOT - it strips both elements and leaves the
+       Users table empty, so Forms would enforce against zero users and lock the
+       owner out with no in-browser recovery. Verified on 2.4.0 and on latest. -->
+  <AuthenticationMethod>External</AuthenticationMethod>
   <AuthenticationRequired>Enabled</AuthenticationRequired>
-  <!-- Prowlarr consumes these two on first boot: it creates the user in
-       prowlarr.db and strips both elements from this file. seed/ is
-       create-if-absent, so it is never rewritten and a password the user
-       changes later survives. -->
-  <Username>admin</Username>
-  <Password>${PROWLARR_ADMIN_PASSWORD}</Password>
   <UrlBase></UrlBase>
   <InstanceName>Prowlarr</InstanceName>
   <UpdateMechanism>Docker</UpdateMechanism>

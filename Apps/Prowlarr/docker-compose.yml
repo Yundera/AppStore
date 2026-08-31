@@ -1,6 +1,43 @@
 name: prowlarr
 
 services:
+  # The SSO gate. It carries the Caddy labels, so this is the only service the
+  # internet can reach. Named `prowlarr-gate` so the backend can keep the name
+  # `prowlarr`, which Sonarr/Radarr/Lidarr use to reach it over `pcs`.
+  prowlarr-gate:
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: prowlarr-gate
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      caddy_0: prowlarr-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: prowlarr-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: prowlarr-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
+    environment:
+      BACKEND_HOST: prowlarr
+      BACKEND_PORT: "9696"
+      LISTEN_PORT: "80"
+      # Presence of OIDC_REGISTRAR_URL puts AppShield in OIDC mode: it
+      # self-registers with the PCS auth-registrar and every human request is
+      # sent through the built-in Authelia SSO.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+    depends_on:
+      - prowlarr
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:2.4.0
     container_name: prowlarr
@@ -8,15 +45,10 @@ services:
     user: $PUID:$PGID
     expose:
       - 9696
-    labels:
-      caddy_0: prowlarr-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 9696}}"
-      caddy_1: prowlarr-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 9696}}"
-      caddy_2: prowlarr-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 9696}}"
+    # No Caddy labels: this service is deliberately NOT published. It sits on
+    # `pcs` so sibling apps can reach it at `prowlarr:9696` with an X-Api-Key,
+    # which is the wiring the Sonarr/Radarr/Lidarr tips describe. That path is
+    # container-to-container and never leaves the host.
     networks:
       - pcs
     environment:
@@ -35,8 +67,9 @@ networks:
     external: true
 
 x-casaos:
-  main: prowlarr
+  main: prowlarr-gate
   index: /
+  webui_port: 80
   tips:
     before_install:
       en_us: |
@@ -44,15 +77,10 @@ x-casaos:
 
         📂 Config lives in `/DATA/AppData/prowlarr/`.
 
-        🔐 **Sign in with the account below.** Prowlarr ships with its login page
-        already enabled and this account already created, so it is never reachable
-        without signing in. Change the password from *Settings → General → Security*
-        once you are in.
-
-        Default Account
-        | Username | Password |
-        | -------- | -------- |
-        | `admin`  | `$PROWLARR_ADMIN_PASSWORD` |
+        🔐 **Protected by your Yundera single sign-on.** Prowlarr sits behind the
+        PCS SSO gate, so there is no separate password to set or remember — open
+        the tile and you are already signed in. Nothing is reachable from the
+        internet without passing that gate first.
 
         🔗 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):
         - **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.
@@ -88,13 +116,6 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  # Admin password for the account seeded into config.xml on first boot.
-  # Generated once into the app's .env and never regenerated, so it survives
-  # restarts, updates and restores. `alnum` rather than `password` because the
-  # value lands in an XML text node and is rendered in a markdown table in
-  # `tips` - symbols would need escaping in both. 24 alphanumerics is ~143 bits.
-  secrets:
-    PROWLARR_ADMIN_PASSWORD: alnum:24
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
   # before the image is pulled, before any hook, before the container starts.
   # Derived from the bind mounts in `volumes:` above; the container drops to
