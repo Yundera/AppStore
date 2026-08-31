@@ -2,7 +2,7 @@ name: convertx
 
 services:
   convertx:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: convertx
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -21,7 +21,6 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: convertx-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
-    user: "root"
     environment:
       BACKEND_HOST: "convertx-backend"
       BACKEND_PORT: "3000"

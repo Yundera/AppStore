@@ -47,7 +47,7 @@ services:
   browsermcp-proxy:
     # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
     # OAUTH_SCOPE names and a configurable protected path.
-    image: ghcr.io/yundera/appshield:2.0.7
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: browsermcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

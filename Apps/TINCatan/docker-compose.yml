@@ -5,12 +5,11 @@ services:
     # (no OIDC_REGISTRAR_URL): TINC is a 2-4 player game whose other players are
     # guests on this PCS, so a shared credential the owner can hand out is the
     # gate that keeps the app usable. See Apps/Stremio for the same pattern.
-    image: ghcr.io/yundera/appshield:2.0.9
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: tincatan
     # OIDC identity / redirect attestation: hostname must equal container_name.
     hostname: tincatan
     restart: unless-stopped
-    user: "root"
     cpu_shares: 80
     expose:
       - 80

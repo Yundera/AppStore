@@ -9,7 +9,7 @@ services:
   # (via Caddy); the backend has no Caddy labels and lives on the internal
   # pcs network.
   annas-torrents-webui:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: annas-torrents-webui
     # OIDC identity: AppShield builds its OIDC redirect URIs from os.hostname(),
     # and the auth-registrar attests this app's name via the container's PTR
@@ -17,7 +17,6 @@ services:
     # registration fails.
     hostname: annas-torrents-webui
     restart: unless-stopped
-    user: "root"
     expose:
       - "80"
     labels:

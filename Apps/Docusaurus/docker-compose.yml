@@ -2,11 +2,10 @@ name: docusaurus
 
 services:
   docusaurus:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: docusaurus
     hostname: docusaurus
     restart: unless-stopped
-    user: "root"
     expose:
       - "80"
     labels:

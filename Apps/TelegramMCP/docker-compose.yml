@@ -41,7 +41,7 @@ services:
     # configurable protected path; 2.0.9+ advertises offline_access and sends
     # prompt=consent, without which no refresh token is issued and every client has
     # to be re-authorized by hand once the 1h access token expires.
-    image: ghcr.io/yundera/appshield:2.0.9
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: telegrammcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -54,7 +54,7 @@ services:
     cpu_shares: 80
     expose:
       - 80
-    user: "root"
+    user: "0:0"   # numeric: scratch image has no passwd; /data/oauth is chowned $PUID
     environment:
       # Telegram's servers POST bot updates here as a plain HTTP client: they cannot
       # follow an SSO redirect and cannot acquire an OAuth token, so /webhook is the

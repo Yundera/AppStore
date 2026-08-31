@@ -6,7 +6,7 @@ services:
   # auth-registrar on first login: no client id, no secret, no issuer to configure.
   # No AUTH_HASH anywhere — Maison injects no such variable, so it would be empty.
   openclaw:
-    image: ghcr.io/yundera/appshield:2.0.9
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: openclaw
     # OIDC identity: AppShield's auth-service builds its OIDC redirect URIs from
     # os.hostname(), and auth-registrar independently attests this app's name via the
@@ -14,7 +14,6 @@ services:
     # container_name, or Docker defaults the hostname to the random container ID.
     hostname: openclaw
     restart: unless-stopped
-    user: "root"
     cpu_shares: 50
     expose:
       - 80

@@ -2,7 +2,7 @@ name: netdata
 
 services:
   netdata-proxy:
-    image: ghcr.io/yundera/appshield:2.0.9
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: netdata
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -10,7 +10,6 @@ services:
     # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
     hostname: netdata
     restart: unless-stopped
-    user: "root"
     environment:
       BACKEND_HOST: "netdata-backend"
       BACKEND_PORT: "19999"

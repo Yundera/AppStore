@@ -3,7 +3,7 @@ name: tribler
 services:
   # OIDC SSO front-door (Yundera Authelia). Only this container is publicly reachable.
   tribler:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: tribler
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -11,7 +11,6 @@ services:
     # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
     hostname: tribler
     restart: unless-stopped
-    user: "root"
     expose:
       - 80
     labels:

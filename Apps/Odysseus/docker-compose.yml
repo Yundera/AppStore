@@ -56,7 +56,7 @@ services:
       - odysseus-internal
 
   odysseus-proxy:
-    image: ghcr.io/yundera/appshield:2.0.6
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: odysseus
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -64,7 +64,6 @@ services:
     # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
     hostname: odysseus
     restart: unless-stopped
-    user: "root"
     environment:
       BACKEND_HOST: "odysseus-backend"
       BACKEND_PORT: "7000"

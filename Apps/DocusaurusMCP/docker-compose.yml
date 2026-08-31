@@ -52,14 +52,14 @@ services:
 
   # AppShield gates the admin panel with Yundera SSO and /mcp with OAuth 2.1.
   docusaurusmcp-proxy:
-    image: ghcr.io/yundera/appshield:2.0.9
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: docusaurusmcp
     hostname: docusaurusmcp
     restart: unless-stopped
     cpu_shares: 80
     expose:
       - 80
-    user: "root"
+    user: "0:0"   # numeric: scratch image has no passwd; /data/oauth is chowned $PUID
     environment:
       BACKEND_HOST: docusaurusmcp-backend
       BACKEND_PORT: "9750"
