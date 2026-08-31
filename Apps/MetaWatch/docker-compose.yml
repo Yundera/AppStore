@@ -262,9 +262,12 @@ networks:
     driver: bridge
 
 x-casaos:
+  # amd64 only: the four meta-* images (meta-watch, meta-search, meta-share,
+  # meta-core) publish a linux/amd64-only OCI index. AppShield is amd64+arm64,
+  # but the intersection across the whole stack is amd64 — declaring arm64
+  # would offer the app on arm64 PCS where the pull has no matching manifest.
   architectures:
     - amd64
-    - arm64
   main: metawatch
   webui_port: 80
   index: /

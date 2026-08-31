@@ -75,8 +75,7 @@ both work.
 ## Assets
 
 `icon.png`, `screenshot-1.png` and `thumbnail.png` all ship with this app.
-Outstanding: `thumbnail.png` is currently a copy of `icon.png` and still needs a
-distinct store-tile image (784x442).
+`thumbnail.png` is a distinct 784x442 store tile derived from the screenshot.
 
 ## Testing
 

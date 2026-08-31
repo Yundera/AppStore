@@ -61,7 +61,8 @@ x-casaos:
   scheme: https
   hostname: login.tailscale.com
   port_map: "443"
-  index: /
+  # Same target as x-compose-app.webui-path below: the console's machines page.
+  index: /admin/machines
 
   architectures:
     - amd64
@@ -146,7 +147,8 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   # The node has no UI of its own, so the tile opens the place you actually manage it
-  # from. Mirrors the x-casaos scheme/hostname/index above, which Maison does not read.
+  # from. Mirrors the x-casaos scheme/hostname/index above, which Maison does not read
+  # — the two blocks must agree so a CasaOS-only consumer lands on the same page.
   webui-host: login.tailscale.com
   webui-scheme: https
   webui-path: /admin/machines

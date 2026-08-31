@@ -42,12 +42,13 @@ services:
 
 x-casaos:
 
-  #this is the link for the webui port
-  scheme: https
-  hostname: raw.githack.com
-  port_map: "443"
-  index: /Yundera/AppStore/main/Apps/Samba/doc/index.html
-
+  # Headless app: SMB/CIFS on 445, no web UI of its own, so there is deliberately no
+  # scheme/hostname/port_map/index and the tile gets no open action. These keys used
+  # to send the tile to doc/index.html rendered through raw.githack.com on a
+  # hardcoded branch, so it served whatever that branch happened to contain instead
+  # of the doc that ships with this ref. There is no branch-free form of that URL;
+  # the connection details a user needs are in tips.before_install below, and
+  # doc/index.html still ships in the repo for reference.
 
   architectures:
     - amd64

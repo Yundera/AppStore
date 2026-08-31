@@ -36,6 +36,19 @@ services:
       SECURITY_INITIALLOGIN_USERNAME: admin
       SECURITY_INITIALLOGIN_PASSWORD: $APP_DEFAULT_PASSWORD
       DISABLE_ADDITIONAL_FEATURES: true
+      # Lock CORS to this app's own published origins. Upstream's default is an
+      # empty list, which does NOT disable CORS - it reflects any request Origin
+      # back with Access-Control-Allow-Credentials: true. Same-origin requests are
+      # exempt from this list, so the UI keeps working on any domain the gateway
+      # publishes; only genuinely cross-origin callers are rejected.
+      SYSTEM_CORSALLOWEDORIGINS: "https://stirlingpdf-${APP_DOMAIN},https://stirlingpdf-${APP_PUBLIC_IP_DASH}.nip.io,https://stirlingpdf-${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Shrink the pre-auth surface: upstream serves the OpenAPI spec, the Swagger
+      # explorer and the actuator endpoints without authentication. Disabling them
+      # is what upstream itself recommends for production (it logs the advice on
+      # every boot). The REST API stays fully available to authenticated callers.
+      SPRINGDOC_API_DOCS_ENABLED: false
+      SPRINGDOC_SWAGGER_UI_ENABLED: false
+      MANAGEMENT_ENDPOINTS_ACCESS_DEFAULT: none
       SYSTEM_DEFAULTLOCALE: en-US
       INSTALL_BOOK_AND_ADVANCED_HTML_OPS: false
       TMPDIR: /tmp

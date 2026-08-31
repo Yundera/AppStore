@@ -94,7 +94,7 @@ services:
       - SEADOC_SERVER_URL=https://seafile-$APP_DOMAIN/sdoc-server
 
       - ENABLE_NOTIFICATION_SERVER=true
-      - INNER_NOTIFICATION_SERVER_URL=http://notification-server:8083
+      - INNER_NOTIFICATION_SERVER_URL=http://seafile-notification-server:8083
       - NOTIFICATION_SERVER_URL=https://seafile-$APP_DOMAIN/notification
 
       - ENABLE_SEAFILE_AI=false
@@ -106,15 +106,15 @@ services:
       caddy_0.import: gateway_tls
       # Notification server
       caddy_0.0_handle_path: "/notification/*"
-      caddy_0.0_handle_path.reverse_proxy: "notification-server:8083"
+      caddy_0.0_handle_path.reverse_proxy: "seafile-notification-server:8083"
       # SeaDoc WebSocket
       caddy_0.1_handle_path: "/socket.io/*"
       caddy_0.1_handle_path.0_rewrite: "* /socket.io{uri}"
-      caddy_0.1_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_0.1_handle_path.1_reverse_proxy: "seafile-seadoc:80"
       # SeaDoc server
       caddy_0.2_handle_path: "/sdoc-server/*"
       caddy_0.2_handle_path.0_rewrite: "* {uri}"
-      caddy_0.2_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_0.2_handle_path.1_reverse_proxy: "seafile-seadoc:80"
       # Default: main seafile app
       caddy_0.4_reverse_proxy: "{{upstreams 80}}"
 
@@ -122,25 +122,25 @@ services:
       caddy_1: seafile-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.0_handle_path: "/notification/*"
-      caddy_1.0_handle_path.reverse_proxy: "notification-server:8083"
+      caddy_1.0_handle_path.reverse_proxy: "seafile-notification-server:8083"
       caddy_1.1_handle_path: "/socket.io/*"
       caddy_1.1_handle_path.0_rewrite: "* /socket.io{uri}"
-      caddy_1.1_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_1.1_handle_path.1_reverse_proxy: "seafile-seadoc:80"
       caddy_1.2_handle_path: "/sdoc-server/*"
       caddy_1.2_handle_path.0_rewrite: "* {uri}"
-      caddy_1.2_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_1.2_handle_path.1_reverse_proxy: "seafile-seadoc:80"
       caddy_1.4_reverse_proxy: "{{upstreams 80}}"
 
       # --- caddy_2: sslip.io fallback (no gateway_tls) ---
       caddy_2: seafile-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.0_handle_path: "/notification/*"
-      caddy_2.0_handle_path.reverse_proxy: "notification-server:8083"
+      caddy_2.0_handle_path.reverse_proxy: "seafile-notification-server:8083"
       caddy_2.1_handle_path: "/socket.io/*"
       caddy_2.1_handle_path.0_rewrite: "* /socket.io{uri}"
-      caddy_2.1_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_2.1_handle_path.1_reverse_proxy: "seafile-seadoc:80"
       caddy_2.2_handle_path: "/sdoc-server/*"
       caddy_2.2_handle_path.0_rewrite: "* {uri}"
-      caddy_2.2_handle_path.1_reverse_proxy: "seadoc:80"
+      caddy_2.2_handle_path.1_reverse_proxy: "seafile-seadoc:80"
       caddy_2.4_reverse_proxy: "{{upstreams 80}}"
     depends_on:
       db:
@@ -157,7 +157,7 @@ services:
       timeout: 10s
       retries: 5
 
-  notification-server:
+  seafile-notification-server:
     image: seafileltd/notification-server:13.0.10
     container_name: seafile-notification-server
     restart: unless-stopped
@@ -195,10 +195,10 @@ services:
       timeout: 5s
       retries: 5
 
-  seadoc:
+  seafile-seadoc:
     image: seafileltd/sdoc-server:2.0.9
     container_name: seafile-seadoc
-    hostname: seadoc
+    hostname: seafile-seadoc
     restart: unless-stopped
     user: 0:0
     cpu_shares: 70

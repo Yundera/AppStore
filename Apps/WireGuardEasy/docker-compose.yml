@@ -51,7 +51,6 @@ networks:
 x-casaos:
   architectures:
     - amd64
-    - arm
     - arm64
   main: wgeasy
   store_app_id: wgeasy

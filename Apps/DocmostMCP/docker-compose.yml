@@ -162,6 +162,9 @@ x-casaos:
   developer: Aptero
   icon: icon.png
   thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
   tagline:
     en_us: MCP server for Docmost — read, write, search, move pages
     fr_fr: Serveur MCP pour Docmost — lire, ecrire, rechercher, deplacer des pages
@@ -176,7 +179,7 @@ x-casaos:
       en_us: |
         **Set your Docmost credentials in the config UI after install**
 
-        There is no install form to fill in — the app installs with `DOCMOST_EMAIL` and `DOCMOST_PASSWORD` empty and the MCP server starts, but every Docmost call fails until you set them. Click **Open** on the app card to land on the bundled **config UI** at `/`, where you enter the credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL. What you save is written to `/DATA/AppData/docmostmcp/config.json` and survives redeploys.
+        There is no install form to fill in — the app installs with `DOCMOST_EMAIL` and `DOCMOST_PASSWORD` empty and the MCP server starts, but every Docmost call fails until you set them. Click **Open** on the app card to land on the bundled **config UI** at `/`, where you enter the credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL. What you save is written to `/DATA/AppData/docmostmcp/data/config.json` and survives redeploys.
 
         **Prerequisites:**
         1. A running **Docmost** instance reachable from the `pcs` Docker network (typically the companion Docmost app installed from this store)

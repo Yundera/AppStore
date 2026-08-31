@@ -80,9 +80,10 @@ networks:
     external: true
 
 x-casaos:
+  # ghcr.io/wg-easy/wg-easy:15.3.0 publishes only linux/amd64 and linux/arm64
+  # (no 32-bit armv7); nginx:1.29.3-alpine is broader, so this is the intersection.
   architectures:
     - amd64
-    - arm
     - arm64
   # Backend+proxy pattern (cf. lystik): main = the backend service name = subdomain prefix;
   # the -proxy sidecar carries the caddy labels advertising <main>-user.nsl.sh and forwards
@@ -128,7 +129,9 @@ x-casaos:
     - screenshot-2.png
     - screenshot-3.png
   category: Network
-  tags: ["privacy", "personal"]
+  # needs-public-ip: a WireGuard server is useless unless inbound UDP 51820 from the
+  # internet reaches the host (a CGNAT/tunnelled PCS never accepts a peer).
+  tags: ["privacy", "personal", "needs-public-ip"]
   title:
     en_us: WireGuard Easy - Host
   tagline:

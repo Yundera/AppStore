@@ -151,8 +151,6 @@ x-casaos:
   icon: icon.png
   screenshot_link:
     - screenshot-1.png
-    - screenshot-2.png
-    - screenshot-3.png
   tagline:
     en_us: Bidirectional Telegram-MCP bridge for AI assistants
     fr_fr: Pont Telegram-MCP bidirectionnel pour les assistants IA

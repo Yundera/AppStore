@@ -42,6 +42,24 @@ Per CONTRIBUTING, either one alone requires this file; together they are the
 - **Extra attack surface is switched off.** `DISABLE_ADDITIONAL_FEATURES=true` and
   `INSTALL_BOOK_AND_ADVANCED_HTML_OPS=false` keep the Calibre/advanced-HTML converters
   and the extra endpoints out of the running app.
+- **The pre-auth HTTP surface is trimmed.** Upstream answers a few endpoints before the
+  login gate. `SPRINGDOC_API_DOCS_ENABLED=false` and `SPRINGDOC_SWAGGER_UI_ENABLED=false`
+  — the settings the image itself recommends on every boot — remove the anonymous
+  OpenAPI document (904 KB, 259 paths) and the interactive Swagger explorer, and
+  `MANAGEMENT_ENDPOINTS_ACCESS_DEFAULT=none` removes the Actuator endpoints. The REST API
+  itself is untouched and stays available to authenticated callers. **One endpoint
+  remains open by design of the upstream app**: `GET /api/v1/info/status` returns
+  `{"version":"...","status":"UP"}` anonymously. It is hard-coded public in
+  `RequestUriUtils.isStaticResource`, has no configuration switch, and is the image's own
+  `HEALTHCHECK` target, so closing it needs an upstream change rather than a compose one.
+- **CORS is pinned to this app's own origins.** Upstream's default
+  `system.corsAllowedOrigins: []` does *not* disable CORS — it reflects any request
+  Origin back with `Access-Control-Allow-Credentials: true`.
+  `SYSTEM_CORSALLOWEDORIGINS` is set to the three hostnames the Caddy labels publish, so
+  a foreign origin gets a 403 and no `Access-Control-Allow-Origin` header. Same-origin
+  requests are exempt from that list in Spring Security (verified against the forwarded
+  host, which is what the gateway sets), so the UI keeps working unchanged on every
+  domain the deployment answers on, including extra domains Maison clones the route onto.
 - **Blast radius is one folder.** The only host path outside `/DATA/AppData/$AppID/`
   is `/DATA/Downloads`. `/DATA/Documents`, `/DATA/Media`, `/DATA/Gallery` and `/DATA`
   itself are **not** mounted, so root inside the container cannot reach them.

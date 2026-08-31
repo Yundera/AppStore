@@ -117,9 +117,11 @@ networks:
     external: true
 
 x-casaos:
+  # amd64 only: the backend image ghcr.io/worph/nextcloud-mcp:1.0.2 publishes a
+  # linux/amd64 manifest only. The AppShield sidecar does ship arm64, but the app
+  # can only run on the intersection of all its images.
   architectures:
     - amd64
-    - arm64
   main: nextcloudmcp-proxy
   index: /
   author: Aptero

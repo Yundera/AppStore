@@ -73,8 +73,13 @@ version of it.
   agent's own API and dashboard are reachable only via the authenticated sidecar.
 - **Authentication is on by default**, via the platform's Authelia SSO (AppShield
   OIDC). There is no unauthenticated read path to the metrics.
-- **Netdata Cloud is not configured.** The agent claims nothing and streams nowhere;
-  all metrics stay in `/DATA/AppData/netdata/lib/` on the machine being monitored.
+- **Netdata Cloud is not claimed.** No claim token is configured, the agent belongs to
+  no Cloud space and streams metrics nowhere; every collected metric stays in
+  `/DATA/AppData/netdata/lib/` on the machine being monitored. This is *not* the same
+  as "no contact with Netdata Inc." — the agent still reports anonymous usage
+  statistics, and the dashboard page it serves still calls out to `app.netdata.cloud`
+  and `registry.my-netdata.io` from the user's browser. Those are enumerated under
+  "Third-party network contacts made by default" below.
 - **Resource limits** bound both containers (`cpu_shares: 90`, `memory: 512M`,
   `cpus: 1.0` on the agent; `cpu_shares: 80`, `memory: 256M` on the sidecar), so a
   runaway collector cannot starve the rest of the PCS.
@@ -134,16 +139,38 @@ account is involved. The read-only host mounts mean the app can observe the syst
 but cannot alter it; the one exception to that statement is the Docker socket, which
 is documented above.
 
-**Two off-box contacts, both upstream Netdata defaults, left untouched by this
-compose.** No collected metric or machine data leaves the box through either of
-them, but both are third-party network contacts enabled by default with no
-`netdata.conf` override shipped here:
+## Third-party network contacts made by default
 
-- **Anonymous usage statistics** (`anonymous_statistics: true`) — the agent reports
-  its own version, OS and enabled plugins to Netdata Inc.'s telemetry endpoint.
-  Opt out per-install with the `DO_NOT_TRACK` environment variable or an
-  `.opt-out-from-anonymous-statistics` file in the config directory.
-- **The public node registry** (`https://registry.my-netdata.io`) — opening the
-  dashboard makes the browser call it (`GET /api/v1/registry?action=hello`) to sync
-  the "visited nodes" menu. Disable with `[registry]` / `enabled = no` in
-  `netdata.conf`.
+This compose ships no `netdata.conf` override and sets no opt-out environment
+variable, so every upstream default below is **live as installed**. None of them
+carry collected *metrics* — the metric database never leaves the box — but several
+do carry machine-identifying data, and they are third-party contacts either way.
+
+Two of them are made by the **agent container** itself; the rest are made by the
+**user's browser** when the SSO-gated dashboard page is opened, because the page
+Netdata serves is wired to Netdata Inc.'s hosted front end.
+
+| # | Who calls | Endpoint | What is sent | Turn it off with |
+| --- | --- | --- | --- | --- |
+| 1 | `netdata-backend` | Netdata Inc.'s anonymous-statistics endpoint | The agent's own version, OS and enabled plugins. No metrics. | `DO_NOT_TRACK=1` in the service `environment:`, or an `.opt-out-from-anonymous-statistics` file in the config directory. |
+| 2 | Browser | `https://registry.my-netdata.io` — `GET /api/v1/registry?action=hello` | **Machine-identifying.** The base64 request payload decodes to `{machine_guid, hostname, bearer_protection}`. Used to sync the dashboard's "visited nodes" menu. | `[registry]` / `enabled = no` in `netdata.conf`. |
+| 3 | Browser | `https://app.netdata.cloud` — `GET /api/v1/agents/<machine_guid>/user_agent_node_access` | **Machine-identifying.** The agent's machine GUID, sent to Netdata Cloud even though the agent is unclaimed. | No supported per-install switch; blocked only by not loading the hosted front end (see #4). |
+| 4 | Browser | `https://app.netdata.cloud` (static assets) | Nothing beyond a normal asset request, but the dashboard's `webpackPublicPath` is `https://app.netdata.cloud`, so the JS bundles are fetched from Netdata Cloud rather than from the local agent — the dashboard therefore depends on Netdata Cloud being reachable. | Not configurable in the shipped image. |
+| 5 | Browser | PostHog product analytics | The served page initialises PostHog with a live project token (`phc_hnhlqe6D…`), `tracking: !false` and `cookieDomain: .netdata.cloud` — i.e. front-end product analytics on dashboard use. | Not configurable in the shipped image; blocked only by not loading the hosted front end. |
+
+One further item, listed for completeness rather than as a live contact: the page
+contains a Google Tag Manager container (`GTM-N6CBMJD`) but only inside a
+`<noscript>` iframe, so in any normal script-enabled browser it never fires.
+
+**What this means in practice.** An installed Netdata reveals to Netdata Inc. that
+this machine exists — its hostname, its machine GUID, its OS and agent version — and,
+if the dashboard is opened, that someone looked at it. It does not reveal the metrics
+themselves, the process/user/container names on the charts, or anything under `/DATA`.
+
+**Why it is left on rather than disabled here.** Contacts 3–5 are baked into the
+dashboard front end the image serves and cannot be switched off from compose; 1 and 2
+can be, and turning them off is the recorded next step for this app alongside the
+Docker-socket proxy above. They are disclosed rather than silently shipped because the
+app has been deployed and tested in this shape, and because a change to `netdata.conf`
+has to be delivered into a bind-mounted config directory that is empty on a clean
+install.

@@ -28,10 +28,22 @@ fi
 # 3. left column: icon / title / tagline stacked vertically, then centred as one
 #    block. Stacking rather than fixed offsets is what keeps a two-line title
 #    (DocmostMCP, "TINC - Settlers of Catan") from landing on top of the tagline.
-CH=${#TITLE}
-if   [ "$CH" -gt 22 ]; then TPS=27
-elif [ "$CH" -gt 13 ]; then TPS=33
-else TPS=40; fi
+# Pick the largest size at which the LONGEST WORD still fits the 258px column.
+# A pure character count cannot see this: "Docusaurus" is only 10 chars but is
+# 297px wide at 40pt, so caption: broke it mid-word into "Docusauru / s".
+# Measuring instead means multi-word titles still wrap at their spaces (which
+# looks fine - "Stirling PDF", "TINC - Settlers of Catan") while a single long
+# word steps down a size rather than being cut in half.
+LONGEST=$(printf '%s\n' $TITLE | awk '{ if (length($0) > length(m)) m = $0 } END { print m }')
+# Two constraints, both needed: the longest word must fit the column width (or
+# it is split mid-word), AND the wrapped block must stay within ~2 lines (or a
+# long multi-word title like "TINC - Settlers of Catan" grows to four lines and
+# collides with the tagline).
+for TPS in 40 33 27 22; do
+  WW=$(convert -background none -font "$FB" -pointsize $TPS label:"$LONGEST" -format '%w' info: 2>/dev/null || echo 999)
+  TH=$(convert -background none -font "$FB" -pointsize $TPS -size 258x caption:"$TITLE" -format '%h' info: 2>/dev/null || echo 999)
+  [ "$WW" -le 258 ] && [ "$TH" -le 100 ] && break
+done
 convert "$SRC/icon.png" -resize 72x72 -background none -gravity west -extent 258x72 "$T/ico.png"
 convert -background none -fill '#FFFFFF' -font "$FB" -pointsize $TPS -size 258x caption:"$TITLE" \
         -background none -gravity west -extent 258x "$T/title.png"
