@@ -194,7 +194,7 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
-  thumbnail: screenshot-1.png
+  thumbnail: thumbnail.png
   tagline:
     en_us: Privacy-respecting metasearch across 200+ engines
     ko_kr: 200개 이상의 엔진을 아우르는 프라이버시 존중 메타 검색

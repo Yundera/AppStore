@@ -60,7 +60,7 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
-  thumbnail: screenshot-1.png
+  thumbnail: thumbnail.png
   description:
     en_us: |
       **Your private, self-hosted knowledge base**

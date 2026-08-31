@@ -54,7 +54,7 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
-  thumbnail: screenshot-1.png
+  thumbnail: thumbnail.png
   architectures:
     - amd64
     - arm64

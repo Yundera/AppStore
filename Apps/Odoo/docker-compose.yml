@@ -89,7 +89,7 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
-  thumbnail: screenshot-1.png
+  thumbnail: thumbnail.png
   title:
     en_us: Odoo
     ko_kr: 오두

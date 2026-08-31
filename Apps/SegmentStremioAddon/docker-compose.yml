@@ -131,7 +131,7 @@ x-casaos:
   tagline:
     en_us: Stremio addon to browse and stream your local media with built-in HLS transcoding
     fr_fr: Addon Stremio pour parcourir et diffuser vos médias locaux avec transcodage HLS intégré
-  thumbnail: icon.png
+  thumbnail: thumbnail.png
   tips:
     before_install:
       en_us: |
