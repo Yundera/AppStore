@@ -46,7 +46,15 @@ x-casaos:
 
         📂 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.
 
-        🔐 **Set your login on first launch.** Sonarr ships with no account: the first page it shows is a non-dismissible *Authentication Required* form. Choose **Forms (Login Page)** and set a username and password there before doing anything else — until you do, anyone who reaches the app's URL can use it.
+        🔐 **Sign in with the account below.** Sonarr ships with its login page
+        already enabled and this account already created, so it is never reachable
+        without signing in. Change the password from *Settings → General → Security*
+        once you are in.
+
+        Default Account
+        | Username | Password |
+        | -------- | -------- |
+        | `admin`  | `$SONARR_ADMIN_PASSWORD` |
 
         🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
 
@@ -79,6 +87,13 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  # Admin password for the account seeded into config.xml on first boot.
+  # Generated once into the app's .env and never regenerated, so it survives
+  # restarts, updates and restores. `alnum` rather than `password` because the
+  # value lands in an XML text node and is rendered in a markdown table in
+  # `tips` - symbols would need escaping in both. 24 alphanumerics is ~143 bits.
+  secrets:
+    SONARR_ADMIN_PASSWORD: alnum:24
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
   # before the image is pulled, before any hook, before the container starts.
   # Derived from the bind mounts in `volumes:` above; the container drops to

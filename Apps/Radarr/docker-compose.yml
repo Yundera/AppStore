@@ -46,6 +46,16 @@ x-casaos:
 
         📂 Config lives in `/DATA/AppData/radarr/`, movies in `/DATA/Media/Movies`, downloads in `/DATA/Downloads` — the same folders Jellyfin reads, so they share one library.
 
+        🔐 **Sign in with the account below.** Radarr ships with its login page
+        already enabled and this account already created, so it is never reachable
+        without signing in. Change the password from *Settings → General → Security*
+        once you are in.
+
+        Default Account
+        | Username | Password |
+        | -------- | -------- |
+        | `admin`  | `$RADARR_ADMIN_PASSWORD` |
+
         🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
 
         ❓ Questions? Contact us at help@yundera.com
@@ -77,6 +87,13 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  # Admin password for the account seeded into config.xml on first boot.
+  # Generated once into the app's .env and never regenerated, so it survives
+  # restarts, updates and restores. `alnum` rather than `password` because the
+  # value lands in an XML text node and is rendered in a markdown table in
+  # `tips` - symbols would need escaping in both. 24 alphanumerics is ~143 bits.
+  secrets:
+    RADARR_ADMIN_PASSWORD: alnum:24
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Derived from the trailing-slash bind mounts in `volumes:` above.
   folders:
