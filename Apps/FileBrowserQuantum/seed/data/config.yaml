@@ -1,0 +1,55 @@
+# FileBrowser Quantum configuration.
+#
+# Seeded once, on first start. Maison's seed tree is create-if-absent, so your
+# edits here are never overwritten by an app update — but a new option added by a
+# later store release will not appear either. Compare against the upstream sample
+# at https://github.com/gtsteffaniak/filebrowser/blob/master/backend/config.yaml
+# after a version bump.
+#
+# The image already points at this file (FILEBROWSER_CONFIG) and at the database
+# beside it (FILEBROWSER_DATABASE); both paths are repeated below so that editing
+# one place is enough.
+
+server:
+  port: 80
+  baseURL: "/"
+  database: "/home/filebrowser/data/database.db"
+  # Thumbnails and other derived files. On the same volume as the database, so it
+  # survives a restart instead of being rebuilt from scratch every boot.
+  cacheDir: "/home/filebrowser/data/cache"
+  # No outbound call to check for new releases: a PCS app should not phone home.
+  # Version bumps come from the app store.
+  disableUpdateCheck: true
+  logging:
+    - levels: "info|warning|error"
+
+  # externalUrl is deliberately left unset. Quantum then builds share links from
+  # the Host of the request, so a link works on whichever of the app's three
+  # routes (<app>-<domain>, nip.io, sslip.io) the owner happened to be using.
+  # Setting it would pin every share link to one of them.
+
+  sources:
+    - path: "/srv"
+      name: "Server"
+      config:
+        defaultEnabled: true
+        rules:
+          # /srv is the whole of /DATA, so this covers /DATA/AppData — every other
+          # app's database, config and secrets. `viewable` keeps it browsable (the
+          # recovery use case this app is installed for) while keeping it out of
+          # the search index: those trees are mostly sqlite/WAL files that churn
+          # constantly, which is index work and memory spent on results nobody
+          # wants. Delete this rule if you do want AppData searchable.
+          - folderPath: "/AppData"
+            viewable: true
+
+auth:
+  # 30 days, matching the PCS-wide session policy. Quantum's own default is 2
+  # hours, which on a file manager means being logged out mid-upload.
+  tokenExpirationHours: 720
+  methods:
+    password:
+      enabled: true
+      # No self-signup: this is a single-owner server, extra accounts are created
+      # by the admin from Settings > Users.
+      signup: false

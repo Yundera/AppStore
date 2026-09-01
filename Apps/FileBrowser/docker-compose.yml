@@ -1,22 +1,37 @@
 name: filebrowser
 services:
+  # AppShield SSO gate — the only publicly reachable service. FileBrowser has no
+  # OIDC of its own and never will (upstream archived the project on 2026-09-01
+  # with the OIDC request, filebrowser/filebrowser#1328, closed unimplemented), so
+  # the gate is what puts this app behind Yundera SSO.
   filebrowser:
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: filebrowser
-    user: $PUID:$PGID
-    environment:
-      PGID: $PGID
-      PUID: $PUID
-      TZ: $TZ
-      FB_DATABASE: /db/database.db
-    image: filebrowser/filebrowser:v2.63.2
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: filebrowser
     restart: unless-stopped
-    volumes:
-      - type: bind
-        source: ${DATA_ROOT:-/DATA}/AppData/$AppID/db/
-        target: /db/
-      - type: bind
-        source: ${DATA_ROOT:-/DATA}/
-        target: /srv/
+    environment:
+      BACKEND_HOST: "filebrowser-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # FileBrowser's share links are anonymous by design — the hash in the URL is
+      # the credential, and the share can carry its own password on top. Behind an
+      # unqualified gate every one of them would 302 to the SSO login and the
+      # feature would be silently dead, so its three prefixes are exempted:
+      #   share/       the share landing page (SPA route)
+      #   api/public/  the endpoints that page calls (/api/public/share, /api/public/dl)
+      #   static/      the JS/CSS that page loads
+      # Prefix-matched, comma-separated, no leading slash. Nothing here reaches the
+      # authenticated API: /api/resources, /api/users and /api/settings stay gated.
+      ALLOWED_PATHS: "share/,api/public/,static/"
+      # This is a file manager: uploads are the point. 0 = unlimited, which is the
+      # image default today — pinned so a future default cannot cap uploads silently.
+      CLIENT_MAX_BODY_SIZE: "0"
     expose:
       - 80
     labels:
@@ -28,9 +43,45 @@ services:
       caddy_1.reverse_proxy: "{{upstreams 80}}"
       caddy_2: filebrowser-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - filebrowser-backend
     networks:
+      # On `pcs` because Caddy and auth-registrar must reach it, and on the app's
+      # own network because that is where its backend lives.
       - pcs
+      - filebrowser-internal
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  filebrowser-backend:
+    container_name: filebrowser-backend
+    user: $PUID:$PGID
+    environment:
+      PGID: $PGID
+      PUID: $PUID
+      TZ: $TZ
+      FB_DATABASE: /db/database.db
+    image: filebrowser/filebrowser:v2.63.23
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/AppData/$AppID/db/
+        target: /db/
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/
+        target: /srv/
+    expose:
+      - 80
+    # No Caddy labels and NOT on `pcs`: with its own auth turned off (see the
+    # set-noauth init step) this container is unauthenticated, so the gate must be
+    # the only path to it. `filebrowser-internal` is what enforces that — on `pcs`
+    # any other app on the server could reach it directly.
+    networks:
+      - filebrowser-internal
+    cpu_shares: 50
     deploy:
       resources:
         limits:
@@ -52,15 +103,17 @@ services:
       volumes:
         - container: /db/
           description:
-            en_us: FileBrowser's own database - user accounts, permissions, shares and settings. Kept across uninstall and reinstall.
+            en_us: FileBrowser's own database - permissions, shares and settings. Kept across uninstall and reinstall.
         - container: /srv/
           description:
-            en_us: The whole of /DATA - Documents, Downloads, Media and AppData. This is everything FileBrowser can browse, edit, delete and share, so any user you create here can reach it.
+            en_us: The whole of /DATA - Documents, Downloads, Media and AppData. This is everything FileBrowser can browse, edit, delete and share, so anyone who passes the Yundera login can reach all of it.
 
 networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
+  filebrowser-internal:
+    name: filebrowser-internal
 
 x-casaos:
   architectures:
@@ -146,80 +199,102 @@ x-casaos:
   tips:
     before_install:
       en_us: |
+        Sign-in
+
+        FileBrowser is protected by your Yundera login (SSO) - the same account you
+        use for the dashboard. There is no separate FileBrowser password to set or
+        remember, and no login form of its own: open the app and you are already in,
+        as its administrator.
+
+        Share links keep working. A link you create from the Share menu stays
+        reachable without a Yundera login, exactly as before - the code in the link
+        is what grants access, plus the optional password you can set on it.
+
         What this app can reach
 
         FileBrowser mounts the whole of `/DATA` read-write. That includes
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
         `/DATA/AppData` - the last one holding the databases, configuration and
-        secrets of every other app installed on this server. Anyone who signs in,
-        including any extra user you create here, can browse, edit, delete and
-        share all of it. Change the default password right after install and only
-        hand out accounts you trust with your whole server.
-
-        Default Account
-        | Username   | Password       |
-        | --------   | ------------   |
-        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+        secrets of every other app installed on this server. Anyone who can sign in
+        to your Yundera account can browse, edit, delete and share all of it, and
+        so can anyone you hand a share link to for a file inside it.
       ko_kr: |
+        로그인
+
+        FileBrowser는 Yundera 로그인(SSO)으로 보호됩니다. 대시보드에서 사용하는 것과
+        같은 계정이며, 따로 설정하거나 기억해야 할 FileBrowser 비밀번호는 없습니다.
+        자체 로그인 화면도 없습니다. 앱을 열면 이미 관리자로 로그인된 상태입니다.
+
+        공유 링크는 그대로 작동합니다. 공유 메뉴에서 만든 링크는 이전과 똑같이
+        Yundera 로그인 없이 접근할 수 있습니다. 링크에 포함된 코드가 접근 권한을
+        부여하며, 원한다면 링크에 비밀번호를 추가로 설정할 수 있습니다.
+
         이 앱이 접근할 수 있는 범위
 
         FileBrowser는 `/DATA` 전체를 읽기/쓰기로 마운트합니다. 여기에는
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`,
         그리고 다른 모든 앱의 데이터베이스, 설정, 비밀 정보가 들어 있는
-        `/DATA/AppData`가 포함됩니다. 여기에 로그인하는 사람은 누구나(직접 추가한
-        사용자 포함) 이 모든 것을 탐색, 편집, 삭제, 공유할 수 있습니다. 설치 후
-        기본 비밀번호를 즉시 변경하고, 서버 전체를 맡길 수 있는 사람에게만 계정을
-        제공하세요.
-
-        기본 계정
-        | 사용자명   | 비밀번호       |
-        | --------   | ------------   |
-        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+        `/DATA/AppData`가 포함됩니다. Yundera 계정에 로그인할 수 있는 사람은 누구나
+        이 모든 것을 탐색, 편집, 삭제, 공유할 수 있으며, 그 안의 파일에 대한 공유
+        링크를 받은 사람도 마찬가지입니다.
       zh_cn: |
+        登录方式
+
+        FileBrowser 由你的 Yundera 登录（SSO）保护，与你登录控制面板所用的是同一个
+        账户。无需设置或记住单独的 FileBrowser 密码，它也没有自己的登录页面：打开应用
+        即已以管理员身份登录。
+
+        分享链接照常可用。你在「分享」菜单中创建的链接无需 Yundera 登录即可访问，
+        与以往一致——链接中的代码就是访问凭证，你还可以为其另外设置密码。
+
         此应用可以访问的范围
 
         FileBrowser 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
         `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
-        数据库、配置和密钥的 `/DATA/AppData`。任何登录此应用的人（包括你在这里创建
-        的其他用户）都可以浏览、编辑、删除和分享这些内容。安装后请立即修改默认密码，
-        并且只把账户交给你愿意托付整台服务器的人。
-
-        默认账户
-        | 用户名     | 密码           |
-        | --------   | ------------   |
-        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+        数据库、配置和密钥的 `/DATA/AppData`。任何能登录你 Yundera 账户的人都可以
+        浏览、编辑、删除和分享这些内容，你分享出去的链接的接收者同样可以访问对应文件。
       fr_fr: |
+        Connexion
+
+        FileBrowser est protégé par votre connexion Yundera (SSO) — le même compte que
+        pour le tableau de bord. Aucun mot de passe FileBrowser distinct à définir ou à
+        retenir, et pas de formulaire de connexion propre à l'application : vous l'ouvrez
+        et vous y êtes déjà, en tant qu'administrateur.
+
+        Les liens de partage continuent de fonctionner. Un lien créé depuis le menu
+        Partager reste accessible sans connexion Yundera, exactement comme avant : c'est
+        le code contenu dans le lien qui donne l'accès, plus le mot de passe facultatif
+        que vous pouvez y ajouter.
+
         Ce à quoi cette application a accès
 
         FileBrowser monte l'intégralité de `/DATA` en lecture-écriture : cela inclut
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
         `/DATA/AppData`, qui contient les bases de données, configurations et secrets
-        de toutes les autres applications du serveur. Toute personne qui s'y connecte,
-        y compris un utilisateur que vous créez ici, peut parcourir, modifier,
-        supprimer et partager l'ensemble. Changez le mot de passe par défaut dès
-        l'installation et ne donnez un compte qu'aux personnes à qui vous confieriez
-        tout le serveur.
-
-        Compte par défaut
-        | Nom d'utilisateur | Mot de passe   |
-        | --------          | ------------   |
-        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+        de toutes les autres applications du serveur. Toute personne pouvant se connecter
+        à votre compte Yundera peut parcourir, modifier, supprimer et partager l'ensemble,
+        de même que toute personne à qui vous transmettez un lien de partage.
       es_es: |
+        Inicio de sesión
+
+        FileBrowser está protegido por tu inicio de sesión de Yundera (SSO), la misma
+        cuenta que usas para el panel. No hay una contraseña de FileBrowser aparte que
+        configurar o recordar, ni un formulario de acceso propio: abres la aplicación y
+        ya estás dentro, como administrador.
+
+        Los enlaces para compartir siguen funcionando. Un enlace creado desde el menú
+        Compartir sigue siendo accesible sin iniciar sesión en Yundera, igual que antes:
+        el código del enlace es lo que concede el acceso, más la contraseña opcional que
+        puedes añadirle.
+
         A qué puede acceder esta aplicación
 
         FileBrowser monta todo `/DATA` en modo lectura-escritura: incluye
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` y
         `/DATA/AppData`, que contiene las bases de datos, la configuración y los
-        secretos de todas las demás aplicaciones del servidor. Cualquiera que inicie
-        sesión aquí, incluido cualquier usuario que crees, puede explorar, editar,
-        eliminar y compartir todo ello. Cambia la contraseña por defecto justo
-        después de instalar y crea cuentas solo para personas a las que confiarías
-        el servidor entero.
-
-        Cuenta predeterminada
-        | Usuario    | Contraseña     |
-        | --------   | ------------   |
-        | `admin`    | `$APP_DEFAULT_PASSWORD` |
+        secretos de todas las demás aplicaciones del servidor. Cualquiera que pueda
+        iniciar sesión en tu cuenta de Yundera puede explorar, editar, eliminar y
+        compartir todo ello, igual que cualquiera a quien le pases un enlace.
   title:
     en_us: FileBrowser
   index: /
@@ -233,18 +308,39 @@ x-compose-app:
   # existing database and used to abort the whole hook when it did.
   init:
     - name: init-db
-      image: filebrowser/filebrowser:v2.63.2
+      image: filebrowser/filebrowser:v2.63.23
       user: $PUID:$PGID
       volumes:
         - /DATA/AppData/$AppID/db:/db
       command: config init --database /db/database.db
       when: absent:/DATA/AppData/$AppID/db/database.db
     - name: add-admin
-      image: filebrowser/filebrowser:v2.63.2
+      image: filebrowser/filebrowser:v2.63.23
       user: $PUID:$PGID
       volumes:
         - /DATA/AppData/$AppID/db:/db
       command: ["users", "add", "admin", "$APP_DEFAULT_PASSWORD", "--perm.admin", "--database", "/db/database.db"]
+      when: once
+    # Hands authentication to the AppShield gate. `noauth` resolves every request to
+    # user ID 1 — the `admin` seeded just above — so the app opens straight into the
+    # UI with full rights and no second password, and never 302s to its own /login
+    # (which the gate reserves and would answer with its own page).
+    #
+    # It has to be `config set`: the CLI's --noauth flag only applies to first-run
+    # quick setup and is not persistent, and the setting lives in the bolt database,
+    # not in an env var.
+    #
+    # `once`, not `always`, on purpose. The step name is new, so an existing install
+    # has no `.init/set-noauth` marker and picks this up on its next install-from-store;
+    # afterwards it is skipped, which is what keeps it off the restart path — bolt takes
+    # an exclusive lock, and a pre_up step that fails against a still-running container
+    # is fatal to the whole converge.
+    - name: set-noauth
+      image: filebrowser/filebrowser:v2.63.23
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/db:/db
+      command: ["config", "set", "--auth.method=noauth", "--database", "/db/database.db"]
       when: once
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts

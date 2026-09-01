@@ -1,0 +1,224 @@
+name: filebrowserquantum
+
+services:
+  filebrowserquantum:
+    image: gtstef/filebrowser:1.5.5-stable
+    container_name: filebrowserquantum
+    user: $PUID:$PGID
+    restart: unless-stopped
+    environment:
+      TZ: $TZ
+      # Sets the password of the built-in `admin` account. Quantum re-applies it on
+      # EVERY start, so a password changed inside the app does not survive a
+      # restart while this variable is set. To manage the admin password from the
+      # UI instead, clear this variable; to keep it and still have a personal
+      # login, create a second account under Settings > Users - that one is left
+      # alone.
+      FILEBROWSER_ADMIN_PASSWORD: $APP_DEFAULT_PASSWORD
+    volumes:
+      # config.yaml (seeded on first start), database.db and the thumbnail cache.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/AppData/$AppID/data/
+        target: /home/filebrowser/data/
+      # The tree the app manages. Mirrors Apps/FileBrowser: the whole of /DATA, so
+      # Documents, Downloads, Media and AppData are all reachable. See rationale.md.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/
+        target: /srv/
+    expose:
+      - 80
+    labels:
+      caddy_0: filebrowserquantum-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: filebrowserquantum-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: filebrowserquantum-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - pcs
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          # Higher than Apps/FileBrowser's 256M on purpose: Quantum keeps a search
+          # index of the source tree, and /srv is the whole of /DATA. Lower this if
+          # your server is small and you narrow the source in config.yaml.
+          memory: 1G
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: Timezone used for the file timestamps shown in the interface.
+        - container: FILEBROWSER_ADMIN_PASSWORD
+          description:
+            en_us: Password of the built-in admin account. Re-applied on every start, so clear it if you want to change the admin password from inside the app.
+      volumes:
+        - container: /home/filebrowser/data/
+          description:
+            en_us: The app's own state - config.yaml, its user/share database and the thumbnail cache. Kept across uninstall and reinstall.
+        - container: /srv/
+          description:
+            en_us: The whole of /DATA - Documents, Downloads, Media and AppData. This is everything the app can browse, edit, delete and share, so any account you create here can reach all of it.
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: filebrowserquantum
+  author: Yundera Team
+  developer: gtsteffaniak
+  category: Cloud
+  tags: ["files", "personal", "search"]
+  description:
+    en_us: |
+      FileBrowser Quantum - a faster file manager with real search
+
+      FileBrowser Quantum is a maintained fork of the classic File Browser, rebuilt around an index of your files. Where the original walks the disk for every search, Quantum answers instantly, and can filter by type, size or folder while it does.
+
+      It keeps everything the original was good at - upload, organize, preview and share files from any device, edit text files, view images and video, create folders and hand out share links - and adds indexed search, multiple named sources, access rules per folder, an optional OnlyOffice integration and a considerably faster interface.
+
+      This app ships the basic single-user setup: sign in with the admin account, and the whole of your server's storage is one browsable source. Additional accounts, per-folder permissions and extra sources are all configurable from the settings screen or the app's config.yaml.
+
+      The original File Browser was archived by its authors on 1 September 2026 and receives no further fixes. Quantum is where that project's development continues.
+    fr_fr: |
+      FileBrowser Quantum - un gestionnaire de fichiers plus rapide, avec une vraie recherche
+
+      FileBrowser Quantum est un fork maintenu du File Browser classique, reconstruit autour d'un index de vos fichiers. Là où l'original parcourt le disque à chaque recherche, Quantum répond instantanément et peut filtrer par type, taille ou dossier au passage.
+
+      Il conserve tout ce que l'original faisait bien - téléverser, organiser, prévisualiser et partager des fichiers depuis n'importe quel appareil, éditer du texte, afficher images et vidéos, créer des dossiers et distribuer des liens de partage - et y ajoute la recherche indexée, plusieurs sources nommées, des règles d'accès par dossier, une intégration OnlyOffice optionnelle et une interface nettement plus rapide.
+
+      Cette application propose la configuration mono-utilisateur de base : connectez-vous avec le compte admin, et l'ensemble du stockage de votre serveur devient une source navigable. Comptes supplémentaires, permissions par dossier et sources additionnelles se configurent depuis l'écran des paramètres ou le fichier config.yaml de l'application.
+
+      Le File Browser d'origine a été archivé par ses auteurs le 1er septembre 2026 et ne reçoit plus aucun correctif. Quantum est la suite du développement de ce projet.
+    zh_cn: |
+      FileBrowser Quantum - 更快的文件管理器，带来真正的搜索
+
+      FileBrowser Quantum 是经典 File Browser 的活跃维护分支，围绕文件索引重新构建。原版每次搜索都要遍历磁盘，而 Quantum 可以即时返回结果，并支持按类型、大小或文件夹筛选。
+
+      它保留了原版的全部优点——在任意设备上上传、整理、预览和分享文件，编辑文本文件，查看图片和视频，创建文件夹并生成分享链接——并加入了索引搜索、多个命名来源、按文件夹的访问规则、可选的 OnlyOffice 集成，以及明显更流畅的界面。
+
+      此应用提供基础的单用户配置：使用 admin 账户登录，服务器的全部存储即为一个可浏览的来源。更多账户、按文件夹的权限以及额外的来源，都可以在设置页面或应用的 config.yaml 中配置。
+
+      原版 File Browser 已于 2026 年 9 月 1 日被作者归档，不再获得任何修复。Quantum 是该项目开发的延续。
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  tagline:
+    en_us: A faster File Browser, with instant indexed search across your whole server.
+    fr_fr: Un File Browser plus rapide, avec recherche indexée instantanée sur tout votre serveur.
+    zh_cn: 更快的 File Browser，对整台服务器进行即时索引搜索。
+  thumbnail: thumbnail.png
+  tips:
+    before_install:
+      en_us: |
+        Default account
+
+        | Username | Password                |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        This password is re-applied on every restart, from the
+        `FILEBROWSER_ADMIN_PASSWORD` variable. Changing it inside the app will not
+        stick while that variable is set - clear the variable first, or create a
+        second account for yourself under Settings > Users and leave `admin` alone.
+
+        Unlike the FileBrowser app, this one is **not** behind your Yundera login.
+        It has its own login page, and that password is the only thing protecting
+        it. Change it or replace the account before you use this on a real server.
+
+        What this app can reach
+
+        The whole of `/DATA` is mounted read-write: `/DATA/Documents`,
+        `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and `/DATA/AppData` - the
+        last one holding the databases, configuration and secrets of every other app
+        installed on this server. Any account created here can browse, edit, delete
+        and share all of it.
+
+        First start takes a minute
+
+        Quantum indexes the source tree before search works. On a server with a
+        large media library the first index can take several minutes; the file
+        listing is usable straight away while it runs. `/DATA/AppData` is browsable
+        but deliberately left out of the index.
+      fr_fr: |
+        Compte par défaut
+
+        | Nom d'utilisateur | Mot de passe            |
+        | ----------------- | ----------------------- |
+        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+
+        Ce mot de passe est réappliqué à chaque redémarrage, depuis la variable
+        `FILEBROWSER_ADMIN_PASSWORD`. Le modifier dans l'application ne sera pas
+        conservé tant que cette variable est définie : videz-la d'abord, ou créez-vous
+        un second compte dans Paramètres > Utilisateurs et laissez `admin` de côté.
+
+        Contrairement à l'application FileBrowser, celle-ci n'est **pas** protégée par
+        votre connexion Yundera. Elle a sa propre page de connexion, et ce mot de passe
+        est la seule chose qui la protège. Changez-le ou remplacez le compte avant
+        d'utiliser cette application sur un serveur réel.
+
+        Ce à quoi cette application a accès
+
+        L'intégralité de `/DATA` est montée en lecture-écriture : `/DATA/Documents`,
+        `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et `/DATA/AppData`, qui
+        contient les bases de données, configurations et secrets de toutes les autres
+        applications du serveur. Tout compte créé ici peut parcourir, modifier,
+        supprimer et partager l'ensemble.
+
+        Le premier démarrage prend une minute
+
+        Quantum indexe l'arborescence avant que la recherche ne fonctionne. Sur un
+        serveur avec une grande médiathèque, le premier index peut prendre plusieurs
+        minutes ; la navigation dans les fichiers reste utilisable pendant ce temps.
+        `/DATA/AppData` est navigable mais volontairement exclu de l'index.
+      zh_cn: |
+        默认账户
+
+        | 用户名   | 密码                    |
+        | -------- | ----------------------- |
+        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+
+        该密码由 `FILEBROWSER_ADMIN_PASSWORD` 变量在每次重启时重新应用。只要该变量存在，
+        在应用内修改密码就不会生效——请先清除该变量，或在「设置 > 用户」中为自己创建
+        第二个账户，不要动 `admin`。
+
+        与 FileBrowser 应用不同，本应用**不**受 Yundera 登录保护。它有自己的登录页面，
+        而这个密码是唯一的防线。在正式服务器上使用前，请务必修改密码或更换账户。
+
+        此应用可以访问的范围
+
+        整个 `/DATA` 以读写方式挂载：`/DATA/Documents`、`/DATA/Downloads`、
+        `/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用数据库、配置和密钥的
+        `/DATA/AppData`。在此创建的任何账户都可以浏览、编辑、删除和分享这些内容。
+
+        首次启动需要一点时间
+
+        Quantum 会先为来源目录建立索引，搜索功能才可用。如果服务器上有大型媒体库，
+        首次索引可能需要几分钟；在此期间文件列表可以正常使用。`/DATA/AppData` 可以浏览，
+        但已被特意排除在索引之外。
+  title:
+    en_us: FileBrowser Quantum
+  index: /
+  webui_port: 80
+  store_app_id: filebrowserquantum
+
+x-compose-app:
+  schema_version: 2
+  # No init containers: Quantum creates its own database on first start, and the
+  # admin account comes from FILEBROWSER_ADMIN_PASSWORD rather than a seeding CLI
+  # call. config.yaml arrives via the seed tree (seed/data/config.yaml), which is
+  # create-if-absent - so the operator's edits to it are never clobbered.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+  # Mirrors the caddy_0 label on the main service, so the tile renders an open action.
+  webui-host: filebrowserquantum-${domain}
