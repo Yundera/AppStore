@@ -98,7 +98,6 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
-  thumbnail: thumbnail.png
   index: /ghost
   tagline:
     en_us: Professional publishing platform for newsletters and blogs

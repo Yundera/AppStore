@@ -140,7 +140,6 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
-  thumbnail: thumbnail.png
   index: /
   tagline:
     en_us: Transform your paper documents into a searchable digital archive

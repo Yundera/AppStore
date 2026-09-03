@@ -92,7 +92,6 @@ x-casaos:
   tagline:
     en_us: Push notifications for AI assistants via ntfy
     zh_cn: 通过 ntfy 为 AI 助手提供推送通知
-  thumbnail: thumbnail.png
   title:
     en_us: Ntfy
   chips:

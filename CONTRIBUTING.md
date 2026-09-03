@@ -41,7 +41,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] Clear description of the application
 - [ ] A mount that exposes a broad slice of `/DATA` (`/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, or `/DATA` itself) is called out — in the app `description`, in `tips.before_install`, or in `rationale.md`. The user has to be able to see what the app can reach before they install it
 - [ ] An app that needs inbound connections from the internet (it publishes a non-HTTP `ports:` entry) carries the `needs-public-ip` tag. See [Publishing host ports](#publishing-host-ports)
-- [ ] Icon and screenshots meet specifications - files and URLs point to this Yundera repository (eg https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/thumbnail.png)
+- [ ] `icon.png` and at least one screenshot are present and meet specifications - files and URLs point to this Yundera repository (eg https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/screenshot-1.png). `thumbnail.png` is optional: supply a purpose-made tile or omit it and let the store fall back to `screenshot-1.png`
 
 ## Testing and Submit Process
 
@@ -352,7 +352,7 @@ App-Name
 ├─ screenshot-1.png     # (Required) At least one screenshot is needed to demonstrate the app runs on CasaOS successfully
 ├─ screenshot-2.png     # (Optional) More screenshots to demonstrate different functionalities are highly recommended
 ├─ screenshot-3.png     # (Optional) ...
-├─ thumbnail.png        # (Required) Tile image shown in the AppStore listing (see specification at bottom)
+├─ thumbnail.png        # (Optional) Purpose-made tile image for the AppStore listing. Used for featured apps; when absent the store falls back to screenshot-1.png (see specification at bottom)
 ├─ seed/                # (Optional) The app's initial data tree, mirroring /DATA/AppData/<app>/
 └─ rationale.md         # (Conditional) Required when the app needs a documented exception — see "Rationale" below
 ```
@@ -1285,7 +1285,10 @@ CasaOS provides additional functionality for environment variable management:
 We occasionally select certain apps as featured apps to display at the AppStore front. Featured apps have higher standards than regular apps:
 
 - **Icon**: Transparent background PNG image, 192x192 pixels
-- **Thumbnail**: 784x442 pixels with rounded corner mask, preferably PNG with transparent background
+- **Thumbnail**: 784x442 pixels with rounded corner mask, preferably PNG with transparent background.
+  Optional for regular apps, where the store falls back to `screenshot-1.png`. Supply one only as a
+  purpose-made tile: a rescaled icon, or a copy of a screenshot, carries no more information than the
+  fallback and should be omitted instead
 - **Screenshots**: 1280x720 pixels, PNG or JPG format, keep file size as small as possible
 
 Please use the prepared [PSD template files](psd-source) to quickly create these images.

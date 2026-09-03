@@ -181,7 +181,6 @@ x-casaos:
     en_us: AI-powered Nextcloud — read, write, chat, all via MCP
     fr_fr: Nextcloud pilote par IA — lire, ecrire, discuter, le tout via MCP
     zh_cn: AI 驱动的 Nextcloud — 通过 MCP 读取、写入、聊天
-  thumbnail: thumbnail.png
   title:
     en_us: Nextcloud MCP
   chips:

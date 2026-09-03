@@ -65,7 +65,9 @@ x-casaos:
     - screenshot-2.png
     - screenshot-3.png
   category: Network
-  tags: ["privacy", "personal"]
+  # needs-public-ip: a WireGuard server is useless unless inbound UDP 51820 from the
+  # internet reaches the host (a CGNAT/tunnelled PCS never accepts a peer).
+  tags: ["privacy", "personal", "needs-public-ip"]
   title:
     en_us: WireGuard Easy
   tagline:

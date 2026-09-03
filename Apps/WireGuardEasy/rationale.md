@@ -35,7 +35,7 @@ inferred from the compose file.
 - **UDP 51820 must be a real published port.** WireGuard clients dial it directly
   from the internet; it is not HTTP and cannot be routed through the Caddy gateway,
   so `expose:` would make the VPN unreachable. The app carries the reserved
-  `needs-public-ip` handling for this reason.
+  `needs-public-ip` tag for this reason.
 
 ## Security mitigations in place
 
