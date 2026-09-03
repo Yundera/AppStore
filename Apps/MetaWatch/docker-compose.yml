@@ -133,7 +133,14 @@ services:
       # remote gateways (the kad `metamesh-gateway` provider namespace) and
       # dials them outbound. Announcing would publish this client's index to the
       # swarm for no benefit.
-      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
+      # Includes mars.i.ipfs.io — the only surviving legacy *.i.ipfs.io
+      # bootstrapper (neptune/pluto/uranus/earth/saturn/venus are all NXDOMAIN).
+      # It is here for resilience: the four IPFS-Foundation bootstrappers can
+      # refuse an individual IP, and when they do a peer cannot join the DHT AT
+      # ALL — no provider record, no discovery, no gateway fan-out. Observed on
+      # watch.nsl.sh 2026-09-01: 2 connections with the four alone, 126 once a
+      # reachable fifth was added. Costs nothing when the four work.
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb,/dns4/mars.i.ipfs.io/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
       META_CORE_URL: "http://metawatch-core:9000"
       META_CORE_PATH: "/meta-core"
       BASE_URL: "http://metawatch-search:3000"
@@ -193,7 +200,14 @@ services:
       # latter holds the v6 address, and `/ip4/<v6>/tcp/...` is not a parseable
       # multiaddr — meta-share REFUSES TO START rather than announce a lie.
       PUBLIC_ADDR: "/ip4/${APP_PUBLIC_IPV4}/tcp/4003"
-      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb"
+      # Includes mars.i.ipfs.io — the only surviving legacy *.i.ipfs.io
+      # bootstrapper (neptune/pluto/uranus/earth/saturn/venus are all NXDOMAIN).
+      # It is here for resilience: the four IPFS-Foundation bootstrappers can
+      # refuse an individual IP, and when they do a peer cannot join the DHT AT
+      # ALL — no provider record, no discovery, no gateway fan-out. Observed on
+      # watch.nsl.sh 2026-09-01: 2 connections with the four alone, 126 once a
+      # reachable fifth was added. Costs nothing when the four work.
+      KAD_BOOTSTRAP_PEERS: "/dns4/sg1.bootstrap.libp2p.io/tcp/4001/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt,/dns4/sv15.bootstrap.libp2p.io/tcp/4001/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN,/dns4/ny5.bootstrap.libp2p.io/tcp/4001/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa,/dns4/am6.bootstrap.libp2p.io/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb,/dns4/mars.i.ipfs.io/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ"
       META_CORE_URL: "http://metawatch-core:9000"
       META_CORE_PATH: "/meta-core"
       BASE_URL: "http://metawatch-share:3000"
