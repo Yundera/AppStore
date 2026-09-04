@@ -27,7 +27,7 @@ This is also the better outcome for the user: there is no password to copy out o
 Opening the tile goes through the SSO they already have.
 
 **Why the backend is on `pcs`.** Prowlarr is an indexer *proxy*: Sonarr, Radarr and Lidarr query
-it at `prowlarr:9696` with an `X-Api-Key`, which is the wiring their own `tips` describe. That is
+it at `prowlarr-backend:9696` with an `X-Api-Key`, which is the wiring their own `tips` describe. That is
 container-to-container traffic on the shared network and never leaves the host. Putting the
 backend behind the gate instead would send those machine calls to an SSO login page and break the
 media stack; exempting `/api/*` on the gate would un-gate Prowlarr's entire administrative
@@ -35,8 +35,8 @@ surface, which is worse than not having a gate at all.
 
 ## Security mitigations in place
 
-- **Only the gate is published.** `prowlarr-gate` holds every Caddy label; the backend has none.
-  The internet has no route to `prowlarr:9696`.
+- **Only the gate is published.** The gate service holds every Caddy label; the backend has none.
+  The internet has no route to `prowlarr-backend:9696`.
 - **The machine API is still authenticated.** With `External`, Prowlarr continues to enforce its
   API key on `/api/*`: verified that `/api/v1/health` returns `401` without `X-Api-Key` and `200`
   with it. `External` disables the *browser* login, not the API key.
@@ -63,7 +63,7 @@ surface, which is worse than not having a gate at all.
 
 ## Known limitation
 
-Because Prowlarr trusts its proxy, anything that can reach `prowlarr:9696` directly is not
+Because Prowlarr trusts its proxy, anything that can reach `prowlarr-backend:9696` directly is not
 challenged for a browser session — it is still challenged for the API key on `/api/*`, but the UI
 would render. That path is limited to containers on the `pcs` network of the same PCS; it is not
 reachable from the internet. This is the same trust boundary the sibling API wiring already

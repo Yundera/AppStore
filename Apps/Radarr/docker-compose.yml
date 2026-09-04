@@ -56,7 +56,7 @@ x-casaos:
         | -------- | -------- |
         | `admin`  | `$RADARR_ADMIN_PASSWORD` |
 
-        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr:9696` and `qbittorrent:80` when they run on the same server.
+        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent:80` when they run on the same server.
 
         ❓ Questions? Contact us at help@yundera.com
   architectures:

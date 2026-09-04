@@ -331,19 +331,25 @@ x-casaos:
     # Single restart to apply all config changes
     echo "Restarting Seafile to apply configuration..."
     docker restart seafile
-    # Ensure admin account exists (fallback if INIT_SEAFILE_ADMIN_* failed on first boot)
-    echo "Waiting for Seafile to be ready after restart..."
-    for i in $(seq 1 30); do
-      if docker exec seafile curl -sf http://localhost/ > /dev/null 2>&1; then
-        echo "Seafile is ready"
-        break
-      fi
-      sleep 10
-    done
-    echo "Ensuring admin account exists..."
-    printf 'admin@%s\n%s\n%s\n' "$APP_DOMAIN" "$APP_DEFAULT_PASSWORD" "$APP_DEFAULT_PASSWORD" | \
-      docker exec -i seafile /opt/seafile/seafile-server-latest/reset-admin.sh 2>&1 || \
-      echo "Warning: admin account setup returned an error (may already exist)"
+    # NOTE: an earlier revision ran reset-admin.sh here as a "fallback in case
+    # INIT_SEAFILE_ADMIN_* failed on first boot". Don't re-add that. Two Touchstone
+    # runs (2026-08-29, 2026-08-31) caught it creating a SECOND admin every single
+    # time -- a random <hex>@auth.local row with contact_email set to admin@$APP_DOMAIN
+    # -- even though INIT_SEAFILE_ADMIN_EMAIL/PASSWORD had already created the real
+    # admin@$APP_DOMAIN account 31s earlier in both captures. Seafile's web login
+    # resolves by contact_email and lands on that auth.local row, but
+    # POST /api2/auth-token/ (desktop/mobile/WebDAV, and this app's own rclone
+    # sidecar, whose seed/rclone/rclone.conf.tmpl logs in as admin@$APP_DOMAIN) does
+    # a literal username match and gets the OTHER, empty account -- so the one
+    # documented credential pair resolved to two different accounts, and a THIRD
+    # accreted on reinstall since the step had no existence guard at all. Seafile's
+    # own INIT_SEAFILE_ADMIN_EMAIL/INIT_SEAFILE_ADMIN_PASSWORD (set above, on the
+    # `seafile` service) is upstream's documented bootstrap for exactly this admin
+    # account, only fires while the ccnet/seahub DB is still empty (so it is already
+    # idempotent across reinstalls/upgrades), and is the identity Tips and the
+    # rclone sidecar already assume. If that mechanism is ever confirmed to fail on
+    # some install, the fix is a guard that checks whether admin@$APP_DOMAIN already
+    # authenticates before calling reset-admin.sh -- not an unconditional call.
     echo "Post-install complete"
   webui_port: 80
   main: seafile

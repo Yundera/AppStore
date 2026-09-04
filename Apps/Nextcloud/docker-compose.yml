@@ -139,14 +139,39 @@ services:
     container_name: nextcloud_cron
     restart: unless-stopped
     cpu_shares: 30
-    # Must match the `nextcloud` service exactly. Without it the image's own default
-    # (www-data, uid 33) runs /cron.sh against a tree Maison owns as $PUID:$PGID, and
-    # every run dies on `Cannot write into config directory!` ->
-    # fopen(/var/www/html/config/config.php): Permission denied, on a 5-minute loop.
-    # Nextcloud's admin overview then reports "Last background job execution ran 56
-    # years ago" — the epoch, i.e. never once — so no cron job has ever run.
+    # Must match the `nextcloud` service exactly so cron.php sees the same file
+    # ownership as the web container.
     user: $PUID:$PGID
-    entrypoint: /cron.sh
+    # The image's default entrypoint, /cron.sh, runs busybox crond, which is asked
+    # to execute a crontab entry belonging to www-data (uid 33) while crond itself
+    # runs as $PUID:$PGID (uid 1000) — a privilege change (setuid to another
+    # non-root uid) it cannot make. So the cron job never fires at all: no error,
+    # no log, just an empty core/lastcron forever and Nextcloud's admin overview
+    # reporting "Last background job execution ran 56 years ago" (the epoch, i.e.
+    # never once). This is a different defect from the one the 2026-08-27 fix
+    # addressed (that one was really about /cron.sh running as the wrong uid and
+    # failing to write config.php) — this container already runs as the right uid,
+    # it's /cron.sh's internal setuid that's broken, so keeping `user: $PUID:$PGID`
+    # alone does not fix it.
+    #
+    # Bypass /cron.sh and call cron.php directly instead: no setuid needed, so the
+    # uid this container already runs as is all that's required. Nextcloud's own
+    # docs recommend a 5-minute interval for system cron, matching this
+    # requirement's wording, so loop on 300s. `|| true` after php keeps a single
+    # failed tick (e.g. a transient DB hiccup) from exiting the loop — and with it
+    # the container, which `restart: unless-stopped` would otherwise cycle.
+    #
+    # `command` MUST be a LIST whose single element is a `- |` block scalar, not a
+    # plain folded string (`command: >`) — folded form gets word-split into argv by
+    # compose and `sh -c` only receives the first word (see Apps/Crafty, which shipped
+    # dead this way; Apps/Tailscale and Apps/TINCatan use this same list-of-one shape).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          php -f /var/www/html/cron.php || true
+          sleep 300
+        done
     depends_on:
       db:
         condition: service_healthy

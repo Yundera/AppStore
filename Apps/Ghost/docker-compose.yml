@@ -39,6 +39,17 @@ services:
       mail__options__host: smtp
       mail__options__port: "587"
       mail__options__tls__rejectUnauthorized: "false"
+      # Ghost 6 turns on its fediverse (ActivityPub) integration by default and
+      # expects /.ghost/activitypub/ proxied to a separate service this compose
+      # does not ship; without it every boot logs "Could not get webhook secret
+      # for ActivityPub" / "No webhook secret found - cannot initialise" (non-fatal,
+      # no primary function affected). hostSettings:limits:limitSocialWeb is the
+      # same flag Ghost(Pro) uses to turn the feature off for hosted sites without
+      # a custom domain; setting it here disables the calculated `social_web_enabled`
+      # setting so Ghost never calls out to the missing endpoint. Verified locally:
+      # reproduced the two errors with this unset, confirmed they disappear with it
+      # set, on ghost:6.59.0-alpine.
+      hostSettings__limits__limitSocialWeb__disabled: "true"
     depends_on:
       db:
         condition: service_healthy

@@ -267,6 +267,19 @@ x-compose-app:
   # failures. A run that cannot reach the API exits non-zero, which leaves the
   # `once` marker unwritten so the next up retries; a failing post_up step is
   # logged and swallowed, so it cannot take a healthy stack back down.
+  #
+  # Rotating the password is not enough: Mealie's /login page decides whether to
+  # show the "first time logging in" banner (and pre-fill changeme@example.com /
+  # MyPassword) purely from GET /api/app/about/startup-info's isFirstLogin, which
+  # is true as long as ANY user still has email == changeme@example.com
+  # (mealie/routes/app/app_about.py) -- the password is irrelevant to it. So this
+  # step also PUTs the admin's email to $APP_EMAIL (the store's usual
+  # admin@$APP_DOMAIN, same shape as Apps/Outline and Apps/Hubs) once it can log
+  # in, which is what the banner's own closing line ("change your email") asks
+  # for. The login identifier stays the username "admin" either way -- Mealie's
+  # seeded default user has username=admin, email=changeme@example.com
+  # (mealie/repos/seed/init_users.py) -- so Tips, which already documents
+  # `admin` / `$APP_DEFAULT_PASSWORD` rather than an email, needs no change.
   init:
     - name: seed-admin-password
       image: curlimages/curl:8.14.1
@@ -276,6 +289,7 @@ x-compose-app:
       environment:
         MEALIE_API: http://mealie:80
         MEALIE_ADMIN: admin
+        MEALIE_ADMIN_EMAIL: ${APP_EMAIL}
         MEALIE_NEW_PASSWORD: ${APP_DEFAULT_PASSWORD}
         MEALIE_SEED_PASSWORD: MyPassword
       entrypoint:
@@ -306,9 +320,39 @@ x-compose-app:
               sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
           }
 
-          if [ -n "$$(login "$$MEALIE_NEW_PASSWORD")" ]; then
+          # Read-modify-write the whole self object rather than hand-building a
+          # UserBase body: PUT /api/users/{id} replaces every field it is sent
+          # (mealie/routes/users/crud.py), and UserBase.admin defaults to false --
+          # a body carrying only "email" would silently demote the account.
+          update_email() {
+            self_json=$$(curl -fsS -m 15 -H "Authorization: Bearer $$1" "$$MEALIE_API/api/users/self") || return 1
+            case "$$self_json" in
+              *'"email":"'"$$MEALIE_ADMIN_EMAIL"'"'*)
+                return 0
+                ;;
+            esac
+            item_id=$$(printf '%s' "$$self_json" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+            if [ -z "$$item_id" ]; then
+              echo "mealie: could not read the admin's user id - leaving email alone" >&2
+              return 1
+            fi
+            new_json=$$(printf '%s' "$$self_json" | sed 's/"email":"[^"]*"/"email":"'"$$MEALIE_ADMIN_EMAIL"'"/')
+            if curl -fsS -m 15 -o /dev/null -X PUT "$$MEALIE_API/api/users/$$item_id" \
+              -H "Authorization: Bearer $$1" \
+              -H "Content-Type: application/json" \
+              --data-binary "$$new_json"; then
+              echo "mealie: set the admin email to $$MEALIE_ADMIN_EMAIL"
+              return 0
+            fi
+            echo "mealie: could not update the admin email" >&2
+            return 1
+          }
+
+          token=$$(login "$$MEALIE_NEW_PASSWORD")
+          if [ -n "$$token" ]; then
             echo "mealie: the admin password is already the generated one"
-            exit 0
+            update_email "$$token"
+            exit $$?
           fi
 
           token=$$(login "$$MEALIE_SEED_PASSWORD")
@@ -326,4 +370,7 @@ x-compose-app:
             echo "mealie: could not rotate the admin password" >&2
             exit 1
           fi
+
+          update_email "$$token"
+          exit $$?
   webui-host: mealie-${domain}

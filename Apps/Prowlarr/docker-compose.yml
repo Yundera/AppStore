@@ -2,11 +2,25 @@ name: prowlarr
 
 services:
   # The SSO gate. It carries the Caddy labels, so this is the only service the
-  # internet can reach. Named `prowlarr-gate` so the backend can keep the name
-  # `prowlarr`, which Sonarr/Radarr/Lidarr use to reach it over `pcs`.
+  # internet can reach.
+  #
+  # The gate MUST own the bare name `prowlarr`. AppShield builds its OIDC redirect
+  # URIs from os.hostname() and the auth-registrar attests the app via the
+  # container's PTR record, so both `container_name` and `hostname` have to equal
+  # the app name — otherwise Docker names the container after its random ID,
+  # AppShield derives `<container-id>-${APP_DOMAIN}`, and Dex rejects the
+  # authorize call with 400 'Unregistered redirect_uri' so no page ever renders.
+  #
+  # That is why the backend is `prowlarr-backend` and not `prowlarr`. Do NOT give
+  # the backend the bare name back: Docker registers BOTH a service key and a
+  # `container_name`/`hostname` in its embedded DNS, so two containers claiming
+  # `prowlarr` on `pcs` round-robin between them — sibling apps would reach the
+  # gate on :80 instead of Prowlarr on :9696 at random. Renaming the gate instead
+  # is not an option either, for the OIDC reason above.
   prowlarr-gate:
     image: ghcr.io/yundera/appshield:3.0.2
-    container_name: prowlarr-gate
+    container_name: prowlarr
+    hostname: prowlarr
     restart: unless-stopped
     expose:
       - 80
@@ -22,7 +36,7 @@ services:
     networks:
       - pcs
     environment:
-      BACKEND_HOST: prowlarr
+      BACKEND_HOST: prowlarr-backend
       BACKEND_PORT: "9696"
       LISTEN_PORT: "80"
       # Presence of OIDC_REGISTRAR_URL puts AppShield in OIDC mode: it
@@ -31,24 +45,25 @@ services:
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
     depends_on:
-      - prowlarr
+      - prowlarr-backend
     cpu_shares: 50
     deploy:
       resources:
         limits:
           memory: 128M
 
-  prowlarr:
+  prowlarr-backend:
     image: lscr.io/linuxserver/prowlarr:2.4.0
-    container_name: prowlarr
+    container_name: prowlarr-backend
     restart: unless-stopped
     user: $PUID:$PGID
     expose:
       - 9696
     # No Caddy labels: this service is deliberately NOT published. It sits on
-    # `pcs` so sibling apps can reach it at `prowlarr:9696` with an X-Api-Key,
-    # which is the wiring the Sonarr/Radarr/Lidarr tips describe. That path is
-    # container-to-container and never leaves the host.
+    # `pcs` so sibling apps can reach it at `prowlarr-backend:9696` with an
+    # X-Api-Key, which is the wiring the Sonarr/Radarr/Lidarr tips describe. The
+    # bare name `prowlarr` belongs to the SSO gate on :80 and will NOT serve the
+    # API. That path is container-to-container and never leaves the host.
     networks:
       - pcs
     environment:
