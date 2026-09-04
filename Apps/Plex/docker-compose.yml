@@ -40,12 +40,12 @@ services:
     restart: unless-stopped
     user: "0:0"
     volumes:
-      - ${DATA_ROOT:-/DATA}/AppData/$AppID:/config
-      - ${DATA_ROOT:-/DATA}/AppData/$AppID/transcode:/transcode
-      - ${DATA_ROOT:-/DATA}/Media/Movies:/data/movies
-      - ${DATA_ROOT:-/DATA}/Media/TV Shows:/data/tvshows
-      - ${DATA_ROOT:-/DATA}/Media/Music:/data/music
-      - ${DATA_ROOT:-/DATA}/Downloads:/data/downloads
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/:/config
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/transcode/:/transcode
+      - ${DATA_ROOT:-/DATA}/Media/Movies/:/data/movies
+      - ${DATA_ROOT:-/DATA}/Media/TV Shows/:/data/tvshows
+      - ${DATA_ROOT:-/DATA}/Media/Music/:/data/music
+      - ${DATA_ROOT:-/DATA}/Downloads/:/data/downloads
     environment:
       PGID: $PGID
       PUID: $PUID
@@ -192,3 +192,32 @@ x-casaos:
         ✅ Para streaming personal gratuito, prueba Jellyfin.
         🔑 Si te suscribes a Plex y quieres transmitir tus propios archivos, sigue nuestro tutorial para configurarlo y obtener tu clave. : https://www.yundera.com/blog/tutorial-1/how-to-setup-plex-17
         ℹ️ Yundera no esta afiliado con Plex y no controla sus servicios.
+
+x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`,
+  # mirroring the trailing-slash bind mounts in `volumes:` above — with one
+  # deliberate omission, so re-check this against a gen-folders.py run rather
+  # than taking the generated output wholesale: /DATA/AppData/$AppID is left out
+  # because it is Maison's own directory. Maison creates and owns it to write the
+  # compose and .env there, so it is never the root-owned-by-Docker case
+  # `folders` exists to prevent. Plex is the only app that binds it as a volume.
+  folders:
+    - path: /DATA/AppData/$AppID/transcode
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/Movies
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/TV Shows
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/Music
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
+  # Same string as the sidecar's caddy_0 label, so the tile's link and the route
+  # Maison clones onto every extra domain stay the same host.
+  webui-host: plex-${domain}

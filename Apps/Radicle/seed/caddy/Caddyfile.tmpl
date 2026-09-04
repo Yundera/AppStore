@@ -1,0 +1,20 @@
+# Serves the Radicle Explorer single-page app.
+#
+# Port 8080, not 80: the installer runs every service as an unprivileged user, and
+# such a process cannot bind a port below 1024. The image's own Caddyfile
+# listens on :80, so this file replaces it.
+:8080 {
+	root * /usr/share/caddy
+
+	# The explorer bundle ships with the public Radicle seeds compiled into it, so
+	# "/" would open on the public network rather than on this server's node. This
+	# sends the entry point to the node page of the API served alongside it. Every
+	# other path is left alone, so the wider network stays browsable.
+	redir / /nodes/radicle-api-${APP_DOMAIN}
+
+	# The explorer is a client-side router: /nodes/..., /repos/... and friends must
+	# resolve to the app shell rather than to a 404.
+	try_files {path} /index.html
+	file_server
+	encode gzip
+}

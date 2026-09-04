@@ -1,0 +1,333 @@
+name: radicle
+
+services:
+  # The web UI: the Radicle Explorer bundle served as static files by Caddy.
+  # It is a pure client-side app — every request it makes goes from the visitor's
+  # browser straight to the API below, which is why that one needs its own domain.
+  radicle:
+    image: dirk1980/radicle-explorer-container@sha256:0e31485c38a765e83a10b1a4bf71b12d4f9fec630881d171bba736a4a56a16ce
+    container_name: radicle
+    user: $PUID:$PGID
+    restart: unless-stopped
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    environment:
+      TZ: $TZ
+      # Caddy writes its autosaved config and its (unused here) certificate store
+      # under these two paths. The image points them at /config and /data, which are
+      # root-owned, so as $PUID the process cannot create them and refuses to start.
+      XDG_CONFIG_HOME: /tmp/caddy-config
+      XDG_DATA_HOME: /tmp/caddy-data
+    volumes:
+      # Replaces the image's own :80 Caddyfile — see the comments in that file.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    expose:
+      - 8080
+    labels:
+      caddy_0: radicle-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8080}}"
+      caddy_1: radicle-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8080}}"
+      caddy_2: radicle-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8080}}"
+    networks:
+      - pcs
+
+  # radicle-httpd — the node's read-only JSON API, on its own domain.
+  #
+  # This domain is deliberately NOT behind the SSO gate: the explorer above is a
+  # static bundle running in the visitor's browser, so it is the browser that calls
+  # this API, cross-origin. The daemon serves public repositories only (private ones
+  # are filtered out upstream) and has no write endpoints at all. See rationale.md.
+  radicle-api:
+    image: dirk1980/radicle-httpd@sha256:5e95be30e4bde55b509a65fd56f8b825cafd0f5cd752c1a13e79aad75b958895
+    container_name: radicle-api
+    user: $PUID:$PGID
+    restart: unless-stopped
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    command: ["--listen", "0.0.0.0:8080"]
+    environment:
+      TZ: $TZ
+    volumes:
+      # Same Radicle home as the node: the daemon reads the repository storage
+      # directly and talks to the node over the control socket inside it.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/home/:/radicle-home/
+    healthcheck:
+      # curl, not wget: this image carries curl and no busybox.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/api/v1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    expose:
+      - 8080
+    labels:
+      caddy_0: radicle-api-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8080}}"
+      caddy_1: radicle-api-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8080}}"
+      caddy_2: radicle-api-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8080}}"
+    networks:
+      - pcs
+
+  # The node itself: speaks the Radicle peer-to-peer protocol (gossip, fetch,
+  # announce) on TCP 8776. No HTTP, so no Caddy route and no place on the shared
+  # network — it only needs egress, which the app-internal bridge provides.
+  radicle-node:
+    image: dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2
+    container_name: radicle-node
+    user: $PUID:$PGID
+    restart: unless-stopped
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    environment:
+      TZ: $TZ
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/home/:/radicle-home/
+    ports:
+      # Radicle peer-to-peer protocol. Other nodes dial in here to fetch the
+      # repositories this node seeds; without it the node still syncs outbound,
+      # but nobody can fetch from it. Hence the needs-public-ip tag.
+      - "8776:8776"
+    healthcheck:
+      # `rad node status` round-trips the node's control socket, which is the only
+      # liveness signal this container has — but it also renders the peer table, and
+      # that takes 3-8s on an idle node and longer while the node is syncing. Hence
+      # the unusually generous timeout: a 10s one fails during the first sync and
+      # flaps the container between healthy and unhealthy.
+      test: ["CMD", "rad", "node", "status"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 90s
+    networks:
+      - radicle-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  # Egress-only network for the node. Nothing else joins it — the node and the
+  # API daemon share state through the Radicle home directory, not over TCP.
+  radicle-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+  main: radicle
+  author: Yundera Team
+  developer: Radicle
+  category: Developer
+  tags: ["developer", "personal", "needs-public-ip"]
+  description:
+    en_us: |
+      Radicle — your own peer-to-peer forge
+
+      Radicle is a sovereign alternative to GitHub and GitLab. Instead of a company's server holding the canonical copy of your code, every participant keeps a full replica and gossips changes directly to peers. Repositories, issues and patches are all Git objects, signed by their author and replicated across the network — there is no central service to go down, change its terms, or lock you out.
+
+      This app runs a complete Radicle node on your server, plus the official Radicle Explorer web interface to browse it:
+
+      • Your node stays online and keeps your repositories available even when your laptop is not
+      • Anything you push from your machine is replicated here and served to the network
+      • Issues, patches and code are browsable in your own web UI, on your own domain
+      • Anyone can clone your repositories over plain HTTPS, no account required
+
+      The web interface is for browsing. Creating repositories, opening issues and proposing patches happen with the `rad` command line on your own machine — the node here is what keeps them alive and reachable.
+
+      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow.
+    fr_fr: |
+      Radicle — votre forge pair-à-pair
+
+      Radicle est une alternative souveraine à GitHub et GitLab. Plutôt qu'un serveur d'entreprise détenant la copie de référence de votre code, chaque participant conserve un réplica complet et propage ses modifications directement à ses pairs. Dépôts, tickets et patches sont tous des objets Git, signés par leur auteur et répliqués sur le réseau — aucun service central ne peut tomber, changer ses conditions ou vous verrouiller dehors.
+
+      Cette application fait tourner un nœud Radicle complet sur votre serveur, ainsi que l'interface web officielle Radicle Explorer pour le parcourir :
+
+      • Votre nœud reste en ligne et garde vos dépôts disponibles même quand votre portable ne l'est pas
+      • Tout ce que vous poussez depuis votre machine est répliqué ici et servi au réseau
+      • Tickets, patches et code se consultent dans votre propre interface web, sur votre domaine
+      • N'importe qui peut cloner vos dépôts en HTTPS, sans compte
+
+      L'interface web sert à consulter. Créer des dépôts, ouvrir des tickets et proposer des patches se fait avec la ligne de commande `rad` sur votre machine — le nœud installé ici est ce qui les maintient vivants et accessibles.
+
+      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué.
+    zh_cn: |
+      Radicle — 属于你自己的点对点代码托管
+
+      Radicle 是 GitHub 与 GitLab 的自主替代方案。代码的权威副本不再由某家公司的服务器保管，而是每个参与者都持有完整副本，并直接向对等节点传播更改。仓库、议题和补丁都是 Git 对象，由作者签名并在网络中复制——没有中心服务会宕机、修改条款或将你拒之门外。
+
+      此应用在你的服务器上运行一个完整的 Radicle 节点，并附带官方的 Radicle Explorer 网页界面：
+
+      • 节点持续在线，即使你的笔记本关机，仓库依然可用
+      • 你从本机推送的内容会复制到这里，并向网络提供服务
+      • 议题、补丁和代码都可以在你自己的域名下浏览
+      • 任何人都可以通过 HTTPS 克隆你的仓库，无需账户
+
+      网页界面用于浏览。创建仓库、提交议题和提出补丁请在本机使用 `rad` 命令行完成——这里的节点负责让它们保持在线、可被获取。
+
+      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容。
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  tagline:
+    en_us: Your own peer-to-peer Git forge — a Radicle node and web explorer on your domain.
+    fr_fr: Votre forge Git pair-à-pair — un nœud Radicle et son explorateur web sur votre domaine.
+    zh_cn: 你自己的点对点 Git 托管——运行在你域名下的 Radicle 节点与网页浏览器。
+  thumbnail: thumbnail.png
+  tips:
+    before_install:
+      en_us: |
+        This app is public on purpose
+
+        A Radicle node is a participant in a public peer-to-peer network. Both of
+        its addresses are open, with no Yundera login in front:
+
+        | Address | What it serves |
+        | ------- | -------------- |
+        | `https://radicle-$APP_DOMAIN` | The web interface |
+        | `https://radicle-api-$APP_DOMAIN/api/v1` | The read-only API the interface calls |
+
+        Only **public** repositories are served, the API has no write endpoints, and
+        a fresh node holds nothing until you seed something. See `rationale.md`.
+
+        Connecting your machine
+
+        Install the `rad` CLI from [radicle.dev](https://radicle.dev), then push a
+        repository and tell this node to seed it. Your node's identity (its Node ID)
+        is printed at `https://radicle-api-$APP_DOMAIN/api/v1` under `nid`.
+
+        Peer-to-peer port
+
+        The node publishes TCP **8776** so other peers can fetch from it. On a server
+        without a directly reachable public IP the app still works — your repositories
+        replicate outward to public seeds — but nobody fetches from you directly.
+      fr_fr: |
+        Cette application est publique, volontairement
+
+        Un nœud Radicle participe à un réseau pair-à-pair public. Ses deux adresses
+        sont ouvertes, sans authentification Yundera devant :
+
+        | Adresse | Ce qu'elle sert |
+        | ------- | --------------- |
+        | `https://radicle-$APP_DOMAIN` | L'interface web |
+        | `https://radicle-api-$APP_DOMAIN/api/v1` | L'API en lecture seule appelée par l'interface |
+
+        Seuls les dépôts **publics** sont servis, l'API n'a aucun point d'écriture, et
+        un nœud neuf ne contient rien tant que vous n'avez rien suivi. Voir
+        `rationale.md`.
+
+        Connecter votre machine
+
+        Installez la CLI `rad` depuis [radicle.dev](https://radicle.dev), puis poussez
+        un dépôt et demandez à ce nœud de le suivre. L'identité de votre nœud (Node ID)
+        est affichée sur `https://radicle-api-$APP_DOMAIN/api/v1`, champ `nid`.
+
+        Port pair-à-pair
+
+        Le nœud publie le port TCP **8776** pour que les autres pairs puissent récupérer
+        ses dépôts. Sur un serveur sans IP publique directement joignable, l'application
+        fonctionne quand même — vos dépôts se répliquent vers les seeds publics — mais
+        personne ne récupère directement chez vous.
+      zh_cn: |
+        此应用有意保持公开
+
+        Radicle 节点是公开点对点网络的参与者。它的两个地址都是开放的，前面没有
+        Yundera 登录：
+
+        | 地址 | 提供的内容 |
+        | ---- | ---------- |
+        | `https://radicle-$APP_DOMAIN` | 网页界面 |
+        | `https://radicle-api-$APP_DOMAIN/api/v1` | 界面调用的只读 API |
+
+        仅提供**公开**仓库，API 没有任何写入接口，全新节点在你指定跟随之前不含任何内容。
+        详见 `rationale.md`。
+
+        连接你的机器
+
+        从 [radicle.dev](https://radicle.dev) 安装 `rad` 命令行，然后推送仓库并让此节点
+        跟随它。节点身份（Node ID）显示在 `https://radicle-api-$APP_DOMAIN/api/v1` 的
+        `nid` 字段。
+
+        点对点端口
+
+        节点公开 TCP **8776**，供其他对等节点抓取。若服务器没有可直接访问的公网 IP，应用
+        仍可使用——你的仓库会向公共 seed 节点复制——但别人无法直接从你这里抓取。
+  title:
+    en_us: Radicle
+  index: /
+  webui_port: 8080
+  store_app_id: radicle
+
+x-compose-app:
+  schema_version: 2
+  folders:
+    - path: /DATA/AppData/$AppID/home
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/caddy
+      user: $PUID
+      group: $PGID
+  init:
+    # Creates the node's Ed25519 identity. Radicle has no first-run wizard: without
+    # a key pair in the Radicle home, radicle-node exits immediately. `rad auth`
+    # prompts for an optional passphrase, hence the empty line on stdin — a seed
+    # node's key secures peer connections and signs nothing permanent, so upstream's
+    # own guidance is to leave it unencrypted (a passphrase would have to be typed
+    # in at every start).
+    - name: init-identity
+      image: dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/home:/radicle-home
+      command: ["sh", "-c", "yes '' | rad auth --alias radicle-${APP_PUBLIC_IP_DASH} --stdin"]
+      when: absent:/DATA/AppData/$AppID/home/keys/radicle
+  files:
+    # The node's config carries the deployment's own addresses, so it is re-rendered
+    # on every up rather than frozen at install. `rad auth` above writes a default
+    # config.json first; this replaces it with ours and keeps it in step if the PCS
+    # domain or public IP ever changes.
+    #
+    # It also carries the bootstrap seeds, and those are NOT the compiled-in defaults.
+    # radicle 1.10 ships `iris.radicle.network` / `rosa.radicle.network`, whose IPv4
+    # addresses refuse connections on 8776 (verified from two networks, 2026-09-04) —
+    # a node configured with them never finds a peer. The same two nodes answer under
+    # their previous hostnames, which is what this file uses; radicle logs a rename
+    # warning for them and keeps working. Revisit when upstream's new addresses accept
+    # peer traffic again.
+    - path: /DATA/AppData/$AppID/home/config.json
+      from: home/config.json.tmpl
+      ensure: always
+      mode: "0644"
+    # Carries this deployment's API domain in a redirect, so it is re-rendered too.
+    - path: /DATA/AppData/$AppID/caddy/Caddyfile
+      from: caddy/Caddyfile.tmpl
+      ensure: always
+      mode: "0644"
+  # The landing path is handled by the Caddy redirect above, not here: neither
+  # `webui-path` nor `x-casaos.index` is interpolated, so a ${...} written in
+  # either reaches the browser as a literal.
+  webui-host: radicle-${domain}
+  webui-path: /
