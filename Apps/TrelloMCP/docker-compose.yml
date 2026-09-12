@@ -1,0 +1,239 @@
+name: trellomcp
+services:
+  # Main MCP server — reachable at trellomcp-backend:9100 on the pcs network.
+  # Serves the web UI (/), the Trello authorize callback (/callback), the config
+  # API (/api) and the MCP endpoint (/mcp), and answers Beacon's UDP discovery
+  # on port 9099.
+  trellomcp-backend:
+    image: ghcr.io/worph/trello-mcp:1.0.0
+    container_name: trellomcp-backend
+    hostname: trellomcp-backend
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9100
+      - 9099
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - WEB_PORT=9100
+      - DISCOVERY_PORT=9099
+      # Public base URL. The web UI builds the Trello authorize return_url
+      # (${BASE_URL}/callback) and the Power-Up origin it tells the user to
+      # register from this value.
+      - BASE_URL=https://trellomcp-${APP_DOMAIN}
+    volumes:
+      # config.json (API key, token, default board) is written here from the web
+      # UI — CONFIG_PATH defaults to /data/config.json in the image. A state
+      # subdirectory, not the app folder root: the root also holds the rendered
+      # compose and the deployment .env, which this container has no business writing.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/AppData/trellomcp/data/
+        target: /data
+    networks:
+      - pcs
+    # 80 — user-facing API backend + Web UI (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 80
+
+  # AppShield provides perimeter authentication: the SSO (OIDC) gate for the
+  # Web UI, and the OAuth 2.1 broker for /mcp (machine clients). Nothing is
+  # exempt — /callback is reached by the user's own browser returning from
+  # trello.com, which already carries the SSO session.
+  trellomcp-proxy:
+    # 2.0.7+ is required for the generic OAUTH_RESOURCE / OAUTH_SCOPE names and a
+    # configurable protected path; 2.0.9+ advertises offline_access and sends
+    # prompt=consent, without which no refresh token is issued and every client has
+    # to be re-authorized by hand once the 1h access token expires.
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: trellomcp
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: trellomcp
+    restart: unless-stopped
+    # 80 — reverse proxy in front of a user-facing app (CONTRIBUTING
+    # "CPU Share Allocation").
+    cpu_shares: 80
+    expose:
+      - 80
+    user: "0:0"   # numeric: scratch image has no passwd; /data/oauth is chowned $PUID
+    environment:
+      BACKEND_HOST: trellomcp-backend
+      BACKEND_PORT: "9100"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
+      # authorization server fronting Dex and gates exactly the path named by the
+      # resource URL (/mcp) on Bearer tokens; everything else stays behind the
+      # SSO gate. The backend itself has no auth on /mcp, so this is what keeps
+      # an anonymous caller from driving the Trello account.
+      OAUTH_RESOURCE: "https://trellomcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/trellomcp/oauth/:/data/oauth
+    depends_on:
+      - trellomcp-backend
+    networks:
+      - pcs
+    labels:
+      caddy_0: trellomcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: trellomcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: trellomcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # point at and the one users actually reach, and it is the service Maison
+  # attaches ${APP_NET} to.
+  main: trellomcp-proxy
+  index: /
+  category: Developer
+  tags: ["developer", "ai"]
+  description:
+    en_us: |
+      **Trello board management for AI assistants via MCP**
+
+      Trello MCP exposes the [Trello](https://trello.com) REST API as a Model Context Protocol (MCP) server, so LLMs and AI assistants can manage your boards, lists, cards, checklists, comments, labels and members.
+
+      Wraps the [`worph/trello-mcp`](https://github.com/worph/trello-mcp) server (based on `delorenj/mcp-server-trello`) with a streamable-HTTP transport so any MCP-compatible client can connect (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus a Web UI for connecting your Trello account and Beacon auto-discovery.
+
+      **What you can do:**
+      - Manage boards, lists and cards from any MCP-compatible AI assistant
+      - Create, update, move and archive cards
+      - Add comments, checklists, labels and attachments
+      - Assign members to cards and review board activity and card history
+      - Connect your Trello account in two clicks from the built-in Web UI
+
+      **Think of it like:** A Trello assistant that AI can control directly.
+
+      **Perfect if you:** Want your AI assistant to run your Trello boards, automate project-management chores, or plug Trello into AI workflows alongside other MCP apps (Beacon, n8n, Chronos).
+    fr_fr: |
+      **Gestion de tableaux Trello pour les assistants IA via MCP**
+
+      Trello MCP expose l'API REST de [Trello](https://trello.com) sous forme de serveur Model Context Protocol (MCP), afin que les LLMs et assistants IA puissent gerer vos tableaux, listes, cartes, checklists, commentaires, etiquettes et membres.
+
+      Enveloppe le serveur [`worph/trello-mcp`](https://github.com/worph/trello-mcp) (base sur `delorenj/mcp-server-trello`) avec un transport streamable-HTTP pour que tout client compatible MCP puisse se connecter (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus une interface Web pour connecter votre compte Trello et la decouverte automatique via Beacon.
+
+      **Ce que vous pouvez faire:**
+      - Gerer tableaux, listes et cartes depuis n'importe quel assistant IA compatible MCP
+      - Creer, modifier, deplacer et archiver des cartes
+      - Ajouter commentaires, checklists, etiquettes et pieces jointes
+      - Assigner des membres et consulter l'activite du tableau et l'historique des cartes
+      - Connecter votre compte Trello en deux clics depuis l'interface Web integree
+
+      **Parfait si vous:** Voulez que votre assistant IA gere vos tableaux Trello, automatiser la gestion de projet, ou integrer Trello dans des workflows IA avec d'autres apps MCP (Beacon, n8n, Chronos).
+  developer: Worph
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  tagline:
+    en_us: AI-powered Trello board management via MCP
+    fr_fr: Gestion de tableaux Trello pilotee par IA via MCP
+  title:
+    en_us: Trello MCP
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        Trello MCP needs a Trello API key and token. You connect your account from the app's Web UI after install — the MCP server starts right away, but every Trello tool answers "credentials not configured" until you do.
+
+        **Setup (2 steps):**
+        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `https://trellomcp-${APP_DOMAIN}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
+        2. Click **Authorize with Trello** and approve — the token is captured automatically and saved
+
+        **MCP Integration (for AI/LLMs):**
+
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your server account (single sign-on).
+        ```json
+        {
+          "mcpServers": {
+            "trello": {
+              "type": "http",
+              "url": "https://trellomcp-${APP_DOMAIN}/mcp"
+            }
+          }
+        }
+        ```
+
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://trellomcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "trello": {
+              "type": "http",
+              "url": "http://trellomcp-backend:9100/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Option 3: Via Beacon (aggregated)**
+
+        If you have **Beacon** installed, Trello MCP auto-registers there via its built-in UDP discovery and its tools show up under the `trello-mcp__*` namespace — no extra config.
+
+        **Available MCP Tools (40+):**
+        | Category | Tools |
+        |----------|-------|
+        | Boards | `list_boards`, `set_active_board`, `create_board`, `get_active_board_info` |
+        | Lists | `get_lists`, `add_list_to_board`, `archive_list` |
+        | Cards | `get_card`, `get_cards_by_list_id`, `add_card_to_list`, `update_card_details`, `archive_card`, `move_card`, `get_my_cards` |
+        | Comments | `add_comment`, `update_comment`, `delete_comment`, `get_card_comments` |
+        | Checklists | `create_checklist`, `get_checklist_items`, `add_checklist_item`, `update_checklist_item` |
+        | Attachments | `attach_image_to_card`, `attach_file_to_card`, `attach_image_data_to_card` |
+        | Members | `get_board_members`, `assign_member_to_card`, `remove_member_from_card` |
+        | Labels | `get_board_labels`, `create_label`, `update_label`, `delete_label` |
+        | Activity | `get_recent_activity`, `get_card_history` |
+
+        **Security:**
+        - The Trello API key and token are stored only in `/DATA/AppData/trellomcp/data/config.json` on this server; the config API reports whether a token is set but never returns it
+        - The token is requested with `read,write` scope and no expiry — revoke it any time from your Trello account settings under **Applications**
+        - Authentication is on by default: the Web UI is behind the server's single sign-on, and `/mcp` is behind OAuth 2.1. Only the in-network address `http://trellomcp-backend:9100/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network
+
+x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`,
+  # one per trailing-slash bind mount in `volumes:` above.
+  folders:
+    - path: /DATA/AppData/trellomcp/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/trellomcp/oauth
+      user: $PUID
+      group: $PGID
+  webui-host: trellomcp-${domain}
+  webui-path: "/"

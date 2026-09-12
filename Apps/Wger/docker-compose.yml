@@ -6,7 +6,7 @@ services:
   # files is required for the app to render at all -- upstream says the same.
   # It is therefore also `x-casaos.main`: the service carrying the caddy labels.
   wger:
-    image: nginx:1.29.3-alpine
+    image: nginx:1.31.5-alpine
     container_name: wger
     # nginx's master process writes /var/run/nginx.pid and /var/cache/nginx,
     # neither of which is writable by an unprivileged uid in this image; the
@@ -247,7 +247,7 @@ services:
           memory: 512M
 
   wger-cache:
-    image: redis:8.2.9-alpine
+    image: redis:8.10.1-alpine
     container_name: wger-cache
     restart: unless-stopped
     # The image's entrypoint would drop to its own `redis` user (uid 999), but

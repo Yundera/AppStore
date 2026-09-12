@@ -27,6 +27,26 @@ The LinuxServer Plex image starts as root to perform internal setup (setting per
   login it cannot complete — breaking the remote access this app exists to provide. The
   honest fix for the old false claim is this documentation, not a real gate.
 
+## Setup requires a plex.tv account (zero-config exception)
+
+Plex delegates identity to **plex.tv**, a service outside the operator's control. There is no
+local account and no skippable first-run wizard: the app URL and `/web/index.html#!/setup` both
+redirect to `app.plex.tv/auth`, which offers only Continue with Google / Apple / Email. A usable
+screen is therefore unreachable in a browser without an account on that third-party service.
+
+This is upstream Plex's design, not a packaging choice, and nothing in this compose can change
+it. No file has to be edited and no command has to be run — the sign-in is entirely in-browser —
+so the app trips neither of `zero-config`'s triggers.
+
+The operator's path is documented where the platform surfaces it: the Tips dialog and the store
+description carry the setup tutorial link and state that streaming your own media needs a Plex
+Pass and a claim token. No credential is written to a file or a log, and none has to be read
+from one.
+
+Recorded here under the Functional Review Protocol's **third-party identity exception**, so an
+audit that holds no plex.tv account records `zero-config` as a pass with the dependency named,
+instead of leaving the run unsettleable and retried forever.
+
 ## Alternatives considered and rejected
 - `user: $PUID:$PGID` — the LSIO image requires root at startup for s6-overlay init; setting a non-root user causes the entrypoint to fail
 - Separate containers for system tasks and media access — Plex is a monolithic application that cannot be split
