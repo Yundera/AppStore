@@ -1,0 +1,397 @@
+name: gitea
+
+services:
+  # Gitea itself — git hosting, the Actions controller, and the OCI package
+  # registry, all in one process. SQLite: a personal forge never has the write
+  # concurrency that would justify a second container for Postgres.
+  gitea:
+    image: gitea/gitea:1.27.3-rootless
+    container_name: gitea
+    user: $PUID:$PGID
+    restart: unless-stopped
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    environment:
+      TZ: $TZ
+      # Every URL Gitea hands out — clone URLs, the registry host, and the
+      # server_url the CI runner passes to jobs — is derived from ROOT_URL, so
+      # it has to be the address that works from outside as well as inside.
+      GITEA__server__ROOT_URL: https://gitea-${APP_DOMAIN}/
+      GITEA__server__DOMAIN: gitea-${APP_DOMAIN}
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__PROTOCOL: http
+      # The address Gitea's own CLI uses to reach the running server's internal
+      # API. It defaults to localhost, which is right for the server itself and
+      # useless from the bootstrap container beside it — and that is where
+      # `gitea actions generate-runner-token` is run from. It has to be set here
+      # rather than there: the CLI reads it out of the shared app.ini, and only
+      # this container's entrypoint renders environment into app.ini.
+      GITEA__server__LOCAL_ROOT_URL: http://gitea:3000/
+      # Git over SSH would need a published host port of its own. Everything
+      # here — clone, push, CI, registry — goes over HTTPS instead.
+      GITEA__server__DISABLE_SSH: "true"
+      GITEA__server__START_SSH_SERVER: "false"
+      # Skips the first-run install wizard: every value it would ask for is set
+      # here, and the admin account is created by gitea-bootstrap below.
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__database__PATH: /var/lib/gitea/data/gitea.db
+      GITEA__service__DISABLE_REGISTRATION: "true"
+      GITEA__service__REQUIRE_SIGNIN_VIEW: "true"
+      GITEA__actions__ENABLED: "true"
+      # Where a bare `uses: actions/checkout@v4` is resolved from.
+      GITEA__actions__DEFAULT_ACTIONS_URL: github
+      GITEA__packages__ENABLED: "true"
+      # Lets a pull mirror name a repository on this server's own Docker
+      # network — a Radicle node's git endpoint, for instance. See rationale.md.
+      GITEA__migrations__ALLOW_LOCALNETWORKS: "true"
+      # How often a pull mirror is re-fetched. The sync emits the same push
+      # event a real push would, so this interval is also how quickly CI
+      # reacts to a commit that arrives from the mirrored source.
+      GITEA__mirror__DEFAULT_INTERVAL: 10m
+      GITEA__mirror__MIN_INTERVAL: 10m
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/var/lib/gitea
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config:/etc/gitea
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    expose:
+      - 3000
+    labels:
+      caddy_0: gitea-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 3000}}"
+      caddy_1: gitea-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 3000}}"
+      caddy_2: gitea-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 3000}}"
+    networks:
+      - pcs
+      - gitea-internal
+
+  # One-shot, every up: creates the admin account if it is missing and leaves a
+  # fresh runner registration token where the runner can read it.
+  #
+  # Both are things only the gitea binary can do against its own database, which
+  # is why this is a container and not a hook — and it has to run *after* the
+  # server is healthy, because the server is what creates app.ini and migrates
+  # the schema on first boot.
+  gitea-bootstrap:
+    image: gitea/gitea:1.27.3-rootless
+    container_name: gitea-bootstrap
+    user: $PUID:$PGID
+    restart: "no"
+    cpu_shares: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      gitea:
+        condition: service_healthy
+    environment:
+      TZ: $TZ
+      GITEA_ADMIN_USER: gitea_admin
+      GITEA_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}
+      GITEA_ADMIN_EMAIL: ${APP_EMAIL:-admin@localhost}
+    entrypoint: ["/bin/sh", "-c"]
+    # `user create` fails once the account exists, which is the normal case on
+    # every start after the first — hence the `||`. The token is single-use and
+    # only consumed when the runner has no .runner file yet, so regenerating it
+    # on every up costs nothing and repairs a runner whose state was wiped.
+    command:
+      - |
+        set -e
+        gitea admin user create \
+          --admin \
+          --username "$${GITEA_ADMIN_USER}" \
+          --password "$${GITEA_ADMIN_PASSWORD}" \
+          --email "$${GITEA_ADMIN_EMAIL}" \
+          --must-change-password=false \
+          || echo "admin account already present, leaving it alone"
+        gitea actions generate-runner-token > /runner/token.new
+        mv /runner/token.new /runner/token
+        chmod 600 /runner/token
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/var/lib/gitea
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config:/etc/gitea
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner:/runner
+    networks:
+      - gitea-internal
+
+  # The CI runner: act_runner with its own Docker daemon inside it (dind), so
+  # workflow jobs and the images they build never touch the host's daemon.
+  # See rationale.md for what `privileged` buys and what it costs.
+  gitea-runner:
+    image: gitea/act_runner:0.6.1-dind
+    container_name: gitea-runner
+    restart: unless-stopped
+    privileged: true
+    cpu_shares: 20
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    depends_on:
+      gitea-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      TZ: $TZ
+      # This address is not just how the runner daemon reaches Gitea — it is
+      # handed to every job as GITHUB_SERVER_URL, and a job runs inside the
+      # runner's *nested* daemon, on a network where `gitea` does not resolve.
+      # So it has to be an address that works from the outside: checkout and
+      # `docker login` from a workflow both go out and back over HTTPS.
+      GITEA_INSTANCE_URL: https://gitea-${APP_DOMAIN}
+      GITEA_RUNNER_REGISTRATION_TOKEN_FILE: /data/token
+      GITEA_RUNNER_NAME: gitea-runner
+      GITEA_RUNNER_LABELS: ubuntu-latest:docker://node:22-bookworm,ubuntu-22.04:docker://node:22-bookworm,docker:docker://docker:28.5-cli
+      CONFIG_FILE: /config/config.yaml
+      # DOCKER_TLS_CERTDIR is deliberately left at the image's default. Emptying
+      # it does not turn the nested daemon's TCP listener off — it turns the
+      # listener's TLS off, and 2375 then answers unauthenticated to anything
+      # that can reach this container.
+    volumes:
+      # .runner (the registration this runner is identified by) and the
+      # bootstrap's token file.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner:/data
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner-config:/config:ro
+      # See the comments in the script: it replaces the image's own wait-for-
+      # dockerd step, which can leave the runner offline for minutes after a
+      # restart.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner-config/act_runner-run:/etc/s6/act_runner/run:ro
+      # The inner daemon's image store. Without this every restart re-pulls
+      # every base image a workflow uses.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner-docker:/var/lib/docker
+    networks:
+      - gitea-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  # The runner and the bootstrap step have no business being reachable from
+  # other apps; they only ever talk to gitea.
+  gitea-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+  main: gitea
+  developer: Gitea
+  category: Developer
+  tags: ["developer", "git", "ci"]
+  description:
+    en_us: |
+      Gitea — a git forge with CI and a container registry
+
+      Gitea is a lightweight, self-contained software forge: repositories, issues, pull requests, releases, a CI engine and an OCI container registry in a single service that is happy on a small machine.
+
+      What it gives you here:
+
+      • Git hosting over HTTPS, with issues, pull requests, releases and wikis
+      • Actions — CI workflows in GitHub Actions syntax, so existing workflow files usually run unchanged
+      • A built-in container registry, so a workflow can build an image and push it next to the code it came from
+      • Pull mirrors — point a repository at any git URL and it is re-fetched on a schedule, and each sync starts the same workflows a push would
+
+      That last pair is what makes it useful in front of a git source that has no webhooks of its own: mirror the repository, and the mirror's own updates drive the build.
+
+      A runner ships with the app, with its own Docker daemon inside it, so workflows can build container images out of the box.
+    fr_fr: |
+      Gitea — une forge git avec CI et registre de conteneurs
+
+      Gitea est une forge logicielle légère et autonome : dépôts, tickets, pull requests, versions, moteur d'intégration continue et registre de conteneurs OCI dans un seul service, à l'aise sur une petite machine.
+
+      Ce que vous obtenez ici :
+
+      • Hébergement git en HTTPS, avec tickets, pull requests, versions et wikis
+      • Actions — des workflows d'intégration continue en syntaxe GitHub Actions, si bien qu'un fichier de workflow existant tourne généralement tel quel
+      • Un registre de conteneurs intégré : un workflow peut construire une image et la publier à côté du code dont elle provient
+      • Miroirs — pointez un dépôt vers n'importe quelle URL git, il est re-synchronisé périodiquement, et chaque synchronisation déclenche les mêmes workflows qu'un push
+
+      Ces deux derniers points sont ce qui rend Gitea utile devant une source git dépourvue de webhooks : mettez le dépôt en miroir, et ce sont les mises à jour du miroir qui pilotent la construction.
+
+      Un runner est fourni avec l'application, avec son propre démon Docker embarqué, afin que les workflows puissent construire des images de conteneurs dès l'installation.
+    zh_cn: |
+      Gitea — 带 CI 与容器仓库的 Git 代码托管
+
+      Gitea 是轻量、自足的软件协作平台：仓库、议题、合并请求、发布、CI 引擎与 OCI 容器仓库集于一个服务，在小型机器上也能流畅运行。
+
+      它在这里提供：
+
+      • 通过 HTTPS 托管 Git，附带议题、合并请求、发布与百科
+      • Actions —— 采用 GitHub Actions 语法的 CI 工作流，现有的工作流文件通常无需修改即可运行
+      • 内置容器仓库，工作流可以构建镜像并发布在源代码旁边
+      • 拉取镜像同步 —— 将仓库指向任意 Git URL，它会按计划重新拉取，每次同步都会触发与推送相同的工作流
+
+      后两项让 Gitea 特别适合放在没有 webhook 的 Git 源前面：把仓库设为镜像，镜像的更新就会驱动构建。
+
+      应用自带一个运行器，内含独立的 Docker 守护进程，因此工作流开箱即可构建容器镜像。
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  tagline:
+    en_us: A git forge with CI and a container registry, on your own domain.
+    fr_fr: Une forge git avec intégration continue et registre de conteneurs, sur votre domaine.
+    zh_cn: 运行在你自己域名下的 Git 托管，内建 CI 与容器仓库。
+  tips:
+    before_install:
+      en_us: |
+        Signing in
+
+        | | |
+        | --- | --- |
+        | Address | `https://gitea-$APP_DOMAIN` |
+        | User | `gitea_admin` |
+        | Password | your server's default app password |
+
+        Gitea uses its own account system. Self-registration is off, so
+        `gitea_admin` is the only account until you create more under
+        Site Administration.
+
+        Building from a repository that has no webhooks
+
+        New Migration → check **This repository will be a mirror**, and give it
+        the git URL. Gitea re-fetches on a schedule, and each sync raises the
+        same `push` event a real push would — so a workflow with `on: push`
+        runs. Commit the workflow to `.gitea/workflows/` in the mirrored
+        repository itself (`.github/workflows/` also works; `.forgejo/` does
+        not).
+
+        One thing to change by hand: a migrated repository arrives with
+        **Actions switched off**. Repository → Settings → Advanced Settings →
+        tick **Actions**, or nothing will ever run, however correct the
+        workflow is.
+
+        Publishing images
+
+        The registry lives at the same address as the web UI. In a workflow,
+        log in to `gitea-$APP_DOMAIN` and push to
+        `gitea-$APP_DOMAIN/<user>/<image>:<tag>`. Use an access token with the
+        `write:package` scope, kept as a repository secret — the token Actions
+        injects as `secrets.GITHUB_TOKEN` is rejected by the registry.
+
+        The CI runner
+
+        The runner holds a Docker daemon of its own and therefore runs
+        privileged. It is what lets a workflow build container images. If you
+        do not intend to run CI, stop the `gitea-runner` container — Gitea
+        itself is unaffected.
+      fr_fr: |
+        Connexion
+
+        | | |
+        | --- | --- |
+        | Adresse | `https://gitea-$APP_DOMAIN` |
+        | Utilisateur | `gitea_admin` |
+        | Mot de passe | le mot de passe par défaut de vos applications |
+
+        Gitea gère ses propres comptes. L'auto-inscription est désactivée :
+        `gitea_admin` est donc le seul compte tant que vous n'en créez pas
+        d'autres depuis l'administration du site.
+
+        Construire depuis un dépôt sans webhooks
+
+        Nouvelle migration → cochez **Ce dépôt sera un miroir** et indiquez
+        l'URL git. Gitea re-synchronise périodiquement, et chaque
+        synchronisation lève l'événement `push` qu'un vrai push aurait levé —
+        un workflow `on: push` se déclenche donc. Le fichier de workflow se
+        place dans `.gitea/workflows/` du dépôt mis en miroir
+        (`.github/workflows/` fonctionne aussi ; `.forgejo/` non).
+
+        Une chose à changer à la main : un dépôt migré arrive avec **Actions
+        désactivé**. Dépôt → Paramètres → Paramètres avancés → cochez
+        **Actions**, sinon rien ne se déclenchera, si correct que soit le
+        workflow.
+
+        Publier des images
+
+        Le registre est à la même adresse que l'interface web. Dans un
+        workflow, connectez-vous à `gitea-$APP_DOMAIN` puis publiez vers
+        `gitea-$APP_DOMAIN/<utilisateur>/<image>:<tag>`. Utilisez un jeton
+        d'accès de portée `write:package`, conservé en secret de dépôt : le
+        jeton fourni par Actions (`secrets.GITHUB_TOKEN`) est refusé par le
+        registre.
+
+        Le runner d'intégration continue
+
+        Le runner embarque son propre démon Docker et tourne donc en mode
+        privilégié. C'est ce qui permet à un workflow de construire des images
+        de conteneurs. Si vous ne comptez pas utiliser l'intégration continue,
+        arrêtez le conteneur `gitea-runner` — Gitea lui-même n'en dépend pas.
+      zh_cn: |
+        登录
+
+        | | |
+        | --- | --- |
+        | 地址 | `https://gitea-$APP_DOMAIN` |
+        | 用户 | `gitea_admin` |
+        | 密码 | 服务器的默认应用密码 |
+
+        Gitea 使用自己的账户体系。自助注册已关闭，因此在你于站点管理中创建更多账户之前，
+        `gitea_admin` 是唯一的账户。
+
+        为没有 webhook 的仓库构建
+
+        新建迁移 → 勾选**将此仓库设为镜像**并填入 git URL。Gitea 会按计划重新拉取，
+        每次同步都会触发与真实推送相同的 `push` 事件，因此 `on: push` 工作流会运行。
+        工作流文件请提交到被镜像仓库自身的 `.gitea/workflows/` 目录
+        （`.github/workflows/` 同样有效，`.forgejo/` 无效）。
+
+        有一处需要手动调整：迁移而来的仓库默认**关闭 Actions**。
+        进入 仓库 → 设置 → 高级设置 → 勾选 **Actions**，否则工作流再正确也不会运行。
+
+        发布镜像
+
+        容器仓库与网页界面位于同一地址。在工作流中登录 `gitea-$APP_DOMAIN`，
+        并推送到 `gitea-$APP_DOMAIN/<用户>/<镜像>:<标签>`。请使用具有
+        `write:package` 权限的访问令牌并存为仓库机密 —— Actions 注入的
+        `secrets.GITHUB_TOKEN` 会被容器仓库拒绝。
+
+        CI 运行器
+
+        运行器内含独立的 Docker 守护进程，因此以特权模式运行，这正是工作流能够构建
+        容器镜像的原因。若不打算使用 CI，可停止 `gitea-runner` 容器 —— 这不影响 Gitea 本身。
+  title:
+    en_us: Gitea
+  index: /
+  webui_port: 3000
+  store_app_id: gitea
+
+x-compose-app:
+  schema_version: 2
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/config
+      user: $PUID
+      group: $PGID
+    # Holds .runner (the runner's registration) and the token file the
+    # bootstrap step writes for it.
+    - path: /DATA/AppData/$AppID/runner
+      user: $PUID
+      group: $PGID
+      mode: "0700"
+    - path: /DATA/AppData/$AppID/runner-config
+      user: $PUID
+      group: $PGID
+    # The inner Docker daemon's image store. dockerd runs as root inside the
+    # runner and takes ownership of what it creates below this point.
+    - path: /DATA/AppData/$AppID/runner-docker
+      user: $PUID
+      group: $PGID
+      mode: "0710"
+  webui-host: gitea-${domain}
+  webui-path: /

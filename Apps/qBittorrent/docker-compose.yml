@@ -1,20 +1,35 @@
 name: qbittorrent
 
 services:
+  # ── AppShield SSO gate ─────────────────────────────────────────────
+  # The only publicly reachable service: it carries the Caddy labels, and the
+  # qBittorrent WebUI behind it has none. AppShield (ghcr.io/yundera/appshield)
+  # runs in OIDC mode — the presence of OIDC_REGISTRAR_URL makes it self-register
+  # with the PCS auth-registrar on first login and send every request through the
+  # built-in Authelia SSO before proxying to the backend.
   qbittorrent:
-    user: $PUID:$PGID
-    image: lscr.io/linuxserver/qbittorrent:5.1.4
+    image: ghcr.io/yundera/appshield:3.0.2
     container_name: qbittorrent
+    # OIDC identity: AppShield builds its OIDC redirect URIs from os.hostname(),
+    # and the auth-registrar attests this app's name via the container's PTR
+    # record — both container_name and hostname must equal the app name, or Docker
+    # names the container after its random ID, AppShield derives
+    # `<container-id>-${APP_DOMAIN}`, and Dex rejects the authorize call with
+    # 400 'Unregistered redirect_uri' so no page ever renders.
+    hostname: qbittorrent
     restart: unless-stopped
     expose:
       - 80
     # The dashboard tile links here from another host, so the browser sends
-    # `Referer: https://<dashboard>/` on that first navigation. qBittorrent's
-    # cross-site check (WebApplication::doProcessRequest) answers 401
-    # "Unauthorized" — not the login page — whenever CSRF protection is on, the
-    # request still needs authentication, and the Referer/Origin host differs from
-    # the served host. Chrome replays the referrer on reload, so the tile is a dead
-    # end until the URL is retyped by hand.
+    # `Referer: https://<dashboard>/` on that first navigation — and after the SSO
+    # round trip it sends the auth origin's. Either way it is a foreign host.
+    # qBittorrent's cross-site check (WebApplication::processRequest →
+    # isCrossSiteRequest) answers 401 "Unauthorized" — not the WebUI — whenever
+    # CSRF protection is on and the Referer/Origin host differs from the served
+    # host. The check runs *before* authentication and is not skipped for
+    # whitelisted clients, so it bites even with the WebUI's own login bypassed
+    # (see the subnet whitelist in the init step below). Chrome replays the
+    # referrer on reload, so the tile would be a dead end until the URL is retyped.
     #
     # Fix: drop Referer and Origin for exactly the request the tile issues — GET,
     # path "/", Sec-Fetch-Mode: navigate — and for nothing else. A cross-site GET
@@ -22,7 +37,9 @@ services:
     # is given up here; every mutating request is an XHR to /api/v2/* with
     # Sec-Fetch-Mode: cors, does not match @tilenav, keeps its Origin, and stays
     # covered by qBittorrent's own check. Stripping the two headers globally would
-    # instead be equivalent to turning CSRF protection back off. See rationale.md.
+    # instead be equivalent to turning CSRF protection back off. The SSO round trip
+    # itself is unaffected: /nhl-auth/* is not path "/" and keeps its headers.
+    # See rationale.md.
     labels:
       caddy_0: qbittorrent-${APP_DOMAIN}
       caddy_0.import: gateway_tls
@@ -56,15 +73,55 @@ services:
       caddy_2.0_handle.reverse_proxy.1_header_up: "-Origin"
       caddy_2.1_handle: ""
       caddy_2.1_handle.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      BACKEND_HOST: "qbittorrent-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # "Add torrent file" POSTs the .torrent through the gate. A big multi-file
+      # torrent is a few MB, and nginx's own default would cap the body at 1m and
+      # answer 413, so the limit is raised here rather than left to the image.
+      CLIENT_MAX_BODY_SIZE: "64m"
+      # No ALLOWED_PATHS: nothing in this app is meant to be reachable without a
+      # session. The WebUI has no share links and no public API.
+    depends_on:
+      - qbittorrent-backend
+    networks:
+      - pcs
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ── qBittorrent WebUI + engine (protected) ─────────────────────────
+  # No Caddy labels: the WebUI is reachable from the internet only through the
+  # gate above. It stays on `pcs` (rather than an app-private network) because
+  # sibling apps talk to it directly — Radarr/Sonarr/Lidarr add it as a download
+  # client at `qbittorrent-backend:80`. That path is container-to-container and
+  # never leaves the host. The bare name `qbittorrent` belongs to the SSO gate and
+  # will not serve the API; do NOT give it back to this service, because Docker
+  # registers both the service key and the container_name in its embedded DNS, so
+  # two containers claiming `qbittorrent` round-robin between them.
+  qbittorrent-backend:
+    user: $PUID:$PGID
+    image: lscr.io/linuxserver/qbittorrent:5.1.4
+    container_name: qbittorrent-backend
+    restart: unless-stopped
+    expose:
+      - 80
     networks:
       - pcs
     # BitTorrent peer + DHT traffic on 6881 (matching TORRENTING_PORT below). Not
-    # HTTP, so Caddy cannot carry it — reaching it means publishing it to the host.
-    # Shipped commented out because the client is usable without it: qBittorrent
-    # still dials out to peers, so downloads work. Uncomment to also accept incoming
-    # peers, which is faster and is what seeding needs; that makes 6881 reachable
-    # from the internet with no authentication in front of it. Called out in
-    # tips.before_install so the user knows what this buys before installing.
+    # HTTP, so neither Caddy nor the gate can carry it — reaching it means
+    # publishing it to the host. Shipped commented out because the client is usable
+    # without it: qBittorrent still dials out to peers, so downloads work.
+    # Uncomment to also accept incoming peers, which is faster and is what seeding
+    # needs; that makes 6881 reachable from the internet with no authentication in
+    # front of it. Called out in tips.before_install so the user knows what this
+    # buys before installing.
     #ports:
     #  - 6881:6881
     #  - 6881:6881/udp
@@ -92,14 +149,27 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Login : `admin`
-        Password : `$APP_DEFAULT_PASSWORD`
-        The download directory is `/DATA/Downloads`
-        qBittorrent dials out to peers on its own, so downloads work as installed.
-        To also accept incoming peer connections — usually faster, and what seeding
-        needs — uncomment the `ports:` block in the compose file. That publishes port
-        `6881` (TCP and UDP) to the internet, reachable without authentication.
-        $APP_DEFAULT_PASSWORD
+        🔐 **Protected by your server account (single sign-on).** qBittorrent sits
+        behind the SSO gate, so your existing server login is the only password you
+        need — open the tile and you are already signed in. The WebUI's own login is
+        bypassed for clients on the server's internal network, which is the only
+        place it can be reached from.
+
+        📂 Downloads land in `/DATA/Downloads`; settings live in
+        `/DATA/AppData/qbittorrent/`.
+
+        🔗 **Wire it into the media stack.** Add it as a *Download Client* in
+        **Radarr**, **Sonarr** or **Lidarr** with host `qbittorrent-backend` and
+        port `80` — that is the app's own container, reached directly on the
+        server's internal network. The name `qbittorrent` is the SSO gate and will
+        not answer the API. Leave the username and password blank, or use
+        `admin` / `$APP_DEFAULT_PASSWORD`; either works.
+
+        📡 **Incoming peer connections are off by default.** qBittorrent dials out
+        to peers on its own, so downloads work as installed. To also accept
+        incoming peers — usually faster, and what seeding needs — uncomment the
+        `ports:` block in the compose file. That publishes port `6881` (TCP and
+        UDP) to the internet, reachable without authentication.
   architectures:
     - amd64
     - arm64
@@ -107,11 +177,11 @@ x-casaos:
   tags: ["files", "personal"]
   developer: qBittorrent Project
   description:
-    en_us: qBittorrent is a cross-platform free and open-source BitTorrent client with a clean, simple interface and powerful features including sequential downloading, bandwidth scheduling, and RSS feed support.
-    fr_fr: qBittorrent est un client BitTorrent multiplateforme gratuit et open-source avec une interface propre et simple et des fonctionnalités puissantes incluant le téléchargement séquentiel, la planification de bande passante et le support des flux RSS.
-    es_es: qBittorrent es un cliente BitTorrent multiplataforma gratuito y de código abierto con una interfaz limpia y simple y características poderosas incluyendo descarga secuencial, programación de ancho de banda y soporte de feeds RSS.
-    zh_cn: qBittorrent是一个跨平台的免费开源BitTorrent客户端，具有简洁的界面和强大的功能，包括顺序下载、带宽调度和RSS源支持。
-    ko_kr: qBittorrent는 깔끔하고 간단한 인터페이스와 순차 다운로드, 대역폭 스케줄링, RSS 피드 지원을 포함한 강력한 기능을 가진 크로스 플랫폼 무료 오픈소스 BitTorrent 클라이언트입니다.
+    en_us: qBittorrent is a cross-platform free and open-source BitTorrent client with a clean, simple interface and powerful features including sequential downloading, bandwidth scheduling, and RSS feed support. The web interface is fronted by the built-in single sign-on, so it opens with your server account and no second password.
+    fr_fr: qBittorrent est un client BitTorrent multiplateforme gratuit et open-source avec une interface propre et simple et des fonctionnalités puissantes incluant le téléchargement séquentiel, la planification de bande passante et le support des flux RSS. L'interface web est protégée par l'authentification unique intégrée, et s'ouvre avec votre compte serveur, sans second mot de passe.
+    es_es: qBittorrent es un cliente BitTorrent multiplataforma gratuito y de código abierto con una interfaz limpia y simple y características poderosas incluyendo descarga secuencial, programación de ancho de banda y soporte de feeds RSS. La interfaz web está protegida por el inicio de sesión único integrado, así que se abre con tu cuenta del servidor y sin una segunda contraseña.
+    zh_cn: qBittorrent是一个跨平台的免费开源BitTorrent客户端，具有简洁的界面和强大的功能，包括顺序下载、带宽调度和RSS源支持。网页界面由内置的单点登录保护，使用您的服务器账号即可打开，无需第二个密码。
+    ko_kr: qBittorrent는 깔끔하고 간단한 인터페이스와 순차 다운로드, 대역폭 스케줄링, RSS 피드 지원을 포함한 강력한 기능을 가진 크로스 플랫폼 무료 오픈소스 BitTorrent 클라이언트입니다. 웹 인터페이스는 내장 싱글 사인온으로 보호되어 서버 계정으로 바로 열리며 두 번째 비밀번호가 필요하지 않습니다.
   icon: icon.png
   thumbnail: thumbnail.png
   screenshot_link:
@@ -172,16 +242,20 @@ x-compose-app:
     # SameSite default in front of it, so it is turned back on here — once, then
     # the user's preferences are left alone.
     #
+    # It is still worth turning on with the SSO gate in front, because the gate is
+    # a session cookie: a cross-site write that arrives with that cookie attached
+    # reaches the backend, and qBittorrent's own Origin check is what rejects it.
+    #
     # What the check costs. qBittorrent compares host and port only (scheme is
     # explicitly not compared) and honours X-Forwarded-Host, so every same-origin
-    # request the WebUI itself makes is satisfied by the Caddy routes as shipped —
-    # the flag is not a reverse-proxy workaround. What it also rejects, and what
-    # the earlier version of this comment did not account for, is the *cross-site
-    # navigation* from the Maison dashboard: with authentication still needed and a
-    # foreign Referer/Origin, the tile's GET / gets a 401 text/plain body instead of
-    # the login page. That single entry request — and only it — is unpicked at the
-    # proxy by the @tilenav handler in the Caddy labels above; cross-site mutating
-    # requests still carry their Origin and are still rejected here.
+    # request the WebUI itself makes is satisfied by the Caddy routes as shipped.
+    # What it also rejects is the *cross-site navigation* that lands on the app —
+    # the dashboard tile, and the redirect back from the SSO round trip, both of
+    # which carry a foreign Referer. The check runs before authentication, so
+    # bypassing the WebUI login below does not exempt it. That single entry
+    # request — and only it — is unpicked at the proxy by the @tilenav handler in
+    # the Caddy labels above; cross-site mutating requests still carry their Origin
+    # and are still rejected here.
     - name: enable-csrf-protection
       image: busybox:1.37.0
       user: $PUID:$PGID
@@ -189,4 +263,39 @@ x-compose-app:
         - /DATA/AppData/qbittorrent/config/qBittorrent:/output
       command: ["sh", "-c", "sed -i 's/CSRFProtection=false/CSRFProtection=true/' /output/qBittorrent.conf; touch /output/.csrf-protection-enabled"]
       when: absent:/DATA/AppData/qbittorrent/config/qBittorrent/.csrf-protection-enabled
+    # Bypass the WebUI's own login for clients on the Docker private ranges — which
+    # is the only place the backend can be reached from, since it has no Caddy
+    # labels and publishes no HTTP port. The SSO gate becomes the single gate, so
+    # the tile opens straight into the UI instead of asking for a second password
+    # after the server login. `WebUI\Username`/`Password_PBKDF2` are left seeded, so
+    # a user who sets AuthSubnetWhitelistEnabled back to false has a known password
+    # to log in with, and the *arr download-client integrations keep working whether
+    # they send credentials or not.
+    #
+    # awk, not `sed a`, because the keys contain a literal backslash that the two
+    # sed implementations treat differently in append text. Existing keys are
+    # dropped first so the step is idempotent, and the insert is anchored on the
+    # [Preferences] header rather than appended, because once qBittorrent has run
+    # it rewrites the file with [Preferences] in the middle of several sections.
+    - name: bypass-webui-login
+      image: busybox:1.37.0
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/qbittorrent/config/qBittorrent:/output
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          awk '
+            /^WebUI\\AuthSubnetWhitelist/ { next }
+            { print }
+            /^\[Preferences\]/ {
+              print "WebUI\\AuthSubnetWhitelistEnabled=true"
+              print "WebUI\\AuthSubnetWhitelist=172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16"
+            }
+          ' /output/qBittorrent.conf > /output/qBittorrent.conf.new
+          mv /output/qBittorrent.conf.new /output/qBittorrent.conf
+          touch /output/.sso-login-bypass
+      when: absent:/DATA/AppData/qbittorrent/config/qBittorrent/.sso-login-bypass
   webui-host: qbittorrent-${domain}

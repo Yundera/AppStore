@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Replaces the image's own /etc/s6/act_runner/run.
+#
+# Upstream waits for the nested Docker daemon through s6's readiness
+# notification. On a cold start with a warm image store dockerd takes longer
+# than s6-notifyoncheck's window, the notification never arrives, s6 marks the
+# service permanently failed, and act_runner sits blocked in `s6-svwait -U` for
+# two to four minutes before s6 gives up and lets it past anyway. The runner
+# shows "offline" in the forge for that whole time and picks up no jobs.
+#
+# Asking the daemon directly is the same wait without the guesswork.
+while [ ! -d /etc/s6/docker/supervise ]; do
+    sleep 0.1
+done
+
+while ! docker info >/dev/null 2>&1; do
+    sleep 1
+done
+
+exec run.sh

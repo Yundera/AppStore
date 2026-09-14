@@ -1,0 +1,30 @@
+# act_runner configuration. Only the settings that differ from upstream's
+# defaults are written out — `act_runner generate-config` prints the full set.
+
+log:
+  level: info
+
+runner:
+  # The file the runner's own registration is kept in, relative to /data.
+  file: .runner
+  # One job at a time. A PCS shares its CPU with everything else installed on
+  # it, and an image build is the least polite thing on the box.
+  capacity: 1
+  timeout: 1h
+  fetch_timeout: 5s
+  fetch_interval: 2s
+
+cache:
+  # The cache server binds an address inside the runner container, which the
+  # job containers — created by the Docker daemon nested inside that same
+  # container — cannot route to. Left on, every `actions/cache` step fails
+  # noisily instead of being skipped.
+  enabled: false
+
+container:
+  # Jobs run on the runner's own nested daemon, on its default bridge: they
+  # reach the internet, and they reach Gitea the way anything outside would,
+  # through its public address.
+  network: bridge
+  privileged: false
+  force_pull: false
