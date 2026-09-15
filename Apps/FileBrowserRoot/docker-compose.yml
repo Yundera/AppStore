@@ -1,0 +1,415 @@
+name: filebrowserroot
+services:
+  # AppShield SSO gate — the only publicly reachable service. FileBrowser has no
+  # OIDC of its own and never will (upstream archived the project on 2026-09-01
+  # with the OIDC request, filebrowser/filebrowser#1328, closed unimplemented), so
+  # the gate is what puts this app behind SSO.
+  filebrowserroot:
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: filebrowserroot
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: filebrowserroot
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: "filebrowserroot-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # FileBrowser's share links are anonymous by design — the hash in the URL is
+      # the credential, and the share can carry its own password on top. Behind an
+      # unqualified gate every one of them would 302 to the SSO login and the
+      # feature would be silently dead, so its three prefixes are exempted:
+      #   share/       the share landing page (SPA route)
+      #   api/public/  the endpoints that page calls (/api/public/share, /api/public/dl)
+      #   static/      the JS/CSS that page loads
+      # Prefix-matched, comma-separated, no leading slash. Nothing here reaches the
+      # authenticated API: /api/resources, /api/users and /api/settings stay gated.
+      ALLOWED_PATHS: "share/,api/public/,static/"
+      # This is a file manager: uploads are the point. 0 = unlimited, which is the
+      # image default today — pinned so a future default cannot cap uploads silently.
+      CLIENT_MAX_BODY_SIZE: "0"
+    expose:
+      - 80
+    labels:
+      caddy_0: filebrowserroot-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: filebrowserroot-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: filebrowserroot-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - filebrowserroot-backend
+    networks:
+      # On `pcs` because Caddy and auth-registrar must reach it, and on the app's
+      # own network because that is where its backend lives.
+      - pcs
+      - filebrowserroot-internal
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  filebrowserroot-backend:
+    container_name: filebrowserroot-backend
+    # root, deliberately: this app exists to reach files the server user cannot —
+    # root-owned app data, system configuration, another container's volume. Running
+    # as $PUID:$PGID would give exactly the standard FileBrowser app, which is the
+    # one to install if that is what you want. Two consequences, both documented in
+    # rationale.md: everything this app creates is owned by root, and a mistake made
+    # in it is a mistake made as root. (The image itself declares USER=1000, so this
+    # line is what actually makes the difference — without it the container would run
+    # as uid 1000 and most of the tree above would be unreadable.)
+    user: 0:0
+    environment:
+      TZ: $TZ
+      FB_DATABASE: /db/database.db
+    image: filebrowser/filebrowser:v2.63.23
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/AppData/$AppID/db/
+        target: /db/
+      # The host's entire filesystem, read-write, as the browsing root. `/` is the
+      # Docker host's root — not this container's — so /etc, /var, /home, /root and
+      # every mount under them (including /DATA) are all reachable from one tree.
+      # This is the app: the point of the (root) variant is that nothing is out of
+      # scope. Bind mounts are recursive, so /proc, /sys and /dev show up too;
+      # browsing them is harmless, searching from `/` walks them and is slow.
+      - type: bind
+        source: /
+        target: /srv/
+    expose:
+      - 80
+    # No Caddy labels and NOT on `pcs`: with its own auth turned off (see the
+    # set-noauth init step) this container is unauthenticated, so the gate must be
+    # the only path to it. `filebrowserroot-internal` is what enforces that — on `pcs`
+    # any other app on the server could reach it directly.
+    networks:
+      - filebrowserroot-internal
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: Timezone used for the file timestamps shown in the interface.
+        - container: FB_DATABASE
+          description:
+            en_us: Path to the FileBrowser database inside the container. Stored on the /db volume.
+      volumes:
+        - container: /db/
+          description:
+            en_us: FileBrowser's own database - permissions, shares and settings. Kept across uninstall and reinstall.
+        - container: /srv/
+          description:
+            en_us: The server's entire filesystem - /DATA and every system directory alongside it (/etc, /var, /home, /root). This is everything FileBrowser can browse, edit, delete and share, as root, so anyone who passes the server login can reach all of it.
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  filebrowserroot-internal:
+    name: filebrowserroot-internal
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: filebrowserroot
+  category: Cloud
+  tags: ["files", "developer"]
+  description:
+    en_us: |
+      FileBrowser (root) - the whole server, in one file manager
+
+      This is the administrator's variant of FileBrowser. It opens on the server's own root directory and runs as root, so every file on the machine is in scope: /DATA alongside /etc, /var, /home, /root and every other app's data. You can read, edit, rename, move, delete, upload and download all of it from the browser, on desktop or mobile.
+
+      That is what it is for. Repair a configuration file an app will no longer start without, recover something out of another app's data directory, inspect a log, drop a file where only root can write - the jobs that need a shell, done in a file explorer instead.
+
+      It is the same FileBrowser interface, with the same editor, previews, drag-and-drop uploads and share links; only the scope and the privileges are different. For everyday files - documents, downloads, media - install the standard FileBrowser app, which stays inside /DATA and runs as your server user.
+
+      This app can break the server. Deleting or editing the wrong file under /etc, /var or /boot as root can leave the machine unbootable, and there is no undo and no confirmation beyond the usual one. Install it if you administer this server yourself, and treat it as a root shell with a nicer interface - because that is what it is.
+    zh_cn: |
+      FileBrowser（root）- 用一个文件管理器管理整台服务器
+
+      这是 FileBrowser 的管理员版本。它以服务器的根目录为起点，并以 root 身份运行，因此机器上的每一个文件都在可操作范围内：不仅是 /DATA，还包括 /etc、/var、/home、/root 以及其他所有应用的数据。你可以在浏览器中（电脑或手机）读取、编辑、重命名、移动、删除、上传和下载这些文件。
+
+      它正是为此而生：修复某个应用无法启动所依赖的配置文件、从另一个应用的数据目录中找回文件、查看日志、把文件放到只有 root 才能写入的位置——这些原本需要命令行的工作，现在可以在文件管理器中完成。
+
+      界面与 FileBrowser 完全相同：同样的编辑器、预览、拖拽上传和分享链接；不同的只是可访问范围和权限。日常文件（文档、下载、媒体）请安装标准的 FileBrowser 应用，它只在 /DATA 内操作，并以你的服务器用户身份运行。
+
+      本应用可能损坏服务器。以 root 身份误删或误改 /etc、/var、/boot 下的文件，可能导致系统无法启动，并且除常规确认外没有撤销机制。请仅在你自行管理的服务器上安装，并把它当作一个界面更友好的 root 终端来对待——它本质上就是如此。
+    fr_fr: |
+      FileBrowser (root) - tout le serveur, dans un seul gestionnaire de fichiers
+
+      Voici la variante « administrateur » de FileBrowser. Elle s'ouvre sur la racine du serveur et s'exécute en tant que root : tous les fichiers de la machine sont donc accessibles, /DATA comme /etc, /var, /home, /root et les données de toutes les autres applications. Vous pouvez les lire, les modifier, les renommer, les déplacer, les supprimer, les téléverser et les télécharger depuis le navigateur, sur ordinateur comme sur mobile.
+
+      C'est précisément son usage : réparer un fichier de configuration sans lequel une application ne démarre plus, récupérer quelque chose dans le répertoire de données d'une autre application, consulter un journal, déposer un fichier là où seul root peut écrire — des tâches de ligne de commande, faites dans un explorateur de fichiers.
+
+      C'est la même interface FileBrowser, avec le même éditeur, les mêmes aperçus, le même téléversement par glisser-déposer et les mêmes liens de partage ; seuls la portée et les privilèges changent. Pour les fichiers du quotidien — documents, téléchargements, médias — installez l'application FileBrowser standard, qui reste dans /DATA et s'exécute sous votre utilisateur serveur.
+
+      Cette application peut casser le serveur. Supprimer ou modifier le mauvais fichier dans /etc, /var ou /boot en tant que root peut rendre la machine non amorçable, sans annulation possible et sans autre confirmation que l'habituelle. Ne l'installez que si vous administrez vous-même ce serveur, et considérez-la comme un shell root doté d'une belle interface — car c'est ce qu'elle est.
+    ko_kr: |
+      FileBrowser (root) - 서버 전체를 하나의 파일 관리자로
+
+      FileBrowser의 관리자용 버전입니다. 서버의 루트 디렉터리에서 시작하며 root 권한으로 실행되므로, /DATA는 물론 /etc, /var, /home, /root와 다른 모든 앱의 데이터까지 이 기기의 모든 파일을 다룰 수 있습니다. 데스크탑이든 모바일이든 브라우저에서 읽기, 편집, 이름 변경, 이동, 삭제, 업로드, 다운로드가 가능합니다.
+
+      바로 그것이 이 앱의 목적입니다. 앱이 시작되지 않는 원인인 설정 파일 수정, 다른 앱의 데이터 디렉터리에서 파일 복구, 로그 확인, root만 쓸 수 있는 위치에 파일 배치 등 원래 셸이 필요했던 작업을 파일 탐색기에서 처리합니다.
+
+      인터페이스는 FileBrowser와 동일합니다. 편집기, 미리보기, 드래그 앤 드롭 업로드, 공유 링크까지 모두 같고 접근 범위와 권한만 다릅니다. 문서, 다운로드, 미디어 같은 일상적인 파일에는 /DATA 안에서 서버 사용자 권한으로 동작하는 표준 FileBrowser 앱을 설치하세요.
+
+      이 앱은 서버를 망가뜨릴 수 있습니다. root 권한으로 /etc, /var, /boot의 잘못된 파일을 삭제하거나 수정하면 기기가 부팅되지 않을 수 있으며, 일반적인 확인 절차 외에 되돌릴 방법이 없습니다. 직접 관리하는 서버에만 설치하고, 보기 좋은 인터페이스를 갖춘 root 셸이라고 생각하고 다루세요. 실제로 그렇습니다.
+    ar_sa: متصفح الملفات (root) - متصفح ملفات عبر الويب يعمل بصلاحيات الجذر على نظام ملفات الخادم بأكمله.
+    de_de: Datei Browser (root) - Webbasierter Datei Browser, der als root auf dem gesamten Dateisystem des Servers läuft.
+    es_es: File Browser (root) - Navegador de archivos web que se ejecuta como root sobre todo el sistema de archivos del servidor.
+    hu_hu: File Browser (root) - Webes fájlböngésző, amely rootként fut a szerver teljes fájlrendszerén.
+    it_it: File Browser (root) - Browser di file via web che gira come root sull’intero filesystem del server.
+    ru_ru: File Browser (root) - веб-браузер файлов, работающий от имени root по всей файловой системе сервера.
+    pl_pl: File Browser (root) - przeglądarka plików w przeglądarce działająca jako root na całym systemie plików serwera.
+    pt_br: File Browser (root) - Navegador de arquivos web que roda como root em todo o sistema de arquivos do servidor.
+    sv_se: File Browser (root) - Webbaserad filbläddrare som körs som root på hela serverns filsystem.
+    uk_ua: File Browser (root) - веб-браузер файлів, що працює від імені root на всій файловій системі сервера.
+  developer: File Browser
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  tagline:
+    en_us: The whole server in a file manager - browse and edit every file on the machine, as root.
+    zh_cn: 用文件管理器管理整台服务器 - 以 root 身份浏览和编辑机器上的每一个文件。
+    ar_sa: الخادم بأكمله في مدير ملفات - تصفح وحرّر كل ملف على الجهاز بصلاحيات الجذر.
+    de_de: Der ganze Server in einem Dateimanager - jede Datei der Maschine als root ansehen und bearbeiten.
+    es_es: Todo el servidor en un gestor de archivos - explora y edita cada archivo de la máquina como root.
+    fr_fr: Tout le serveur dans un gestionnaire de fichiers - parcourez et modifiez chaque fichier de la machine, en root.
+    hu_hu: A teljes szerver egy fájlkezelőben - böngéssze és szerkessze a gép minden fájlját rootként.
+    it_it: L’intero server in un file manager - sfoglia e modifica ogni file della macchina, come root.
+    ru_ru: Весь сервер в файловом менеджере - просматривайте и редактируйте любой файл машины от имени root.
+    pl_pl: Cały serwer w menedżerze plików - przeglądaj i edytuj każdy plik na maszynie jako root.
+    pt_br: O servidor inteiro em um gerenciador de arquivos - navegue e edite cada arquivo da máquina como root.
+    sv_se: Hela servern i en filhanterare - bläddra och redigera varje fil på maskinen som root.
+    uk_ua: Увесь сервер у файловому менеджері - переглядайте та редагуйте будь-який файл машини від імені root.
+    ko_kr: 서버 전체를 파일 관리자로 - 기기의 모든 파일을 root 권한으로 탐색하고 편집하세요.
+  thumbnail: thumbnail.png
+  tips:
+    before_install:
+      en_us: |
+        Sign-in
+
+        FileBrowser (root) is protected by your server's single sign-on (SSO) - the
+        same account you use for the dashboard. It reuses that account instead of a
+        password or login form of its own: open the app and you are already in, as
+        its administrator.
+
+        What this app can reach
+
+        It mounts the server's whole filesystem read-write and runs as root. The tree
+        you land on is the machine's own `/`: `/DATA` with your documents, downloads
+        and media, `/DATA/AppData` with the databases, configuration and secrets of
+        every other app installed here, and the system itself - `/etc`, `/var`,
+        `/home`, `/root`, `/boot`. Nothing on this server is out of reach, and file
+        permissions do not limit what it can write.
+
+        That is the point of this app, and it is also how it breaks things. Editing
+        or deleting the wrong file under `/etc`, `/var` or `/boot` can leave the
+        machine unable to boot; files it creates are owned by root, which other apps
+        may then be unable to write to; and there is no undo. Install it if you
+        administer this server yourself. For documents, downloads and media, the
+        standard FileBrowser app is the one to use - it stays inside `/DATA` and runs
+        as your server user.
+
+        Share links
+
+        A link you create from the Share menu stays reachable without signing in to
+        the server - the code in the link is what grants access, plus the optional
+        password you can set on it. Here that link can point at any file on the
+        machine, system files included, so check what you are sharing before you send
+        it.
+      ko_kr: |
+        로그인
+
+        FileBrowser (root)는 서버의 통합 로그인(SSO)으로 보호됩니다. 대시보드에서 사용하는
+        것과 같은 계정이며, 별도의 비밀번호나 자체 로그인 화면 대신 그 계정을 그대로
+        사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다.
+
+        이 앱이 접근할 수 있는 범위
+
+        서버의 파일 시스템 전체를 읽기/쓰기로 마운트하며 root 권한으로 실행됩니다.
+        처음 보이는 트리는 기기의 `/` 자체입니다. 문서, 다운로드, 미디어가 있는 `/DATA`,
+        설치된 다른 모든 앱의 데이터베이스·설정·비밀 정보가 있는 `/DATA/AppData`,
+        그리고 `/etc`, `/var`, `/home`, `/root`, `/boot` 같은 시스템 디렉터리까지
+        포함됩니다. 이 서버에서 접근하지 못하는 곳은 없으며, 파일 권한도 쓰기를
+        제한하지 않습니다.
+
+        그것이 이 앱의 목적이자, 문제가 생기는 방식이기도 합니다. `/etc`, `/var`,
+        `/boot`의 잘못된 파일을 수정하거나 삭제하면 기기가 부팅되지 않을 수 있고,
+        이 앱이 만든 파일은 root 소유이므로 다른 앱이 쓰지 못할 수 있으며, 되돌릴 방법도
+        없습니다. 직접 관리하는 서버에만 설치하세요. 문서·다운로드·미디어에는
+        `/DATA` 안에서 서버 사용자 권한으로 동작하는 표준 FileBrowser 앱이 적합합니다.
+
+        공유 링크
+
+        공유 메뉴에서 만든 링크는 서버에 로그인하지 않아도 접근할 수 있습니다. 링크에
+        포함된 코드가 접근 권한을 부여하며, 원한다면 비밀번호를 추가로 설정할 수 있습니다.
+        이 앱에서는 시스템 파일을 포함해 기기의 어떤 파일도 링크 대상이 될 수 있으므로,
+        보내기 전에 무엇을 공유하는지 반드시 확인하세요.
+      zh_cn: |
+        登录方式
+
+        FileBrowser（root）由服务器的统一登录（SSO）保护，与你登录控制面板所用的是同一个
+        账户。它直接沿用该账户，而不是单独的密码或自己的登录页面：打开应用即已以管理员
+        身份登录。
+
+        此应用可以访问的范围
+
+        它以读写方式挂载服务器的整个文件系统，并以 root 身份运行。你看到的目录树就是机器
+        本身的 `/`：包含文档、下载和媒体的 `/DATA`，保存着已安装的其他所有应用的数据库、
+        配置和密钥的 `/DATA/AppData`，以及 `/etc`、`/var`、`/home`、`/root`、`/boot`
+        等系统目录。这台服务器上没有它够不到的地方，文件权限也不会限制它的写入。
+
+        这正是本应用的用途，也是它可能造成损坏的原因。修改或删除 `/etc`、`/var`、`/boot`
+        下的错误文件可能导致机器无法启动；它创建的文件归 root 所有，其他应用可能因此无法
+        写入；而且没有撤销功能。请仅在你自行管理的服务器上安装。若只需处理文档、下载和
+        媒体，请使用标准的 FileBrowser 应用——它只在 `/DATA` 内操作，并以你的服务器用户
+        身份运行。
+
+        分享链接
+
+        你在「分享」菜单中创建的链接无需登录服务器即可访问——链接中的代码就是访问凭证，
+        你还可以为其另外设置密码。在本应用中，该链接可以指向机器上的任意文件，包括系统
+        文件，因此发送前请确认你分享的究竟是什么。
+      fr_fr: |
+        Connexion
+
+        FileBrowser (root) est protégé par l'authentification unique (SSO) de votre
+        serveur — le même compte que pour le tableau de bord. L'application réutilise ce
+        compte plutôt qu'un mot de passe ou un formulaire de connexion qui lui seraient
+        propres : vous l'ouvrez et vous y êtes déjà, en tant qu'administrateur.
+
+        Ce à quoi cette application a accès
+
+        Elle monte l'intégralité du système de fichiers du serveur en lecture-écriture et
+        s'exécute en tant que root. L'arborescence affichée est le `/` de la machine :
+        `/DATA` avec vos documents, téléchargements et médias, `/DATA/AppData` avec les
+        bases de données, configurations et secrets de toutes les autres applications
+        installées, et le système lui-même — `/etc`, `/var`, `/home`, `/root`, `/boot`.
+        Rien n'est hors de portée sur ce serveur, et les permissions de fichiers ne
+        limitent pas ce qu'elle peut écrire.
+
+        C'est l'objet même de cette application, et c'est aussi ainsi qu'elle casse les
+        choses. Modifier ou supprimer le mauvais fichier dans `/etc`, `/var` ou `/boot`
+        peut rendre la machine non amorçable ; les fichiers qu'elle crée appartiennent à
+        root, et d'autres applications peuvent alors ne plus pouvoir y écrire ; et il n'y
+        a pas d'annulation. Ne l'installez que si vous administrez vous-même ce serveur.
+        Pour les documents, téléchargements et médias, utilisez l'application FileBrowser
+        standard : elle reste dans `/DATA` et s'exécute sous votre utilisateur serveur.
+
+        Liens de partage
+
+        Un lien créé depuis le menu Partager reste accessible sans se connecter au
+        serveur : c'est le code contenu dans le lien qui donne l'accès, plus le mot de
+        passe facultatif que vous pouvez y ajouter. Ici, ce lien peut pointer vers
+        n'importe quel fichier de la machine, y compris les fichiers système : vérifiez
+        ce que vous partagez avant de l'envoyer.
+      es_es: |
+        Inicio de sesión
+
+        FileBrowser (root) está protegido por el inicio de sesión único (SSO) de tu
+        servidor, la misma cuenta que usas para el panel. La aplicación reutiliza esa
+        cuenta en lugar de una contraseña o un formulario de acceso propios: abres la
+        aplicación y ya estás dentro, como administrador.
+
+        A qué puede acceder esta aplicación
+
+        Monta todo el sistema de archivos del servidor en modo lectura-escritura y se
+        ejecuta como root. El árbol que ves es la propia `/` de la máquina: `/DATA` con
+        tus documentos, descargas y medios, `/DATA/AppData` con las bases de datos, la
+        configuración y los secretos de todas las demás aplicaciones instaladas, y el
+        sistema en sí — `/etc`, `/var`, `/home`, `/root`, `/boot`. Nada queda fuera de su
+        alcance en este servidor, y los permisos de archivo no limitan lo que puede
+        escribir.
+
+        Ese es el propósito de esta aplicación, y también la forma en que puede romper
+        cosas. Editar o borrar el archivo equivocado en `/etc`, `/var` o `/boot` puede
+        dejar la máquina sin arrancar; los archivos que crea pertenecen a root, y otras
+        aplicaciones pueden quedarse sin poder escribir en ellos; y no hay deshacer.
+        Instálala solo si administras tú mismo este servidor. Para documentos, descargas
+        y medios, usa la aplicación FileBrowser estándar: se queda dentro de `/DATA` y se
+        ejecuta con tu usuario del servidor.
+
+        Enlaces para compartir
+
+        Un enlace creado desde el menú Compartir sigue siendo accesible sin iniciar
+        sesión en el servidor: el código del enlace es lo que concede el acceso, más la
+        contraseña opcional que puedes añadirle. Aquí ese enlace puede apuntar a
+        cualquier archivo de la máquina, incluidos los del sistema, así que comprueba qué
+        estás compartiendo antes de enviarlo.
+  title:
+    en_us: FileBrowser (root)
+  index: /
+  webui_port: 80
+
+x-compose-app:
+  schema_version: 2
+  # Seeding the database needs filebrowser's own binary, so it stays a container —
+  # but the container is declared, not shelled out to. The guard replaces the
+  # `if [ ! -f ]` the hook opened with: `config init` refuses to overwrite an
+  # existing database and used to abort the whole hook when it did.
+  init:
+    - name: init-db
+      image: filebrowser/filebrowser:v2.63.23
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/db:/db
+      command: config init --database /db/database.db
+      when: absent:/DATA/AppData/$AppID/db/database.db
+    - name: add-admin
+      image: filebrowser/filebrowser:v2.63.23
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/db:/db
+      command: ["users", "add", "admin", "$APP_DEFAULT_PASSWORD", "--perm.admin", "--database", "/db/database.db"]
+      when: once
+    # Hands authentication to the AppShield gate. `noauth` resolves every request to
+    # user ID 1 — the `admin` seeded just above — so the app opens straight into the
+    # UI with full rights and no second password, and never 302s to its own /login
+    # (which the gate reserves and would answer with its own page).
+    #
+    # It has to be `config set`: the CLI's --noauth flag only applies to first-run
+    # quick setup and is not persistent, and the setting lives in the bolt database,
+    # not in an env var.
+    #
+    # `once`, not `always`, on purpose. The step name is new, so an existing install
+    # has no `.init/set-noauth` marker and picks this up on its next install-from-store;
+    # afterwards it is skipped, which is what keeps it off the restart path — bolt takes
+    # an exclusive lock, and a pre_up step that fails against a still-running container
+    # is fatal to the whole converge.
+    - name: set-noauth
+      image: filebrowser/filebrowser:v2.63.23
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/db:/db
+      command: ["config", "set", "--auth.method=noauth", "--database", "/db/database.db"]
+      when: once
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
+  # in `volumes:` above — re-run it instead of editing this block by hand.
+  #
+  # NOTE for whoever re-runs it: the backend's second bind mount is the host root
+  # (`source: /`). It must NEVER appear here — a generated `- path: /` entry would
+  # have Maison chown the whole filesystem to $PUID:$PGID before every start and
+  # destroy the machine. Only the db directory belongs in this block.
+  folders:
+    - path: /DATA/AppData/$AppID/db
+      user: $PUID
+      group: $PGID
+  webui-host: filebrowserroot-${domain}
