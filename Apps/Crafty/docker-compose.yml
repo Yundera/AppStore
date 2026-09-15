@@ -1,0 +1,195 @@
+name: crafty
+services:
+  crafty:
+    image: registry.gitlab.com/crafty-controller/crafty-4:4.10.8
+    container_name: crafty
+    hostname: crafty
+    user: "0:0"                          # Crafty requires root; see rationale.md
+    cpu_shares: 50
+    restart: unless-stopped
+    expose:
+      - 8443                             # self-signed HTTPS panel, reached by Caddy over the pcs network only
+    ports:
+      - "25500-25600:25500-25600"       # Minecraft Java server port pool (Crafty's default range for new servers)
+      - "19132:19132/udp"               # Minecraft Bedrock
+      - "8123:8123"                      # Dynmap
+    environment:
+      TZ: $TZ
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/backups/:/crafty/backups
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/logs/:/crafty/logs
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/servers/:/crafty/servers
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config/:/crafty/app/config
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/import/:/crafty/import
+    labels:
+      # Crafty has its own login, so it carries the Caddy labels directly (Docmost pattern, no auth sidecar).
+      # Upstream is the panel's self-signed HTTPS on 8443: https upstream + skip cert verification.
+      # Crafty REQUIRES websockets (WSS): pin HTTP/1.1 and forward the Upgrade/Connection/Proto/Host headers.
+      caddy_0: crafty-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_0.reverse_proxy.transport: http
+      caddy_0.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_0.reverse_proxy.transport.versions: "1.1"
+      caddy_0.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_0.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_0.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_0.reverse_proxy.header_up_3: "Host {host}"
+      caddy_1: crafty-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_1.reverse_proxy.transport: http
+      caddy_1.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_1.reverse_proxy.transport.versions: "1.1"
+      caddy_1.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_1.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_1.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_1.reverse_proxy.header_up_3: "Host {host}"
+      caddy_2: crafty-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams https 8443}}"
+      caddy_2.reverse_proxy.transport: http
+      caddy_2.reverse_proxy.transport.tls_insecure_skip_verify:
+      caddy_2.reverse_proxy.transport.versions: "1.1"
+      caddy_2.reverse_proxy.header_up_0: "Upgrade websocket"
+      caddy_2.reverse_proxy.header_up_1: "Connection Upgrade"
+      caddy_2.reverse_proxy.header_up_2: "X-Forwarded-Proto https"
+      caddy_2.reverse_proxy.header_up_3: "Host {host}"
+    networks:
+      - pcs
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: crafty
+  webui_port: 80                         # gateway-side port; the Caddy labels map this clean subdomain to the container's 8443. Do NOT set this to 8443 or the dashboard builds 8443-crafty-<domain>:8443
+  index: /
+  category: Games
+  tags: ["games", "personal", "family", "needs-public-ip"]
+  developer: Arcadia Technology
+  store_app_id: crafty
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+  title:
+    en_us: Crafty - Minecraft Server Manager
+  tagline:
+    en_us: Web-based Minecraft server manager.
+    fr_fr: Gestionnaire de serveurs Minecraft en ligne.
+    ko_kr: 웹 기반 마인크래프트 서버 관리자.
+    es_es: Gestor de servidores de Minecraft basado en web.
+  description:
+    en_us: |
+      Crafty is a web GUI for creating, running and managing
+      Minecraft servers (Java and Bedrock) from your browser. It launches and
+      supervises your server processes, automates backups, builds servers from
+      common loaders, gives you live console access, and supports per-user
+      roles and permissions.
+    fr_fr: |
+      Crafty est une interface web pour creer, lancer et gerer des
+      serveurs Minecraft (Java et Bedrock) depuis votre navigateur. Il lance et
+      supervise les processus serveur, automatise les sauvegardes, cree des
+      serveurs a partir des loaders courants, donne acces a la console en direct
+      et gere les roles et permissions par utilisateur.
+    ko_kr: |
+      Crafty 는 브라우저에서 마인크래프트 서버(자바 및 베드락)를
+      생성, 실행, 관리할 수 있는 웹 GUI입니다. 서버 프로세스 실행 및 관리,
+      백업 자동화, 일반 로더 기반 서버 생성, 실시간 콘솔 접근, 사용자별 역할
+      및 권한을 지원합니다.
+  tips:
+    before_install:
+      en_us: |
+        **Getting started**
+
+        Login: `admin`
+        Password: `$APP_DEFAULT_PASSWORD!`
+
+        **Creating a server**
+
+        When you create a server, choose a port in the `25500-25600` range
+        (the ports this app publishes). Bedrock servers use UDP port `19132`.
+
+        **Sharing your server with players**
+
+        Give players the address below, plus the port of the server you
+        created:
+
+        - **Java (Java Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`:`25565`
+          (or whichever port you chose)
+        - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `19132`
+
+        Your server must be reachable from the internet on that port. If your
+        PCS is behind CGNAT or the port is not forwarded, players outside your
+        network may be unable to connect.
+
+x-compose-app:
+  schema_version: 2
+  # Why this is an init container and not a seed/ file.
+  #
+  # crafty-4's docker_launcher.sh bootstraps its config ONLY when the directory is
+  # empty: `if [ ! "$(ls -A --ignore=.gitkeep ./app/config)" ]` copies all of
+  # app/config_original/* and runs repair_permissions; otherwise it copies just
+  # version.json and nothing else. seed/ files land BEFORE the first up (seed tree ->
+  # folders -> pull -> up), so seeding `config/default.json` — the only file that
+  # carries the initial admin credentials — made the directory non-empty and took the
+  # else branch: credits.json, logging.json and motd_format.json never reached the
+  # volume. /panel/credits then 500s on the missing file and logging silently falls
+  # back to logging.basicConfig, so the declared logs/ volume never gets the
+  # configured handlers.
+  #
+  # The trap: what defeats the launcher is ANY file in config/, not how it got there.
+  # So this does the launcher's job itself, from the same image, before the first up —
+  # copy the full config_original set, then overwrite the one file we actually mean to
+  # change. `cp` without -n so an image upgrade refreshes the upstream files, then the
+  # credential is rewritten last.
+  #
+  # Keyed on credits.json rather than `once`: the `once` marker lives with the compose
+  # and an uninstall-keep-data removes it, so `once` would re-run on reinstall and
+  # reset a password the user had changed.
+  init:
+    - name: seed-config
+      image: registry.gitlab.com/crafty-controller/crafty-4:4.10.8
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/config:/out
+      environment:
+        CRAFTY_PASSWORD: ${APP_DEFAULT_PASSWORD}
+      entrypoint: ["/bin/sh", "-c"]
+      # `command` must be a LIST whose single element is the whole script. As a plain
+      # folded string it is word-split into argv, so `sh -c` receives only "cp" as its
+      # script and the install dies on `cp: missing file operand`.
+      command:
+        - |
+          cp -r /crafty/app/config_original/. /out/ &&
+          printf '{"username":"admin","password":"%s!"}' "$$CRAFTY_PASSWORD" > /out/default.json
+      when: absent:/DATA/AppData/$AppID/config/credits.json
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
+  # in `volumes:` above — re-run it instead of editing this block by hand.
+  folders:
+    - path: /DATA/AppData/$AppID/backups
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/logs
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/servers
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/import
+      user: $PUID
+      group: $PGID
+  webui-host: crafty-${domain}
