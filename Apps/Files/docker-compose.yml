@@ -1,0 +1,306 @@
+name: files
+
+services:
+  # AppShield SSO gate — the only publicly reachable service.
+  #
+  # Files has no authentication of its own and never will: the whole scope
+  # decision was that the gate IS the auth system (see the app's README). Unlike
+  # the FileBrowser app this replaces, there is nothing to exempt — no anonymous
+  # share links — so ALLOWED_PATHS carries only the health endpoint.
+  files:
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: files
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via
+    # the container's PTR record, rejecting any redirect URI that doesn't match. Must
+    # equal the app name, or Docker defaults the hostname to the random container ID
+    # and OIDC registration fails.
+    hostname: files
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: "files-backend"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # The one route that must answer without a session. Nothing else is exempt.
+      ALLOWED_PATHS: "api/health"
+      # This is a file manager: uploads are the point, and they pass through the
+      # gate. 0 = unlimited. Uploads are chunked (tus, 8 MiB chunks), so even a
+      # generous limit would cap them — this must stay 0.
+      CLIENT_MAX_BODY_SIZE: "0"
+    expose:
+      - 80
+    labels:
+      caddy_0: files-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: files-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: files-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - files-backend
+    networks:
+      # On `pcs` because Caddy and auth-registrar must reach it, and on the app's
+      # own network because that is where its backend lives.
+      - pcs
+      - files-internal
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  files-backend:
+    container_name: files-backend
+    image: ghcr.io/yundera/files:1.0.0
+    restart: unless-stopped
+    environment:
+      DATA_ROOT: "/DATA"
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      # Everything the app creates is owned by PUID:PGID with these modes.
+      # Group-writable on purpose: it is what lets a container running as another
+      # uid in the same group write to a file uploaded here.
+      DIR_MODE: "0775"
+      FILE_MODE: "0664"
+      # Deleted files go to a trash folder inside this app's own data directory
+      # and are purged after this many days. 0 disables the automatic purge.
+      TRASH_RETENTION_DAYS: "30"
+      THUMB_CACHE_MB: "512"
+    # Runs as ROOT, deliberately, and this is the load-bearing line. See
+    # rationale.md — in short, a file manager over /DATA has to read
+    # /DATA/AppData, whose app directories are routinely owned by other uids with
+    # mode 0700, and Docker has no ambient capabilities to grant instead.
+    user: 0:0
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN          # stamp PUID:PGID onto created files
+      - FOWNER         # chmod files owned by another uid
+      - FSETID         # keep setgid bits on created directories
+      - DAC_OVERRIDE   # write into app data directories owned by others
+      - DAC_READ_SEARCH # read and traverse them
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      # The whole of /DATA: Documents, Downloads, Media and AppData. This is
+      # everything the app can browse, edit and delete, so anyone who passes the
+      # server login can reach all of it. The app's own state — trash, thumbnail
+      # cache, upload staging — lives in AppData/files and is hidden from the
+      # browse tree so a user cannot browse into their own trash.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/
+        target: /DATA/
+    expose:
+      - 8080
+    # No Caddy labels and NOT on `pcs`. This container has no authentication of
+    # its own and runs as root over all of /DATA, so the gate must be the only
+    # path to it. `files-internal` is what enforces that — on `pcs`, any other
+    # app on the server could reach it directly and read or delete anything.
+    # DO NOT move this service onto `pcs`.
+    networks:
+      - files-internal
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          # Higher than the gate because of the thumbnailer: it decodes up to 24
+          # megapixels at a time, two at a time, so peak decode memory is roughly
+          # 24e6 x 4 bytes x 2 = ~200 MB on top of the binary. Below ~384M this
+          # will OOM on a folder of full-size camera photos.
+          memory: 512M
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  files-internal:
+    name: files-internal
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: files
+  developer: Yundera
+  category: Cloud
+  tags: ["files", "personal"]
+  description:
+    en_us: |
+      📁 **What is Files?**
+
+      **Files** is the file manager for your Personal Cloud Server. It gives you
+      everything under `/DATA` — Documents, Downloads, Media and your app data —
+      in one browser window that looks and works like the rest of your server.
+
+      ✅ **What you can do**
+      • Browse in a grid or a list, with image thumbnails
+      • Upload files *and whole folders* by dragging them in — uploads resume if your connection drops
+      • Create, rename, copy, move and delete
+      • Edit text, YAML and Markdown in place, with a live Markdown preview
+      • Preview images, video, audio and PDFs without downloading them
+      • Search by name inside any folder
+
+      🗑️ **Deleting is not permanent.** Files you delete move to a Trash you can
+      see, restore from, and empty yourself. They are cleared automatically after
+      30 days.
+
+      🔒 **Signed in already.** Files has no separate login — it uses your server
+      account, like the rest of your PCS. There is no sharing and no second set of
+      users to manage.
+
+      ⚠️ **It can see everything.** That includes the data folders of your other
+      apps. Deleting an app's database here will break that app, so take the same
+      care you would in a terminal.
+    fr_fr: |
+      📁 **Qu'est-ce que Files ?**
+
+      **Files** est le gestionnaire de fichiers de votre serveur cloud personnel.
+      Il vous donne accès à tout ce qui se trouve sous `/DATA` — Documents,
+      Téléchargements, Médias et les données de vos applications — dans une seule
+      fenêtre de navigateur, dans le même style que le reste de votre serveur.
+
+      ✅ **Ce que vous pouvez faire**
+      • Naviguer en grille ou en liste, avec des vignettes d'images
+      • Téléverser des fichiers *et des dossiers entiers* par glisser-déposer — les envois reprennent si la connexion est coupée
+      • Créer, renommer, copier, déplacer et supprimer
+      • Éditer du texte, du YAML et du Markdown sur place, avec un aperçu Markdown en direct
+      • Prévisualiser images, vidéos, audio et PDF sans les télécharger
+      • Rechercher par nom dans n'importe quel dossier
+
+      🗑️ **Supprimer n'est pas définitif.** Les fichiers supprimés vont dans une
+      corbeille que vous pouvez consulter, restaurer et vider vous-même. Ils sont
+      effacés automatiquement au bout de 30 jours.
+
+      🔒 **Déjà connecté.** Files n'a pas de connexion séparée : il utilise le
+      compte de votre serveur, comme le reste de votre PCS. Il n'y a ni partage ni
+      second jeu d'utilisateurs à gérer.
+
+      ⚠️ **Il voit tout.** Y compris les dossiers de données de vos autres
+      applications. Supprimer ici la base de données d'une application la cassera,
+      alors soyez aussi prudent que dans un terminal.
+    zh_cn: |
+      📁 **Files 是什么？**
+
+      **Files** 是你的个人云服务器的文件管理器。它把 `/DATA` 下的一切——Documents、
+      Downloads、Media 以及你的应用数据——集中在一个浏览器窗口里，外观和操作都与
+      服务器的其他部分一致。
+
+      ✅ **你可以做什么**
+      • 以网格或列表浏览，图片带缩略图
+      • 拖入文件*或整个文件夹*上传——连接中断后可续传
+      • 新建、重命名、复制、移动和删除
+      • 就地编辑文本、YAML 和 Markdown，并实时预览 Markdown
+      • 无需下载即可预览图片、视频、音频和 PDF
+      • 在任意文件夹内按名称搜索
+
+      🗑️ **删除不是永久的。** 删除的文件会进入回收站，你可以查看、还原，也可以自己
+      清空。它们会在 30 天后自动清除。
+
+      🔒 **已经登录。** Files 没有单独的登录页，它使用你的服务器账户，和 PCS 的其余
+      部分一样。没有分享功能，也不需要管理第二套用户。
+
+      ⚠️ **它能看到一切。** 包括其他应用的数据目录。在这里删除某个应用的数据库会让
+      那个应用无法运行，请像在终端里一样小心。
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  tagline:
+    en_us: Your files, in your browser. Browse, edit and upload without leaving the page.
+    fr_fr: Vos fichiers, dans votre navigateur. Parcourir, éditer et téléverser sans quitter la page.
+    zh_cn: 在浏览器里管理你的文件：浏览、编辑、上传，无需离开页面。
+  tips:
+    before_install:
+      en_us: |
+        What this app can reach
+
+        Files mounts the whole of `/DATA` read-write. That includes
+        `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
+        `/DATA/AppData` — the last one holding the databases, configuration and
+        secrets of every other app installed on this server. Anyone who can sign in
+        to your server account can browse, edit and delete all of it.
+
+        Sign-in
+
+        Files is protected by your server's single sign-on — the same account you
+        use for the dashboard. Open the app and you are already in. It has no
+        login of its own, no second password and no sharing.
+
+        Replacing FileBrowser
+
+        Files replaces FileBrowser, whose upstream was archived in September 2026.
+        The two can be installed side by side — Files keeps no state FileBrowser
+        uses, and nothing is migrated or removed. If you were using FileBrowser's
+        share links, note that Files has no sharing: those links have no
+        equivalent here and will stop working when you uninstall FileBrowser.
+      fr_fr: |
+        Ce à quoi cette application a accès
+
+        Files monte l'intégralité de `/DATA` en lecture-écriture : cela inclut
+        `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
+        `/DATA/AppData`, qui contient les bases de données, configurations et
+        secrets de toutes les autres applications du serveur. Toute personne
+        pouvant se connecter à votre compte serveur peut parcourir, modifier et
+        supprimer l'ensemble.
+
+        Connexion
+
+        Files est protégé par l'authentification unique de votre serveur — le même
+        compte que pour le tableau de bord. Vous ouvrez l'application et vous y
+        êtes déjà. Elle n'a ni connexion propre, ni second mot de passe, ni
+        partage.
+
+        Remplacement de FileBrowser
+
+        Files remplace FileBrowser, dont le projet amont a été archivé en
+        septembre 2026. Les deux peuvent cohabiter : Files n'utilise aucun état de
+        FileBrowser, et rien n'est migré ni supprimé. Si vous utilisiez les liens
+        de partage de FileBrowser, notez que Files ne propose pas de partage : ces
+        liens n'ont pas d'équivalent ici et cesseront de fonctionner lorsque vous
+        désinstallerez FileBrowser.
+      zh_cn: |
+        此应用可以访问的范围
+
+        Files 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
+        `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
+        数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户的人都可以浏览、
+        编辑和删除这些内容。
+
+        登录方式
+
+        Files 由服务器的统一登录保护，与你登录控制面板所用的是同一个账户。打开应用
+        即已登录。它没有自己的登录页、没有第二个密码，也没有分享功能。
+
+        替代 FileBrowser
+
+        Files 用于替代 FileBrowser，后者的上游项目已于 2026 年 9 月归档。两者可以
+        同时安装——Files 不使用 FileBrowser 的任何数据，也不会迁移或删除任何内容。
+        如果你在使用 FileBrowser 的分享链接，请注意 Files 没有分享功能：这些链接在
+        这里没有对应物，卸载 FileBrowser 后它们将失效。
+  title:
+    en_us: Files
+  index: /
+  webui_port: 80
+  store_app_id: files
+
+x-compose-app:
+  schema_version: 2
+  # The app's own state — trash, thumbnail cache, upload staging — lives here
+  # (STATE_DIR defaults to $DATA_ROOT/AppData/files). The backend runs as root and
+  # would create it itself, root-owned; declaring it here is what makes it
+  # PUID:PGID so the user can clear it out without sudo.
+  folders:
+    - path: /DATA/AppData/$AppID
+      user: $PUID
+      group: $PGID
+  webui-host: files-${domain}
+  webui-path: /

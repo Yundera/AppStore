@@ -1,20 +1,32 @@
 #!/usr/bin/env bash
-# Replaces the image's own /etc/s6/act_runner/run.
+# Replaces the image's own /etc/s6/act_runner/run. Two waits, both of which the
+# stock script gets wrong for this deployment.
 #
-# Upstream waits for the nested Docker daemon through s6's readiness
-# notification. On a cold start with a warm image store dockerd takes longer
-# than s6-notifyoncheck's window, the notification never arrives, s6 marks the
-# service permanently failed, and act_runner sits blocked in `s6-svwait -U` for
-# two to four minutes before s6 gives up and lets it past anyway. The runner
-# shows "offline" in the forge for that whole time and picks up no jobs.
+# 1. The nested Docker daemon. Upstream waits for it through s6's readiness
+#    notification. On a cold start with a warm image store dockerd takes longer
+#    than s6-notifyoncheck's window, the notification never arrives, s6 marks
+#    the service permanently failed, and act_runner sits blocked in
+#    `s6-svwait -U` for two to four minutes before s6 gives up and lets it past
+#    anyway. The runner shows "offline" in the forge for that whole time and
+#    picks up no jobs. Asking the daemon directly is the same wait without the
+#    guesswork.
 #
-# Asking the daemon directly is the same wait without the guesswork.
+# 2. The registration token. It is minted by an init step that runs after the
+#    stack is up, so on a first install it does not exist yet when this
+#    container starts — and the stock entrypoint reads the token file exactly
+#    once, before its retry loop, so a token that arrives late is never seen.
+
 while [ ! -d /etc/s6/docker/supervise ]; do
     sleep 0.1
 done
 
 while ! docker info >/dev/null 2>&1; do
     sleep 1
+done
+
+while [ ! -s "${GITEA_RUNNER_REGISTRATION_TOKEN_FILE:-/data/token}" ] && [ ! -s /data/.runner ]; do
+    echo "waiting for the runner registration token"
+    sleep 2
 done
 
 exec run.sh

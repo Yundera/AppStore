@@ -25,17 +25,17 @@ services:
       GITEA__server__PROTOCOL: http
       # The address Gitea's own CLI uses to reach the running server's internal
       # API. It defaults to localhost, which is right for the server itself and
-      # useless from the bootstrap container beside it — and that is where
-      # `gitea actions generate-runner-token` is run from. It has to be set here
-      # rather than there: the CLI reads it out of the shared app.ini, and only
-      # this container's entrypoint renders environment into app.ini.
+      # useless from the init container that runs
+      # `gitea actions generate-runner-token`. It has to be set here rather than
+      # there: the CLI reads it out of the shared app.ini, and only this
+      # container's entrypoint renders environment into app.ini.
       GITEA__server__LOCAL_ROOT_URL: http://gitea:3000/
       # Git over SSH would need a published host port of its own. Everything
       # here — clone, push, CI, registry — goes over HTTPS instead.
       GITEA__server__DISABLE_SSH: "true"
       GITEA__server__START_SSH_SERVER: "false"
       # Skips the first-run install wizard: every value it would ask for is set
-      # here, and the admin account is created by gitea-bootstrap below.
+      # here, and the admin account is created by an init step below.
       GITEA__security__INSTALL_LOCK: "true"
       GITEA__database__DB_TYPE: sqlite3
       GITEA__database__PATH: /var/lib/gitea/data/gitea.db
@@ -77,56 +77,6 @@ services:
       - pcs
       - gitea-internal
 
-  # One-shot, every up: creates the admin account if it is missing and leaves a
-  # fresh runner registration token where the runner can read it.
-  #
-  # Both are things only the gitea binary can do against its own database, which
-  # is why this is a container and not a hook — and it has to run *after* the
-  # server is healthy, because the server is what creates app.ini and migrates
-  # the schema on first boot.
-  gitea-bootstrap:
-    image: gitea/gitea:1.27.3-rootless
-    container_name: gitea-bootstrap
-    user: $PUID:$PGID
-    restart: "no"
-    cpu_shares: 10
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    depends_on:
-      gitea:
-        condition: service_healthy
-    environment:
-      TZ: $TZ
-      GITEA_ADMIN_USER: gitea_admin
-      GITEA_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}
-      GITEA_ADMIN_EMAIL: ${APP_EMAIL:-admin@localhost}
-    entrypoint: ["/bin/sh", "-c"]
-    # `user create` fails once the account exists, which is the normal case on
-    # every start after the first — hence the `||`. The token is single-use and
-    # only consumed when the runner has no .runner file yet, so regenerating it
-    # on every up costs nothing and repairs a runner whose state was wiped.
-    command:
-      - |
-        set -e
-        gitea admin user create \
-          --admin \
-          --username "$${GITEA_ADMIN_USER}" \
-          --password "$${GITEA_ADMIN_PASSWORD}" \
-          --email "$${GITEA_ADMIN_EMAIL}" \
-          --must-change-password=false \
-          || echo "admin account already present, leaving it alone"
-        gitea actions generate-runner-token > /runner/token.new
-        mv /runner/token.new /runner/token
-        chmod 600 /runner/token
-    volumes:
-      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/var/lib/gitea
-      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config:/etc/gitea
-      - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner:/runner
-    networks:
-      - gitea-internal
-
   # The CI runner: act_runner with its own Docker daemon inside it (dind), so
   # workflow jobs and the images they build never touch the host's daemon.
   # See rationale.md for what `privileged` buys and what it costs.
@@ -140,9 +90,6 @@ services:
       resources:
         limits:
           memory: 2G
-    depends_on:
-      gitea-bootstrap:
-        condition: service_completed_successfully
     environment:
       TZ: $TZ
       # This address is not just how the runner daemon reaches Gitea — it is
@@ -161,12 +108,12 @@ services:
       # that can reach this container.
     volumes:
       # .runner (the registration this runner is identified by) and the
-      # bootstrap's token file.
+      # registration token the init step leaves for it.
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner:/data
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner-config:/config:ro
-      # See the comments in the script: it replaces the image's own wait-for-
-      # dockerd step, which can leave the runner offline for minutes after a
-      # restart.
+      # Replaces the image's own start-up wait — see the comments in the
+      # script. It is declared under x-compose-app.files rather than left to
+      # the seed tree, because it has to arrive executable.
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner-config/act_runner-run:/etc/s6/act_runner/run:ro
       # The inner daemon's image store. Without this every restart re-pulls
       # every base image a workflow uses.
@@ -178,8 +125,8 @@ networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
-  # The runner and the bootstrap step have no business being reachable from
-  # other apps; they only ever talk to gitea.
+  # The runner has no business being reachable from other apps — it only ever
+  # talks to gitea and to the internet.
   gitea-internal:
     driver: bridge
 
@@ -393,5 +340,49 @@ x-compose-app:
       user: $PUID
       group: $PGID
       mode: "0710"
+  files:
+    # Declared rather than left to the seed tree so the executable bit is
+    # stated, not inherited: git on a Windows-hosted checkout records every
+    # file 100644, and s6 refuses to spawn a `run` script it cannot execute —
+    # the runner then loops "unable to spawn ./run: Permission denied" and no
+    # workflow ever runs.
+    - path: /DATA/AppData/$AppID/runner-config/act_runner-run
+      from: runner-config/act_runner-run
+      ensure: always
+      mode: "0755"
+  init:
+    # Both steps are the gitea binary acting on its own installation, and both
+    # need the server already running: it is the server that renders app.ini
+    # and migrates the schema on first boot, and `generate-runner-token` is a
+    # client of its internal API rather than a database write.
+    - name: create-admin
+      image: gitea/gitea:1.27.3-rootless
+      user: $PUID:$PGID
+      phase: post_up
+      volumes:
+        - /DATA/AppData/$AppID/data:/var/lib/gitea
+        - /DATA/AppData/$AppID/config:/etc/gitea
+      command:
+        - sh
+        - -c
+        - gitea admin user create --admin --username gitea_admin --password "$APP_DEFAULT_PASSWORD" --email "$APP_EMAIL" --must-change-password=false
+      when: once
+    - name: runner-token
+      image: gitea/gitea:1.27.3-rootless
+      user: $PUID:$PGID
+      phase: post_up
+      network: $APP_NET
+      volumes:
+        - /DATA/AppData/$AppID/data:/var/lib/gitea
+        - /DATA/AppData/$AppID/config:/etc/gitea
+        - /DATA/AppData/$AppID/runner:/runner
+      command:
+        - sh
+        - -c
+        - gitea actions generate-runner-token > /runner/token.new && mv /runner/token.new /runner/token && chmod 600 /runner/token
+      # Only while the runner has no registration of its own. Once it has one
+      # the token is dead weight, and re-minting it on every start would leave
+      # a live credential lying in the app folder for no reason.
+      when: absent:/DATA/AppData/$AppID/runner/.runner
   webui-host: gitea-${domain}
   webui-path: /
