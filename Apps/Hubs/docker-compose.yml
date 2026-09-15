@@ -91,7 +91,7 @@ services:
       turkeyCfg_DB_HOST: "db"
       turkeyCfg_DB_HOST_T: "db"
       turkeyCfg_APP_EMAIL: "${APP_EMAIL}"
-      turkeyCfg_MAILER_RELAY: "smtp"
+      turkeyCfg_MAILER_RELAY: "hubs-mailpit"
       turkeyCfg_MAILER_PORT: "587"
       turkeyCfg_MAILER_TLS: "never"
       turkeyCfg_DB_USER: $turkeyCfg_DB_USER
@@ -306,6 +306,39 @@ services:
     networks:
       - hubs-net
 
+  hubs-mailpit:
+    image: axllent/mailpit:v1.29.7
+    container_name: hubs-mailpit
+    restart: unless-stopped
+    user: "$PUID:$PGID"
+    cpu_shares: 20
+    environment:
+      MP_SMTP_BIND_ADDR: "0.0.0.0:587"
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_SMTP_RELAY_HOST: smtp
+      MP_SMTP_RELAY_PORT: 587
+      MP_SMTP_RELAY_STARTTLS: "false"
+      MP_SMTP_RELAY_ALL: 1
+      MP_UI_AUTH: "admin:$APP_DEFAULT_PASSWORD"
+
+      TZ: UTC
+    expose:
+      - 587
+      - 8025
+    networks:
+      - hubs-net
+      - pcs
+    labels:
+      caddy_0: hubsmail-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8025}}"
+      caddy_1: hubsmail-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8025}}"
+      caddy_2: hubsmail-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8025}}"
+
 networks:
   hubs-net:
     name: hubs-net
@@ -359,6 +392,8 @@ x-casaos:
       en_us: |
         **🔑 Initial admin: `${APP_EMAIL}`** — the only account with admin rights. Sign in with this email at https://hubs-${APP_DOMAIN} to receive a magic-link.
 
+        **How to sign in:** Hubs uses magic-link (email-only) login. Enter `${APP_EMAIL}` at https://hubs-${APP_DOMAIN}/signin, then open the [Local Mailbox](https://hubsmail-${APP_DOMAIN}) to find the magic-link email and click it. Mailbox login — user: `admin`, password: `$APP_DEFAULT_PASSWORD`
+
         **Operator surfaces** (after admin sign-in):
         - [Admin panel](https://hubs-${APP_DOMAIN}/admin)
         - [Spoke scene editor](https://hubs-${APP_DOMAIN}/spoke/projects)
@@ -402,6 +437,8 @@ x-casaos:
       ko_kr: |
         **🔑 초기 관리자: `${APP_EMAIL}`** — 관리자 권한을 가진 유일한 계정입니다. https://hubs-${APP_DOMAIN} 에서 이 이메일로 로그인하면 매직 링크를 받게 됩니다.
 
+        **로그인 방법:** Hubs는 매직링크(이메일 전용) 로그인을 사용합니다. https://hubs-${APP_DOMAIN}/signin 에서 `${APP_EMAIL}`을 입력한 후, [로컬 메일함](https://hubsmail-${APP_DOMAIN})을 열어 매직링크 이메일을 확인하고 클릭하세요. 메일함 로그인 — 사용자: `admin`, 비밀번호: `$APP_DEFAULT_PASSWORD`
+
         **운영자 화면** (관리자 로그인 후):
         - [관리 패널](https://hubs-${APP_DOMAIN}/admin)
         - [Spoke 씬 에디터](https://hubs-${APP_DOMAIN}/spoke/projects)
@@ -422,8 +459,8 @@ x-compose-app:
       image: ghcr.io/worph/hubs-seed:2.0.0
       command: bootstrap
       volumes:
-        - /DATA/AppData/hubs:/data/hubs
-        - /DATA/AppData/hubs/secrets:/data/compose
+        - ${DATA_ROOT:-/DATA}/AppData/hubs:/data/hubs
+        - ${DATA_ROOT:-/DATA}/AppData/hubs/secrets:/data/compose
       environment:
         APP_DOMAIN: ${APP_DOMAIN}
         APP_PUBLIC_IP_DASH: ${APP_PUBLIC_IP_DASH}
@@ -439,7 +476,7 @@ x-compose-app:
       phase: post_up
       network: hubs-net
       volumes:
-        - /DATA/AppData/hubs/secrets/.env:/secrets.env:ro
+        - ${DATA_ROOT:-/DATA}/AppData/hubs/secrets/.env:/secrets.env:ro
       environment:
         SECRETS_ENV_FILE: /secrets.env
         RET_INTERNAL_URL: https://hubs-reticulum:4000
@@ -468,27 +505,27 @@ x-compose-app:
         case "$key" in ''|\#*) continue ;; esac
         grep -q "^$key=" $APP_DIR/.env 2>/dev/null ||
           printf '%s=%s\n' "$key" "$value" >> $APP_DIR/.env
-      done < /DATA/AppData/hubs/secrets/.env
+      done < ${DATA_ROOT:-/DATA}/AppData/hubs/secrets/.env
   # Created and owned by Maison before images are pulled, before any hook runs and
   # before any container starts - on the first boot and every one after it.
   folders:
-    - path: /DATA/AppData/hubs
+    - path: ${DATA_ROOT:-/DATA}/AppData/hubs
       user: $PUID
       group: $PGID
     # hubs-seed's generated .env: the database password and the Guardian /
     # Phoenix / PostgREST keys.
-    - path: /DATA/AppData/hubs/secrets
+    - path: ${DATA_ROOT:-/DATA}/AppData/hubs/secrets
       user: $PUID
       group: $PGID
       mode: "0700"
     # postgres:14-alpine drops to uid 70 through gosu, so the cluster directory
-    # has to be its own. recursive because a chown of /DATA/AppData can re-lock
+    # has to be its own. recursive because a chown of ${DATA_ROOT:-/DATA}/AppData can re-lock
     # the tree to PUID between boots, which crash-loops the database.
-    - path: /DATA/AppData/hubs/pgdata
+    - path: ${DATA_ROOT:-/DATA}/AppData/hubs/pgdata
       user: 70
       group: 70
       recursive: true
-    - path: /DATA/AppData/hubs/retstorage
+    - path: ${DATA_ROOT:-/DATA}/AppData/hubs/retstorage
       user: $PUID
       group: $PGID
   webui-host: hubs-${domain}
