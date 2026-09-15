@@ -188,6 +188,7 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  thumbnail: thumbnail.png
   tagline:
     en_us: A git forge with CI and a container registry, on your own domain.
     fr_fr: Une forge git avec intégration continue et registre de conteneurs, sur votre domaine.
@@ -326,7 +327,7 @@ x-compose-app:
       user: $PUID
       group: $PGID
     # Holds .runner (the runner's registration) and the token file the
-    # bootstrap step writes for it.
+    # init step writes for it.
     - path: /DATA/AppData/$AppID/runner
       user: $PUID
       group: $PGID
@@ -352,9 +353,13 @@ x-compose-app:
       mode: "0755"
   init:
     # Both steps are the gitea binary acting on its own installation, and both
-    # need the server already running: it is the server that renders app.ini
-    # and migrates the schema on first boot, and `generate-runner-token` is a
-    # client of its internal API rather than a database write.
+    # have to wait for the server: post_up fires as soon as `compose up`
+    # returns, which is when the container has *started*, not when Gitea has
+    # migrated its schema. Run them any sooner and `user create` dies on
+    # "no such table: user".
+    #
+    # The wait is bounded by `timeout` rather than left open: a step that
+    # blocks forever would hold the install open forever.
     - name: create-admin
       image: gitea/gitea:1.27.3-rootless
       user: $PUID:$PGID
@@ -365,12 +370,22 @@ x-compose-app:
       command:
         - sh
         - -c
-        - gitea admin user create --admin --username gitea_admin --password "$APP_DEFAULT_PASSWORD" --email "$APP_EMAIL" --must-change-password=false
-      when: once
+        - |
+          timeout 240 sh -c 'until gitea admin user list >/dev/null 2>&1; do sleep 3; done'
+          gitea admin user create --admin --username gitea_admin \
+            --password "$APP_DEFAULT_PASSWORD" --email "$APP_EMAIL" \
+            --must-change-password=false \
+            || echo "admin account already present, leaving it alone"
+      # Re-run rather than remembered: the command is idempotent, and an account
+      # that was deleted by accident comes back on the next start.
+      when: always
     - name: runner-token
       image: gitea/gitea:1.27.3-rootless
       user: $PUID:$PGID
       phase: post_up
+      # Unlike the account, a runner token is not a database write — it is a
+      # call to the running server's internal API, so this one needs to be able
+      # to reach it.
       network: $APP_NET
       volumes:
         - /DATA/AppData/$AppID/data:/var/lib/gitea
@@ -379,7 +394,10 @@ x-compose-app:
       command:
         - sh
         - -c
-        - gitea actions generate-runner-token > /runner/token.new && mv /runner/token.new /runner/token && chmod 600 /runner/token
+        - |
+          timeout 240 sh -c 'until gitea actions generate-runner-token > /runner/token.new 2>/dev/null; do sleep 3; done'
+          mv /runner/token.new /runner/token
+          chmod 600 /runner/token
       # Only while the runner has no registration of its own. Once it has one
       # the token is dead weight, and re-minting it on every start would leave
       # a live credential lying in the app folder for no reason.
