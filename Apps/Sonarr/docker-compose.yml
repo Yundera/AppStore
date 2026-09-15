@@ -1,0 +1,110 @@
+name: sonarr
+
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:4.0.19
+    container_name: sonarr
+    restart: unless-stopped
+    user: $PUID:$PGID
+    expose:
+      - 8989
+    labels:
+      caddy_0: sonarr-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8989}}"
+      caddy_1: sonarr-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8989}}"
+      caddy_2: sonarr-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8989}}"
+    networks:
+      - pcs
+    environment:
+      TZ: $TZ
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/sonarr/config:/config   # dedicated Sonarr config
+      - ${DATA_ROOT:-/DATA}/Media/TV Shows:/tv              # shared TV library (same folder Jellyfin reads)
+      - ${DATA_ROOT:-/DATA}/Downloads:/downloads            # shared downloads folder
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  main: sonarr
+  index: /
+  tips:
+    before_install:
+      en_us: |
+        📺 **Sonarr** is a TV series collection manager — it monitors, downloads and organises your shows automatically as new episodes air.
+
+        📂 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.
+
+        🔐 **Sign in with the account below.** Sonarr ships with its login page
+        already enabled and this account already created, so it is never reachable
+        without signing in. Change the password from *Settings → General → Security*
+        once you are in.
+
+        Default Account
+        | Username | Password |
+        | -------- | -------- |
+        | `admin`  | `$SONARR_ADMIN_PASSWORD` |
+
+        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent:80` when they run on the same server.
+
+        ❓ Questions? Contact us at help@yundera.com
+  architectures:
+    - amd64
+    - arm64
+  category: Media
+  tags: ["media", "personal"]
+  developer: Servarr (Sonarr)
+  description:
+    en_us: Sonarr is a TV series collection manager for Usenet and BitTorrent users. It monitors multiple RSS feeds for new episodes, grabs, sorts and renames them, and integrates with download clients like qBittorrent and indexers via Prowlarr. Uses the same `/DATA/Media/TV Shows` library folder Jellyfin reads.
+    fr_fr: Sonarr est un gestionnaire de collection de séries TV pour les utilisateurs Usenet et BitTorrent. Il surveille plusieurs flux RSS pour les nouveaux épisodes, les récupère, les trie et les renomme, et s'intègre aux clients de téléchargement comme qBittorrent et aux indexeurs via Prowlarr. Utilise le même dossier de bibliothèque TV que Jellyfin lit.
+    es_es: Sonarr es un gestor de colección de series de TV para usuarios de Usenet y BitTorrent. Monitorea múltiples fuentes RSS de nuevos episodios, los descarga, ordena y renombra, e se integra con clientes de descarga como qBittorrent e indexadores vía Prowlarr. Usa la misma carpeta de biblioteca de TV que lee Jellyfin.
+    zh_cn: Sonarr 是面向 Usenet 和 BitTorrent 用户的电视剧收藏管理器。它监控多个 RSS 源以获取新剧集，抓取、整理并重命名，并通过 Prowlarr 与 qBittorrent 等下载客户端和索引器集成。使用与 Jellyfin 相同的电视库文件夹。
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  thumbnail: thumbnail.png
+  tagline:
+    en_us: Automatically find, download and organise your TV show collection.
+    fr_fr: Trouvez, téléchargez et organisez automatiquement votre collection de séries TV.
+    es_es: Encuentra, descarga y organiza automáticamente tu colección de series de TV.
+    zh_cn: 自动查找、下载并整理您的电视剧收藏。
+  title:
+    en_us: Sonarr
+  store_app_id: sonarr
+  is_uncontrolled: false
+
+x-compose-app:
+  schema_version: 2
+  # Admin password for the account seeded into config.xml on first boot.
+  # Generated once into the app's .env and never regenerated, so it survives
+  # restarts, updates and restores. `alnum` rather than `password` because the
+  # value lands in an XML text node and is rendered in a markdown table in
+  # `tips` - symbols would need escaping in both. 24 alphanumerics is ~143 bits.
+  secrets:
+    SONARR_ADMIN_PASSWORD: alnum:24
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
+  # before the image is pulled, before any hook, before the container starts.
+  # Derived from the bind mounts in `volumes:` above; the container drops to
+  # $PUID:$PGID, so each of these must be user-owned or Sonarr cannot write.
+  folders:
+    - path: /DATA/AppData/$AppID/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Media/TV Shows
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
+  webui-host: sonarr-${domain}
