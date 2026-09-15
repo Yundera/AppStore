@@ -1,0 +1,15 @@
+{
+  "gateway": {
+    "controlUi": {
+      "enabled": true,
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true,
+      "allowedOrigins": [
+        "https://openclaw-${APP_DOMAIN}",
+        "https://openclaw-${APP_PUBLIC_IP_DASH}.nip.io",
+        "https://openclaw-${APP_PUBLIC_IP_DASH}.sslip.io"
+      ]
+    },
+    "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+  }
+}

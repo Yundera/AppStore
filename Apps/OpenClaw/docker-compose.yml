@@ -1,0 +1,417 @@
+name: openclaw
+
+services:
+  # AppShield sidecar — the only publicly reachable service. It fronts the OpenClaw
+  # gateway with the PCS's built-in Authelia SSO (OIDC) and self-registers with
+  # auth-registrar on first login: no client id, no secret, no issuer to configure.
+  # No AUTH_HASH anywhere — Maison injects no such variable, so it would be empty.
+  openclaw:
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: openclaw
+    # OIDC identity: AppShield's auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal
+    # container_name, or Docker defaults the hostname to the random container ID.
+    hostname: openclaw
+    restart: unless-stopped
+    cpu_shares: 80
+    expose:
+      - 80
+    labels:
+      caddy_0: openclaw-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: openclaw-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: openclaw-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      BACKEND_HOST: "openclaw-backend"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+    depends_on:
+      - openclaw-backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      # On `pcs` because Caddy must reach it, and on the app's own network
+      # because that is where its backend lives.
+      - pcs
+      - openclaw-internal
+
+  # The gateway itself. It executes shell commands and reads/writes files by design,
+  # so it is deliberately NOT on the shared `pcs` network: only the AppShield sidecar
+  # can reach it, and every request therefore passes the SSO gate first.
+  openclaw-backend:
+    image: alpine/openclaw:2026.6.9
+    container_name: openclaw-backend
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    cpu_shares: 70
+    healthcheck:
+      # curl, not wget: despite the `alpine/` namespace (a Docker Hub org name, not a
+      # base image) this image is Debian bookworm and ships no wget, so the old
+      # `wget --spider` probe exited 127 every time and the container sat permanently
+      # `unhealthy` while the gateway was serving perfectly well.
+      test: ["CMD", "sh", "-c", "curl -fsS -o /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    expose:
+      - 8080
+    environment:
+      TZ: $TZ
+      NODE_ENV: production
+      # AI Provider API Keys (configure at least one)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Required, or the gateway REFUSES TO START. From 2026.6.x the image guards a
+      # non-loopback bind: "Refusing to bind gateway to lan without auth. Set
+      # OPENCLAW_GATEWAY_TOKEN or OPENCLAW_GATEWAY_PASSWORD" — it then exits and
+      # restarts on a ~10s loop, never listening on 8080, so AppShield answers 502
+      # behind a tile that reports `running`. The two control-UI flags below do NOT
+      # satisfy the guard; only a token or password does. $APP_DEFAULT_PASSWORD is the
+      # per-install random value Maison injects, so this is a distinct secret per PCS
+      # and never a shipped literal. It gates the gateway's own API as a second layer
+      # behind the sidecar; it is not what the browser authenticates with.
+      OPENCLAW_GATEWAY_TOKEN: $APP_DEFAULT_PASSWORD
+      # The Control UI's own device-pairing flow is disabled because authentication is
+      # delegated to the AppShield sidecar in front of it. Safe only because this
+      # service sits on an app-private bridge and has no route of its own.
+      OPENCLAW_GATEWAY_CONTROL_UI_ALLOW_INSECURE_AUTH: "true"
+      OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_DISABLE_DEVICE_AUTH: "true"
+    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "8080", "--allow-unconfigured"]
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/openclaw:/home/node/.openclaw
+    restart: unless-stopped
+    networks:
+      # App-private only: reached solely by the AppShield sidecar.
+      - openclaw-internal
+
+networks:
+  # The deployment's shared network, under whatever name it carries there.
+  # ${APP_NET} comes from the app's .env; the `:-pcs` default keeps a hand-run
+  # `docker compose up -d` working. Maison copies this file byte-for-byte and
+  # never rewrites it, so the reference has to be written here.
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  # App-private link between the sidecar and the gateway.
+  openclaw-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: openclaw
+  category: AI
+  tags: ["ai", "personal", "developer"]
+  description:
+    en_us: |
+      **What is OpenClaw?**
+
+      OpenClaw is an open-source personal AI assistant that actually does things. Unlike typical chatbots that only answer questions, OpenClaw can take real actions on your behalf.
+
+      **Key Features:**
+
+      - **Multi-platform messaging**: Connect via WhatsApp, Telegram, Discord, Slack, Signal, and more
+      - **Persistent memory**: Learns your preferences and remembers context
+      - **Web browsing**: Can browse the web and fill out forms
+      - **File access**: Read and write files on your system
+      - **Shell commands**: Execute scripts and system commands
+      - **Extensible**: Add community skills or write your own plugins
+      - **Self-improving**: Can write its own skills
+
+      **Practical Uses:**
+
+      - Email management and calendar operations
+      - Flight check-ins and reservations
+      - Health metric monitoring
+      - Document processing
+      - Automation of repetitive tasks
+
+      **Privacy First:**
+
+      Your data stays on your server. OpenClaw runs locally and connects to AI providers (Anthropic Claude or OpenAI) only for inference.
+
+      **Built-in Web UI:**
+
+      Access the Control UI and WebChat directly from your browser - no additional tools needed!
+    fr_fr: |
+      **Qu'est-ce qu'OpenClaw ?**
+
+      OpenClaw est un assistant IA personnel open-source qui agit vraiment. Contrairement aux chatbots typiques qui ne font que repondre aux questions, OpenClaw peut effectuer de vraies actions en votre nom.
+
+      **Fonctionnalites cles :**
+
+      - **Messagerie multi-plateforme** : Connectez-vous via WhatsApp, Telegram, Discord, Slack, Signal, et plus
+      - **Memoire persistante** : Apprend vos preferences et se souvient du contexte
+      - **Navigation web** : Peut naviguer sur le web et remplir des formulaires
+      - **Acces aux fichiers** : Lire et ecrire des fichiers sur votre systeme
+      - **Commandes shell** : Executer des scripts et commandes systeme
+      - **Extensible** : Ajoutez des competences communautaires ou ecrivez vos propres plugins
+
+      **Confidentialite d'abord :**
+
+      Vos donnees restent sur votre serveur. OpenClaw fonctionne localement et se connecte aux fournisseurs d'IA uniquement pour l'inference.
+    de_de: |
+      **Was ist OpenClaw?**
+
+      OpenClaw ist ein Open-Source personlicher KI-Assistent, der tatsachlich Dinge erledigt. Im Gegensatz zu typischen Chatbots, die nur Fragen beantworten, kann OpenClaw echte Aktionen in Ihrem Namen durchfuhren.
+
+      **Hauptfunktionen:**
+
+      - **Multi-Plattform-Messaging**: Verbinden Sie sich uber WhatsApp, Telegram, Discord, Slack, Signal und mehr
+      - **Persistenter Speicher**: Lernt Ihre Praferenzen und erinnert sich an den Kontext
+      - **Web-Browsing**: Kann im Web surfen und Formulare ausfullen
+      - **Dateizugriff**: Lesen und Schreiben von Dateien auf Ihrem System
+      - **Shell-Befehle**: Ausfuhren von Skripten und Systembefehlen
+      - **Erweiterbar**: Fugen Sie Community-Skills hinzu oder schreiben Sie Ihre eigenen Plugins
+
+      **Datenschutz zuerst:**
+
+      Ihre Daten bleiben auf Ihrem Server. OpenClaw lauft lokal und verbindet sich nur fur Inferenz mit KI-Anbietern.
+    es_es: |
+      **Que es OpenClaw?**
+
+      OpenClaw es un asistente de IA personal de codigo abierto que realmente hace cosas. A diferencia de los chatbots tipicos que solo responden preguntas, OpenClaw puede realizar acciones reales en tu nombre.
+
+      **Caracteristicas principales:**
+
+      - **Mensajeria multiplataforma**: Conectate via WhatsApp, Telegram, Discord, Slack, Signal y mas
+      - **Memoria persistente**: Aprende tus preferencias y recuerda el contexto
+      - **Navegacion web**: Puede navegar por la web y rellenar formularios
+      - **Acceso a archivos**: Leer y escribir archivos en tu sistema
+      - **Comandos shell**: Ejecutar scripts y comandos del sistema
+      - **Extensible**: Agrega habilidades de la comunidad o escribe tus propios plugins
+
+      **Privacidad primero:**
+
+      Tus datos permanecen en tu servidor. OpenClaw se ejecuta localmente y se conecta a proveedores de IA solo para inferencia.
+    zh_cn: |
+      **什么是OpenClaw？**
+
+      OpenClaw是一个开源的个人AI助手，它真正能够执行任务。与只能回答问题的典型聊天机器人不同，OpenClaw可以代表您执行实际操作。
+
+      **主要功能：**
+
+      - **多平台消息**: 通过WhatsApp、Telegram、Discord、Slack、Signal等连接
+      - **持久记忆**: 学习您的偏好并记住上下文
+      - **网页浏览**: 可以浏览网页并填写表单
+      - **文件访问**: 在您的系统上读写文件
+      - **Shell命令**: 执行脚本和系统命令
+      - **可扩展**: 添加社区技能或编写自己的插件
+
+      **隐私优先：**
+
+      您的数据保留在您的服务器上。OpenClaw在本地运行，仅在推理时连接到AI提供商。
+    ko_kr: |
+      **OpenClaw란?**
+
+      OpenClaw는 실제로 작업을 수행하는 오픈소스 개인 AI 어시스턴트입니다. 질문에만 답하는 일반적인 챗봇과 달리 OpenClaw는 사용자를 대신하여 실제 작업을 수행할 수 있습니다.
+
+      **주요 기능:**
+
+      - **멀티 플랫폼 메시징**: WhatsApp, Telegram, Discord, Slack, Signal 등을 통해 연결
+      - **지속적 메모리**: 선호도를 학습하고 컨텍스트를 기억
+      - **웹 브라우징**: 웹을 탐색하고 양식을 작성할 수 있음
+      - **파일 액세스**: 시스템에서 파일 읽기 및 쓰기
+      - **Shell 명령**: 스크립트 및 시스템 명령 실행
+      - **확장 가능**: 커뮤니티 스킬 추가 또는 자체 플러그인 작성
+
+      **개인정보 보호 우선:**
+
+      데이터는 서버에 보관됩니다. OpenClaw는 로컬에서 실행되며 추론을 위해서만 AI 제공업체에 연결됩니다.
+  developer: OpenClaw Community
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+  tagline:
+    en_us: Open-source AI assistant that actually does things
+    fr_fr: Assistant IA open-source qui agit vraiment
+    de_de: Open-Source KI-Assistent der tatsachlich Dinge erledigt
+    es_es: Asistente de IA de codigo abierto que realmente hace cosas
+    zh_cn: 真正能执行任务的开源AI助手
+    ko_kr: 실제로 작업을 수행하는 오픈소스 AI 어시스턴트
+  title:
+    en_us: OpenClaw
+  tips:
+    before_install:
+      en_us: |
+        **API Key Required**
+
+        OpenClaw requires an AI provider API key to function. Configure at least one:
+
+        | Provider | Environment Variable |
+        |----------|---------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **First-Time Setup**
+
+        1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your server account (single sign-on)
+        2. **Unlock the gateway**: if the Control UI asks for a gateway token or password, paste `$APP_DEFAULT_PASSWORD`
+        3. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
+        4. **Start chatting**: Use the built-in WebChat or connect messaging platforms
+
+        **Messaging Integrations:**
+
+        OpenClaw supports WhatsApp, Telegram, Discord, Slack, Signal, and more. Configure through the Web UI after setup.
+
+        **Already installed from an earlier version?**
+
+        The gateway only accepts browser origins listed in its own config file, and that file is never overwritten once it exists - so an existing install keeps the old one. If the Web UI reports `Browser origin not allowed`, edit `/DATA/AppData/openclaw/openclaw.json`, add the block below inside `gateway.controlUi`, and restart the app:
+
+        `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`
+
+        **Documentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      fr_fr: |
+        **Cle API requise**
+
+        OpenClaw necessite une cle API de fournisseur d'IA pour fonctionner. Configurez au moins une :
+
+        | Fournisseur | Variable d'environnement |
+        |-------------|-------------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **Configuration initiale**
+
+        1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte serveur (authentification unique)
+        2. **Deverrouiller la passerelle** : si l'interface demande un token ou un mot de passe, collez `$APP_DEFAULT_PASSWORD`
+        3. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
+
+        **Deja installe depuis une version anterieure ?**
+
+        Le fichier de configuration existant n'est jamais ecrase. Si l'interface affiche `Browser origin not allowed`, ajoutez `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dans `gateway.controlUi` de `/DATA/AppData/openclaw/openclaw.json`, puis redemarrez l'app.
+
+        **Documentation :** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      de_de: |
+        **API-Schlussel erforderlich**
+
+        OpenClaw benotigt einen KI-Anbieter-API-Schlussel. Konfigurieren Sie mindestens einen:
+
+        | Anbieter | Umgebungsvariable |
+        |----------|-------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **Ersteinrichtung**
+
+        1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Server-Konto an (Single Sign-on)
+        2. **Gateway entsperren**: Fragt die Control UI nach einem Token oder Passwort, fugen Sie `$APP_DEFAULT_PASSWORD` ein
+        3. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
+
+        **Bereits aus einer fruheren Version installiert?**
+
+        Die vorhandene Konfigurationsdatei wird nie uberschrieben. Meldet die Web-UI `Browser origin not allowed`, erganzen Sie in `/DATA/AppData/openclaw/openclaw.json` unter `gateway.controlUi` den Eintrag `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` und starten Sie die App neu.
+
+        **Dokumentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      es_es: |
+        **Clave API requerida**
+
+        OpenClaw requiere una clave API de proveedor de IA para funcionar. Configura al menos una:
+
+        | Proveedor | Variable de entorno |
+        |-----------|---------------------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **Configuracion inicial**
+
+        1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta del servidor (inicio de sesion unico)
+        2. **Desbloquear el gateway**: si la interfaz pide un token o contrasena, pega `$APP_DEFAULT_PASSWORD`
+        3. **Configurar clave API**: Agrega tu clave API en la seccion Config
+
+        **Ya instalado desde una version anterior?**
+
+        El archivo de configuracion existente nunca se sobrescribe. Si la interfaz muestra `Browser origin not allowed`, anade `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dentro de `gateway.controlUi` en `/DATA/AppData/openclaw/openclaw.json` y reinicia la app.
+
+        **Documentacion:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      zh_cn: |
+        **需要API密钥**
+
+        OpenClaw需要AI提供商的API密钥才能运行。请至少配置一个：
+
+        | 提供商 | 环境变量 |
+        |--------|----------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **首次设置**
+
+        1. **访问Web界面**：点击应用图标，使用您的服务器账户登录（单点登录）
+        2. **解锁网关**：如果控制界面要求输入网关令牌或密码，请粘贴 `$APP_DEFAULT_PASSWORD`
+        3. **配置API密钥**：在Config部分添加您的API密钥
+
+        **从旧版本升级？**
+
+        已存在的配置文件不会被覆盖。如果界面提示 `Browser origin not allowed`，请在 `/DATA/AppData/openclaw/openclaw.json` 的 `gateway.controlUi` 中加入 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`，然后重启应用。
+
+        **文档：** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+      ko_kr: |
+        **API 키 필요**
+
+        OpenClaw가 작동하려면 AI 제공업체 API 키가 필요합니다. 최소 하나를 구성하세요:
+
+        | 제공업체 | 환경 변수 |
+        |----------|-----------|
+        | Anthropic Claude | `ANTHROPIC_API_KEY` |
+        | OpenAI | `OPENAI_API_KEY` |
+
+        **최초 설정**
+
+        1. **웹 UI 접속**: 앱 아이콘을 클릭하고 서버 계정으로 로그인 (통합 인증)
+        2. **게이트웨이 잠금 해제**: 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구하면 `$APP_DEFAULT_PASSWORD` 를 붙여넣으세요
+        3. **API 키 구성**: Config 섹션에서 API 키 추가
+
+        **이전 버전에서 이미 설치했나요?**
+
+        기존 설정 파일은 덮어쓰지 않습니다. 웹 UI에 `Browser origin not allowed` 가 표시되면 `/DATA/AppData/openclaw/openclaw.json` 의 `gateway.controlUi` 안에 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` 를 추가하고 앱을 재시작하세요.
+
+        **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+  index: /
+  webui_port: 80
+  port_map: "80"
+
+x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before any image is pulled
+  # and before any hook runs. Declared here rather than mkdir'd in the hook: a hook
+  # mkdir runs inside the Maison container and lands root-owned, which is exactly
+  # what leaves the gateway unable to write its own config volume.
+  folders:
+    - path: /DATA/AppData/openclaw
+      user: $PUID
+      group: $PGID
+  # openclaw.json is the LIVE gateway config the user edits from the Config section
+  # of the UI. Declared rather than heredoc'd in a hook: `ensure: once` is
+  # create-if-absent on every up, so a reinstall or a version upgrade never
+  # overwrites what the gateway or the user wrote, and Maison chowns it to
+  # $PUID:$PGID so the gateway can rewrite its own config.
+  #
+  # `.tmpl` because gateway.controlUi.allowedOrigins has to name this install's own
+  # published origins. The gateway checks the browser Origin on every Control UI
+  # websocket connect and rejects anything not on that list ("Browser origin not
+  # allowed"), which made the whole UI — /chat, /webchat, /control, /overview,
+  # /config — unusable on the hostnames this store publishes. There is no
+  # environment variable for it: the image reads the list from this file only.
+  # The three entries mirror the caddy_0/1/2 labels above; keep them in step.
+  files:
+    - path: /DATA/AppData/openclaw/openclaw.json
+      from: openclaw.json.tmpl
+      ensure: once
+      mode: "0644"
+  webui-host: openclaw-${domain}
+  webui-path: "/"
