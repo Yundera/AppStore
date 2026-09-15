@@ -1,0 +1,22 @@
+<Config>
+  <BindAddress>*</BindAddress>
+  <Port>7878</Port>
+  <EnableSsl>False</EnableSsl>
+  <LaunchBrowser>False</LaunchBrowser>
+  <!-- Auth is enabled before the app is ever reachable. Without an
+       AuthenticationMethod other than None, Radarr serves its full UI and
+       its admin API - including /initialize.json, which hands out the API
+       key - to anonymous callers. The first-run modal is a client-side
+       overlay and does not gate either. -->
+  <AuthenticationMethod>Forms</AuthenticationMethod>
+  <AuthenticationRequired>Enabled</AuthenticationRequired>
+  <!-- Radarr consumes these two on first boot: it creates the user in
+       radarr.db and strips both elements from this file. seed/ is
+       create-if-absent, so it is never rewritten and a password the user
+       changes later survives. -->
+  <Username>admin</Username>
+  <Password>${RADARR_ADMIN_PASSWORD}</Password>
+  <UrlBase></UrlBase>
+  <InstanceName>Radarr</InstanceName>
+  <UpdateMechanism>Docker</UpdateMechanism>
+</Config>
