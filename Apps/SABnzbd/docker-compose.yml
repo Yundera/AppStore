@@ -1,0 +1,234 @@
+name: sabnzbd
+
+services:
+  # ── AppShield SSO gate ─────────────────────────────────────────────
+  # The only publicly reachable service: it carries the Caddy labels, and the
+  # SABnzbd web UI behind it has none. AppShield (ghcr.io/yundera/appshield)
+  # runs in OIDC mode — the presence of OIDC_REGISTRAR_URL makes it self-register
+  # with the PCS auth-registrar on first login and send every request through the
+  # built-in Authelia SSO before proxying to the backend.
+  sabnzbd:
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: sabnzbd
+    # OIDC identity: AppShield builds its OIDC redirect URIs from os.hostname(),
+    # and the auth-registrar attests this app's name via the container's PTR
+    # record — both container_name and hostname must equal the app name, or Docker
+    # names the container after its random ID, AppShield derives
+    # `<container-id>-${APP_DOMAIN}`, and Dex rejects the authorize call with
+    # 400 'Unregistered redirect_uri' so no page ever renders.
+    hostname: sabnzbd
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      caddy_0: sabnzbd-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: sabnzbd-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      BACKEND_HOST: "sabnzbd-backend"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # "Add NZB file" POSTs the .nzb through the gate. An NZB for a large
+      # multi-part release runs to a few MB once it lists every article, and the
+      # default body cap would answer 413, so the limit is raised here rather than
+      # left to the image.
+      CLIENT_MAX_BODY_SIZE: "64m"
+      # No ALLOWED_PATHS: nothing in this app is meant to be reachable without a
+      # session. Sibling apps that need the API reach the backend directly over
+      # the shared network instead (see the note on that service below).
+    depends_on:
+      - sabnzbd-backend
+    networks:
+      - pcs
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ── SABnzbd web UI + download engine (protected) ───────────────────
+  # No Caddy labels: the web UI is reachable from the internet only through the
+  # gate above. It stays on `pcs` (rather than an app-private network) because
+  # sibling apps talk to it directly — Radarr/Sonarr/Lidarr add it as a download
+  # client at `sabnzbd-backend:8080` with the API key from Settings → General.
+  # That path is container-to-container and never leaves the host. The bare name
+  # `sabnzbd` belongs to the SSO gate and will not serve the API; do NOT give it
+  # back to this service, because Docker registers both the service key and the
+  # container_name in its embedded DNS, so two containers claiming `sabnzbd`
+  # round-robin between them.
+  #
+  # `hostname` matters here for a second reason: SABnzbd seeds host_whitelist
+  # from socket.gethostname() when the setting is empty, and the seeded
+  # sabnzbd.ini lists this exact name so the sibling-app API calls above pass the
+  # DNS-rebinding check (see seed/config/sabnzbd.ini.tmpl).
+  sabnzbd-backend:
+    image: lscr.io/linuxserver/sabnzbd:5.1.3
+    container_name: sabnzbd-backend
+    hostname: sabnzbd-backend
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 8080
+    environment:
+      TZ: $TZ
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/sabnzbd/config:/config
+      # Incomplete jobs are scratch space — partial articles, unpack temp dirs —
+      # so they stay in AppData and out of the user's Downloads folder. Only
+      # finished jobs are moved to /DATA/Downloads by SABnzbd itself.
+      - ${DATA_ROOT:-/DATA}/AppData/sabnzbd/incomplete:/incomplete-downloads
+      - ${DATA_ROOT:-/DATA}/Downloads:/downloads
+    networks:
+      - pcs
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          # Generous on purpose. The cgroup covers SABnzbd itself (~150M plus the
+          # 512M article cache set in the seeded ini) and the par2/unrar child
+          # processes it spawns, whose footprint grows with the number of files in
+          # a release. Being OOM-killed mid-repair is how a download ends up
+          # silently corrupt, so the cap is set above the worst case rather than
+          # at the typical one. It is a limit, not a reservation — an idle
+          # SABnzbd holds a small fraction of it.
+          memory: 2G
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  main: sabnzbd
+  webui_port: 80
+  index: /
+  tips:
+    before_install:
+      en_us: |
+        🔐 **Protected by your server account (single sign-on).** SABnzbd sits
+        behind the SSO gate, so your existing server login is the only password you
+        need — open the tile and you are already signed in.
+
+        📰 **Bring your Usenet provider.** SABnzbd downloads from Usenet, which
+        needs a news server account of your own. The first time you open the app it
+        runs a short wizard that asks for your provider's host, port and
+        credentials; after that it is ready to use.
+
+        📂 **Finished downloads land in `/DATA/Downloads`**, the shared folder the
+        rest of your apps read and write — SABnzbd can see and change everything
+        already in it. Work in progress stays in
+        `/DATA/AppData/sabnzbd/incomplete`, and settings in
+        `/DATA/AppData/sabnzbd/config`.
+
+        🔗 **Wire it into the media stack.** Add it as a *Download Client* in
+        **Radarr**, **Sonarr** or **Lidarr** with host `sabnzbd-backend` and port
+        `8080` — that is the app's own container, reached directly on the server's
+        internal network. The name `sabnzbd` is the SSO gate and will not answer
+        the API. The API key is under *Settings → General* in SABnzbd. Pair it with
+        **Prowlarr** for indexers.
+  architectures:
+    - amd64
+    - arm64
+  category: Downloader
+  tags: ["files", "personal"]
+  developer: The SABnzbd Team
+  description:
+    en_us: SABnzbd is a binary newsreader that automates downloading from Usenet. Feed it an NZB and it fetches every article, verifies and repairs the download with par2, unpacks it, and files the result in your Downloads folder — with a queue, scheduling, bandwidth limits, RSS feeds and categories along the way. It plugs straight into Radarr, Sonarr and Lidarr as a download client. The web interface is fronted by the built-in single sign-on, so it opens with your server account and no second password. You supply your own Usenet provider account.
+    fr_fr: SABnzbd est un lecteur de news binaires qui automatise le téléchargement depuis Usenet. Donnez-lui un NZB et il récupère chaque article, vérifie et répare le téléchargement avec par2, le décompresse et range le résultat dans votre dossier de téléchargements — avec file d'attente, planification, limites de bande passante, flux RSS et catégories. Il s'intègre directement à Radarr, Sonarr et Lidarr comme client de téléchargement. L'interface web est protégée par l'authentification unique intégrée, et s'ouvre avec votre compte serveur, sans second mot de passe. Vous fournissez votre propre compte de fournisseur Usenet.
+    es_es: SABnzbd es un lector de noticias binarias que automatiza las descargas desde Usenet. Dale un NZB y recupera cada artículo, verifica y repara la descarga con par2, la descomprime y archiva el resultado en tu carpeta de descargas — con cola, programación, límites de ancho de banda, fuentes RSS y categorías. Se integra directamente con Radarr, Sonarr y Lidarr como cliente de descarga. La interfaz web está protegida por el inicio de sesión único integrado, así que se abre con tu cuenta del servidor y sin una segunda contraseña. Tú aportas tu propia cuenta de proveedor de Usenet.
+    zh_cn: SABnzbd 是一个二进制新闻阅读器，可自动从 Usenet 下载。给它一个 NZB 文件，它就会抓取每一篇文章，用 par2 校验并修复下载内容，解压后归档到您的下载文件夹——并提供队列、计划任务、带宽限制、RSS 源和分类功能。它可作为下载客户端直接接入 Radarr、Sonarr 和 Lidarr。网页界面由内置的单点登录保护，使用您的服务器账号即可打开，无需第二个密码。您需要自备 Usenet 服务商账号。
+    ko_kr: SABnzbd는 Usenet에서의 다운로드를 자동화하는 바이너리 뉴스리더입니다. NZB 파일을 넣으면 모든 아티클을 가져와 par2로 검증하고 복구한 뒤 압축을 풀어 다운로드 폴더에 정리합니다. 대기열, 스케줄링, 대역폭 제한, RSS 피드, 카테고리 기능도 함께 제공합니다. Radarr, Sonarr, Lidarr에 다운로드 클라이언트로 바로 연결됩니다. 웹 인터페이스는 내장 싱글 사인온으로 보호되어 서버 계정으로 바로 열리며 두 번째 비밀번호가 필요하지 않습니다. Usenet 제공업체 계정은 직접 준비하셔야 합니다.
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  tagline:
+    en_us: Automated Usenet downloader that fetches, repairs and unpacks NZBs for you.
+    fr_fr: Téléchargeur Usenet automatisé qui récupère, répare et décompresse vos NZB.
+    es_es: Descargador de Usenet automatizado que obtiene, repara y descomprime tus NZB.
+    zh_cn: 自动化 Usenet 下载器，为您抓取、修复并解压 NZB。
+    ko_kr: NZB를 가져와 복구하고 압축까지 풀어주는 자동화 Usenet 다운로더입니다.
+  title:
+    en_us: SABnzbd
+  store_app_id: sabnzbd
+  is_uncontrolled: false
+
+x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  # The container drops to $PUID:$PGID, so each of these must be user-owned or
+  # SABnzbd cannot write its config, its incomplete jobs, or the finished
+  # downloads it moves into the shared folder.
+  folders:
+    - path: /DATA/AppData/$AppID/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/incomplete
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Downloads
+      user: $PUID
+      group: $PGID
+  init:
+    # SABnzbd refuses any request whose Host header is not an IP, `localhost` or
+    # a name in `host_whitelist` — a DNS-rebinding guard (interface.py
+    # check_hostname, akin to CVE-2019-5702). The check is skipped entirely when
+    # SABnzbd's own login is enabled, but it is not: the SSO gate is the single
+    # login, so the whitelist is what has to be right, and it has to name every
+    # hostname the app is published on.
+    #
+    # seed/config/sabnzbd.ini.tmpl writes the whitelist on first install, but the
+    # seed is create-if-absent and SABnzbd rewrites the file from then on. So if
+    # the deployment's domain ever changes, the seeded names go stale and every
+    # request answers `403 Access denied - Hostname verification failed`. This
+    # step re-adds the current names on every up.
+    #
+    # Add-only, one host at a time: an entry the user added by hand (a custom
+    # domain, another reverse proxy) survives, and a name that is already there is
+    # left alone rather than duplicated. No shell variables and no `$(...)` —
+    # Maison interpolates this string before /bin/sh sees it, so a `$name` of its
+    # own would be blanked first.
+    #
+    # Each check greps the `host_whitelist` line, not the whole file. configobj
+    # keeps this file's comments verbatim across every rewrite SABnzbd makes, and
+    # the seed's comment block names `sabnzbd-backend` — so a whole-file grep
+    # matches its own documentation, skips the sed, and silently leaves the
+    # sibling-app entry out. Found that way on a real PCS: after a simulated
+    # domain change the three route hosts came back and `sabnzbd-backend` did not,
+    # which shows up only as Radarr/Sonarr getting 403 from a UI that works.
+    #
+    # Runs at pre_up, which is *before* the seed is written, so on a first install
+    # the file does not exist yet — hence the `if`. The seed then writes the same
+    # names one step later.
+    - name: refresh-host-whitelist
+      image: busybox:1.37.0
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/config:/config
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          if [ -f /config/sabnzbd.ini ]; then
+            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-${APP_DOMAIN}" ||
+              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-${APP_DOMAIN}, |" /config/sabnzbd.ini
+            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-${APP_PUBLIC_IP_DASH}.nip.io" ||
+              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-${APP_PUBLIC_IP_DASH}.nip.io, |" /config/sabnzbd.ini
+            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io" ||
+              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io, |" /config/sabnzbd.ini
+            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-backend" ||
+              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-backend, |" /config/sabnzbd.ini
+          fi
+      when: always
+  webui-host: sabnzbd-${domain}

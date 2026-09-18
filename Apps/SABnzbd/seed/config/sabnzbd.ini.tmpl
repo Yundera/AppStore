@@ -1,0 +1,61 @@
+# SABnzbd's starting configuration. It is create-if-absent: SABnzbd takes over
+# this file on first start, fills in every key it does not find here with its own
+# default, and rewrites it from then on — so anything the user changes in the web
+# UI sticks, and nothing below is re-applied behind their back.
+#
+# Only the settings that have to differ from stock for the app to work behind the
+# SSO gate are set here. Everything else is left to SABnzbd.
+__version__ = 19
+__encoding__ = utf-8
+[misc]
+# Listen on every interface inside the container; the AppShield sidecar is the
+# only thing that can reach it.
+host = ::
+port = 8080
+
+# SABnzbd's own login stays off — the SSO gate in front is the single login, and
+# a second password on top of it would be the only thing it bought. Leaving
+# username/password empty is also what makes the two settings below load-bearing:
+# with a login configured, SABnzbd skips the hostname check entirely.
+username = ""
+password = ""
+
+# How much of SABnzbd is reachable from a non-local address:
+#   0 = nothing (stock)   1 = NZB adding   2 = API   3 = full API
+#   4 = web UI            5 = web UI, but external visitors must log in
+#
+# Stock 0 is unusable here. Every request arrives from Caddy and the sidecar
+# carrying the visitor's real address in X-Forwarded-For, which SABnzbd trusts by
+# default (verify_xff_header), so it correctly judges every visitor "external"
+# and answers 403 to all of them. 4 opens the web UI; the SSO gate, not SABnzbd,
+# is what decides who gets that far. 5 is not used because it would mean a second
+# login. This key is `protect`ed upstream — it can only be set in this file, never
+# through the web UI or the API.
+inet_exposure = 4
+
+# DNS-rebinding guard (interface.py check_hostname): a request whose Host header
+# is not an IP, `localhost` or one of these names is refused with
+# `403 Access denied - Hostname verification failed`. It therefore has to name
+# every hostname the app answers on:
+#   - the three published routes, matching the caddy_0/1/2 labels;
+#   - `sabnzbd-backend`, the container name Radarr/Sonarr/Lidarr and Prowlarr
+#     use to reach the API over the shared network — without it those
+#     integrations 403 while the browser works fine.
+# Rendered once, here; the `refresh-host-whitelist` init step in the compose file
+# keeps it current if the deployment's domain later changes.
+host_whitelist = sabnzbd-backend, sabnzbd-${APP_DOMAIN}, sabnzbd-${APP_PUBLIC_IP_DASH}.nip.io, sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io
+
+# Match the container's mounts. Stock puts both under /config, which would bury
+# finished downloads inside AppData instead of the shared Downloads folder.
+download_dir = /incomplete-downloads
+complete_dir = /downloads
+
+# Article cache. Stock is 1G, which together with the par2/unrar children is more
+# than the container's memory limit allows for; 512M leaves headroom for repair
+# and unpack. Raise it in Settings → General if the server has memory to spare.
+cache_limit = 512M
+
+# There is no browser to launch in a container, and the version is pinned by the
+# store rather than upgraded in place, so the update banner is noise.
+auto_browser = 0
+check_new_rel = 0
