@@ -1,0 +1,203 @@
+name: seafiledrive
+
+services:
+  seafiledrive:
+    image: rclone/rclone:1.74.4
+    container_name: seafiledrive
+    hostname: seafiledrive
+    restart: unless-stopped
+    # FUSE needs root plus the capabilities below; the files it publishes are still
+    # owned by the user, via --uid/--gid. See rationale.md.
+    user: 0:0
+    privileged: true
+    cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 64M
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    # Two knobs worth changing from the app's .env; everything else about the
+    # remote lives in config/rclone.conf, which is seeded once and then yours.
+    #   SEAFILE_DRIVE_CACHE_MODE  off | minimal | writes | full
+    #   SEAFILE_DRIVE_REMOTE      the rclone remote, and optionally a subpath
+    command: >
+      mount ${SEAFILE_DRIVE_REMOTE:-seafile:}
+      /data/seafile
+      --config /config/rclone.conf
+      --cache-dir /cache
+      --allow-other
+      --allow-non-empty
+      --vfs-cache-mode ${SEAFILE_DRIVE_CACHE_MODE:-off}
+      --vfs-cache-poll-interval 5s
+      --dir-cache-time 5s
+      --vfs-read-ahead 0
+      --buffer-size 0
+      --log-level INFO
+      --stats 30s
+      --uid $PUID
+      --gid $PGID
+    volumes:
+      # `shared` propagation is what carries the FUSE mount back out to the host,
+      # and from there into every other app that binds /DATA/Seafile.
+      - ${DATA_ROOT:-/DATA}/Seafile/:/data/seafile:shared
+      - ${DATA_ROOT:-/DATA}/AppData/seafiledrive/config/:/config
+      # Empty while the cache mode is `off`; a mode that does cache writes here
+      # rather than growing the container's own writable layer.
+      - ${DATA_ROOT:-/DATA}/AppData/seafiledrive/cache/:/cache
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+    networks:
+      # Seafile runs in its own compose project, so the shared network is how this
+      # container resolves `seafile` and reaches its WebDAV port.
+      - pcs
+    healthcheck:
+      # A FUSE mount fails by hanging or by going stale, not by exiting, so the
+      # check is a real directory read through it.
+      test: ["CMD-SHELL", "ls /data/seafile >/dev/null 2>&1 || exit 1"]
+      interval: 60s
+      start_period: 120s
+      timeout: 15s
+      retries: 3
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  store_app_id: seafiledrive
+  main: seafiledrive
+
+  # Headless: the app publishes a folder, not a page, so there is no webui_port,
+  # no Caddy label group and no `webui-host` below — the tile has no open action
+  # and the app is reached through the file manager, over SMB, or at
+  # /DATA/Seafile on the host.
+
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  category: Cloud
+  tags: ["files", "personal", "business"]
+  developer: Rclone
+  author: Yundera
+  title:
+    en_us: Seafile Virtual Folder
+  tagline:
+    en_us: Your Seafile libraries as a folder on the server
+    es_es: Tus bibliotecas de Seafile como una carpeta en el servidor
+    fr_fr: Vos bibliothèques Seafile comme un dossier sur le serveur
+    ko_kr: Seafile 라이브러리를 서버의 폴더로
+    zh_cn: 将 Seafile 资料库挂载为服务器上的文件夹
+  description:
+    en_us: |
+      Mounts your Seafile libraries at /DATA/Seafile, so the files you keep in Seafile behave like ordinary files on the server.
+
+      Every other app on the machine can then read and write them directly: point a media player at a library, back one up, edit a document from the file manager, share one over SMB. Files stay in Seafile — they are streamed on demand rather than duplicated onto the disk — and every change made through the folder lands back in the library, with Seafile's own versioning and sharing still applying.
+
+      Built on rclone's FUSE mount over Seafile's WebDAV. It mounts the admin account out of the box; edit config/rclone.conf to mount any other account instead.
+    es_es: |
+      Monta tus bibliotecas de Seafile en /DATA/Seafile, de modo que los archivos que guardas en Seafile se comportan como archivos normales en el servidor.
+
+      El resto de aplicaciones de la máquina pueden leerlos y escribirlos directamente: apunta un reproductor multimedia a una biblioteca, haz una copia de seguridad, edita un documento desde el gestor de archivos o compártela por SMB. Los archivos permanecen en Seafile — se transmiten bajo demanda en lugar de duplicarse en el disco — y cada cambio hecho a través de la carpeta vuelve a la biblioteca.
+
+      Basado en el montaje FUSE de rclone sobre el WebDAV de Seafile. Monta la cuenta de administrador de fábrica; edita config/rclone.conf para montar otra cuenta.
+    fr_fr: |
+      Monte vos bibliothèques Seafile dans /DATA/Seafile, de sorte que les fichiers conservés dans Seafile se comportent comme des fichiers ordinaires sur le serveur.
+
+      Toutes les autres applications de la machine peuvent alors les lire et les écrire directement : diriger un lecteur multimédia vers une bibliothèque, en sauvegarder une, éditer un document depuis le gestionnaire de fichiers, en partager une en SMB. Les fichiers restent dans Seafile — ils sont diffusés à la demande plutôt que dupliqués sur le disque — et chaque modification faite via le dossier revient dans la bibliothèque.
+
+      Basé sur le montage FUSE de rclone via le WebDAV de Seafile. Il monte le compte administrateur par défaut ; modifiez config/rclone.conf pour monter un autre compte.
+    ko_kr: |
+      Seafile 라이브러리를 /DATA/Seafile에 마운트하여, Seafile에 보관한 파일을 서버의 일반 파일처럼 다룰 수 있게 합니다.
+
+      그러면 이 컴퓨터의 다른 모든 앱이 파일을 직접 읽고 쓸 수 있습니다. 미디어 플레이어를 라이브러리로 연결하고, 백업하고, 파일 관리자에서 문서를 편집하고, SMB로 공유할 수 있습니다. 파일은 Seafile에 그대로 있으며(디스크에 복제되지 않고 필요할 때 스트리밍됩니다), 폴더를 통한 모든 변경은 라이브러리에 반영됩니다.
+
+      Seafile의 WebDAV 위에서 동작하는 rclone FUSE 마운트를 사용합니다. 기본적으로 관리자 계정을 마운트하며, config/rclone.conf를 편집해 다른 계정을 마운트할 수 있습니다.
+    zh_cn: |
+      将您的 Seafile 资料库挂载到 /DATA/Seafile，让保存在 Seafile 中的文件像服务器上的普通文件一样使用。
+
+      这样机器上的其他应用就能直接读写它们：把媒体播放器指向某个资料库、为其备份、在文件管理器中编辑文档、通过 SMB 共享。文件仍然保存在 Seafile 中——按需流式读取而不是复制到磁盘——通过该文件夹所做的每一处修改都会回到资料库，Seafile 自身的版本管理与共享依然生效。
+
+      基于 rclone 对 Seafile WebDAV 的 FUSE 挂载。默认挂载管理员账户；编辑 config/rclone.conf 即可改挂其他账户。
+  tips:
+    before_install:
+      en_us: |
+        **Install Seafile first.** This app mounts a running Seafile; on its own it has
+        nothing to show. It logs in over WebDAV as Seafile's admin account:
+
+        | Field    | Value                   |
+        |----------|-------------------------|
+        | Email    | admin@$APP_DOMAIN       |
+        | Password | `$APP_DEFAULT_PASSWORD` |
+
+        **Where the files appear**
+
+        `/DATA/Seafile` on the host, one folder per library. Every app on the server can
+        bind that path; the file manager and the SMB share reach it too.
+
+        **Mounting a different account**
+
+        Edit `/DATA/AppData/seafiledrive/config/rclone.conf` and restart the app. The
+        password field is obscured, not plaintext — produce one with
+        `docker exec seafiledrive rclone obscure 'the-password'`. An account with
+        two-factor authentication or SSO needs a WebDAV password instead of its login
+        password (Seafile → avatar → **Settings** → **WebDAV Password**).
+
+        **Speed**
+
+        Files are streamed from Seafile on demand, so the folder costs no disk space and
+        always shows the current library, and files written through it start to finish —
+        copies, downloads, camera imports — land in Seafile directly.
+
+        Two cases want a local cache instead, set in the app's `.env` as
+        `SEAFILE_DRIVE_CACHE_MODE`:
+
+        | Value    | Use it for                                                        |
+        |----------|-------------------------------------------------------------------|
+        | `off`    | the default: streaming, copying, browsing                         |
+        | `writes` | apps that edit a file in place — databases, editors, torrent clients |
+        | `full`   | the same, plus repeated reads of the same large files kept on disk |
+
+        A cache lives in `/DATA/AppData/seafiledrive/cache` and is bounded by your disk,
+        not by the app's 512 MB of memory.
+
+        **If the folder ever looks empty or an `ls` hangs**, the mount went stale —
+        restart the app. To clear it by hand: `sudo fusermount -uz /DATA/Seafile`.
+
+x-compose-app:
+  schema_version: 2
+  # rclone's config carries the WebDAV password in rclone's own obscured form, which
+  # only rclone can produce — so a one-shot container produces it and the value is
+  # substituted into seed/config/rclone.conf.tmpl. It runs only while there is no
+  # config yet, which is what makes an edited rclone.conf permanent.
+  init:
+    - name: obscure-webdav-password
+      image: rclone/rclone:1.74.4
+      command: ["obscure", "$APP_DEFAULT_PASSWORD"]
+      capture: RCLONE_OBSCURED_PASS
+      when: absent:/DATA/AppData/seafiledrive/config/rclone.conf
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up` — one
+  # per trailing-slash bind mount in `volumes:` above.
+  folders:
+    - path: /DATA/AppData/seafiledrive/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/seafiledrive/cache
+      user: $PUID
+      group: $PGID
+    - path: /DATA/Seafile
+      user: $PUID
+      group: $PGID

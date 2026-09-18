@@ -1,0 +1,18 @@
+# Seafile Virtual Folder — rclone remote.
+#
+# Seeded once, then left alone: edit it to mount a different Seafile account and
+# the file survives every restart, update and reinstall.
+#
+#   user  the Seafile login to mount (the account's own libraries and whatever
+#         is shared with it — Seafile's WebDAV shows nothing else)
+#   pass  obscured, never plaintext. Produce one with:
+#           docker exec seafiledrive rclone obscure 'your-password'
+#         An account with 2FA or SSO needs a WebDAV password instead of its
+#         login password: Seafile → avatar → Settings → WebDAV Password.
+#
+[seafile]
+type = webdav
+url = http://seafile:8080/seafdav
+vendor = other
+user = admin@${APP_DOMAIN}
+pass = ${RCLONE_OBSCURED_PASS}

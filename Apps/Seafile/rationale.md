@@ -18,13 +18,11 @@ This Seafile deployment uses root containers for several services due to technic
   inbound path is the platform Caddy that picks up the `caddy_*` labels; application data
   is confined to `/DATA/AppData/seafile/shared`
 
-### RClone FUSE Mount Service
-- **Reason**: FUSE mounting requires root privileges and system capabilities:
-  - `privileged: true` for FUSE operations
-  - `SYS_ADMIN` capability for mount operations
-  - `/dev/fuse` device access
-  - `apparmor:unconfined` in `security_opt`, because the default profile blocks the mount
-- **Mitigation**: File ownership is properly managed via `--uid $PUID --gid $PGID` flags, ensuring mounted files at `/DATA/Seafile` have correct user permissions
+No service in this stack is privileged, and none of them mounts a host path outside
+`/DATA/AppData/seafile`. The FUSE mount that used to publish the libraries at
+`/DATA/Seafile` — the one thing here that needed `privileged`, `SYS_ADMIN` and
+`/dev/fuse` — is now the separate **Seafile Virtual Folder** app (`Apps/SeafileDrive`),
+so those privileges are granted only on a machine whose owner asked for that folder.
 
 ## CPU Share Allocation
 
@@ -38,7 +36,6 @@ contended:
 - **Seadoc** (`seafile-seadoc`): 70 — interactive document editing
 - **Redis** (`redis`): 30 — cache, not on the critical path
 - **Notification Server** (`seafile-notification-server`): 30 — lightweight background service
-- **RClone** (`rclone`): 30 — background FUSE mount
 
 `cpu_shares` caps nothing; it only orders contention. If a deployment needs a hard
 ceiling, add `deploy.resources.limits.memory` per service.
@@ -63,6 +60,6 @@ gives each attached service an alias equal to its service name. So all three use
 app-prefixed service names and `container_name`s, and `seafile-seadoc` pins a matching
 `hostname`; none of them claims a generic alias on the shared network.
 
-`db`, `redis` and `rclone` are on `seafile-net` only — nothing outside this app can
+`db` and `redis` are on `seafile-net` only — nothing outside this app can
 resolve or reach them. No service publishes a host port: every port is `expose`d
 rather than mapped, so the only inbound path into the stack is through Caddy.
