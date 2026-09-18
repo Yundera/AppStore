@@ -1,0 +1,358 @@
+name: kubo
+
+services:
+  # ── SSO gate: the WebUI and the node's RPC API ──────────────────────────────
+  # Kubo serves both on one port: the WebUI is a static bundle at /webui/ and it
+  # drives the node through /api/v0/* on the same origin. That API is unauthenticated
+  # and total -- add, pin, unpin, rewrite the config, shut the daemon down -- so the
+  # whole port sits behind AppShield in OIDC mode and never leaves the shared network
+  # on its own. The public read side is a separate hostname on the node's gateway
+  # port; see kubo-backend below and rationale.md.
+  kubo:
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: kubo
+    # OIDC identity: AppShield builds its redirect URIs from os.hostname(), and the
+    # auth-registrar attests this app's name via the container's PTR record -- both
+    # container_name and hostname must equal the app name, or Docker names the
+    # container after its random ID and Dex rejects the authorize call with
+    # 400 'Unregistered redirect_uri'.
+    hostname: kubo
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      # The bare path "/" is redirected to the WebUI, because the RPC port serves
+      # nothing at the root and a user who types the hostname would otherwise land on
+      # an empty page. It is a redirect only, issued before the gate, and discloses
+      # nothing. Everything else -- /webui/*, /api/v0/*, and AppShield's own
+      # /nhl-auth/* -- is proxied through the gate.
+      #
+      # `redir` with a named matcher, not a `handle` branch: Caddy's directive order
+      # already puts redir ahead of reverse_proxy, and the handle form
+      # (`0_handle: "@root"` + `0_handle.redir`) renders as an empty handle block --
+      # tested on wisera, it answered "/" with a 200 and no body.
+      caddy_0: kubo-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.@root.path: "/"
+      caddy_0.redir: "@root /webui/ 302"
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: kubo-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.@root.path: "/"
+      caddy_1.redir: "@root /webui/ 302"
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: kubo-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.@root.path: "/"
+      caddy_2.redir: "@root /webui/ 302"
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    environment:
+      BACKEND_HOST: "kubo-backend"
+      BACKEND_PORT: "5001"
+      LISTEN_PORT: "80"
+      # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Adding a file is a POST of that whole file to /api/v0/add. Any cap here is a
+      # cap on what the user can put in their own node, so there is none.
+      CLIENT_MAX_BODY_SIZE: "0"
+      # No ALLOWED_PATHS: nothing behind this gate is meant to be reachable without a
+      # session. The public read path is a different hostname on a different port.
+    depends_on:
+      - kubo-backend
+    networks:
+      - pcs
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ── Kubo, the IPFS node ────────────────────────────────────────────────────
+  # Carries Caddy labels of its own, which is the documented deviation in
+  # rationale.md: they publish `{{upstreams 8080}}`, the read-only gateway, and
+  # nothing else. Caddy builds routes only from what a label names, so port 5001 --
+  # the RPC API -- has no route on this hostname and stays reachable only through
+  # the gate above.
+  kubo-backend:
+    image: ipfs/kubo:v0.43.1
+    container_name: kubo-backend
+    user: $PUID:$PGID
+    restart: unless-stopped
+    # --enable-gc added to the image's own command. StorageMax below is a refusal
+    # threshold, not a target: without garbage collection the block store grows to
+    # the cap and then declines new blocks. With it, blocks nobody pinned are
+    # collected each Datastore.GCPeriod (1h) and pinned data is never touched.
+    command: ["daemon", "--migrate=true", "--agent-version-suffix=docker", "--enable-gc"]
+    expose:
+      # 5001 RPC API + WebUI (behind the gate), 8080 read-only gateway.
+      - 5001
+      - 8080
+    # libp2p swarm. This is the peer protocol, not HTTP: Caddy cannot carry it, so
+    # reaching it means publishing it. Shipped enabled because a node no one can dial
+    # can only pull -- other peers and the public gateways cannot fetch what this node
+    # pins, and Kubo's AutoTLS never gets the libp2p.direct certificate that lets
+    # browsers connect to it directly. Outbound still works either way, so the app
+    # degrades rather than breaks on a PCS with no reachable public address; that is
+    # what the needs-public-ip tag warns about.
+    ports:
+      - 4001:4001/tcp
+      - 4001:4001/udp
+    labels:
+      # The public read side, on its own hostname. Separate from kubo-${APP_DOMAIN}
+      # on purpose: a path gateway serves every shared file from the origin it is
+      # reached on, so sharing an HTML page from the WebUI's own origin would put
+      # attacker-authored script next to the RPC API with the user's session attached.
+      # On this hostname that script is cross-origin to the API, and Kubo's own origin
+      # check -- which allowlists only the three hostnames above -- answers it 403.
+      caddy_0: kubo-gateway-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8080}}"
+      caddy_1: kubo-gateway-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8080}}"
+      caddy_2: kubo-gateway-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8080}}"
+    environment:
+      TZ: $TZ
+      # Read at `ipfs init` only, so this shapes the repo the first time and is inert
+      # afterwards: Routing.Type=autoclient (the node queries the DHT but does not
+      # serve it), ConnMgr 20/40 instead of 600/900, Swarm.RelayService off, flatfs +
+      # leveldb. Measured on wisera over 20 minutes, with port 4001 published and the
+      # WebUI pinned: 77-107 MiB and 0.6-11% of a core at rest, settling around 30-100
+      # peers. The first few minutes after a start are not that -- the node bootstraps
+      # the DHT, accepts several hundred inbound connections before the connection
+      # manager trims them, and announces its pins; expect most of a core until it
+      # settles.
+      IPFS_PROFILE: lowpower
+      # Go's own ceiling, under the container limit, so the runtime collects instead
+      # of being OOM-killed at the edge.
+      GOMEMLIMIT: 768MiB
+      # Consumed by seed/init.d/01-configure-node.sh on every start.
+      IPFS_ALLOWED_ORIGINS: '["https://kubo-${APP_DOMAIN}","https://kubo-${APP_PUBLIC_IP_DASH}.nip.io","https://kubo-${APP_PUBLIC_IP_DASH}.sslip.io"]'
+      # Set to "false" to let the public gateway hostname fetch any CID from the
+      # network on a visitor's behalf, turning this node into an open gateway for
+      # anyone who finds the address. Left true, it serves only what this node holds.
+      IPFS_GATEWAY_NOFETCH: "true"
+      # Which CIDs this node announces to the DHT. Upstream's suggested setting for a
+      # node with garbage collection on: the files and folders you pinned or put in
+      # MFS, without the internal chunks they are built from. "all" is Kubo's default
+      # and is what makes a fresh node peg a core for minutes after every new pin.
+      IPFS_PROVIDE_STRATEGY: pinned+mfs+entities
+      # Soft cap on the block store under /DATA/AppData/kubo/data.
+      IPFS_STORAGE_MAX: 20GB
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/data/ipfs
+      # Kubo's entrypoint runs every *.sh here before starting the daemon.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/init.d/:/container-init.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "ipfs --api=/ip4/127.0.0.1/tcp/5001 diag healthy > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - pcs
+    cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  main: kubo
+  webui_port: 80
+  tips:
+    before_install:
+      en_us: |
+        🔐 **Protected by your server account (single sign-on).** The node's web
+        interface and its control API open with your existing server login.
+
+        🔗 **Sharing is a second address.** Anything you pin is readable at
+        `https://kubo-gateway-${APP_DOMAIN}/ipfs/<cid>`, open to whoever you send the
+        link to — they sign into nothing and install nothing. That address serves
+        **only what you have pinned**: every other CID answers 404, so it stays your
+        share link rather than a gateway to the rest of the network.
+
+        ⚙️ **Two settings to make *Share link* use that address.** The web interface
+        stores them in your browser, so set them once, per browser, under *Settings*:
+        put `https://kubo-gateway-${APP_DOMAIN}` in **Local HTTP Gateway**, and choose
+        **Local gateway, path link** under **Sharing IPFS links**. File previews and the
+        *Share link* button then both point at your own server. Left alone, they assume
+        a gateway on the machine the browser is running on.
+
+        📌 **Pins are what you keep.** Files you add are pinned and kept forever. Blocks
+        you merely visited are cached up to `IPFS_STORAGE_MAX` (20 GB by default) and
+        swept hourly. Everything lives in `/DATA/AppData/kubo/`.
+
+        📡 **Port 4001 is published** (TCP and UDP) so other peers can dial this node —
+        that is what lets them fetch what you pin, and what earns the node its
+        `libp2p.direct` certificate. On a PCS with no directly reachable public address
+        the node still works, it just reaches fewer peers.
+  architectures:
+    - amd64
+    - arm64
+  category: Dapps
+  tags: ["files", "developer", "needs-public-ip"]
+  developer: Protocol Labs / Shipyard
+  description:
+    en_us: |
+      Kubo is the reference IPFS implementation — a node on the InterPlanetary File System, the
+      content-addressed peer-to-peer network where a file is named by the hash of what it contains
+      rather than by where it sits. Add a file and you get a CID that resolves to those exact bytes
+      anywhere on the network, forever, and cannot be altered without changing the name.
+      The bundled web interface covers the whole job: drag files in, organise them in folders,
+      see what is pinned, watch which peers you are connected to. The node is configured for a
+      small always-on machine — it queries the network without taking on the work of serving it —
+      and idles at around 100 MB of memory.
+      Whatever you pin is readable over plain HTTPS at a second, login-free address, so you can
+      hand someone a link without asking them to install anything; that address serves only your
+      own pinned content.
+    fr_fr: |
+      Kubo est l'implémentation de référence d'IPFS — un nœud du système de fichiers interplanétaire,
+      le réseau pair-à-pair adressé par contenu où un fichier porte le nom de l'empreinte de ce qu'il
+      contient plutôt que celui de son emplacement. Ajoutez un fichier et vous obtenez un CID qui
+      résout vers ces octets exacts partout sur le réseau, pour toujours, et qui ne peut être modifié
+      sans changer de nom.
+      L'interface web intégrée couvre tout : glissez-déposez vos fichiers, organisez-les en dossiers,
+      consultez vos épinglages, observez vos pairs connectés. Le nœud est réglé pour une petite
+      machine allumée en permanence — il interroge le réseau sans en assurer le service — et
+      consomme environ 100 Mo de mémoire au repos.
+      Tout ce que vous épinglez est lisible en HTTPS à une seconde adresse sans connexion, ce qui
+      permet de partager un lien sans rien faire installer ; cette adresse ne sert que vos propres
+      contenus épinglés.
+    es_es: |
+      Kubo es la implementación de referencia de IPFS — un nodo del Sistema de Archivos
+      Interplanetario, la red entre pares direccionada por contenido donde un archivo se nombra por
+      el hash de lo que contiene y no por dónde está. Añade un archivo y obtienes un CID que
+      resuelve a esos bytes exactos en cualquier punto de la red, para siempre, y que no puede
+      alterarse sin cambiar de nombre.
+      La interfaz web incluida cubre todo el trabajo: arrastra archivos, organízalos en carpetas,
+      revisa lo que tienes fijado y observa a qué pares estás conectado. El nodo está ajustado para
+      una máquina pequeña siempre encendida — consulta la red sin asumir el trabajo de servirla — y
+      en reposo usa alrededor de 100 MB de memoria.
+      Todo lo que fijes se lee por HTTPS en una segunda dirección sin inicio de sesión, así puedes
+      pasar un enlace sin pedirle a nadie que instale nada; esa dirección sirve únicamente tu propio
+      contenido fijado.
+    zh_cn: |
+      Kubo 是 IPFS 的参考实现 —— 星际文件系统上的一个节点。这是一个基于内容寻址的点对点网络，
+      文件以其内容的哈希命名，而不是以存放位置命名。添加一个文件就会得到一个 CID，它在网络的任
+      何角落都指向这些完全相同的字节，永久有效，且内容一改名字就变。
+      内置的网页界面涵盖全部操作：拖入文件、整理文件夹、查看已固定内容、观察已连接的节点。该节
+      点针对长期开机的小型机器做了调优 —— 它查询网络但不承担为网络提供服务的负担 —— 空闲时内存
+      占用约为 100 MB。
+      凡是您固定的内容，都可以通过第二个免登录地址以 HTTPS 读取，您可以直接把链接发给别人而无需
+      对方安装任何东西；该地址只提供您自己固定的内容。
+    ko_kr: |
+      Kubo는 IPFS의 표준 구현체로, 행성간 파일 시스템의 노드입니다. 콘텐츠 주소 기반 P2P
+      네트워크에서 파일은 저장 위치가 아니라 그 내용의 해시로 이름이 정해집니다. 파일을 추가하면
+      CID를 얻게 되며, 이 CID는 네트워크 어디에서나 정확히 같은 바이트를 영구히 가리키고, 내용이
+      바뀌면 이름도 바뀝니다.
+      기본 제공되는 웹 인터페이스가 모든 작업을 처리합니다. 파일을 끌어다 놓고, 폴더로 정리하고,
+      고정된 항목을 확인하고, 연결된 피어를 살펴볼 수 있습니다. 이 노드는 항상 켜져 있는 작은
+      장비에 맞게 설정되어 있으며 — 네트워크에 질의하되 네트워크를 떠받치는 부담은 지지 않습니다 —
+      유휴 상태에서 메모리 사용량이 약 100MB입니다.
+      고정한 자료는 로그인이 필요 없는 두 번째 주소에서 HTTPS로 읽을 수 있으므로, 상대방이 무언가를
+      설치하지 않아도 링크만 건네면 됩니다. 이 주소는 직접 고정한 자료만 제공합니다.
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  index: /webui/
+  tagline:
+    en_us: Run your own IPFS node — add files, pin what you want to keep, share a link.
+    fr_fr: Votre propre nœud IPFS — ajoutez des fichiers, épinglez ce que vous gardez, partagez un lien.
+    es_es: Tu propio nodo IPFS — añade archivos, fija lo que quieras conservar y comparte un enlace.
+    zh_cn: 运行属于您自己的 IPFS 节点 —— 添加文件、固定要保留的内容、分享链接。
+    ko_kr: 나만의 IPFS 노드 — 파일을 추가하고, 보관할 것을 고정하고, 링크로 공유하세요.
+  title:
+    en_us: Kubo
+  store_app_id: kubo
+  is_uncontrolled: false
+
+x-compose-app:
+  schema_version: 2
+  folders:
+    # The fs-repo: keys, config, block store, pins. Kubo drops to the container's own
+    # uid when started as root, but `user:` above pins it to $PUID:$PGID, so the repo
+    # directory has to be owned by the same pair or `ipfs init` cannot write it.
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+      mode: "0700"
+    - path: /DATA/AppData/$AppID/init.d
+      user: $PUID
+      group: $PGID
+  files:
+    # Declared rather than left to the seed tree for both halves of what `files` adds:
+    # `mode` states the executable bit, which a checkout on a Windows-hosted volume
+    # records as 0644 and which the entrypoint needs to exec the script (it silently
+    # falls back to sourcing otherwise); and `ensure: always` re-renders it on every
+    # up, so a fix shipped in a store update actually reaches an installed app instead
+    # of being skipped as already-present.
+    - path: /DATA/AppData/$AppID/init.d/01-configure-node.sh
+      from: init.d/01-configure-node.sh
+      ensure: always
+      mode: "0755"
+  init:
+    # Kubo does not embed its WebUI -- it serves it *from IPFS*, redirecting /webui/ to
+    # the bundle's CID and fetching it through the gateway on first use. Gateway.NoFetch
+    # (see rationale.md) stops exactly that fetch, so out of the box the tile would open
+    # on Kubo's "IPFS WebUI Not Available ... not in your local node due to
+    # Gateway.NoFetch=true" page. Pinning the bundle puts it in the local repo, where
+    # NoFetch is happy to serve it, and keeps garbage collection off it.
+    #
+    # `pin add` goes over bitswap rather than through the gateway, so NoFetch does not
+    # block it -- verified on 0.43.1, 29 MB in 7 s. It is the API's own view of which
+    # bundle it wants that is read here, rather than a CID written into this file, so a
+    # future image bump carries its matching WebUI with it instead of silently pinning
+    # last version's. The raw socket is not decoration: the page that names the CID is
+    # served as 503 until the pin exists, and busybox wget discards the body of an error
+    # response.
+    #
+    # `$$` is an escaped dollar -- Maison expands $NAME/${NAME} in this string before the
+    # container runs, so the shell's and awk's own variables are written $$NAME.
+    - name: pin-webui
+      image: ipfs/kubo:v0.43.1
+      phase: post_up
+      network: $APP_NET
+      # No volumes: every call goes to the running daemon over --api, so this container
+      # needs no repo of its own.
+      command:
+        - sh
+        - -c
+        - |
+          API=/dns/kubo-backend/tcp/5001
+          # post_up fires when `compose up` returns -- the container has started, the
+          # daemon has not necessarily finished opening its repo.
+          if ! timeout 180 sh -c "until ipfs --api=$$API id >/dev/null 2>&1; do sleep 3; done"; then
+            echo "node did not answer in time; the WebUI will be pinned on the next start"
+            exit 0
+          fi
+          cid=$$(printf 'GET /webui/ HTTP/1.0\r\nHost: kubo\r\n\r\n' | nc kubo-backend 5001 | grep -oE 'baf[a-z2-7]{50,}' | head -1)
+          if [ -z "$$cid" ]; then
+            echo "could not read the WebUI CID from the node; leaving it to the next start"
+            exit 0
+          fi
+          # Drop a previous bundle first, so an image bump does not leave 29 MB of last
+          # version's WebUI pinned forever. Unpinned, it is collected by --enable-gc.
+          ipfs --api=$$API pin ls --type=recursive --names 2>/dev/null |
+            awk -v keep="$$cid" '$$3 == "ipfs-webui" && $$1 != keep { print $$1 }' |
+            while read -r old; do ipfs --api=$$API pin rm "$$old" >/dev/null 2>&1 || true; done
+          if ! ipfs --api=$$API pin add --name ipfs-webui "/ipfs/$$cid"; then
+            echo "could not fetch the WebUI bundle; retrying on the next start"
+            exit 0
+          fi
+      # Idempotent and cheap once satisfied (an already-pinned CID returns at once), and
+      # re-running is what makes an image bump pick up its own WebUI. It never fails the
+      # install: a node that could not reach the network yet still serves its gateway and
+      # its API, and Kubo's own 503 page explains the missing WebUI.
+      when: always
+  webui-host: kubo-${domain}
+  webui-path: /webui/
