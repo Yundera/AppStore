@@ -7,7 +7,7 @@ services:
   # A host-networked container cannot be a Caddy upstream, so the web UI is exposed
   # through the wgeasyhost-proxy sidecar below instead of Caddy labels here.
   wgeasyhost:
-    image: ghcr.io/wg-easy/wg-easy:15.3.0
+    image: ghcr.io/wg-easy/wg-easy:15.4.0
     container_name: wgeasyhost
     restart: unless-stopped
     user: "0:0"
@@ -45,7 +45,7 @@ services:
   # to the host-mode web UI via the docker host-gateway (host.docker.internal:51821).
   # nginx.conf ships in seed/ (create-if-absent on every up) and is bind-mounted read-only.
   wgeasyhost-proxy:
-    image: nginx:1.29.3-alpine
+    image: nginx:1.31.5-alpine
     container_name: wgeasyhost-proxy
     restart: unless-stopped
     # Must be root: the CasaOS installer injects `user: $PUID:$PGID` into any service
@@ -125,8 +125,11 @@ x-casaos:
   thumbnail: thumbnail.png
   screenshot_link:
     - screenshot-1.png
+<<<<<<< HEAD
     - screenshot-2.png
     - screenshot-3.png
+=======
+>>>>>>> ae495c7 (Update WireGuardEasyHost to wg-easy 15.4.0, nginx 1.31.5)
   category: Network
   # needs-public-ip: a WireGuard server is useless unless inbound UDP 51820 from the
   # internet reaches the host (a CGNAT/tunnelled PCS never accepts a peer).
