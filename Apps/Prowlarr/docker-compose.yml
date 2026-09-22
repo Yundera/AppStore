@@ -99,7 +99,7 @@ x-casaos:
 
         🔗 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):
         - **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.
-        - **qBittorrent** (`qbittorrent-backend:80`) — add it as a *Download Client* inside **Radarr/Sonarr** for automated grabs (a download client added in Prowlarr only powers Prowlarr's own manual searches and does not sync to apps).
+        - **qBittorrent** (`qbittorrent:80`) — add it as a *Download Client* inside **Radarr/Sonarr** for automated grabs (a download client added in Prowlarr only powers Prowlarr's own manual searches and does not sync to apps).
         - **Jellyfin** — point it at `/DATA/Media` to stream everything Radarr/Sonarr import.
 
         ❓ Questions? Contact us at help@yundera.com
