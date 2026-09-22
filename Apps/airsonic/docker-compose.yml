@@ -1,0 +1,76 @@
+name: airsonic
+
+services:
+  airsonic:
+    container_name: airsonic
+    image: lscr.io/linuxserver/airsonic-advanced:11.1.4-ls166
+    restart: unless-stopped
+    expose:
+      - 80 
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      JAVA_OPTS: >-
+        -Dserver.port=80
+        -Dserver.use-forward-headers=true
+        -Dserver.forward-headers-strategy=native
+        -Dserver.tomcat.remoteip.protocol-header=x-forwarded-proto
+        -Dserver.tomcat.remoteip.remote-ip-header=x-forwarded-for
+        -Dserver.tomcat.remoteip.host-header=x-forwarded-host
+
+    volumes:
+      - /DATA/AppData/airsonic/config/:/config
+      - /DATA/AppData/airsonic/data/:/data
+      - /DATA/Media/Music/:/music:ro
+      - /DATA/AppData/airsonic/playlists/:/playlists    
+    deploy:
+      resources:
+        reservations:
+          memory: 256M    
+    cpu_shares: 50    
+    networks:
+      - pcs 
+
+networks:
+  pcs:
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: airsonic
+  webui_port: 80
+  store_app_id: airsonic
+  index: /login
+  healthcheck_path: /login
+  title:
+    en_us: Airsonic
+  tagline:
+    en_us: Subsonic-compatible music server
+  description:
+    en_us: |
+      Airsonic-Advanced is a modern, actively maintained fork of Subsonic.
+      Fully compatible with Subsonic mobile and desktop apps.
+  developer: linuxserver.io
+  category: Media
+  tips:
+    before_install:
+      en_us: |
+        Music folder:
+        /DATA/Media/Music
+        Config & data:
+        /DATA/AppData/airsonic
+  pre-install-cmd: |
+    docker run --rm \
+      -v /DATA:/DATA \
+      ubuntu:22.04 sh -c "
+      mkdir -p /DATA/AppData/airsonic/config &&
+      mkdir -p /DATA/AppData/airsonic/data &&
+      mkdir -p /DATA/AppData/airsonic/playlists &&
+      mkdir -p /DATA/Media/Music &&
+      chown -R $PUID:$PGID /DATA/AppData/airsonic /DATA/Media/Music &&
+      chmod -R 755 /DATA/AppData/airsonic /DATA/Media/Music &&
+      echo 'Airsonic Advanced: directories created successfully'
+      "
