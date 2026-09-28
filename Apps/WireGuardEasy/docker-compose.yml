@@ -42,6 +42,7 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
     cpu_shares: 50
+    mem_limit: 256m
 
 networks:
   pcs:
@@ -56,6 +57,20 @@ x-casaos:
   store_app_id: wgeasy
   webui_port: 80
   index: /
+  # New clients inherit the server-wide default PersistentKeepalive from wg-easy's
+  # userConfig row (factory-seeded to 0 = off). With 0, a client behind NAT (a home PC)
+  # cannot be reached by other clients until it has sent traffic itself. v15 dropped the
+  # keepalive env/INIT var, so the only way to seed a default is to write it after the
+  # container has built its SQLite DB: poll until the user_configs_table row exists, then
+  # set 25s (standard NAT-traversal value) — only while still at the factory default, so
+  # a later change in the UI is never clobbered. Uses the image's own bundled @libsql
+  # driver (no sqlite3 CLI present). Same step as WireGuardEasyHost.
+  post-install-cmd: |
+    for i in $(seq 1 60); do
+      docker exec -w /app/server wgeasy node --input-type=module -e 'import {createClient} from "@libsql/client"; const c=createClient({url:"file:/etc/wireguard/wg-easy.db"}); const r=await c.execute("SELECT count(*) AS n FROM user_configs_table"); if(Number(r.rows[0].n)<1) process.exit(3); await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0"); console.log("wgeasy: default PersistentKeepalive set to 25s");' && break
+      sleep 2
+    done
+    exit 0
   developer: WeejeWel
   icon: icon.png
   thumbnail: thumbnail.png
@@ -148,6 +163,14 @@ x-casaos:
         This is **WireGuard Easy v15**. The admin account is auto-configured. VPN settings can be changed from the web UI after login.
 
         The VPN listens on UDP port 51820. Make sure this port is open on your firewall/router.
+
+        **Reaching a Windows client from other clients:** connected clients can reach each other at their VPN addresses (`10.8.0.x`). A Windows client answers only once its tunnel is a *Private* network — Windows files a new tunnel as *Public* and blocks unsolicited inbound connections (ping, file sharing, Remote Desktop). Once per tunnel, in an **administrator** PowerShell:
+
+        ```powershell
+        Set-NetConnectionProfile -InterfaceAlias "<tunnel name>" -NetworkCategory Private
+        ```
+
+        This lets every client on the VPN reach that PC's shares and Remote Desktop. Keep the tunnel's name when you re-import a config, or Windows treats it as a new, Public network again.
       ko_kr: |
         # 기본 계정
 
@@ -158,6 +181,14 @@ x-casaos:
         **WireGuard Easy v15** 버전입니다. 관리자 계정이 자동 설정됩니다. VPN 설정은 로그인 후 웹 UI에서 변경할 수 있습니다.
 
         VPN은 UDP 포트 51820에서 수신합니다. 방화벽/라우터에서 이 포트가 열려있는지 확인하세요.
+
+        **다른 클라이언트에서 Windows 클라이언트에 접속하기:** 연결된 클라이언트는 VPN 주소(`10.8.0.x`)로 서로 접속할 수 있습니다. 단, Windows 클라이언트는 터널이 *개인(Private)* 네트워크일 때만 응답합니다. Windows는 새 터널을 *공용(Public)*으로 분류하여 요청하지 않은 수신 연결(ping, 파일 공유, 원격 데스크톱)을 차단합니다. 터널마다 한 번, **관리자** PowerShell에서 실행하세요:
+
+        ```powershell
+        Set-NetConnectionProfile -InterfaceAlias "<터널 이름>" -NetworkCategory Private
+        ```
+
+        이렇게 하면 VPN의 모든 클라이언트가 해당 PC의 공유 폴더와 원격 데스크톱에 접속할 수 있습니다. 설정을 다시 가져올 때 터널 이름을 유지하세요. 이름이 바뀌면 Windows가 새로운 공용 네트워크로 취급합니다.
       zh_cn: |
         # 默认账户
 
@@ -168,6 +199,14 @@ x-casaos:
         这是 **WireGuard Easy v15** 版本。管理员账户已自动配置。登录后可在 Web UI 中更改 VPN 设置。
 
         VPN 监听 UDP 端口 51820。请确保防火墙/路由器上此端口已开放。
+
+        **从其他客户端访问 Windows 客户端：** 已连接的客户端可以通过 VPN 地址（`10.8.0.x`）互相访问。但 Windows 客户端只有在隧道被设为*专用（Private）*网络时才会响应——Windows 会把新隧道归类为*公用（Public）*，并阻止所有未经请求的入站连接（ping、文件共享、远程桌面）。每个隧道只需执行一次，在**管理员** PowerShell 中运行：
+
+        ```powershell
+        Set-NetConnectionProfile -InterfaceAlias "<隧道名称>" -NetworkCategory Private
+        ```
+
+        之后 VPN 上的所有客户端都能访问该电脑的共享和远程桌面。重新导入配置时请保持隧道名称不变，否则 Windows 会将其视为新的公用网络。
       fr_fr: |
         # Compte par defaut
 
@@ -178,6 +217,14 @@ x-casaos:
         Ceci est **WireGuard Easy v15**. Le compte administrateur est configure automatiquement. Les parametres VPN peuvent etre modifies depuis l'interface web apres connexion.
 
         Le VPN ecoute sur le port UDP 51820. Assurez-vous que ce port est ouvert sur votre pare-feu/routeur.
+
+        **Joindre un client Windows depuis les autres clients :** les clients connectes peuvent se joindre entre eux via leur adresse VPN (`10.8.0.x`). Un client Windows ne repond toutefois qu'une fois son tunnel classe en reseau *Prive* — Windows classe un nouveau tunnel en *Public* et bloque les connexions entrantes non sollicitees (ping, partage de fichiers, Bureau a distance). Une fois par tunnel, dans un PowerShell **administrateur** :
+
+        ```powershell
+        Set-NetConnectionProfile -InterfaceAlias "<nom du tunnel>" -NetworkCategory Private
+        ```
+
+        Tous les clients du VPN peuvent alors atteindre les partages et le Bureau a distance de ce PC. Gardez le meme nom de tunnel en reimportant une configuration, sinon Windows le traite comme un nouveau reseau Public.
       es_es: |
         # Cuenta predeterminada
 
@@ -188,6 +235,14 @@ x-casaos:
         Esta es la version **WireGuard Easy v15**. La cuenta de administrador se configura automaticamente. La configuracion VPN se puede cambiar desde la interfaz web despues de iniciar sesion.
 
         La VPN escucha en el puerto UDP 51820. Asegurese de que este puerto este abierto en su firewall/router.
+
+        **Acceder a un cliente Windows desde otros clientes:** los clientes conectados pueden comunicarse entre si mediante su direccion VPN (`10.8.0.x`). Sin embargo, un cliente Windows solo responde cuando su tunel es una red *Privada*: Windows clasifica un tunel nuevo como *Publica* y bloquea las conexiones entrantes no solicitadas (ping, uso compartido de archivos, Escritorio remoto). Una vez por tunel, en un PowerShell de **administrador**:
+
+        ```powershell
+        Set-NetConnectionProfile -InterfaceAlias "<nombre del tunel>" -NetworkCategory Private
+        ```
+
+        Asi, todos los clientes de la VPN pueden acceder a las carpetas compartidas y al Escritorio remoto de ese PC. Mantenga el mismo nombre de tunel al reimportar una configuracion; de lo contrario, Windows lo trata como una nueva red Publica.
 
 x-compose-app:
   webui-host: wgeasy-${domain}

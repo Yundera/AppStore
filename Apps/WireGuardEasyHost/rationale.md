@@ -47,6 +47,19 @@ knowingly rather than inheriting it.
   **best-effort** — the hook ends with `exit 0`, because reaching host services at
   `10.9.0.1` does not need IP forwarding (only peer-to-peer and full-tunnel routing do),
   so a host that refuses the writes should still get a working app.
+- **Forwarding needs one rule in Docker's firewall.** wg-easy's own `FORWARD` accepts
+  are written with the image's `iptables`, which is iptables-legacy, but Docker writes
+  its rules with nft and sets the nft `FORWARD` policy to `DROP`. A forwarded packet has
+  to pass both, so on any Docker host (every PCS) peer-to-peer and full-tunnel traffic
+  is silently dropped. `post-install-cmd` therefore appends rules to wg-easy's own
+  PostUp/PostDown hooks that insert, via `iptables-nft`, into Docker's `DOCKER-USER` chain:
+  `wg0 → wg0`, `wg0 → uplink`, and `uplink → wg0` for established replies only. Because
+  they live in the hooks, `wg-quick` re-applies them on every start (reboots included)
+  and removes them when the interface goes down or the app is uninstalled. Nothing is
+  written to the host's persistent firewall config. The rules are deliberately scoped:
+  a blanket `-i wg0 ACCEPT` would also let a peer route into Docker's container networks
+  and skip the gateway. The same hook sets wg-easy's uplink device, which it hard-codes to
+  `eth0`, to the host's actual default-route interface.
 - **A host-mode container cannot be a Caddy upstream**, which is why the web UI is not
   served directly. `wgeasyhost` binds the UI on host port `51821`, and the bridged
   `wgeasyhost-proxy` sidecar on the `pcs` network carries the gateway labels and

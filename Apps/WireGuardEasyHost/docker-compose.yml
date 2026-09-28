@@ -101,6 +101,7 @@ x-casaos:
   # per-namespace. Idempotent, and best-effort: clients reach host services at 10.9.0.1
   # without forwarding (only peer-to-peer and full-tunnel routing need it), so a PCS
   # that refuses the sysctls should still get the app — the hook always exits 0.
+  # The sysctl alone does not make forwarding work on a PCS — see post-install-cmd.
   # nginx.conf is no longer fetched here; it ships in seed/ (see x-compose-app).
   pre-install-cmd: |
     docker run --rm --privileged --network=host alpine:3.20 sh -c '
@@ -108,18 +109,70 @@ x-casaos:
       sysctl -w net.ipv4.conf.all.src_valid_mark=1
     ' || echo "[pre-install] host sysctl setup skipped; peer-to-peer and full-tunnel routing may need net.ipv4.ip_forward=1"
     exit 0
-  # New clients inherit the server-wide default PersistentKeepalive from wg-easy's
-  # userConfig row (factory-seeded to 0 = off). v15 dropped the keepalive env/INIT var,
-  # so the only way to seed a default is to write it after the container has built its
-  # SQLite DB. This runs AFTER container startup: it polls until the user_configs_table
-  # row exists, then sets PersistentKeepalive to 25s (standard NAT-traversal value) — but
-  # only while still at the factory default (0), so a later manual change in the UI is
-  # never clobbered. Uses the image's own bundled @libsql driver (no sqlite3 CLI present).
+  # Runs AFTER container startup, against wg-easy's SQLite DB (polls until it is built),
+  # using the image's own bundled @libsql driver (no sqlite3 CLI present). Three writes:
+  #
+  # 1. Default PersistentKeepalive -> 25s. New clients inherit it from the userConfig row
+  #    (factory 0 = off); v15 dropped the env/INIT var. Only while still at 0, so a manual
+  #    change in the UI is never clobbered.
+  #
+  # 2. Forwarding through Docker's firewall. wg-easy's own PostUp FORWARD accepts go
+  #    through the image's `iptables`, which is iptables-LEGACY. Docker on the host writes
+  #    nft, and its nft FORWARD chain has policy DROP. A forwarded packet has to pass both
+  #    hooks, so the nft drop wins and wg-easy's accepts do nothing: peer-to-peer (wg0->wg0)
+  #    and full-tunnel (wg0->uplink) traffic is silently dropped on any Docker host.
+  #    Fix: append rules to PostUp/PostDown that go into DOCKER-USER (Docker never flushes
+  #    that chain) via iptables-nft, which the image also ships. They live in the hooks, so
+  #    they are re-applied by every `wg-quick up` (reboots included) and removed on down.
+  #    Scoped to wg0->wg0 and wg0<->uplink only, NOT a blanket `-i wg0`: that would let
+  #    a peer route into Docker's container networks and bypass the gateway. Each command
+  #    ends in `|| true` because wg-quick aborts `up` on a failing hook — a host without
+  #    DOCKER-USER (e.g. Docker's native nftables backend) keeps a working VPN instead.
+  #    Appended once (guarded by the DOCKER-USER marker), keeping any user-edited hooks.
+  #
+  # 3. Uplink device. The hooks' {{device}} (MASQUERADE for full-tunnel, and rule 2) is
+  #    hard-coded to `eth0` by wg-easy's first migration, with no env var to change it.
+  #    Set it to the interface of the host's default route, only while still `eth0`.
+  #
+  # If 2 or 3 changed anything, the script leaves a marker in the container and the hook
+  # restarts it, so wg-quick re-reads the hooks. (A marker rather than a captured $var:
+  # Compose interpolates x- fields too, and warns on every shell variable in a hook.)
   post-install-cmd: |
     for i in $(seq 1 60); do
-      docker exec -w /app/server wgeasyhost node --input-type=module -e 'import {createClient} from "@libsql/client"; const c=createClient({url:"file:/etc/wireguard/wg-easy.db"}); const r=await c.execute("SELECT count(*) AS n FROM user_configs_table"); if(Number(r.rows[0].n)<1) process.exit(3); await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0"); console.log("wgeasyhost: default PersistentKeepalive set to 25s");' && break
+      docker exec -w /app/server wgeasyhost node --input-type=module -e '
+        import {createClient} from "@libsql/client";
+        import {execSync} from "node:child_process";
+        const c = createClient({url: "file:/etc/wireguard/wg-easy.db"});
+        const n = await c.execute("SELECT count(*) AS n FROM user_configs_table");
+        if (Number(n.rows[0].n) < 1) process.exit(3);
+        await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0");
+        let changed = false;
+        // host netns, so this is the host default route
+        let up = "";
+        try { up = (execSync("ip -4 route show default").toString().match(/ dev (\S+)/) || [])[1] || ""; } catch {}
+        if (up && up !== "eth0") {
+          const r = await c.execute({sql: "UPDATE interfaces_table SET device=? WHERE name=? AND device=?", args: [up, "wg0", "eth0"]});
+          if (r.rowsAffected) { changed = true; console.log("wgeasyhost: uplink device set to " + up); }
+        }
+        const rules = [
+          "DOCKER-USER -i wg0 -o wg0 -j ACCEPT",
+          "DOCKER-USER -i wg0 -o {{device}} -j ACCEPT",
+          "DOCKER-USER -i {{device}} -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
+        ];
+        const addUp = rules.map(r => " iptables-nft -C " + r + " 2>/dev/null || iptables-nft -I " + r + " || true;").join("");
+        const addDown = rules.map(r => " iptables-nft -D " + r + " 2>/dev/null || true;").join("");
+        const h = (await c.execute({sql: "SELECT post_up FROM hooks_table WHERE id=?", args: ["wg0"]})).rows[0];
+        if (h && !String(h.post_up).includes("DOCKER-USER")) {
+          await c.execute({sql: "UPDATE hooks_table SET post_up=post_up||?, post_down=post_down||? WHERE id=?", args: [addUp, addDown, "wg0"]});
+          changed = true; console.log("wgeasyhost: DOCKER-USER forward rules added to PostUp/PostDown");
+        }
+        if (changed) (await import("node:fs")).writeFileSync("/tmp/wgeasyhost-restart", "");
+        else console.log("wgeasyhost: hooks already up to date");
+      ' && break
       sleep 2
     done
+    docker exec wgeasyhost rm /tmp/wgeasyhost-restart 2>/dev/null && docker restart wgeasyhost
+    exit 0
   developer: WeejeWel
   icon: icon.png
   thumbnail: thumbnail.png
@@ -177,6 +230,14 @@ x-casaos:
 
         Notes: the default split-tunnel only routes `10.9.0.0/24`, so your normal internet stays direct (no kill-switch). The target service must listen on all interfaces (`0.0.0.0`), not just one — apps installed from this store already do.
 
+        **Reaching a Windows client from other peers:** clients can also reach each other (e.g. `10.9.0.3` → `10.9.0.4`). A Windows client answers, though, only once its tunnel is a *Private* network. Windows files a new tunnel as *Public*, which blocks every unsolicited inbound connection — ping, file sharing, Remote Desktop — while its own outgoing traffic still works. Once per tunnel, in an **administrator** PowerShell (the tunnel name is the one shown in the WireGuard app):
+
+        ```powershell
+        Set-NetConnectionProfile -InterfaceAlias "<tunnel name>" -NetworkCategory Private
+        ```
+
+        This lets every peer on the VPN reach that PC's shares and Remote Desktop, the same as on a home network. The setting is tied to the tunnel's **name**: keep the name when you re-import a config, or Windows treats it as a new, Public network again.
+
         **Firewall:** the VPN listens on **UDP 51820** - it must be open on your firewall/router. The management UI also binds host port `51821` over plain HTTP; access it via the HTTPS gateway link, and firewall `51821` if you don't want it exposed directly.
       fr_fr: |
         # Compte par defaut
@@ -197,6 +258,14 @@ x-casaos:
         - **Test ping :** `ping 10.9.0.1` doit repondre une fois connecte.
 
         Notes : le split-tunnel par defaut ne route que `10.9.0.0/24`, votre trafic internet normal reste direct (pas de kill-switch). Le service cible doit ecouter sur toutes les interfaces (`0.0.0.0`).
+
+        **Joindre un client Windows depuis les autres pairs :** les clients peuvent aussi se joindre entre eux (ex. `10.9.0.3` → `10.9.0.4`). Un client Windows ne repond toutefois qu'une fois son tunnel classe en reseau *Prive*. Windows classe un nouveau tunnel en *Public*, ce qui bloque toute connexion entrante non sollicitee — ping, partage de fichiers, Bureau a distance — alors que son trafic sortant fonctionne. Une fois par tunnel, dans un PowerShell **administrateur** (le nom du tunnel est celui affiche dans l'application WireGuard) :
+
+        ```powershell
+        Set-NetConnectionProfile -InterfaceAlias "<nom du tunnel>" -NetworkCategory Private
+        ```
+
+        Tous les pairs du VPN peuvent alors atteindre les partages et le Bureau a distance de ce PC, comme sur un reseau domestique. Ce reglage est lie au **nom** du tunnel : gardez le meme nom en reimportant une configuration, sinon Windows le traite comme un nouveau reseau Public.
 
         **Pare-feu :** le VPN ecoute sur **UDP 51820** - ce port doit etre ouvert. L'interface de gestion ecoute aussi sur le port hote `51821` en HTTP ; utilisez le lien HTTPS de la passerelle.
 
