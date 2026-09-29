@@ -42,22 +42,112 @@ services:
     container_name: terminaltty
     restart: unless-stopped
     user: "root"
-    command: ["ttyd", "--writable", "--client-option", "enableZmodem=true", "--client-option", "enableSixel=false", "--client-option", "enableTrzsz=false", "--terminal-type", "xterm-256color", "chroot", "/host", "bash"]
-    volumes:
-      - type: bind
-        source: /
-        target: /host
+    # The shell is an SSH session to admin@localhost, opened from inside the host's
+    # namespaces — the same session `ssh admin@<server>` gives, so hostname, network,
+    # processes, tty, login shell, sudo and systemd are all the host's. See rationale.md.
+    #
+    # Two steps, at every container start:
+    #   1. TERMINAL_SETUP (below) runs in the HOST's filesystem (nsenter --mount) and
+    #      makes sure the app's own key exists and is authorized for `admin`. The app
+    #      configures itself; nothing has to be provisioned on the host beforehand.
+    #   2. ttyd starts, and for each browser session runs the host's own `ssh` from
+    #      inside the host's namespaces. The key and known_hosts paths are HOST paths.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'nsenter --target=1 --mount -- /bin/sh -c "$$TERMINAL_SETUP" && exec "$$@"'
+      - terminal
+    command:
+      - ttyd
+      - --writable
+      - --client-option
+      - enableZmodem=true
+      - --client-option
+      - enableSixel=false
+      - --client-option
+      - enableTrzsz=false
+      - --client-option
+      - scrollback=5000
+      - --terminal-type
+      - xterm-256color
+      - nsenter
+      - --target=1
+      - --mount
+      - --uts
+      - --ipc
+      - --net
+      - --pid
+      - --
+      - ssh
+      - -F
+      - /dev/null
+      - -i
+      - ${DATA_ROOT:-/DATA}/AppData/terminal/ssh/id_ed25519
+      - -o
+      - IdentitiesOnly=yes
+      - -o
+      - UserKnownHostsFile=${DATA_ROOT:-/DATA}/AppData/terminal/ssh/known_hosts
+      - -o
+      - HostKeyAlias=localhost
+      - -o
+      - StrictHostKeyChecking=yes
+      - -o
+      - BatchMode=yes
+      - -o
+      - ServerAliveInterval=30
+      - -o
+      - LogLevel=ERROR
+      - -tt
+      - admin@localhost
+    environment:
+      # Runs as root in the host's mount namespace, with the host's /bin/sh and tools.
+      # Idempotent: it only rewrites what is missing or wrong.
+      #   - key: generated once, kept in this app's own data folder (root-only);
+      #   - authorized_keys: exactly ONE line, identified by the `yundera-terminal`
+      #     comment and restricted to from="127.0.0.1,::1" — useless anywhere but on
+      #     this box. Every other line in the file is left as it is;
+      #   - known_hosts: the host's own host keys, so the client checks strictly.
+      TERMINAL_SETUP: |
+        set -eu
+        D="${DATA_ROOT:-/DATA}/AppData/terminal/ssh"
+        U=admin
+        M=yundera-terminal
+        H="$$(getent passwd "$$U" | cut -d: -f6)"
+        if [ -z "$$H" ]; then echo "terminal: no '$$U' user on this host" >&2; exit 1; fi
+        mkdir -p "$$D"
+        chmod 700 "$$D"
+        if [ ! -s "$$D/id_ed25519" ] || [ ! -s "$$D/id_ed25519.pub" ]; then
+          rm -f "$$D/id_ed25519" "$$D/id_ed25519.pub"
+          ssh-keygen -q -t ed25519 -N "" -C "$$M" -f "$$D/id_ed25519"
+        fi
+        AK="$$H/.ssh/authorized_keys"
+        L="from=\"127.0.0.1,::1\",no-agent-forwarding,no-port-forwarding,no-X11-forwarding $$(cut -d' ' -f1,2 "$$D/id_ed25519.pub") $$M"
+        if [ "$$(grep -E "[[:space:]]$$M\$$" "$$AK" 2>/dev/null || true)" != "$$L" ]; then
+          mkdir -p "$$H/.ssh"
+          chmod 700 "$$H/.ssh"
+          chown "$$U:" "$$H/.ssh"
+          T="$$(mktemp "$$H/.ssh/.authorized_keys.XXXXXX")"
+          grep -v -E "[[:space:]]$$M\$$" "$$AK" > "$$T" 2>/dev/null || true
+          printf '%s\n' "$$L" >> "$$T"
+          chmod 600 "$$T"
+          chown "$$U:" "$$T"
+          mv -f "$$T" "$$AK"
+        fi
+        for f in /etc/ssh/ssh_host_*_key.pub; do
+          printf 'localhost %s\n' "$$(cut -d' ' -f1,2 "$$f")"
+        done > "$$D/known_hosts.tmp"
+        mv -f "$$D/known_hosts.tmp" "$$D/known_hosts"
     networks:
       # App-private: reached only by this app's own services, so it
       # has no business on the shared network.
       - terminal-internal
     cpu_shares: 70
-    # Full host privilege: this app IS a root shell on the host filesystem.
-    # See rationale.md.
+    # Only ttyd and the ssh client count against this — the shell itself runs in the
+    # host's sshd session, outside this container.
+    mem_limit: 128m
+    # Entering PID 1's namespaces needs both. See rationale.md.
+    pid: host
     privileged: true
-    cap_add:
-      - SYS_ADMIN
-      - NET_ADMIN
 
 networks:
   pcs:
@@ -77,14 +167,16 @@ x-casaos:
   screenshot_link:
     - screenshot-1.png
   tagline:
-    en_us: "Root shell on your server, in the browser"
+    en_us: "Admin shell on your server, in the browser"
   category: Utilities
   tags: ["developer"]
   description:
     en_us: |
-      Terminal gives you a full root shell on your Personal Cloud Server from any browser, using ttyd.
+      Terminal gives you a shell on your Personal Cloud Server from any browser, using ttyd.
 
-      This is an administration tool, and it is not sandboxed. The session opens as **root on the host filesystem** (the host root `/` is mounted read-write and the shell chroots into it), so it can read and modify everything on the server: `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, every other app's data under `/DATA/AppData`, and the system files outside `/DATA`. Anything you could do over SSH as root, this app can do.
+      This is an administration tool, and it is not sandboxed. Each session is a real SSH login on the server as the **`admin` user, who has passwordless `sudo`** — the same session you would get with `ssh admin@<your server>`, with the server's own hostname, network, processes and services. It can therefore read and modify everything on the server: `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, every other app's data under `/DATA/AppData`, and the system files outside `/DATA`. Anything you could do over SSH as root, this app can do.
+
+      On start, the app creates its own SSH key in `/DATA/AppData/terminal/ssh/` and adds it to `admin`'s `authorized_keys`, restricted to connections from the server itself.
 
       Access is protected by the server's single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in server account reaches the shell. You sign in with that same account instead of setting a separate app password.
 
@@ -96,8 +188,8 @@ x-casaos:
       en_us: |
         **This app is a root shell on your server.**
 
-        - It mounts the host root `/` read-write and opens the session as `root`, so it can read and change **every** file on the PCS — all of `/DATA` (Documents, Downloads, Media, Gallery, and every other app's data) as well as system files outside `/DATA`.
-        - The container runs `privileged`, which is what makes host administration tasks work.
+        - Each session is an SSH login as `admin`, who has passwordless `sudo`, so it can read and change **every** file on the PCS — all of `/DATA` (Documents, Downloads, Media, Gallery, and every other app's data) as well as system files outside `/DATA`.
+        - To open that session, the app adds its own key to `admin`'s `authorized_keys` (usable only from the server itself), and its container runs `privileged` in the host's process namespace.
         - Access is gated by the server's single sign-on (AppShield OIDC) — sign in with your server account, the same login you already use for the server.
 
         Treat access to this app as equivalent to root SSH access to the server. If you only need to browse or edit files, install **FileBrowser** instead.
