@@ -98,7 +98,7 @@ services:
       - -o
       - LogLevel=ERROR
       - -tt
-      - admin@localhost
+      - ${TERMINAL_USER:-admin}@localhost
     environment:
       # Runs as root in the host's mount namespace, with the host's /bin/sh and tools.
       # Idempotent: it only rewrites what is missing or wrong.
@@ -107,10 +107,13 @@ services:
       #     comment and restricted to from="127.0.0.1,::1" — useless anywhere but on
       #     this box. Every other line in the file is left as it is;
       #   - known_hosts: the host's own host keys, so the client checks strictly.
+      # TERMINAL_USER picks the host account the session logs into. It defaults to
+      # `admin`, the PCS sudoer; a deployment without one (a self-hosted mesh box)
+      # passes its own. It must be able to log in over SSH with a key.
       TERMINAL_SETUP: |
         set -eu
         D="${DATA_ROOT:-/DATA}/AppData/terminal/ssh"
-        U=admin
+        U="${TERMINAL_USER:-admin}"
         M=yundera-terminal
         H="$$(getent passwd "$$U" | cut -d: -f6)"
         if [ -z "$$H" ]; then echo "terminal: no '$$U' user on this host" >&2; exit 1; fi
