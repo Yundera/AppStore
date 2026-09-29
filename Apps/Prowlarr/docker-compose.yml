@@ -66,20 +66,62 @@ services:
     # API. That path is container-to-container and never leaves the host.
     networks:
       - pcs
+      - prowlarr-internal
     environment:
       TZ: $TZ
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/prowlarr/config:/config   # dedicated Prowlarr config
+    depends_on:
+      - prowlarr-flaresolverr
     cpu_shares: 50
     deploy:
       resources:
         limits:
           memory: 512M
 
+  # Solves Cloudflare challenges for the indexers that sit behind one. Prowlarr
+  # only hands it a request when a response IS a challenge, and only for indexers
+  # carrying the `flaresolverr` tag (the init step below creates the tag and the
+  # proxy entry).
+  #
+  # Private network only: FlareSolverr has no authentication — it is a headless
+  # Chrome that fetches any URL it is sent. On `pcs` every container of the PCS
+  # could use it as a browser proxy, including against internal addresses.
+  #
+  # Memory is the one knob that matters. Every challenge is solved in its own
+  # Chromium (~250-300 MB while solving) and Prowlarr queries all tagged indexers
+  # in parallel; FlareSolverr has no concurrency cap. At 1G the cgroup OOM-killed
+  # Chromium thousands of times on a busy box and every tagged indexer failed
+  # with "tab crashed". 2G fits ~6-7 concurrent solves; idle it sits near 350 MB.
+  # (Not /dev/shm: FlareSolverr already starts Chrome with --disable-dev-shm-usage.)
+  prowlarr-flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
+    container_name: prowlarr-flaresolverr
+    hostname: prowlarr-flaresolverr
+    # The image's own unprivileged `flaresolverr` user. No volumes, so PUID/PGID
+    # have nothing to own here.
+    user: "1000:1000"
+    restart: unless-stopped
+    expose:
+      - 8191
+    networks:
+      - prowlarr-internal
+    environment:
+      TZ: $TZ
+      LOG_LEVEL: info
+    cpu_shares: 20
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
 networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
+  # Backend <-> FlareSolverr only. Named explicitly so the init step can join it.
+  prowlarr-internal:
+    name: prowlarr-internal
 
 x-casaos:
   main: prowlarr-gate
@@ -96,6 +138,11 @@ x-casaos:
         behind the PCS SSO gate, so your existing server login is the only
         password you need — open the tile and you are already signed in. Every
         request from the internet passes through that gate first.
+
+        🛡️ **Cloudflare-protected indexers work out of the box.** FlareSolverr is
+        bundled and already registered in Prowlarr (*Settings → Indexers*). It is
+        used for every indexer carrying the `flaresolverr` tag — when an indexer's
+        test fails with a Cloudflare error, edit it and add that tag.
 
         🔗 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):
         - **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.
@@ -141,4 +188,88 @@ x-compose-app:
       # Reclaim a tree an earlier root-running install left behind: the backend
       # now drops to $PUID:$PGID and dies on an unwritable /config otherwise.
       recursive: true
+  # Registers the bundled FlareSolverr in Prowlarr. Running the sidecar is not
+  # enough: Prowlarr only uses a solver it has an *indexer proxy* entry for, and
+  # only for indexers sharing that entry's tag. That lives in prowlarr.db, which
+  # the store must not write directly (see rationale.md), so this goes through
+  # Prowlarr's own API with the key it generated on first boot.
+  #
+  # A converge, not a one-shot: it runs after every up and only ever ADDS — the
+  # `flaresolverr` tag when there is none, the proxy when there is no FlareSolverr
+  # proxy at all. A proxy the user already configured (or pointed elsewhere) is
+  # left untouched. Which indexers get the tag stays the user's call: Prowlarr
+  # needs it only on Cloudflare-protected ones, and its own test error says so.
+  init:
+    - name: register-flaresolverr
+      image: curlimages/curl:8.14.1
+      phase: post_up
+      network: prowlarr-internal
+      when: always
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/prowlarr/config:/prowlarr:ro
+      environment:
+        PROWLARR_API: http://prowlarr-backend:9696
+        SOLVER_URL: http://prowlarr-flaresolverr:8191/
+      entrypoint:
+        - /bin/sh
+      command:
+        - -c
+        # `$$` is an escaped dollar: Maison expands $NAME/${NAME} in this string
+        # before the container runs, so the shell's own variables are written $$NAME.
+        - |
+          set -u
+
+          # First boot runs migrations and only then writes <ApiKey> into
+          # config.xml, well after the container appears.
+          key=""
+          n=0
+          while :; do
+            key=$$(sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' /prowlarr/config.xml 2>/dev/null)
+            if [ -n "$$key" ] && curl -fs -m 5 -o /dev/null "$$PROWLARR_API/ping"; then
+              break
+            fi
+            n=$$((n + 1))
+            if [ "$$n" -ge 150 ]; then
+              echo "prowlarr: no API key / no answer within 5 minutes" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+          api() {
+            curl -fsS -m 30 -H "X-Api-Key: $$key" -H "Content-Type: application/json" "$$@"
+          }
+          # Prowlarr's objects are flat, so one object per line is enough to
+          # pick fields out without jq (not in this image).
+          id_of() { sed -n 's/.*"id" *: *\([0-9][0-9]*\).*/\1/p' | head -n 1; }
+
+          tag=$$(api "$$PROWLARR_API/api/v1/tag" | tr -d '\n' | tr '}' '\n' |
+            grep '"label" *: *"flaresolverr"' | id_of)
+          if [ -z "$$tag" ]; then
+            tag=$$(api -X POST -d '{"label":"flaresolverr"}' "$$PROWLARR_API/api/v1/tag" |
+              tr -d '\n' | id_of)
+            [ -n "$$tag" ] || { echo "prowlarr: could not create the flaresolverr tag" >&2; exit 1; }
+            echo "prowlarr: created tag flaresolverr (id $$tag)"
+          fi
+
+          if api "$$PROWLARR_API/api/v1/indexerProxy" | tr -d '\n' |
+            grep -q '"implementation" *: *"FlareSolverr"'; then
+            echo "prowlarr: a FlareSolverr proxy already exists, leaving it as configured"
+            exit 0
+          fi
+
+          # forceSave: keep the entry even if Prowlarr's connectivity test races
+          # the sidecar's first start; the proxy re-tests on use.
+          api -X POST "$$PROWLARR_API/api/v1/indexerProxy?forceSave=true" -o /dev/null -d '{
+            "name": "FlareSolverr",
+            "implementation": "FlareSolverr",
+            "configContract": "FlareSolverrSettings",
+            "tags": ['"$$tag"'],
+            "fields": [
+              {"name": "host", "value": "'"$$SOLVER_URL"'"},
+              {"name": "requestTimeout", "value": 60}
+            ]
+          }' || { echo "prowlarr: could not register FlareSolverr" >&2; exit 1; }
+          echo "prowlarr: registered FlareSolverr at $$SOLVER_URL for tag flaresolverr"
   webui-host: prowlarr-${domain}

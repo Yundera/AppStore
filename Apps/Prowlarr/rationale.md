@@ -47,6 +47,36 @@ surface, which is worse than not having a gate at all.
   AppShield image's own unprivileged user. Both carry memory limits and `cpu_shares`, and both
   images are pinned.
 
+## Bundled FlareSolverr
+
+**What.** A third service, `prowlarr-flaresolverr`, solves Cloudflare challenges for the indexers
+that sit behind one. A `post_up` init step registers it in Prowlarr as an indexer proxy tied to a
+`flaresolverr` tag.
+
+**Why bundled, not a separate store app.** FlareSolverr has no authentication: it is a headless
+Chrome that fetches any URL it is sent. A standalone app would have to sit on the shared `pcs`
+network, where every container of the PCS could use it as a browser proxy, including against
+internal addresses. As a sidecar it sits only on the app-private `prowlarr-internal` network, which
+nothing but the backend and the init step joins. Bundling is also what makes it work without
+manual steps (below), and it keeps the solver's version moving with the app that depends on it.
+The Suwayomi app follows the same pattern.
+
+**Why the init step talks to Prowlarr's API.** Running the solver is not enough: Prowlarr only uses
+one it has an indexer-proxy entry for, and only for indexers sharing that entry's tag. That entry
+lives in `prowlarr.db`, which the store does not write directly (see the alternatives below), so
+the step uses the documented `/api/v1/tag` and `/api/v1/indexerProxy` endpoints, with the API key
+Prowlarr wrote into `config.xml` (mounted read-only). It only ever **adds**: the tag if there is
+none, the proxy if no FlareSolverr proxy exists. A proxy the user configured or pointed elsewhere
+is left alone. It does not tag indexers, because only Cloudflare-protected ones need it, and
+Prowlarr's own test error tells the user which ones.
+
+**Resources.** Each challenge is solved in its own Chromium (~250-300 MB while solving), Prowlarr
+queries every tagged indexer in parallel, and FlareSolverr has no concurrency cap. At a 1G limit a
+busy PCS recorded thousands of cgroup OOM kills, and every tagged indexer failed with `tab crashed`.
+The 2G limit fits ~6-7 concurrent solves; idle, it sits near 350 MB. `cpu_shares` is kept low so a
+burst of solves yields to everything else. The service runs as the image's own unprivileged
+`flaresolverr` user (uid 1000) and mounts nothing.
+
 ## Alternatives considered and rejected
 
 - **`AuthenticationMethod=Forms` with a seeded credential** (what Sonarr/Radarr/Lidarr use) —
