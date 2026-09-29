@@ -99,6 +99,9 @@ x-compose-app:
     - path: /DATA/AppData/radarr/config
       user: $PUID
       group: $PGID
+      # Reclaim a tree an earlier root-running install left behind: the backend
+      # now drops to $PUID:$PGID and dies on an unwritable /config otherwise.
+      recursive: true
     - path: /DATA/Media/Movies
       user: $PUID
       group: $PGID

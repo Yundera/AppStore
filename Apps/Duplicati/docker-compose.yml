@@ -114,4 +114,7 @@ x-compose-app:
     - path: /DATA/AppData/duplicati/config
       user: $PUID
       group: $PGID
+      # Reclaim a tree an earlier root-running install left behind: the backend
+      # now drops to $PUID:$PGID and dies on an unwritable /config otherwise.
+      recursive: true
   webui-host: duplicati-${domain}
