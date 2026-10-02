@@ -2,7 +2,10 @@ name: terminal
 
 services:
   terminal:
-    image: ghcr.io/yundera/appshield:3.0.2
+    # >= 3.1.0 keeps the OIDC back-channel on the box: auth-registrar hands the gate
+    # `internal_issuer_url` and its discovery, token and JWKS calls go there instead of
+    # out through the public route.
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: terminal
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -28,6 +31,12 @@ services:
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      SESSION_DURATION_HOURS: "720"
+    # The gate's sessions. Without a mount they live in the container and every
+    # recreate (an update, a self-check redeploy) logs the user out. Root above, so
+    # the Docker-created directory is writable.
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/terminal/gate-data:/data
     depends_on:
       - terminal-ttyd
     networks:
