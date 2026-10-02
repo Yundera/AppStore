@@ -113,7 +113,7 @@ services:
       resources:
         limits:
           memory: 512M
-    cpu_shares: 30
+    cpu_shares: 70
     networks:
       - metawatch-internal
 
@@ -276,7 +276,7 @@ services:
       resources:
         limits:
           memory: 768M
-    cpu_shares: 30
+    cpu_shares: 50
     networks:
       - metawatch-internal
 
