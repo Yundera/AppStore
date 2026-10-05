@@ -55,7 +55,7 @@ services:
 
   files-backend:
     container_name: files-backend
-    image: ghcr.io/yundera/files:1.0.0
+    image: ghcr.io/yundera/files:1.0.2
     restart: unless-stopped
     environment:
       DATA_ROOT: "/DATA"
