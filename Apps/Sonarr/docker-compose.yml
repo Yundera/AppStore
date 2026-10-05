@@ -2,7 +2,7 @@ name: sonarr
 
 services:
   sonarr:
-    image: lscr.io/linuxserver/sonarr:4.0.17
+    image: lscr.io/linuxserver/sonarr:4.0.19
     container_name: sonarr
     restart: unless-stopped
     user: $PUID:$PGID
@@ -56,7 +56,7 @@ x-casaos:
         | -------- | -------- |
         | `admin`  | `$SONARR_ADMIN_PASSWORD` |
 
-        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent-backend:80` when they run on the same server.
+        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent:80` when they run on the same server.
 
         ❓ Questions? Contact us at help@yundera.com
   architectures:
