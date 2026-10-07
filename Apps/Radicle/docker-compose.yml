@@ -124,6 +124,47 @@ services:
     networks:
       - radicle-internal
 
+  # Seeds the owner's repositories without anyone touching the server. The node's
+  # policy is `block`, so a repository is only stored once somebody runs
+  # `rad seed <rid>` *on the server* — and most users have no shell there. This
+  # loop does it for them: given the owner's Node ID (RADICLE_OWNER, set in the
+  # app's .env), it follows them and seeds every repository their own node
+  # announces. Unset, it idles and the app behaves exactly as before. See
+  # seed/autoseed/autoseed.sh and rationale.md.
+  radicle-autoseed:
+    image: dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2
+    container_name: radicle-autoseed
+    user: $PUID:$PGID
+    restart: unless-stopped
+    cpu_shares: 20
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    # `sh` explicitly: the store's git does not carry the exec bit, so the script
+    # must not depend on it.
+    entrypoint: ["sh", "/autoseed.sh"]
+    environment:
+      TZ: $TZ
+      # Your own node's ID — `rad self --nid` on your machine. Several may be given,
+      # comma-separated. Empty = auto-seeding off.
+      RADICLE_OWNER: ${RADICLE_OWNER:-}
+    volumes:
+      # The same Radicle home as the node: the loop drives it through the control
+      # socket in there, so it needs no network.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/home/:/radicle-home/
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/autoseed/autoseed.sh:/autoseed.sh:ro
+    network_mode: none
+    depends_on:
+      - radicle-node
+    healthcheck:
+      # The loop touches this file every pass; a stale one means it has hung.
+      test: ["CMD-SHELL", "find /tmp/autoseed.alive -mmin -10 | grep -q ."]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 networks:
   pcs:
     name: ${APP_NET:-pcs}
@@ -155,7 +196,7 @@ x-casaos:
 
       The web interface is for browsing. Creating repositories, opening issues and proposing patches happen with the `rad` command line on your own machine — the node here is what keeps them alive and reachable.
 
-      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow.
+      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow — or set your own Node ID as the owner in the app's settings, and every repository you publish from your machine is seeded here automatically.
     fr_fr: |
       Radicle — votre forge pair-à-pair
 
@@ -170,7 +211,7 @@ x-casaos:
 
       L'interface web sert à consulter. Créer des dépôts, ouvrir des tickets et proposer des patches se fait avec la ligne de commande `rad` sur votre machine — le nœud installé ici est ce qui les maintient vivants et accessibles.
 
-      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué.
+      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué — ou indiquez votre propre Node ID comme propriétaire dans les réglages de l'application, et chaque dépôt que vous publiez depuis votre machine est suivi ici automatiquement.
     zh_cn: |
       Radicle — 属于你自己的点对点代码托管
 
@@ -185,7 +226,7 @@ x-casaos:
 
       网页界面用于浏览。创建仓库、提交议题和提出补丁请在本机使用 `rad` 命令行完成——这里的节点负责让它们保持在线、可被获取。
 
-      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容。
+      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容——或者在应用设置中把你自己的 Node ID 设为所有者，此后你从本机发布的每个仓库都会自动在这里跟随。
   icon: icon.png
   screenshot_link:
     - screenshot-1.png
@@ -215,9 +256,40 @@ x-casaos:
 
         Connecting your machine
 
-        Install the `rad` CLI from [radicle.dev](https://radicle.dev), then push a
-        repository and tell this node to seed it. Your node's identity (its Node ID)
-        is printed at `https://radicle-api-$APP_DOMAIN/api/v1` under `nid`.
+        Install the `rad` CLI from [radicle.dev](https://radicle.dev) and create your
+        identity with `rad auth`. Then point your node at this one: in
+        `~/.radicle/config.json`, add this address to both `preferredSeeds` and
+        `node.connect`, and restart your node (`rad node stop && rad node start`):
+
+        ```
+        <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+        ```
+
+        `<nid>` is this server's Node ID, the `nid` field at
+        `https://radicle-api-$APP_DOMAIN/api/v1`. With it in `preferredSeeds`, your
+        pushes reach this node without a separate `rad sync`.
+
+        Let this node seed your repositories
+
+        Open this app's settings, **Env** tab, and set `RADICLE_OWNER` to your own Node
+        ID — `rad self --nid` on your machine (add the variable if it isn't listed).
+        From then on every repository your node announces is seeded here within a
+        couple of minutes, with no command on the server. Left empty, nothing is
+        seeded automatically; several IDs may be given, comma-separated.
+
+        Publishing a repository
+
+        ```
+        cd my-project
+        rad init --public      # creates it and adds a `rad` git remote
+        git push rad main      # every later push
+        ```
+
+        Your own node must be running (`rad node start`) when you push: the push is
+        stored on your machine and only leaves it through your node. The repository
+        then shows up at `https://radicle-$APP_DOMAIN`. Private repositories
+        (`rad init --private`) are not announced, so they are neither seeded
+        automatically nor shown here.
 
         Peer-to-peer port
 
@@ -242,9 +314,41 @@ x-casaos:
 
         Connecter votre machine
 
-        Installez la CLI `rad` depuis [radicle.dev](https://radicle.dev), puis poussez
-        un dépôt et demandez à ce nœud de le suivre. L'identité de votre nœud (Node ID)
-        est affichée sur `https://radicle-api-$APP_DOMAIN/api/v1`, champ `nid`.
+        Installez la CLI `rad` depuis [radicle.dev](https://radicle.dev) et créez votre
+        identité avec `rad auth`. Faites ensuite pointer votre nœud vers celui-ci : dans
+        `~/.radicle/config.json`, ajoutez cette adresse à `preferredSeeds` et à
+        `node.connect`, puis redémarrez votre nœud (`rad node stop && rad node start`) :
+
+        ```
+        <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+        ```
+
+        `<nid>` est le Node ID de ce serveur, champ `nid` sur
+        `https://radicle-api-$APP_DOMAIN/api/v1`. Présent dans `preferredSeeds`, il
+        reçoit vos pushs sans `rad sync` séparé.
+
+        Laisser ce nœud suivre vos dépôts
+
+        Ouvrez les réglages de l'application, onglet **Env**, et donnez à
+        `RADICLE_OWNER` votre propre Node ID — `rad self --nid` sur votre machine
+        (ajoutez la variable si elle n'apparaît pas). Dès lors, chaque dépôt annoncé par
+        votre nœud est suivi ici en quelques minutes, sans aucune commande sur le
+        serveur. Vide, rien n'est suivi automatiquement ; plusieurs ID peuvent être
+        séparés par des virgules.
+
+        Publier un dépôt
+
+        ```
+        cd mon-projet
+        rad init --public      # le crée et ajoute un remote git `rad`
+        git push rad main      # chaque push suivant
+        ```
+
+        Votre propre nœud doit tourner (`rad node start`) au moment du push : le push est
+        stocké sur votre machine et n'en sort que par votre nœud. Le dépôt apparaît
+        ensuite sur `https://radicle-$APP_DOMAIN`. Les dépôts privés
+        (`rad init --private`) ne sont pas annoncés : ils ne sont ni suivis
+        automatiquement ni affichés ici.
 
         Port pair-à-pair
 
@@ -268,9 +372,35 @@ x-casaos:
 
         连接你的机器
 
-        从 [radicle.dev](https://radicle.dev) 安装 `rad` 命令行，然后推送仓库并让此节点
-        跟随它。节点身份（Node ID）显示在 `https://radicle-api-$APP_DOMAIN/api/v1` 的
-        `nid` 字段。
+        从 [radicle.dev](https://radicle.dev) 安装 `rad` 命令行，并用 `rad auth` 创建身份。
+        然后让你的节点指向此节点：在 `~/.radicle/config.json` 中，把下面的地址同时加入
+        `preferredSeeds` 和 `node.connect`，再重启节点（`rad node stop && rad node start`）：
+
+        ```
+        <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+        ```
+
+        `<nid>` 是本服务器的 Node ID，即 `https://radicle-api-$APP_DOMAIN/api/v1` 的
+        `nid` 字段。加入 `preferredSeeds` 后，你的推送无需单独执行 `rad sync` 即可到达此节点。
+
+        让此节点跟随你的仓库
+
+        打开本应用的设置，**Env** 标签页，把 `RADICLE_OWNER` 设为你自己的 Node ID——
+        在本机运行 `rad self --nid` 获取（若未列出该变量，请自行添加）。此后你的节点
+        宣告的每个仓库都会在几分钟内在这里被跟随，无需在服务器上执行任何命令。留空则
+        不会自动跟随；可填写多个 ID，以逗号分隔。
+
+        发布仓库
+
+        ```
+        cd my-project
+        rad init --public      # 创建仓库并添加名为 `rad` 的 git remote
+        git push rad main      # 之后的每次推送
+        ```
+
+        推送时你自己的节点必须在运行（`rad node start`）：推送先保存在本机，只能通过你的
+        节点发出。之后仓库会出现在 `https://radicle-$APP_DOMAIN`。私有仓库
+        （`rad init --private`）不会被宣告，因此既不会被自动跟随，也不会在这里显示。
 
         点对点端口
 
@@ -289,6 +419,9 @@ x-compose-app:
       user: $PUID
       group: $PGID
     - path: /DATA/AppData/$AppID/caddy
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/autoseed
       user: $PUID
       group: $PGID
   init:
@@ -312,12 +445,15 @@ x-compose-app:
     # domain or public IP ever changes.
     #
     # It also carries the bootstrap seeds, and those are NOT the compiled-in defaults.
-    # radicle 1.10 ships `iris.radicle.network` / `rosa.radicle.network`, whose IPv4
-    # addresses refuse connections on 8776 (verified from two networks, 2026-09-04) —
-    # a node configured with them never finds a peer. The same two nodes answer under
-    # their previous hostnames, which is what this file uses; radicle logs a rename
-    # warning for them and keeps working. Revisit when upstream's new addresses accept
-    # peer traffic again.
+    # radicle 1.10 ships `iris.radicle.network` / `rosa.radicle.network`. On 2026-09-04
+    # both refused connections on 8776 (from two networks), so this file used their
+    # previous hostnames. Re-checked 2026-10-03:
+    #   - rosa.radicle.network now accepts → used under its current name (it was
+    #     `ash.radicle.garden` here; same Node ID).
+    #   - iris refuses under both names (`iris.radicle.network`, `seed.radicle.garden`).
+    #     Kept: a dead entry costs one failed dial, and it may come back.
+    #   - seed.radicle.dev accepts.
+    # Two reachable seeds are enough to bootstrap. Revisit if a node never finds a peer.
     - path: /DATA/AppData/$AppID/home/config.json
       from: home/config.json.tmpl
       ensure: always
@@ -327,6 +463,21 @@ x-compose-app:
       from: caddy/Caddyfile.tmpl
       ensure: always
       mode: "0644"
+    # Re-rendered on every up so a fix shipped in a store update reaches installed
+    # apps instead of being skipped as already present.
+    - path: /DATA/AppData/$AppID/autoseed/autoseed.sh
+      from: autoseed/autoseed.sh
+      ensure: always
+      mode: "0755"
+  hooks:
+    # Puts an empty RADICLE_OWNER line in the app's .env so the setting shows up in
+    # the .env editor, where the user fills it in. Not a `variables:` entry: those are
+    # re-rendered on every up and would wipe what the user typed. Append-only and only
+    # when absent, so a reinstall keeps the user's value. A failed post_install is
+    # logged, not fatal — the app still runs, the key just has to be added by hand.
+    post_install: |
+      grep -q '^RADICLE_OWNER=' $APP_DIR/.env 2>/dev/null ||
+        printf 'RADICLE_OWNER=\n' >> $APP_DIR/.env
   # The landing path is handled by the Caddy redirect above, not here: neither
   # `webui-path` nor `x-casaos.index` is interpolated, so a ${...} written in
   # either reaches the browser as a literal.

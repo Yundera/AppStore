@@ -43,6 +43,16 @@ tagged `needs-public-ip` so that this is visible before install.
   `seedingPolicy.default = block`: a fresh node replicates nothing until the user
   explicitly seeds a repository with `rad seed <rid>`. It cannot be used as an
   unbounded drop box for whatever the network gossips at it.
+- **Auto-seeding is scoped to the owner, and off until they opt in.** Running
+  `rad seed` means a shell on the server, which most users don't have, so the
+  `radicle-autoseed` sidecar does it for them once they put their own Node ID in
+  `RADICLE_OWNER` (the app's `.env`). It seeds only repositories that a listed owner's
+  node announces in the routing table, with scope `followed` (the repository's
+  delegates plus the owner, no other remotes). The default policy stays `block`, so
+  a repository nobody in `RADICLE_OWNER` announces is still never stored, and an
+  empty `RADICLE_OWNER` leaves the app exactly as strict as before. The sidecar has
+  no network (`network_mode: none`) and only talks to the node through the control
+  socket in the shared Radicle home.
 - **The web UI is not a control surface.** It only browses. Creating repositories,
   issues and patches requires the `rad` CLI and the user's own signing key, which never
   leaves their machine.
@@ -70,6 +80,11 @@ tagged `needs-public-ip` so that this is visible before install.
 - **A permissive seeding policy** (`default: allow`) — rejected: it would make every
   install replicate whatever the network offers onto the user's disk without them
   asking.
+- **`default: allow` with `scope: followed`, following the owner** — rejected for the
+  same reason: `followed` narrows *whose refs* are fetched, not *which repositories*
+  are seeded, and a seeded repository's delegates are always fetched. The node would
+  still store every repository the network announces. The sidecar instead seeds
+  repositories one by one, only those the owner's own node announces.
 
 ## Data protection
 
