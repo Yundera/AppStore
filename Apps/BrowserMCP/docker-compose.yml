@@ -3,7 +3,7 @@ services:
   # Main container — Chromium + Playwright + MCP server + noVNC viewer.
   # Reachable at browsermcp-backend:9746 on the pcs network. Beacon discovery on UDP 9099.
   browsermcp-backend:
-    image: ghcr.io/worph/browser-mcp:1.1.4
+    image: ghcr.io/worph/browser-mcp:1.1.8
     container_name: browsermcp-backend
     hostname: browsermcp-backend
     restart: unless-stopped
@@ -20,7 +20,6 @@ services:
       - PORT=9746
       - DISCOVERY_PORT=9099
       - CONFIG_PATH=/app/data/config.json
-      - VNC_RESOLUTION=1280x720x24
       # Kill idle Chrome after this many ms (default 2h); respawns on next use.
       - IDLE_TTL_MS=7200000
     volumes:
@@ -47,7 +46,7 @@ services:
   browsermcp-proxy:
     # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
     # OAUTH_SCOPE names and a configurable protected path.
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: browsermcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -204,8 +203,14 @@ x-casaos:
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** and
-        create one there.
+        scripts), register one via Dynamic Client Registration:
+        ```bash
+        curl -X POST https://browsermcp-${APP_DOMAIN}/AppShield/oidc/reg \
+          -H 'Content-Type: application/json' \
+          -d '{"redirect_uris":["https://your-client/callback"]}'
+        ```
+        The response contains `client_id` and `client_secret`. You can view and
+        revoke registered clients at **https://browsermcp-${APP_DOMAIN}/AppShield/oauth**.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -227,25 +232,38 @@ x-casaos:
         If you have **Beacon** installed, Browser MCP auto-registers there and its tools
         show up under the `browser-mcp__*` namespace — no extra config.
 
-        **Available MCP Tools:**
+        **Available MCP Tools (29):**
         | Tool | Description |
         |------|-------------|
-        | `navigate` | Navigate the browser to a URL |
-        | `click` | Click on an element by CSS/text selector |
-        | `type` | Type text into an input element |
-        | `screenshot` | Take a screenshot of the current page |
-        | `evaluate` | Execute JavaScript in the browser context |
-        | `get_text` | Get the text content of an element |
-        | `get_page_content` | Get the full HTML of the current page |
+        | `navigate_page` | Navigate the browser to a URL |
+        | `click` | Click on an element |
+        | `type_text` | Type text into an input element |
+        | `fill` | Fill an input field |
+        | `fill_form` | Fill multiple form fields at once |
+        | `press_key` | Press a keyboard key |
+        | `hover` | Hover over an element |
+        | `drag` | Drag an element to a target |
+        | `select_page` | Switch to a specific browser tab |
+        | `new_page` | Open a new browser tab |
+        | `close_page` | Close a browser tab |
+        | `list_pages` | List all open browser tabs |
+        | `take_screenshot` | Take a screenshot of the current page |
+        | `take_snapshot` | Take a DOM snapshot of the current page |
+        | `evaluate_script` | Execute JavaScript in the browser context |
         | `wait_for` | Wait for an element to reach a specific state |
-        | `go_back` | Navigate back in browser history |
-        | `go_forward` | Navigate forward in browser history |
-        | `set_viewport` | Set the browser viewport size |
-        | `get_console_logs` | Get browser console log entries |
-        | `pdf` | Generate a PDF of the current page |
-        | `get_cookies` | Get browser cookies |
-        | `set_cookies` | Set browser cookies |
-        | `clear_cookies` | Clear all browser cookies |
+        | `resize_page` | Resize the browser viewport |
+        | `emulate` | Emulate a device (mobile, tablet, etc.) |
+        | `upload_file` | Upload a file to a file input |
+        | `handle_dialog` | Accept or dismiss a browser dialog |
+        | `get_console_message` | Get a specific console log entry |
+        | `list_console_messages` | List all console log entries |
+        | `get_network_request` | Get details of a network request |
+        | `list_network_requests` | List all network requests |
+        | `take_heapsnapshot` | Take a heap snapshot for memory analysis |
+        | `lighthouse_audit` | Run a Lighthouse performance audit |
+        | `performance_start_trace` | Start a performance trace |
+        | `performance_stop_trace` | Stop and retrieve a performance trace |
+        | `performance_analyze_insight` | Analyze performance insights |
 
         **Security:**
         - The Web UI, live noVNC viewer, and `/api` endpoints sit behind your server's
@@ -278,8 +296,14 @@ x-casaos:
           }
         }
         ```
-        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
-        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 创建。
+        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），通过动态客户端注册创建：
+        ```bash
+        curl -X POST https://browsermcp-${APP_DOMAIN}/AppShield/oidc/reg \
+          -H 'Content-Type: application/json' \
+          -d '{"redirect_uris":["https://your-client/callback"]}'
+        ```
+        响应包含 `client_id` 和 `client_secret`。已注册的客户端可在
+        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 查看和撤销。
 
         **选项 2：本地 Docker 连接（无需认证）**
         ```json
@@ -298,25 +322,38 @@ x-casaos:
 
         如果安装了 **Beacon**，Browser MCP 会自动注册，其工具显示在 `browser-mcp__*` 命名空间下，无需额外配置。
 
-        **可用 MCP 工具：**
+        **可用 MCP 工具（29个）：**
         | 工具 | 描述 |
         |------|------|
-        | `navigate` | 将浏览器导航到 URL |
-        | `click` | 通过 CSS/文本选择器点击元素 |
-        | `type` | 在输入元素中输入文本 |
-        | `screenshot` | 截取当前页面截图 |
-        | `evaluate` | 在浏览器上下文中执行 JavaScript |
-        | `get_text` | 获取元素的文本内容 |
-        | `get_page_content` | 获取当前页面的完整 HTML |
+        | `navigate_page` | 将浏览器导航到 URL |
+        | `click` | 点击元素 |
+        | `type_text` | 在输入元素中输入文本 |
+        | `fill` | 填充输入字段 |
+        | `fill_form` | 一次填充多个表单字段 |
+        | `press_key` | 按下键盘按键 |
+        | `hover` | 悬停在元素上 |
+        | `drag` | 将元素拖到目标位置 |
+        | `select_page` | 切换到指定浏览器标签页 |
+        | `new_page` | 打开新标签页 |
+        | `close_page` | 关闭标签页 |
+        | `list_pages` | 列出所有打开的标签页 |
+        | `take_screenshot` | 截取当前页面截图 |
+        | `take_snapshot` | 获取当前页面 DOM 快照 |
+        | `evaluate_script` | 在浏览器中执行 JavaScript |
         | `wait_for` | 等待元素达到特定状态 |
-        | `go_back` | 在浏览器历史中后退 |
-        | `go_forward` | 在浏览器历史中前进 |
-        | `set_viewport` | 设置浏览器视口大小 |
-        | `get_console_logs` | 获取浏览器控制台日志 |
-        | `pdf` | 生成当前页面的 PDF |
-        | `get_cookies` | 获取浏览器 cookies |
-        | `set_cookies` | 设置浏览器 cookies |
-        | `clear_cookies` | 清除所有浏览器 cookies |
+        | `resize_page` | 调整浏览器视口大小 |
+        | `emulate` | 模拟设备（手机、平板等）|
+        | `upload_file` | 上传文件到文件输入框 |
+        | `handle_dialog` | 接受或关闭浏览器对话框 |
+        | `get_console_message` | 获取特定控制台日志 |
+        | `list_console_messages` | 列出所有控制台日志 |
+        | `get_network_request` | 获取网络请求详情 |
+        | `list_network_requests` | 列出所有网络请求 |
+        | `take_heapsnapshot` | 获取堆快照用于内存分析 |
+        | `lighthouse_audit` | 运行 Lighthouse 性能审计 |
+        | `performance_start_trace` | 开始性能追踪 |
+        | `performance_stop_trace` | 停止并获取性能追踪 |
+        | `performance_analyze_insight` | 分析性能洞察 |
 
 x-compose-app:
   schema_version: 2
@@ -330,5 +367,16 @@ x-compose-app:
     - path: /DATA/AppData/browsermcp/oauth
       user: $PUID
       group: $PGID
+  init:
+    - name: default-config
+      image: alpine:3.20
+      phase: pre_up
+      command:
+        - sh
+        - -c
+        - '[ -f /data/config.json ] || printf ''{"browser":{"autoLaunch":true},"hostname":"browsermcp-backend"}\n'' > /data/config.json; grep -q ''"autoLaunch"'' /data/config.json || sed -i ''s/"browser":{/"browser":{"autoLaunch":true,/'' /data/config.json; sed -i ''s/"autoLaunch":false/"autoLaunch":true/'' /data/config.json'
+      volumes:
+        - ${DATA_ROOT:-/DATA}/AppData/browsermcp/data:/data
+      when: always
   webui-host: browsermcp-${domain}
   webui-path: "/"
