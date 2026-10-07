@@ -677,14 +677,31 @@ keeps mirroring the route it was cloned from.
 
 ```yaml
 x-compose-app:
-  view: system        # apps (default) | system | hidden
+  view: system        # apps (default) | system | service
 ```
 
-`view: system` also **protects** the app — Maison refuses Stop and Uninstall (Restart
-and Start stay available, so a wedged platform app is still recoverable without SSH)
-and skips it in scheduled backups. It is a foot-gun guard, not a security boundary:
-the app declares it about itself. Reserve it for platform pieces; ordinary apps
-should leave `view` alone.
+`view` is a category and nothing else: it moves the tile, it does not change what
+Maison will do to the app. An app with no web UI lands in `service` on its own.
+Reserve `system` for platform pieces; ordinary apps should leave `view` alone.
+
+##### `lifecycle` — whether the app can be stopped or uninstalled
+
+```yaml
+x-compose-app:
+  lifecycle:
+    stoppable: false      # default true
+    uninstallable: false  # default true
+```
+
+`stoppable: false` makes Maison refuse Stop, update the app without stopping it, and
+leave it out of "Update all". `uninstallable: false` makes it refuse Uninstall. Restart
+and Start stay available, so a wedged app is still recoverable without SSH. It is a
+foot-gun guard, not a security boundary: the app declares it about itself. **A store
+app needs a `rationale.md` entry to set either key** — an app the user cannot remove
+is a review question, not a default.
+
+Whether the app is backed up is its own key, `backup.skip` (see Maison's
+`docs/x-compose-app.md`).
 
 ##### Keys Maison writes itself
 
