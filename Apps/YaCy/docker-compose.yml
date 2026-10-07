@@ -1,0 +1,316 @@
+name: yacy
+
+services:
+  yacy:
+    # 1.942 (the upstream `latest` build of 2026-09-23); upstream publishes no
+    # version tags for current builds, so the multi-arch index is pinned by digest.
+    image: yacy/yacy_search_server@sha256:55c5e5dd928f312cf47a57afa8d645df37366f15678e0983c8b7fdbe3b5f6475
+    container_name: yacy
+    user: $PUID:$PGID
+    restart: unless-stopped
+    labels:
+      caddy_0: yacy-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8090}}"
+      caddy_1: yacy-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8090}}"
+      caddy_2: yacy-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8090}}"
+    networks:
+      - pcs
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    cpu_shares: 70
+    expose:
+      - 8090
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/yacy/data:/opt/yacy_search_server/DATA
+    healthcheck:
+      # The image ships wget, not curl.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8090/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  main: yacy
+  webui_port: 8090
+  index: /
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/icon.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-1.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-2.png
+    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-3.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-1.png
+
+
+  architectures:
+    - amd64
+    - arm64
+  author: Yundera Team
+  category: Utilities
+  description:
+    en_us: |
+      **Your own private search engine**
+
+      YaCy is a decentralized, peer-to-peer search engine that you can run on your own server. Unlike Google or Bing, YaCy doesn't track you or store your searches. You control your own search index and privacy.
+
+      **What you can do:**
+      - Run your own web search engine with complete privacy
+      - Crawl and index any websites you want
+      - Join the global YaCy network to search across all peers
+      - Create an intranet search for your organization
+      - Search your local files and documents
+
+      **Three ways to use YaCy:**
+      - **P2P Mode**: Join the global network and search the decentralized index
+      - **Portal Mode**: Create your own independent search portal
+      - **Intranet Mode**: Private search for your organization or home network
+
+      **Perfect if you:** Value privacy, want control over your search results, need to index specific websites, or want to search without being tracked.
+    fr_fr: |
+      **Votre propre moteur de recherche prive**
+
+      YaCy est un moteur de recherche decentralise et pair-a-pair que vous pouvez executer sur votre propre serveur. Contrairement a Google ou Bing, YaCy ne vous suit pas et ne stocke pas vos recherches. Vous controlez votre propre index de recherche et votre vie privee.
+
+      **Ce que vous pouvez faire:**
+      - Executer votre propre moteur de recherche web avec une confidentialite complete
+      - Explorer et indexer tous les sites web que vous souhaitez
+      - Rejoindre le reseau mondial YaCy pour rechercher sur tous les pairs
+      - Creer une recherche intranet pour votre organisation
+      - Rechercher vos fichiers et documents locaux
+
+      **Trois facons d'utiliser YaCy:**
+      - **Mode P2P**: Rejoignez le reseau mondial et recherchez dans l'index decentralise
+      - **Mode Portail**: Creez votre propre portail de recherche independant
+      - **Mode Intranet**: Recherche privee pour votre organisation ou reseau domestique
+
+      **Parfait si vous:** Valorisez la vie privee, voulez controler vos resultats de recherche, devez indexer des sites specifiques, ou voulez rechercher sans etre suivi.
+    de_de: |
+      **Ihre eigene private Suchmaschine**
+
+      YaCy ist eine dezentrale Peer-to-Peer-Suchmaschine, die Sie auf Ihrem eigenen Server betreiben koennen. Im Gegensatz zu Google oder Bing verfolgt YaCy Sie nicht und speichert Ihre Suchen nicht. Sie kontrollieren Ihren eigenen Suchindex und Ihre Privatsphaere.
+
+      **Was Sie tun koennen:**
+      - Betreiben Sie Ihre eigene Websuchmaschine mit vollstaendiger Privatsphaere
+      - Durchsuchen und indexieren Sie beliebige Websites
+      - Treten Sie dem globalen YaCy-Netzwerk bei, um ueber alle Peers zu suchen
+      - Erstellen Sie eine Intranet-Suche fuer Ihre Organisation
+      - Durchsuchen Sie Ihre lokalen Dateien und Dokumente
+
+      **Drei Moeglichkeiten, YaCy zu nutzen:**
+      - **P2P-Modus**: Treten Sie dem globalen Netzwerk bei und durchsuchen Sie den dezentralen Index
+      - **Portal-Modus**: Erstellen Sie Ihr eigenes unabhaengiges Suchportal
+      - **Intranet-Modus**: Private Suche fuer Ihre Organisation oder Ihr Heimnetzwerk
+
+      **Perfekt, wenn Sie:** Privatsphaere schaetzen, Kontrolle ueber Ihre Suchergebnisse wuenschen, bestimmte Websites indexieren muessen oder suchen moechten, ohne verfolgt zu werden.
+    es_es: |
+      **Tu propio motor de busqueda privado**
+
+      YaCy es un motor de busqueda descentralizado y peer-to-peer que puedes ejecutar en tu propio servidor. A diferencia de Google o Bing, YaCy no te rastrea ni almacena tus busquedas. Tu controlas tu propio indice de busqueda y privacidad.
+
+      **Lo que puedes hacer:**
+      - Ejecutar tu propio motor de busqueda web con privacidad completa
+      - Rastrear e indexar cualquier sitio web que desees
+      - Unirte a la red global YaCy para buscar en todos los peers
+      - Crear una busqueda de intranet para tu organizacion
+      - Buscar tus archivos y documentos locales
+
+      **Tres formas de usar YaCy:**
+      - **Modo P2P**: Unete a la red global y busca en el indice descentralizado
+      - **Modo Portal**: Crea tu propio portal de busqueda independiente
+      - **Modo Intranet**: Busqueda privada para tu organizacion o red domestica
+
+      **Perfecto si:** Valoras la privacidad, quieres control sobre tus resultados de busqueda, necesitas indexar sitios web especificos, o quieres buscar sin ser rastreado.
+    zh_cn: |
+      **您自己的私人搜索引擎**
+
+      YaCy是一个去中心化的点对点搜索引擎，您可以在自己的服务器上运行。与Google或Bing不同，YaCy不会跟踪您或存储您的搜索。您可以控制自己的搜索索引和隐私。
+
+      **您可以做的事:**
+      - 运行您自己的网络搜索引擎，完全保护隐私
+      - 抓取和索引您想要的任何网站
+      - 加入全球YaCy网络，在所有节点之间搜索
+      - 为您的组织创建内网搜索
+      - 搜索您的本地文件和文档
+
+      **使用YaCy的三种方式:**
+      - **P2P模式**: 加入全球网络并搜索去中心化索引
+      - **门户模式**: 创建您自己独立的搜索门户
+      - **内网模式**: 为您的组织或家庭网络提供私人搜索
+
+      **非常适合:** 重视隐私、希望控制搜索结果、需要索引特定网站或希望在不被跟踪的情况下搜索的人。
+    ko_kr: |
+      **나만의 개인 검색 엔진**
+
+      YaCy는 자체 서버에서 실행할 수 있는 분산형 P2P 검색 엔진입니다. Google이나 Bing과 달리 YaCy는 사용자를 추적하거나 검색을 저장하지 않습니다. 자신의 검색 인덱스와 개인 정보를 직접 관리합니다.
+
+      **할 수 있는 것:**
+      - 완전한 프라이버시로 자체 웹 검색 엔진 운영
+      - 원하는 모든 웹사이트 크롤링 및 인덱싱
+      - 글로벌 YaCy 네트워크에 참여하여 모든 피어에서 검색
+      - 조직을 위한 인트라넷 검색 생성
+      - 로컬 파일 및 문서 검색
+
+      **YaCy를 사용하는 세 가지 방법:**
+      - **P2P 모드**: 글로벌 네트워크에 참여하고 분산 인덱스 검색
+      - **포털 모드**: 독립적인 검색 포털 생성
+      - **인트라넷 모드**: 조직 또는 홈 네트워크를 위한 비공개 검색
+
+      **이런 분께 완벽해요:** 프라이버시를 중시하고, 검색 결과를 직접 제어하고 싶거나, 특정 웹사이트를 인덱싱해야 하거나, 추적 없이 검색하고 싶은 분들.
+  developer: YaCy Community
+  tagline:
+    en_us: Decentralized peer-to-peer search engine for complete privacy
+    fr_fr: Moteur de recherche pair-a-pair decentralise pour une confidentialite complete
+    de_de: Dezentrale Peer-to-Peer-Suchmaschine fuer vollstaendige Privatsphaere
+    es_es: Motor de busqueda peer-to-peer descentralizado para privacidad completa
+    zh_cn: 去中心化点对点搜索引擎，完全保护隐私
+    ko_kr: 완전한 프라이버시를 위한 분산형 P2P 검색 엔진
+  title:
+    en_us: YaCy
+  tips:
+    before_install:
+      en_us: |
+        **Default Admin Access**
+
+        | Setting | Value |
+        |---------|-------|
+        | Admin Panel | [Admin Panel](https://yacy-$APP_DOMAIN/) |
+        | Username | `admin` |
+        | Password | `$APP_DEFAULT_PASSWORD` |
+
+        **How to use:**
+        1. Visit the admin interface and log in
+        2. Choose your use case (P2P Network, Portal, or Intranet)
+        3. Start a web crawl to build your search index
+        4. Use the search interface to find indexed content
+
+        **Use Cases:**
+        - **Freeworld (P2P)**: Join the global network for web-wide search
+        - **Portal**: Run your own independent search portal
+        - **Intranet**: Private search for internal documents
+
+        **Understanding Crawling & P2P:**
+        - **Searching**: Works immediately - query the global index built by other peers
+        - **Crawling**: Tell YaCy to download and index websites (Admin > Crawler). This builds YOUR local index
+        - **Junior peer** (default): You search the network but don't share your index
+        - **Senior peer**: You share your crawled content with other peers
+
+        **Peer status:** this app does not publish port 8090 to the internet, so YaCy runs as a junior peer: it searches the network and builds your own index, but other peers cannot connect in to fetch it.
+
+        **Public search page:** the search page at `https://yacy-$APP_DOMAIN/` is open to anyone with the link, like any public search portal. The admin pages (crawler, settings) require the login above.
+      fr_fr: |
+        **Acces Admin par Defaut**
+
+        | Parametre | Valeur |
+        |-----------|--------|
+        | Panneau Admin | [Panneau Admin](https://yacy-$APP_DOMAIN/) |
+        | Nom d'utilisateur | `admin` |
+        | Mot de passe | `$APP_DEFAULT_PASSWORD` |
+
+        **Comment utiliser:**
+        1. Visitez l'interface d'administration et connectez-vous
+        2. Choisissez votre cas d'utilisation (Reseau P2P, Portail ou Intranet)
+        3. Lancez un crawl web pour construire votre index de recherche
+        4. Utilisez l'interface de recherche pour trouver le contenu indexe
+
+        **Astuce:** Commencez par un petit crawl de vos sites web preferes pour voir comment fonctionne l'indexation!
+      de_de: |
+        **Standard-Admin-Zugang**
+
+        | Einstellung | Wert |
+        |-------------|------|
+        | Admin-Panel | [Admin-Panel](https://yacy-$APP_DOMAIN/) |
+        | Benutzername | `admin` |
+        | Passwort | `$APP_DEFAULT_PASSWORD` |
+
+        **Verwendung:**
+        1. Besuchen Sie die Admin-Oberflaeche und melden Sie sich an
+        2. Waehlen Sie Ihren Anwendungsfall (P2P-Netzwerk, Portal oder Intranet)
+        3. Starten Sie einen Web-Crawl, um Ihren Suchindex aufzubauen
+        4. Verwenden Sie die Suchoberflaeche, um indexierte Inhalte zu finden
+
+        **Tipp:** Beginnen Sie mit einem kleinen Crawl Ihrer Lieblingswebsites, um zu sehen, wie die Indexierung funktioniert!
+      es_es: |
+        **Acceso Admin por Defecto**
+
+        | Configuracion | Valor |
+        |---------------|-------|
+        | Panel Admin | [Panel Admin](https://yacy-$APP_DOMAIN/) |
+        | Usuario | `admin` |
+        | Contrasena | `$APP_DEFAULT_PASSWORD` |
+
+        **Como usar:**
+        1. Visita la interfaz de administracion e inicia sesion
+        2. Elige tu caso de uso (Red P2P, Portal o Intranet)
+        3. Inicia un rastreo web para construir tu indice de busqueda
+        4. Usa la interfaz de busqueda para encontrar contenido indexado
+
+        **Consejo:** Comienza con un pequeno rastreo de tus sitios web favoritos para ver como funciona la indexacion!
+      zh_cn: |
+        **默认管理员访问**
+
+        | 设置 | 值 |
+        |------|-----|
+        | 管理面板 | [管理面板](https://yacy-$APP_DOMAIN/) |
+        | 用户名 | `admin` |
+        | 密码 | `$APP_DEFAULT_PASSWORD` |
+
+        **使用方法:**
+        1. 访问管理界面并登录
+        2. 选择您的用例（P2P网络、门户或内网）
+        3. 启动网络抓取以构建搜索索引
+        4. 使用搜索界面查找索引内容
+
+        **提示:** 从您喜欢的网站开始小规模抓取，看看索引是如何工作的!
+      ko_kr: |
+        **기본 관리자 접근**
+
+        | 설정 | 값 |
+        |------|-----|
+        | 관리자 패널 | [관리자 패널](https://yacy-$APP_DOMAIN/) |
+        | 사용자명 | `admin` |
+        | 비밀번호 | `$APP_DEFAULT_PASSWORD` |
+
+        **사용 방법:**
+        1. 관리자 인터페이스를 방문하고 로그인
+        2. 사용 사례 선택 (P2P 네트워크, 포털 또는 인트라넷)
+        3. 검색 인덱스를 구축하기 위해 웹 크롤링 시작
+        4. 검색 인터페이스를 사용하여 인덱싱된 콘텐츠 찾기
+
+        **팁:** 인덱싱이 어떻게 작동하는지 보려면 좋아하는 웹사이트를 작은 규모로 크롤링하는 것부터 시작하세요!
+
+x-compose-app:
+  schema_version: 2
+  folders:
+    - /DATA/AppData/$AppID/data
+    - /DATA/AppData/$AppID/data/SETTINGS
+  init:
+    # YaCy stores the admin password as MD5("admin:<adminRealm>:<password>").
+    # The seeded yacy.conf pins adminRealm=YaCy; this computes the matching hash
+    # for that template. Only needed while the file does not exist yet — seed/
+    # never overwrites it, so a password changed in the admin UI survives.
+    - name: admin-hash
+      image: busybox:1.37.0
+      when: absent:/DATA/AppData/$AppID/data/SETTINGS/yacy.conf
+      environment:
+        YACY_PW: ${APP_DEFAULT_PASSWORD}
+      entrypoint:
+        - /bin/sh
+      command:
+        - -c
+        - printf 'admin:YaCy:%s' "$$YACY_PW" | md5sum | cut -d' ' -f1
+      capture: YACY_ADMIN_HASH

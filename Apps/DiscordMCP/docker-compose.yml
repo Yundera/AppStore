@@ -1,0 +1,226 @@
+name: discordmcp
+services:
+  # Main MCP server — reachable at discordmcp-backend:9640 on the pcs network.
+  # Serves the web UI (/), its API (/api) and the MCP endpoint (/mcp), and
+  # answers Beacon's UDP discovery on port 9099. Talks to Discord over an
+  # outbound gateway connection only — no inbound callback path is needed.
+  discordmcp-backend:
+    image: ghcr.io/bookjjun-ij/discordmcp:1.0.0
+    container_name: discordmcp-backend
+    hostname: discordmcp-backend
+    user: $PUID:$PGID
+    restart: unless-stopped
+    expose:
+      - 9640
+      - 9099
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - PORT=9640
+      - DISCOVERY_PORT=9099
+    volumes:
+      # config.json (bot token, default guild/channel) is created here on first
+      # save — CONFIG_PATH=/app/data/config.json is baked into the image.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/AppData/discordmcp/
+        target: /app/data
+    networks:
+      - pcs
+    # 80 — user-facing API backend + Web UI (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 80
+
+  # AppShield provides perimeter authentication: the SSO (OIDC) gate for the
+  # Web UI, and the OAuth 2.1 broker for /mcp (machine clients). No path is
+  # exempt from both.
+  discordmcp-proxy:
+    image: ghcr.io/yundera/appshield:3.0.2
+    container_name: discordmcp
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: discordmcp
+    restart: unless-stopped
+    # 80 — reverse proxy in front of a user-facing app (CONTRIBUTING
+    # "CPU Share Allocation").
+    cpu_shares: 80
+    expose:
+      - 80
+    user: "0:0"   # numeric: scratch image has no passwd; /data/oauth is chowned $PUID
+    environment:
+      BACKEND_HOST: discordmcp-backend
+      BACKEND_PORT: "9640"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      # Machine/API auth for the MCP endpoint: AppShield gates exactly /mcp on
+      # Bearer tokens; everything else stays behind the SSO gate.
+      OAUTH_RESOURCE: "https://discordmcp-${APP_DOMAIN}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/discordmcp/oauth/:/data/oauth
+    depends_on:
+      - discordmcp-backend
+    networks:
+      - pcs
+    labels:
+      caddy_0: discordmcp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: discordmcp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: discordmcp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # point at and the one users actually reach.
+  main: discordmcp-proxy
+  hostname: discordmcp-${APP_DOMAIN}
+  scheme: https
+  port_map: "443"
+  index: /
+  category: Chat
+  tags: ["developer", "ai"]
+  description:
+    en_us: |
+      **Let your AI talk to Discord — send messages, embeds, and more via MCP**
+
+      Discord MCP connects your AI assistant to [Discord](https://discord.com) through the Model Context Protocol. Once installed, Beacon discovers it automatically and your AI gains the ability to post messages and rich embeds to any Discord channel your bot can reach.
+
+      Wraps the [`BookJJun-IJ/DiscordMCP`](https://github.com/BookJJun-IJ/DiscordMCP) server (built on discord.js) with a streamable-HTTP transport so any MCP-compatible client can connect (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus a Web UI for entering the bot token.
+
+      **What you can do:**
+      - Send text messages to Discord channels from any MCP-compatible AI
+      - Post rich embeds with titles, descriptions, fields, and colors
+      - List all text channels in your Discord server
+      - Configure everything through a simple web dashboard
+      - Zero-config Beacon discovery — just install and it works
+
+      **Perfect if you:** Want Claude / Cursor / any MCP client to post alerts, summaries or results to a Discord server — and pair it with other MCP apps (Beacon, n8n, Chronos) for end-to-end AI workflows.
+    fr_fr: |
+      **Laissez votre IA parler a Discord — envoyez messages, embeds et plus via MCP**
+
+      Discord MCP connecte votre assistant IA a [Discord](https://discord.com) via le Model Context Protocol. Une fois installe, Beacon le decouvre automatiquement et votre IA peut publier des messages et des embeds riches dans n'importe quel salon Discord accessible a votre bot.
+
+      Enveloppe le serveur [`BookJJun-IJ/DiscordMCP`](https://github.com/BookJJun-IJ/DiscordMCP) (base sur discord.js) avec un transport streamable-HTTP pour que tout client compatible MCP puisse se connecter (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus une interface Web pour saisir le token du bot.
+
+      **Ce que vous pouvez faire:**
+      - Envoyer des messages texte dans des salons Discord depuis toute IA compatible MCP
+      - Publier des embeds riches avec titres, descriptions, champs et couleurs
+      - Lister tous les salons texte de votre serveur Discord
+      - Tout configurer depuis un tableau de bord Web simple
+      - Decouverte Beacon sans configuration — installez et c'est pret
+  developer: BookJJun-IJ
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  tagline:
+    en_us: Let your AI send messages to Discord via MCP
+    fr_fr: Laissez votre IA envoyer des messages sur Discord via MCP
+  thumbnail: thumbnail.png
+  title:
+    en_us: Discord MCP
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: |
+        **Getting Started**
+
+        Discord MCP needs a Discord bot token. You set it in the app's Web UI after install.
+
+        **Prerequisites:**
+        1. Create an application at https://discord.com/developers/applications and add a **Bot** to it
+        2. Copy the **bot token**
+        3. Invite the bot to your Discord server with the "Send Messages" (and "Embed Links") permission
+
+        **Setup:**
+        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server)
+        2. Paste your **bot token** (optionally a default guild and channel ID) and click **Save & Restart**
+
+        **MCP Integration (for AI/LLMs):**
+
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your server account (single sign-on).
+        ```json
+        {
+          "mcpServers": {
+            "discord": {
+              "type": "http",
+              "url": "https://discordmcp-${APP_DOMAIN}/mcp"
+            }
+          }
+        }
+        ```
+
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), open **https://discordmcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "discord": {
+              "type": "http",
+              "url": "http://discordmcp-backend:9640/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network. The Web UI
+        shows `http://discordmcp:9640/mcp` (hard-coded upstream) — use
+        `discordmcp-backend` instead.*
+
+        **Option 3: Via Beacon (aggregated)**
+
+        If you have **Beacon** installed, Discord MCP auto-registers there via its built-in UDP discovery — no extra config.
+
+        **Available MCP Tools:**
+        | Tool | Description |
+        |------|-------------|
+        | `send_message` | Send a text message to a Discord channel |
+        | `send_embed` | Send a rich embed message to a Discord channel |
+        | `list_channels` | List all text channels in a Discord server |
+        | `echo` | Echo a message back (test tool) |
+
+        **Security:**
+        - The bot token is stored only in `/DATA/AppData/discordmcp/config.json` on this server
+        - The Web UI is protected by the server's single sign-on
+        - `/mcp` is gated separately on OAuth 2.1 Bearer tokens. Only the in-network address
+          `http://discordmcp-backend:9640/mcp` (Option 2) is unauthenticated, and it is not
+          published outside the `pcs` Docker network
+
+x-compose-app:
+  schema_version: 2
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  folders:
+    - path: /DATA/AppData/discordmcp
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/discordmcp/oauth
+      user: $PUID
+      group: $PGID
+  webui-host: discordmcp-${domain}
+  webui-path: "/"

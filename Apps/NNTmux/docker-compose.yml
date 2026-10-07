@@ -1,0 +1,691 @@
+name: nntmux
+
+# =============================================================================
+# NNTmux — a self-hosted Usenet indexer (newznab-tmux fork, `pyrowman/nntmux`).
+#
+# Scans Usenet headers with YOUR provider account, collates them into releases
+# and writes an .nzb per release, then serves them like any Newznab indexer:
+# a web UI (its own login) and the Newznab API at `/api/v1/api` + `/getnzb`.
+#
+# First run: everything is set from the app settings (Maison: App settings >
+# Env) — NNTP_* for your provider, NNTMUX_* for what to scan — and applied by
+# the scanner on its own; `docker exec nntmux-scanner nntmux-setup status` says
+# what is still missing. Newznab clients (Prowlarr, Sonarr…) get an API key from
+# `nntmux-setup api-user <name>`.
+#
+# Layout: the web container `nntmux` is the only one on `pcs` and the only one
+# with a Caddy route; MariaDB, Redis, Manticore and the scanner sit on the
+# private `nntmux-internal` network. Data lives under /DATA/AppData/nntmux/;
+# the scanner's scripts (scanner.sh, nntmux-setup) ship in this app's seed/
+# folder and are refreshed on every start and update.
+#
+# amd64 ONLY — `pyrowman/nntmux` ships no arm64 build.
+#
+# ⚠ Four silent-failure traps in the `pyrowman/nntmux` image, empirically
+# verified (see the meta-gateway dev compose header for the full writeup):
+#   1. `PATH_TO_NZBS` (and every other storage path var) must be ABSENT from
+#      the env, never present-but-blank — that reads as an explicit empty
+#      string, not "unset", and nntmux aborts NZB writing with 0 releases and
+#      no visible error. This compose bind-mounts a COMPLETE, hand-filled
+#      `.env` (below) rather than relying on individual `environment:` keys,
+#      for exactly this reason.
+#   2. `DB_CONNECTION` must be `mariadb`, not `mysql` — the install migration
+#      loads its schema file by connection name; `mysql` finds no matching
+#      schema and fails partway through a from-scratch migration.
+#   3. Manticore is a HARD first-boot dependency (unless
+#      `ELASTICSEARCH_ENABLED=true`, which just swaps it for a heavier one) —
+#      `nntmux-manticore` below is not optional.
+#   4. Seeded usenet groups default to `active=0, backfill=0` — scanning an
+#      inactive group silently does nothing. See the tips below for the SQL
+#      to activate one.
+# One FIRST-BOOT-ONLY loud bug: the entrypoint runs `config:cache` before
+# `key:generate`, so every session route 500s until you run
+# `docker exec nntmux php artisan config:clear` once (and again after ANY edit
+# of nntmux.env — the cached config keeps the old values). See tips.
+#
+# ⚠ Four more, found the hard way on a live box (2026-07-26) after this stack
+# came up with SEVEN healthy containers and returned ZERO results for every
+# query — the feeder answering `"Done"` and nothing else. None of them logs
+# anything; each one alone is enough to keep the catalog empty forever.
+#
+#   5. NEVER set a key in `nntmux.env` unless the value must DIFFER from the
+#      PHP default. `config/nntmux.php` does
+#      `env('NN_MULTIPROCESSING_MAX_CHILD_TIME', 1800)` and Laravel's `env()`
+#      returns STRINGS, so restating the default in the .env handed
+#      `Pool::timeout(float)` a `string("1800")` → TypeError → every Forking
+#      multiprocessing runner died on start. Those runners are exactly what a
+#      scan needs. This is trap #1's type-flavoured twin: a redundant
+#      restatement is not a no-op, it silently changes the value's TYPE. The
+#      key is therefore deliberately ABSENT from the seeded .env below (see the
+#      comment there); with it absent, `gettype()` reports `integer` and the
+#      runners execute. Same rule applies to any other key you are tempted to
+#      "document" by writing its default into the file.
+#      (Upstream record: meta-gateway `dev/docker-compose.feeder-usenet.yml`,
+#      the "CORRECTION (2026-07-26)" block.)
+#   6. The image runs `frankenphp` and NOTHING ELSE — no cron, no supervisord,
+#      no queue worker. nntmux's own `settings.running=1` therefore starts
+#      nothing: there is no process to read it. Even with valid NNTP creds and
+#      active groups the catalog stays empty permanently. That is why
+#      `nntmux-scanner` below exists — it is the missing loop, run as
+#      a SECOND container off the same image so the web container's
+#      install/populate entrypoint stays untouched.
+#   7. The nntmux entrypoint RE-SEEDS `settings` and `usenet_groups` on EVERY
+#      container boot. Configuration applied before a restart silently reverts
+#      (observed: `running`→0, `delaytime`→2, every group→`active=0`). Apply
+#      group activation and scheduler settings AFTER the final restart, and
+#      re-check them after any `docker restart` / stack update.
+#   8. `settings.delaytime` (HOURS, default 2) stalls a backfilled catalog:
+#      `ProcessReleases` refuses to advance a collection until it has aged past
+#      it. That is correct for live tailing (a posting may still be uploading)
+#      and pointless for backfill, where every article is already days old —
+#      and the symptom, collections climbing while releases flatline, is
+#      indistinguishable from a broken pipeline because nothing logs an error.
+#      Because trap #7 re-seeds it back to 2 on every restart, the scanner
+#      loop below ASSERTS `delaytime=0` on each pass **while `backfill=1`** —
+#      the one setting it writes, making the tier self-healing across
+#      restarts. It is scoped to the backfill phase on purpose: with
+#      `backfill=0` (pure forward tailing) the operator's own value stands.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # nntmux-db — MariaDB backing nntmux's release catalog. Private to this app
+  # (`nntmux-internal` only): clients use nntmux's Newznab API, never the DB.
+  # ---------------------------------------------------------------------------
+  nntmux-db:
+    image: mariadb:12.3
+    cpu_shares: 70
+    container_name: nntmux-db
+    hostname: nntmux-db
+    restart: unless-stopped
+    # Room for a clean shutdown (InnoDB flushes its buffer pool on stop).
+    stop_grace_period: 2m
+    # tc.log guard. MariaDB keeps an mmap'ed XA coordinator log (tc.log) while
+    # it runs; a CLEAN shutdown overwrites its first byte with 'A' and then
+    # unlinks it. When the unlink doesn't land (observed on every recreate
+    # driven by the app manager's up, never on a plain `docker compose up`),
+    # the next start finds the file, tries crash recovery on it and aborts with
+    # "Bad magic header in tc log" — forever, the container just crash-loops.
+    # A leading 'A' proves close() completed, so no XA transaction is in doubt
+    # and the file is safe to drop. Any other header (a real crash) is left for
+    # MariaDB's own recovery.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        f=/var/lib/mysql/tc.log
+        if [ -f "$$f" ] && [ "$$(head -c1 "$$f")" = A ]; then
+          echo "tc.log carries the clean-shutdown marker; removing the leftover"
+          rm -f "$$f"
+        fi
+        exec docker-entrypoint.sh "$$@"
+      - --
+    command: ["mariadbd"]
+    # 2g, not the 512m this shipped with: 512m is fine for an empty schema and
+    # far too small once the catalog is real. A header scan of a busy binary
+    # group builds `collections`/`binaries`/`parts` tables in the tens of
+    # millions of rows, and InnoDB starved of buffer pool turns collation into
+    # a disk-thrash that never catches up. Measured on a live box.
+    mem_limit: 2g
+    memswap_limit: 2g
+    environment:
+      MARIADB_DATABASE: nntmux
+      MARIADB_USER: nntmux
+      MARIADB_PASSWORD: "$APP_DEFAULT_PASSWORD"
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - nntmux-internal
+
+  # ---------------------------------------------------------------------------
+  # nntmux-redis — nntmux's OWN Redis. Deliberately separate from the
+  # gateway core's Redis (different failure domain; losing this one is free).
+  # ---------------------------------------------------------------------------
+  nntmux-redis:
+    image: redis:7-alpine
+    cpu_shares: 70
+    container_name: nntmux-redis
+    hostname: nntmux-redis
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
+    networks:
+      - nntmux-internal
+
+  # ---------------------------------------------------------------------------
+  # nntmux-manticore — RT-index search backend. NOT optional (trap #3 above) —
+  # a hard first-boot dependency of nntmux's own entrypoint, and what serves
+  # the API's `t=search&q=…`. No volume: the entrypoint repopulates it on boot.
+  # Digest-pinned (upstream reuses low-looking version numbers across an old
+  # semver line and a newer CalVer-ish one; the digest is unambiguous).
+  # ---------------------------------------------------------------------------
+  nntmux-manticore:
+    image: manticoresearch/manticore@sha256:032388dc77321e3ac898a14b9a0c3fc22ab8d08cd2582abd6c5b642d46b82181
+    cpu_shares: 50
+    container_name: nntmux-manticore
+    hostname: nntmux-manticore
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    ulimits:
+      nofile: { soft: 65535, hard: 65535 }
+    networks:
+      - nntmux-internal
+
+  # ---------------------------------------------------------------------------
+  # nntmux — the web UI + Newznab API. Exposed DIRECTLY via Caddy (no AppShield
+  # gate): nntmux ships its own admin login (ADMIN_USER/ADMIN_PASS, seeded
+  # below), the convention this store uses for every app that brings its own
+  # auth. Also on `pcs` as `http://nntmux` — where Newznab clients on the box
+  # (Prowlarr, Sonarr, …) reach `/api/v1/api` and `/getnzb`.
+  # ---------------------------------------------------------------------------
+  nntmux:
+    # Digest-pinned, NOT :latest — a silent tag move could change the
+    # `misc/update/*.php` command surface the "collate via tinker" tip below
+    # depends on. Re-pin deliberately, re-verify the trap list above when you do.
+    image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
+    cpu_shares: 50
+    container_name: nntmux
+    hostname: nntmux
+    restart: unless-stopped
+    stop_grace_period: 30s
+    # The working set scales with scan breadth (group set x backfill depth), an
+    # operator choice (see tips), so this is a ceiling rather than a size: 3g
+    # is what a real corpus needed on a live box — 1536m was reached and
+    # exceeded by a single busy group's header scan. Raise it if you scan wide.
+    mem_limit: 3g
+    memswap_limit: 3g
+    environment:
+      # Shell-script-consumed vars — the entrypoint's own `mkdir -p` step reads
+      # these from the PROCESS environment, not the mounted .env. Keep in
+      # lockstep with the matching keys in nntmux.env below.
+      PATH_TO_NZBS: /app/storage/nzb/
+      COVERS_PATH: /app/storage/covers
+      TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
+      TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
+      ELASTICSEARCH_ENABLED: "false"
+      # Behind the box's Caddy (which terminates TLS) Laravel sees plain http and
+      # trusts no proxy header (it only trusts Cloudflare's ranges), so every
+      # redirect it builds — the login one first — is `http://…`, which the
+      # gateway then bounces to an IP host with no valid certificate: the UI is
+      # unreachable. The prepend (configs: below, loaded through a conf.d ini —
+      # this FrankenPHP 1.3 ignores `php_ini` in FRANKENPHP_CONFIG) marks a
+      # request secure when it ARRIVED as https; internal clients on `pcs`
+      # (http://nntmux) are untouched.
+    volumes:
+      # The complete, hand-filled .env (trap #1) — a full-file mount rather
+      # than individual `environment:` keys. Writable: `nntmux:install`
+      # persists a generated APP_KEY back into it on first boot.
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/nntmux-env/nntmux.env:/app/.env:rw
+      # The .nzb store (nntmux writes; served to clients by `/getnzb`).
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/nntmux-storage/nzb:/app/storage/nzb:rw
+      # ⚠ LOAD-BEARING: the install lock. The entrypoint runs
+      # `nntmux:install --yes` — which DROPS ALL TABLES — whenever
+      # `_install/install.lock` is missing, and in the image that file lives in
+      # the container filesystem: every container RECREATE (image bump, compose
+      # change, `down`/`up`) would wipe the whole release catalog. Persisting the
+      # directory (it holds only `.gitignore` + `install.lock`) makes the first
+      # install the only one. Observed: a catalog wiped by a plain recreate.
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/install:/app/_install:rw
+    configs:
+      - source: forwarded-https
+        target: /etc/nntmux/forwarded-https.php
+      - source: forwarded-https-ini
+        target: /usr/local/etc/php/conf.d/zz-forwarded-https.ini
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "-o", "/dev/null", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    depends_on:
+      nntmux-db:
+        condition: service_healthy
+      nntmux-redis:
+        condition: service_started
+      nntmux-manticore:
+        condition: service_started
+    labels:
+      caddy_0: nntmux-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: nntmux-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: nntmux-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - nntmux-internal
+      - pcs
+
+  # ---------------------------------------------------------------------------
+  # nntmux-scanner — the SCAN LOOP (trap #6). The nntmux image runs
+  # frankenphp and nothing else, so without this container nothing ever calls
+  # the scan/backfill/collate entry points and the catalog stays empty forever,
+  # no matter how correct the credentials, the groups or `settings.running` are.
+  #
+  # It is a second container off the SAME digest-pinned image, sharing the same
+  # `/app/.env` and the same nzb store, rather than a second process inside the
+  # web container — the web container's entrypoint runs install/populate under
+  # `set -e` and must keep it; here it is REPLACED by `entrypoint:` below so
+  # that install/populate does NOT run twice against one database.
+  #
+  # Every knob (interval, binaries on/off, backfill on/off, backfill_qty,
+  # backfill_days, running) is read from nntmux's own `settings` table at
+  # /admin/tmux-edit — deliberately NOT from new env vars here, which would
+  # make two sources of truth for one number.
+  # ---------------------------------------------------------------------------
+  nntmux-scanner:
+    # MUST stay byte-identical to nntmux's pin above: the two
+    # containers share one `/app/.env` and one database schema, and the script
+    # below calls `misc/update/*.php` + `Blacklight\` classes by name.
+    image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
+    cpu_shares: 20
+    container_name: nntmux-scanner
+    hostname: nntmux-scanner
+    restart: unless-stopped
+    # Bypasses the image's own install/populate entrypoint on purpose — see the
+    # block comment above. Only the web container may run it.
+    entrypoint: ["/bin/sh", "/scanner.sh"]
+    # The image ships a HEALTHCHECK that curls its own web server. This
+    # container deliberately runs no web server — its entrypoint IS the scan
+    # loop — so the inherited probe can only ever fail. Observed live: a
+    # scanner actively backfilling and writing NZBs sitting at
+    # `Up 5 minutes (unhealthy)`.
+    #
+    # That is not cosmetic. A permanently-red container that is in fact working
+    # trains the operator to ignore health status, which is precisely how this
+    # stack's empty-catalog failure stayed invisible for so long — the feeder's
+    # own health() reporting `ok` over a zero-row catalog was the same bug from
+    # the other direction. Liveness for this container is its LOG
+    # (`docker logs -f nntmux-scanner`), not a probe; a probe that
+    # cannot be honest is worse than none.
+    healthcheck:
+      disable: true
+    # A backfill pass holds a group's article range in memory; 2g is the
+    # headroom measured alongside nntmux's own 3g on a live box.
+    mem_limit: 2g
+    memswap_limit: 2g
+    environment:
+      # Same shell-script-consumed vars as nntmux: the wrapper
+      # scripts read these from the PROCESS environment, not from the mounted
+      # .env (trap #1). Keep the two blocks in lockstep.
+      PATH_TO_NZBS: /app/storage/nzb/
+      COVERS_PATH: /app/storage/covers
+      TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
+      TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
+      ELASTICSEARCH_ENABLED: "false"
+      # The app settings (this app's .env, Maison > App settings > Env), for
+      # `nntmux-setup apply` before every pass. PREFIXED on purpose: nntmux's
+      # dotenv is immutable, so an EMPTY NNTP_SERVER in a process environment
+      # would override nntmux.env and blank the provider. Blank = not managed.
+      SETUP_NNTP_SERVER: "${NNTP_SERVER:-}"
+      SETUP_NNTP_PORT: "${NNTP_PORT:-}"
+      SETUP_NNTP_USERNAME: "${NNTP_USERNAME:-}"
+      SETUP_NNTP_PASSWORD: "${NNTP_PASSWORD:-}"
+      SETUP_NNTP_CONNECTIONS: "${NNTP_CONNECTIONS:-}"
+      SETUP_NNTP_SSLENABLED: "${NNTP_SSLENABLED:-}"
+      SETUP_NNTMUX_GROUPS: "${NNTMUX_GROUPS:-}"
+      SETUP_NNTMUX_SCAN: "${NNTMUX_SCAN:-}"
+      SETUP_NNTMUX_BACKFILL: "${NNTMUX_BACKFILL:-}"
+      SETUP_NNTMUX_BACKFILL_DAYS: "${NNTMUX_BACKFILL_DAYS:-}"
+      SETUP_NNTMUX_BACKFILL_QTY: "${NNTMUX_BACKFILL_QTY:-}"
+      SETUP_NNTMUX_MONITOR_DELAY: "${NNTMUX_MONITOR_DELAY:-}"
+      SETUP_NNTMUX_REGISTRATION: "${NNTMUX_REGISTRATION:-closed}"
+      SETUP_NNTMUX_MIN_RELEASE_MB: "${NNTMUX_MIN_RELEASE_MB:-20}"
+    volumes:
+      # The same .env the web container filled in — one credential set, one
+      # APP_KEY. Read-write only because Laravel's .env handling expects it.
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/nntmux-env/nntmux.env:/app/.env:rw
+      # nntmux writes .nzb.gz here (collation runs in this container).
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/nntmux-storage/nzb:/app/storage/nzb:rw
+      # The loop and the setup helper — this app's seed/scanner/, refreshed on
+      # every start (x-compose-app `files`).
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/scanner/scanner.sh:/scanner.sh:ro
+      - ${DATA_ROOT:-/DATA}/AppData/nntmux/scanner/nntmux-setup:/usr/local/bin/nntmux-setup:ro
+    depends_on:
+      # Not just `started`: the loop's very first action is an artisan call, so
+      # it must not race the web container's install/migrate step.
+      nntmux:
+        condition: service_healthy
+    networks:
+      - nntmux-internal
+
+configs:
+  # `$$` is compose's escape for a literal `$` (else it interpolates `$_SERVER`).
+  forwarded-https:
+    content: |
+      <?php
+      // Prepended to every request (auto_prepend_file, see forwarded-https-ini).
+      if (($$_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') {
+          $$_SERVER['HTTPS'] = 'on';
+      }
+  forwarded-https-ini:
+    content: |
+      ; zz- so it loads after the image's own conf.d files and wins.
+      auto_prepend_file = /etc/nntmux/forwarded-https.php
+
+networks:
+  nntmux-internal:
+    name: nntmux-internal
+    driver: bridge
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  main: nntmux
+  index: /
+  webui_port: 80
+  hostname: nntmux-${APP_DOMAIN}
+  scheme: https
+  port_map: "443"
+  store_app_id: nntmux
+  architectures:
+    - amd64
+  author: Yundera Team
+  category: Media
+  developer: NNTmux Project
+  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NNTmux/icon.png
+  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NNTmux/icon.png
+  title:
+    en_us: NNTmux
+  tagline:
+    en_us: Your own Usenet indexer — scan, collate and serve NZBs over the Newznab API
+    fr_fr: Votre propre indexeur Usenet — scan, collation et NZB via l'API Newznab
+  description:
+    en_us: |
+      **A self-hosted Usenet indexer.**
+
+      NNTmux scans the Usenet groups you choose with your own provider account,
+      collates the posted articles into releases and writes an NZB for each —
+      your own catalog, no third-party indexer, no indexer quota.
+
+      **Newznab API:** any Newznab client (Prowlarr, Sonarr, Radarr…) can search
+      it and download its NZBs — `http://nntmux` on the box, or
+      `https://nntmux-<your-domain>`. Each client gets its own API key.
+
+      **Set up from the app settings:** your provider and the groups to scan are
+      app settings (no file editing); the bundled scanner applies them and keeps
+      them applied.
+
+      **You need a Usenet provider account** (NNTP login) — this app scans
+      headers, it does not supply one. **The catalog is not instant:** a first
+      pass over a few busy binary groups pulls tens of GB and runs for hours.
+
+      **Includes:** MariaDB, Redis, Manticore and the scan loop. amd64 only.
+    fr_fr: |
+      **Un indexeur Usenet auto-hébergé.**
+
+      NNTmux scanne les groupes Usenet de votre choix avec votre propre compte
+      fournisseur, regroupe les articles en releases et écrit un NZB pour
+      chacune — votre propre catalogue, sans indexeur tiers ni quota.
+
+      **API Newznab :** tout client Newznab (Prowlarr, Sonarr, Radarr…) peut y
+      chercher et télécharger les NZB, chacun avec sa propre clé d'API.
+
+      **Configuration depuis les réglages de l'app** (fournisseur, groupes à
+      scanner), appliquée automatiquement par le scanner. Un compte fournisseur
+      Usenet (NNTP) est nécessaire ; le catalogue se remplit progressivement.
+  tips:
+    before_install:
+      en_us: |
+        **1. Log in:** user `admin`, password = this app's default password
+        (shown in this app's tips once installed). Change it afterwards.
+
+        **2. Set it up in App settings › Env** (Save applies it — no file editing,
+        no restart needed):
+        - `NNTP_SERVER`, `NNTP_PORT`, `NNTP_USERNAME`, `NNTP_PASSWORD` — your
+          Usenet provider. Optional: `NNTP_CONNECTIONS` (keep it at 1-2: the
+          scanner shares your provider's connection slots), `NNTP_SSLENABLED`.
+        - `NNTMUX_GROUPS` — the groups to index, comma-separated
+          (e.g. `alt.binaries.teevee`). Find names with
+          `docker exec nntmux-scanner nntmux-setup groups teevee`.
+        - `NNTMUX_SCAN=on` to start scanning. Optional: `NNTMUX_BACKFILL=on` +
+          `NNTMUX_BACKFILL_DAYS` (how far back — start small, a deep backfill is
+          hundreds of GB), `NNTMUX_MONITOR_DELAY` (seconds between passes).
+        - `NNTMUX_REGISTRATION` — `closed` (default), `invite` or `open`.
+        - `NNTMUX_MIN_RELEASE_MB` — postings smaller than this never become
+          releases (default 20). Busy groups carry tens of thousands of
+          single-article posts under random names that no indexer can name.
+
+        A blank setting is left to nntmux's own admin UI. Set ones are re-applied
+        by the scanner before every pass, so they survive restarts (nntmux resets
+        its groups and scheduler on each boot).
+
+        **3. Check:** `docker exec nntmux-scanner nntmux-setup status` — provider
+        connection test, active groups, scan state, and the next step.
+        Watch the scan: `docker logs -f nntmux-scanner`.
+
+        **API clients** (Prowlarr, Sonarr…): give each its own key with
+        `docker exec nntmux-scanner nntmux-setup api-user <name>` — a user with
+        raised daily API/download limits, made for Newznab clients.
+
+# Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
+# schema_version 2 is required for `folders`: an older Maison refuses the app
+# outright rather than starting it without its directories.
+x-compose-app:
+  schema_version: 2
+  # Created and chowned by Maison before the containers start. NOT `recursive`
+  # on the nzb store: it holds one file per release (a million+ on a real
+  # catalog), and the image's own boot already walks it for minutes.
+  folders:
+    - path: /DATA/AppData/nntmux/db
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/nntmux/nntmux-env
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/nntmux/nntmux-storage/nzb
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/nntmux/scanner
+      user: $PUID
+      group: $PGID
+    # The install lock (see the nntmux service): its presence is what stops a
+    # recreated container from re-installing over the catalog.
+    - path: /DATA/AppData/nntmux/install
+      user: $PUID
+      group: $PGID
+  # Shown from the tile menu after install (x-casaos `before_install` is only
+  # shown in the install dialog). `${VAR}`s resolve from this app's .env.
+  tips:
+    en_us: |
+      **Login:** user `admin`, password `${APP_DEFAULT_PASSWORD}`. Change it after
+      the first login.
+
+      **Set up in App settings › Env** (Save applies it):
+      - `NNTP_SERVER`, `NNTP_PORT`, `NNTP_USERNAME`, `NNTP_PASSWORD` — your Usenet
+        provider (`NNTP_CONNECTIONS` 1-2 recommended).
+      - `NNTMUX_GROUPS` — groups to index, comma-separated. Find names:
+        `docker exec nntmux-scanner nntmux-setup groups <text>`
+      - `NNTMUX_SCAN=on` to scan; optional `NNTMUX_BACKFILL=on` +
+        `NNTMUX_BACKFILL_DAYS`, `NNTMUX_MONITOR_DELAY`.
+      - `NNTMUX_REGISTRATION`: `closed` (default) / `invite` / `open`.
+      - `NNTMUX_MIN_RELEASE_MB` (default 20): smaller postings are dropped —
+        random-named fragments that no indexer can name.
+
+      **Check:** `docker exec nntmux-scanner nntmux-setup status` (says what is
+      missing). Watch: `docker logs -f nntmux-scanner`.
+
+      **API key for a client** (Prowlarr, Sonarr…):
+      `docker exec nntmux-scanner nntmux-setup api-user <name>`
+    fr_fr: |
+      **Connexion :** utilisateur `admin`, mot de passe `${APP_DEFAULT_PASSWORD}`.
+
+      **Configuration dans Réglages de l'app › Env** : `NNTP_SERVER`, `NNTP_PORT`,
+      `NNTP_USERNAME`, `NNTP_PASSWORD` (fournisseur), `NNTMUX_GROUPS` (groupes),
+      `NNTMUX_SCAN=on`. Vérification :
+      `docker exec nntmux-scanner nntmux-setup status`.
+  hooks:
+    # Once, at install (after the folders exist, before the first start).
+    pre_install: |
+      # 1. nntmux's .env (trap #1: a COMPLETE file). The provider lines stay
+      #    blank: they are filled from the app settings by `nntmux-setup apply`.
+      if [ ! -f $APP_DIR/nntmux-env/nntmux.env ]; then
+        cat > $APP_DIR/nntmux-env/nntmux.env <<NNTMUX_ENV
+      DB_CONNECTION=mariadb
+      DB_HOST=nntmux-db
+      DB_PORT=3306
+      DB_SOCKET=
+      DB_USERNAME=nntmux
+      DB_PASSWORD=$APP_DEFAULT_PASSWORD
+      DB_DATABASE=nntmux
+
+      MANTICORESEARCH_HOST=nntmux-manticore
+      MANTICORESEARCH_PORT=9308
+
+      ELASTICSEARCH_HOST=localhost
+      ELASTICSEARCH_PORT=9200
+      ELASTICSEARCH_SCHEME=http
+      ELASTICSEARCH_USER=
+      ELASTICSEARCH_PASS=
+      ELASTICSEARCH_LOGGING=false
+      ELASTICSEARCH_ENABLED=false
+
+      NNTP_COMPRESSED_HEADERS=false
+      USE_ALTERNATE_NNTP_SERVER=false
+
+      NNTP_USERNAME=
+      NNTP_PASSWORD=
+      NNTP_SERVER=
+      NNTP_PORT=563
+      NNTP_CONNECTIONS=1
+      NNTP_SSLENABLED=true
+      NNTP_SOCKET_TIMEOUT=120
+
+      NNTP_USERNAME_A=
+      NNTP_PASSWORD_A=
+      NNTP_SERVER_A=
+      NNTP_PORT_A=
+      NNTP_CONNECTIONS_A=
+      NNTP_SSLENABLED_A=false
+      NNTP_SOCKET_TIMEOUT_A=120
+
+      # NN_MULTIPROCESSING_MAX_CHILD_TIME is deliberately ABSENT (trap #5).
+      # Writing it here, even as its own default of 1800, hands
+      # Pool::timeout(float) a string via Laravel's env(), which returns STRINGS,
+      # and every Forking multiprocessing runner dies with a TypeError.
+      # RULE for this whole file: never set a key unless the value must DIFFER
+      # from the PHP default in config/nntmux.php. Restating a default is not
+      # documentation, it is a type change.
+
+      ADMIN_USER=admin
+      ADMIN_PASS=$APP_DEFAULT_PASSWORD
+      ADMIN_EMAIL=admin@$APP_DOMAIN
+
+      APP_NAME=NNTmux
+      APP_ENV=production
+      APP_DEBUG=false
+      APP_TIMEZONE=UTC
+      APP_URL=https://nntmux-$APP_DOMAIN
+
+      APP_LOCALE=en
+      APP_FALLBACK_LOCALE=en
+      APP_FAKER_LOCALE=en_US
+
+      APP_MAINTENANCE_DRIVER=file
+      APP_MAINTENANCE_STORE=database
+
+      BCRYPT_ROUNDS=12
+      APP_KEY=
+      LOG_CHANNEL=stack
+      LOG_STACK=single
+      PASSWORD_HASH=argon2id
+
+      BROADCAST_CONNECTION=log
+      CACHE_STORE=file
+      QUEUE_CONNECTION=sync
+
+      REDIS_HOST=nntmux-redis
+      REDIS_PASSWORD=null
+      REDIS_PORT=6379
+      REDIS_CLIENT=phpredis
+
+      SESSION_DRIVER=file
+      SESSION_DOMAIN=null
+      SESSION_SECURE_COOKIE=false
+      SESSION_ENCRYPT=false
+      SESSION_COOKIE=nntmux
+      SESSION_PATH=/
+
+      SCOUT_DRIVER=database
+      SCOUT_QUEUE=true
+
+      ITEMS_PER_PAGE=50
+      ITEMS_PER_COVER_PAGE=25
+      MAX_PAGER_RESULTS=125000
+      ECHOCLI=true
+      RENAME_PAR2=false
+      ADD_PAR2=false
+      RENAME_MUSIC_MEDIAINFO=true
+      CACHE_EXPIRY_SHORT=5
+      CACHE_EXPIRY_MEDIUM=10
+      CACHE_EXPIRY_LONG=15
+
+      SSL_CAFILE=
+      SSL_CAPATH=
+      SSL_VERIFY_PEER=false
+      SSL_VERIFY_HOST=false
+      SSL_ALLOW_SELF_SIGNED=true
+
+      SMARTY_DEBUG=false
+      SMARTY_CACHING=false
+      SMARTY_CACHE_LIFE=120
+      SMARTY_COMPILE_CHECK=false
+      SMARTY_FORCE_COMPILE=false
+      SMARTY_CACHE_DRIVER=file
+
+      TMDB_APIKEY=9a4e16adddcd1e86da19bcaf5ff3c2a3
+      TMDB_CACHE=false
+      TMDB_LOG=false
+      TVDB_APIKEY=ef6fb572-bcee-4d99-9b52-90549ad7553a
+      TVDB_PIN=
+
+      TEMP_UNRAR_PATH=/app/storage/tmp/unrar/
+      TEMP_UNZIP_PATH=/app/storage/tmp/unzip/
+      VIEW_COMPILED_PATH=/app/storage/framework/views
+      PATH_TO_NZBS=/app/storage/nzb/
+      COVERS_PATH=/app/storage/covers
+
+      TELESCOPE_ENABLED=false
+      PURGE_INACTIVE_USERS=false
+      OTP_ENABLED=false
+      CHECK_PASSWORDED_RARS=false
+      DELETE_PASSWORDED_RELEASES=false
+      DELETE_POSSIBLE_PASSWORDED_RELEASES=false
+      EXTRACT_USING_RARINFO=false
+      PRIVATE_PROFILES=true
+      STORE_USER_IP=false
+      FORUM_FRONTEND_ENABLED=false
+      NNTMUX_ENV
+      fi
+      # 2. The app settings, as empty keys so they show up in App settings > Env
+      #    (blank = not managed). Registration defaults to closed.
+      for kv in NNTP_SERVER= NNTP_PORT= NNTP_USERNAME= NNTP_PASSWORD= NNTP_CONNECTIONS= NNTP_SSLENABLED= \
+                NNTMUX_GROUPS= NNTMUX_SCAN= NNTMUX_BACKFILL= NNTMUX_BACKFILL_DAYS= NNTMUX_BACKFILL_QTY= \
+                NNTMUX_MONITOR_DELAY= NNTMUX_REGISTRATION=closed NNTMUX_MIN_RELEASE_MB=20; do
+        k=$(echo "$kv" | cut -d= -f1)
+        grep -q "^$k=" "$APP_DIR/.env" 2>/dev/null || echo "$kv" >> "$APP_DIR/.env"
+      done
+  # The scanner's scripts, re-written on every start so an app update reaches
+  # existing installs (pre_install runs only once).
+  files:
+    - path: /DATA/AppData/nntmux/scanner/scanner.sh
+      from: scanner/scanner.sh
+      ensure: always
+      mode: "0755"
+    - path: /DATA/AppData/nntmux/scanner/nntmux-setup
+      from: scanner/nntmux-setup
+      ensure: always
+      mode: "0755"
+  # Same string as the caddy_0 label, so the tile link and the route agree.
+  webui-host: nntmux-${domain}
+  webui-path: "/"
