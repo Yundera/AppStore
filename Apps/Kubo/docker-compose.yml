@@ -320,6 +320,7 @@ x-compose-app:
     # container runs, so the shell's and awk's own variables are written $$NAME.
     - name: pin-webui
       image: ipfs/kubo:v0.43.1
+      entrypoint: [""]
       phase: post_up
       network: $APP_NET
       # No volumes: every call goes to the running daemon over --api, so this container
