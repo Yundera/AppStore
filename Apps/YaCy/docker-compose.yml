@@ -49,19 +49,20 @@ x-casaos:
   main: yacy
   webui_port: 8090
   index: /
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/icon.png
+  icon: icon.png
   screenshot_link:
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-1.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-2.png
-    - https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-3.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/YaCy/screenshot-1.png
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  thumbnail: thumbnail.png
 
 
   architectures:
     - amd64
     - arm64
-  author: Yundera Team
-  category: Utilities
+  category: WEB
+  tags: ["search", "privacy", "personal"]
+  store_app_id: yacy
   description:
     en_us: |
       **Your own private search engine**
@@ -295,6 +296,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  webui-host: yacy-${domain}
   folders:
     - /DATA/AppData/$AppID/data
     - /DATA/AppData/$AppID/data/SETTINGS
