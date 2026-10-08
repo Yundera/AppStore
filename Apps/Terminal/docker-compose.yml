@@ -211,5 +211,8 @@ x-casaos:
   webui_port: 80
 
 x-compose-app:
+  # Tiles in Maison's System grid: a PCS ships with it preinstalled. The grid only —
+  # it is still an ordinary app the user can stop, back up and uninstall.
+  view: system
   webui-host: terminal-${domain}
   webui-path: "/"
