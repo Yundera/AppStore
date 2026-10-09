@@ -20,6 +20,7 @@ services:
       - PORT=9746
       - DISCOVERY_PORT=9099
       - CONFIG_PATH=/app/data/config.json
+      - VNC_RESOLUTION=1280x720x24
       # Kill idle Chrome after this many ms (default 2h); respawns on next use.
       - IDLE_TTL_MS=7200000
     volumes:
@@ -155,6 +156,18 @@ x-casaos:
       - 在浏览器上下文中执行 JavaScript 进行高级自动化
       - 通过内置 noVNC 网页查看器实时查看浏览器
       - 访问 Web UI 仪表板进行状态监控
+    ko_kr: |
+      **MCP를 통해 AI가 제어하는 클라우드 Chromium 브라우저**
+
+      Browser MCP는 Chromium 브라우저, Playwright 자동화, MCP(Model Context Protocol) 서버를 하나의 컨테이너에 통합합니다. LLM과 AI 어시스턴트가 웹사이트를 탐색하고, 요소를 클릭하고, 폼을 입력하고, 스크린샷을 찍고, 콘텐츠를 추출할 수 있습니다.
+
+      **주요 기능:**
+      - MCP 호환 AI 어시스턴트에서 실제 Chromium 브라우저 제어
+      - 웹사이트 탐색, 요소 클릭, 폼 입력, 웹 페이지 상호작용
+      - 시각적 피드백 루프를 위한 스크린샷 (스크린샷 → 판단 → 실행)
+      - 브라우저 컨텍스트에서 JavaScript 실행
+      - 내장 noVNC 웹 뷰어로 브라우저 실시간 확인
+      - Web UI 대시보드에서 상태 모니터링
   icon: icon.png
   screenshot_link:
     - screenshot-1.png
@@ -164,6 +177,7 @@ x-casaos:
     en_us: AI-controlled web browser via MCP
     fr_fr: Navigateur web controle par l'IA via MCP
     zh_cn: 通过 MCP 由 AI 控制的网页浏览器
+    ko_kr: MCP를 통해 AI가 제어하는 웹 브라우저
   thumbnail: thumbnail.png
   title:
     en_us: Browser MCP
@@ -176,7 +190,7 @@ x-casaos:
       en_us: |
         **Getting Started**
 
-        After installation, Chromium launches automatically inside a virtual display.
+        After installation, open the Web UI and click **Save Config** to start the Chromium browser.
         The Web UI is protected by your server's single sign-on — you sign in with your existing server account.
 
         **Web Interface:**
@@ -203,14 +217,8 @@ x-casaos:
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), register one via Dynamic Client Registration:
-        ```bash
-        curl -X POST https://browsermcp-${APP_DOMAIN}/AppShield/oidc/reg \
-          -H 'Content-Type: application/json' \
-          -d '{"redirect_uris":["https://your-client/callback"]}'
-        ```
-        The response contains `client_id` and `client_secret`. You can view and
-        revoke registered clients at **https://browsermcp-${APP_DOMAIN}/AppShield/oauth**.
+        scripts), open **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** and
+        create one there.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -232,38 +240,25 @@ x-casaos:
         If you have **Beacon** installed, Browser MCP auto-registers there and its tools
         show up under the `browser-mcp__*` namespace — no extra config.
 
-        **Available MCP Tools (29):**
+        **Available MCP Tools:**
         | Tool | Description |
         |------|-------------|
-        | `navigate_page` | Navigate the browser to a URL |
-        | `click` | Click on an element |
-        | `type_text` | Type text into an input element |
-        | `fill` | Fill an input field |
-        | `fill_form` | Fill multiple form fields at once |
-        | `press_key` | Press a keyboard key |
-        | `hover` | Hover over an element |
-        | `drag` | Drag an element to a target |
-        | `select_page` | Switch to a specific browser tab |
-        | `new_page` | Open a new browser tab |
-        | `close_page` | Close a browser tab |
-        | `list_pages` | List all open browser tabs |
-        | `take_screenshot` | Take a screenshot of the current page |
-        | `take_snapshot` | Take a DOM snapshot of the current page |
-        | `evaluate_script` | Execute JavaScript in the browser context |
+        | `navigate` | Navigate the browser to a URL |
+        | `click` | Click on an element by CSS/text selector |
+        | `type` | Type text into an input element |
+        | `screenshot` | Take a screenshot of the current page |
+        | `evaluate` | Execute JavaScript in the browser context |
+        | `get_text` | Get the text content of an element |
+        | `get_page_content` | Get the full HTML of the current page |
         | `wait_for` | Wait for an element to reach a specific state |
-        | `resize_page` | Resize the browser viewport |
-        | `emulate` | Emulate a device (mobile, tablet, etc.) |
-        | `upload_file` | Upload a file to a file input |
-        | `handle_dialog` | Accept or dismiss a browser dialog |
-        | `get_console_message` | Get a specific console log entry |
-        | `list_console_messages` | List all console log entries |
-        | `get_network_request` | Get details of a network request |
-        | `list_network_requests` | List all network requests |
-        | `take_heapsnapshot` | Take a heap snapshot for memory analysis |
-        | `lighthouse_audit` | Run a Lighthouse performance audit |
-        | `performance_start_trace` | Start a performance trace |
-        | `performance_stop_trace` | Stop and retrieve a performance trace |
-        | `performance_analyze_insight` | Analyze performance insights |
+        | `go_back` | Navigate back in browser history |
+        | `go_forward` | Navigate forward in browser history |
+        | `set_viewport` | Set the browser viewport size |
+        | `get_console_logs` | Get browser console log entries |
+        | `pdf` | Generate a PDF of the current page |
+        | `get_cookies` | Get browser cookies |
+        | `set_cookies` | Set browser cookies |
+        | `clear_cookies` | Clear all browser cookies |
 
         **Security:**
         - The Web UI, live noVNC viewer, and `/api` endpoints sit behind your server's
@@ -275,7 +270,7 @@ x-casaos:
       zh_cn: |
         **快速开始**
 
-        安装后，Chromium 将在虚拟显示中自动启动。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。
+        安装后，打开 Web 界面并点击 **Save Config** 以启动 Chromium 浏览器。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。
 
         **Web 界面：**
         - **主 UI** — 带有实时 noVNC 浏览器视图、状态和工具信息的仪表板
@@ -296,14 +291,8 @@ x-casaos:
           }
         }
         ```
-        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），通过动态客户端注册创建：
-        ```bash
-        curl -X POST https://browsermcp-${APP_DOMAIN}/AppShield/oidc/reg \
-          -H 'Content-Type: application/json' \
-          -d '{"redirect_uris":["https://your-client/callback"]}'
-        ```
-        响应包含 `client_id` 和 `client_secret`。已注册的客户端可在
-        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 查看和撤销。
+        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
+        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 创建。
 
         **选项 2：本地 Docker 连接（无需认证）**
         ```json
@@ -322,38 +311,94 @@ x-casaos:
 
         如果安装了 **Beacon**，Browser MCP 会自动注册，其工具显示在 `browser-mcp__*` 命名空间下，无需额外配置。
 
-        **可用 MCP 工具（29个）：**
+        **可用 MCP 工具：**
         | 工具 | 描述 |
         |------|------|
-        | `navigate_page` | 将浏览器导航到 URL |
-        | `click` | 点击元素 |
-        | `type_text` | 在输入元素中输入文本 |
-        | `fill` | 填充输入字段 |
-        | `fill_form` | 一次填充多个表单字段 |
-        | `press_key` | 按下键盘按键 |
-        | `hover` | 悬停在元素上 |
-        | `drag` | 将元素拖到目标位置 |
-        | `select_page` | 切换到指定浏览器标签页 |
-        | `new_page` | 打开新标签页 |
-        | `close_page` | 关闭标签页 |
-        | `list_pages` | 列出所有打开的标签页 |
-        | `take_screenshot` | 截取当前页面截图 |
-        | `take_snapshot` | 获取当前页面 DOM 快照 |
-        | `evaluate_script` | 在浏览器中执行 JavaScript |
+        | `navigate` | 将浏览器导航到 URL |
+        | `click` | 通过 CSS/文本选择器点击元素 |
+        | `type` | 在输入元素中输入文本 |
+        | `screenshot` | 截取当前页面截图 |
+        | `evaluate` | 在浏览器上下文中执行 JavaScript |
+        | `get_text` | 获取元素的文本内容 |
+        | `get_page_content` | 获取当前页面的完整 HTML |
         | `wait_for` | 等待元素达到特定状态 |
-        | `resize_page` | 调整浏览器视口大小 |
-        | `emulate` | 模拟设备（手机、平板等）|
-        | `upload_file` | 上传文件到文件输入框 |
-        | `handle_dialog` | 接受或关闭浏览器对话框 |
-        | `get_console_message` | 获取特定控制台日志 |
-        | `list_console_messages` | 列出所有控制台日志 |
-        | `get_network_request` | 获取网络请求详情 |
-        | `list_network_requests` | 列出所有网络请求 |
-        | `take_heapsnapshot` | 获取堆快照用于内存分析 |
-        | `lighthouse_audit` | 运行 Lighthouse 性能审计 |
-        | `performance_start_trace` | 开始性能追踪 |
-        | `performance_stop_trace` | 停止并获取性能追踪 |
-        | `performance_analyze_insight` | 分析性能洞察 |
+        | `go_back` | 在浏览器历史中后退 |
+        | `go_forward` | 在浏览器历史中前进 |
+        | `set_viewport` | 设置浏览器视口大小 |
+        | `get_console_logs` | 获取浏览器控制台日志 |
+        | `pdf` | 生成当前页面的 PDF |
+        | `get_cookies` | 获取浏览器 cookies |
+        | `set_cookies` | 设置浏览器 cookies |
+        | `clear_cookies` | 清除所有浏览器 cookies |
+      ko_kr: |
+        **시작하기**
+
+        설치 후, Web UI를 열고 **Save Config** 버튼을 클릭하여 Chromium 브라우저를 시작하세요.
+        Web UI는 서버의 싱글 사인온(SSO)으로 보호됩니다 — 기존 서버 계정으로 로그인하세요.
+
+        **웹 인터페이스:**
+        - **메인 UI** — 실시간 noVNC 브라우저 뷰, 상태, 도구 정보가 포함된 대시보드
+
+        **MCP 연동 (AI/LLM용):**
+
+        AI 어시스턴트를 연결하여 브라우저를 제어할 수 있습니다.
+
+        **옵션 1: 공개 URL (OAuth)**
+
+        `/mcp` 엔드포인트는 OAuth 2.1로 보호됩니다. 아래 URL을 클라이언트에 설정하세요.
+        OAuth 디스커버리를 지원하는 클라이언트(claude.ai, Claude Desktop)는 자동으로
+        등록되며 서버 계정(SSO)으로 승인합니다.
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "https://browsermcp-${APP_DOMAIN}/mcp"
+            }
+          }
+        }
+        ```
+        client_id/client_secret가 필요한 클라이언트(n8n, 커스텀 스크립트)는
+        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 에서 생성하세요.
+
+        **옵션 2: 로컬 Docker 연결 (인증 불필요)**
+
+        같은 서버에서 실행 중인 AI 어시스턴트는 Docker 네트워크로 직접 연결:
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "http://browsermcp-backend:9746/mcp"
+            }
+          }
+        }
+        ```
+        *참고: AI 어시스턴트가 `pcs` Docker 네트워크에 있어야 합니다.*
+
+        **옵션 3: Beacon 경유 (통합)**
+
+        **Beacon**이 설치되어 있으면 Browser MCP가 자동 등록되며, `browser-mcp__*` 네임스페이스에서 도구를 사용할 수 있습니다.
+
+        **사용 가능한 MCP 도구:**
+        | 도구 | 설명 |
+        |------|------|
+        | `navigate` | URL로 브라우저 이동 |
+        | `click` | CSS/텍스트 선택자로 요소 클릭 |
+        | `type` | 입력 요소에 텍스트 입력 |
+        | `screenshot` | 현재 페이지 스크린샷 |
+        | `evaluate` | 브라우저에서 JavaScript 실행 |
+        | `get_text` | 요소의 텍스트 내용 가져오기 |
+        | `get_page_content` | 현재 페이지 전체 HTML 가져오기 |
+        | `wait_for` | 요소가 특정 상태에 도달할 때까지 대기 |
+        | `go_back` | 브라우저 뒤로 가기 |
+        | `go_forward` | 브라우저 앞으로 가기 |
+        | `set_viewport` | 브라우저 뷰포트 크기 설정 |
+        | `get_console_logs` | 브라우저 콘솔 로그 가져오기 |
+        | `pdf` | 현재 페이지 PDF 생성 |
+        | `get_cookies` | 브라우저 쿠키 가져오기 |
+        | `set_cookies` | 브라우저 쿠키 설정 |
+        | `clear_cookies` | 모든 브라우저 쿠키 삭제 |
 
 x-compose-app:
   schema_version: 2
@@ -367,16 +412,5 @@ x-compose-app:
     - path: /DATA/AppData/browsermcp/oauth
       user: $PUID
       group: $PGID
-  init:
-    - name: default-config
-      image: alpine:3.20
-      phase: pre_up
-      command:
-        - sh
-        - -c
-        - '[ -f /data/config.json ] || printf ''{"browser":{"autoLaunch":true},"hostname":"browsermcp-backend"}\n'' > /data/config.json; grep -q ''"autoLaunch"'' /data/config.json || sed -i ''s/"browser":{/"browser":{"autoLaunch":true,/'' /data/config.json; sed -i ''s/"autoLaunch":false/"autoLaunch":true/'' /data/config.json'
-      volumes:
-        - ${DATA_ROOT:-/DATA}/AppData/browsermcp/data:/data
-      when: always
   webui-host: browsermcp-${domain}
   webui-path: "/"
