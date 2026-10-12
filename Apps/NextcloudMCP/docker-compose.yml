@@ -1,10 +1,10 @@
 name: nextcloudmcp
 services:
-  # Main MCP wrapper — exposes /mcp (Nextcloud tools), /talk-mcp (Talk tools),
+  # Main MCP wrapper — exposes /mcp (Nextcloud + Talk tools, one MCP server)
   # and the Web UI on 9650. Reachable at nextcloudmcp-backend:9650 inside the pcs
   # network so Beacon and other MCP clients can call it directly.
   nextcloudmcp-backend:
-    image: ghcr.io/worph/nextcloud-mcp:1.0.2
+    image: ghcr.io/worph/nextcloud-mcp:1.0.3
     container_name: nextcloudmcp-backend
     hostname: nextcloudmcp-backend
     # supervisord is PID 1 and MUST start as root so it can drop privileges for
@@ -55,10 +55,6 @@ services:
   # /mcp on OAuth 2.1 for remote MCP clients (see OAUTH_RESOURCE below). MCP
   # clients talking to `nextcloudmcp-backend:9650` directly on the pcs network
   # bypass this entirely — Beacon discovery, Claude Code, etc. stay fast.
-  #
-  # NOTE: the OAuth broker protects exactly one path prefix, so /talk-mcp is NOT
-  # OAuth-gated — from outside it sits behind the interactive SSO gate, and
-  # in-cluster clients should use http://nextcloudmcp-backend:9650/talk-mcp.
   nextcloudmcp-proxy:
     # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
     # OAUTH_SCOPE names and a configurable protected path.
@@ -117,7 +113,7 @@ networks:
     external: true
 
 x-casaos:
-  # amd64 only: the backend image ghcr.io/worph/nextcloud-mcp:1.0.2 publishes a
+  # amd64 only: the backend image ghcr.io/worph/nextcloud-mcp:1.0.3 publishes a
   # linux/amd64 manifest only. The AppShield sidecar does ship arm64, but the app
   # can only run on the intersection of all its images.
   architectures:
@@ -139,7 +135,7 @@ x-casaos:
       - Send chat messages to anyone in Nextcloud from an AI prompt (`talk_send_to_user` — resolves name to 1-on-1 and posts).
       - Drive it all through the Beacon MCP aggregator (auto-detected) for unified access.
 
-      **118 Nextcloud tools + 6 Talk tools.** Single app-password setup. Polling-based (no admin CLI). See the built-in docs for the full rationale.
+      **138 tools — 118 Nextcloud + 20 Talk — in one MCP server.** Single app-password setup. Polling-based (no admin CLI). See the built-in docs for the full rationale.
 
       **Think of it like:** a personal AI assistant that genuinely lives inside your Nextcloud — messages go to *you*, answers come from Claude, your team gets replies within seconds.
     fr_fr: |
@@ -154,7 +150,7 @@ x-casaos:
       - Envoyer des messages a n'importe qui dans Nextcloud depuis une invite IA (`talk_send_to_user` — resout le nom en conversation 1-a-1 et poste).
       - Piloter l'ensemble via l'agregateur MCP Beacon (auto-detecte) pour un acces unifie.
 
-      **118 outils Nextcloud + 6 outils Talk.** Configuration par mot de passe d'application unique. Base sur le polling (pas de CLI admin). Voir la documentation integree pour la justification complete.
+      **138 outils — 118 Nextcloud + 20 Talk — dans un seul serveur MCP.** Configuration par mot de passe d'application unique. Base sur le polling (pas de CLI admin). Voir la documentation integree pour la justification complete.
 
       **Comme si:** un assistant IA personnel qui vit vraiment dans votre Nextcloud — les messages vous arrivent, les reponses viennent de Claude, votre equipe obtient des reponses en quelques secondes.
     zh_cn: |
@@ -169,7 +165,7 @@ x-casaos:
       - 从 AI 提示向 Nextcloud 中的任何人发送聊天消息（`talk_send_to_user` — 将名称解析为 1 对 1 并发布）。
       - 通过 Beacon MCP 聚合器（自动检测）统一驱动所有功能。
 
-      **118 个 Nextcloud 工具 + 6 个 Talk 工具。** 一次应用密码设置。基于轮询（无需管理员 CLI）。详见内置文档。
+      **138 个工具 — 118 个 Nextcloud + 20 个 Talk — 合并为一个 MCP 服务器。** 一次应用密码设置。基于轮询（无需管理员 CLI）。详见内置文档。
   icon: icon.png
   screenshot_link:
     - screenshot-1.png
@@ -200,12 +196,12 @@ x-casaos:
 
         **MCP Integration (for AI/LLMs):**
 
-        The app exposes two MCP servers — `nextcloud-mcp` (118 Nextcloud tools) and `nextcloud-talk-mcp` (6 chat tools).
+        The app exposes one MCP server, `nextcloud-mcp`, with 138 tools: 118 for Nextcloud and 20 for Talk chat.
 
         **Option 1: Via Beacon (recommended)**
-        If Beacon is installed, both servers are auto-discovered and namespaced:
+        If Beacon is installed, the server is auto-discovered and its tools namespaced:
         - `nextcloud-mcp__nc_notes_*`, `nextcloud-mcp__nc_calendar_*`, `nextcloud-mcp__deck_*`, etc.
-        - `nextcloud-talk-mcp__talk_send_to_user`, `nextcloud-talk-mcp__talk_list_conversations`, etc.
+        - `nextcloud-mcp__talk_send_to_user`, `nextcloud-mcp__talk_list_conversations`, etc.
 
         **Option 2: Public URL (OAuth)**
 
@@ -224,9 +220,6 @@ x-casaos:
           }
         }
         ```
-        *`talk-mcp` is not available over the public URL — use Beacon (Option 1)
-        or the local Docker connection below.*
-
         **Option 3: Local Docker connection (no auth required)**
         ```json
         {
@@ -234,10 +227,6 @@ x-casaos:
             "nextcloud-mcp": {
               "type": "http",
               "url": "http://nextcloudmcp-backend:9650/mcp"
-            },
-            "nextcloud-talk-mcp": {
-              "type": "http",
-              "url": "http://nextcloudmcp-backend:9650/talk-mcp"
             }
           }
         }
@@ -284,12 +273,12 @@ x-casaos:
 
         **Integration MCP (pour IA/LLMs):**
 
-        L'app expose deux serveurs MCP — `nextcloud-mcp` (118 outils Nextcloud) et `nextcloud-talk-mcp` (6 outils de chat).
+        L'app expose un seul serveur MCP, `nextcloud-mcp`, avec 138 outils : 118 pour Nextcloud et 20 pour le chat Talk.
 
         **Option 1: Via Beacon (recommande)**
-        Si Beacon est installe, les deux serveurs sont auto-decouverts et namespaces:
+        Si Beacon est installe, le serveur est auto-decouvert et ses outils namespaces:
         - `nextcloud-mcp__nc_notes_*`, `nextcloud-mcp__nc_calendar_*`, `nextcloud-mcp__deck_*`, etc.
-        - `nextcloud-talk-mcp__talk_send_to_user`, `nextcloud-talk-mcp__talk_list_conversations`, etc.
+        - `nextcloud-mcp__talk_send_to_user`, `nextcloud-mcp__talk_list_conversations`, etc.
 
         **Option 2: URL publique (OAuth)**
 
@@ -309,9 +298,6 @@ x-casaos:
           }
         }
         ```
-        *`talk-mcp` n'est pas disponible via l'URL publique — utilisez Beacon
-        (Option 1) ou la connexion Docker locale ci-dessous.*
-
         **Option 3: Connexion Docker locale (pas d'auth requise)**
         ```json
         {
@@ -319,10 +305,6 @@ x-casaos:
             "nextcloud-mcp": {
               "type": "http",
               "url": "http://nextcloudmcp-backend:9650/mcp"
-            },
-            "nextcloud-talk-mcp": {
-              "type": "http",
-              "url": "http://nextcloudmcp-backend:9650/talk-mcp"
             }
           }
         }
@@ -353,10 +335,10 @@ x-casaos:
 
         **MCP 集成（用于 AI/LLM）：**
 
-        应用公开了两个 MCP 服务器 — `nextcloud-mcp`（118 个 Nextcloud 工具）和 `nextcloud-talk-mcp`（6 个聊天工具）。
+        应用公开一个 MCP 服务器 `nextcloud-mcp`，共 138 个工具：118 个 Nextcloud 工具和 20 个 Talk 聊天工具。
 
         **选项 1：通过 Beacon（推荐）**
-        如果安装了 Beacon，两个服务器都会自动发现并命名空间化。
+        如果安装了 Beacon，该服务器会自动发现，其工具会加上命名空间。
 
         **选项 2：公共 URL（OAuth）**
 
