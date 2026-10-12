@@ -51,9 +51,11 @@ collides with the `/admin` route) and account creation fails with it.
   cannot see, the host's daemon.
 - `capacity: 1` in the runner config and a 2G memory limit bound what a
   runaway build can consume.
-- Self-registration is disabled (`DISABLE_REGISTRATION`) and anonymous
-  browsing is off (`REQUIRE_SIGNIN_VIEW`), so the forge starts closed with a
-  single account whose password is the deployment's default app password.
+- Self-registration is disabled (`DISABLE_REGISTRATION`), so the forge starts
+  with a single account whose password is the deployment's default app
+  password. Anonymous browsing is on (`REQUIRE_SIGNIN_VIEW: "false"`) so public
+  repositories can be read and cloned without an account; a repository marked
+  private still requires a sign-in, and nothing can be pushed anonymously.
 - `ALLOW_LOCALNETWORKS` is reachable only by an authenticated user of this
   Gitea — with registration disabled, that is the owner. It widens what the
   owner can point a mirror at; it does not expose anything to an anonymous

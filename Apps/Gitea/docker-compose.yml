@@ -40,7 +40,9 @@ services:
       GITEA__database__DB_TYPE: sqlite3
       GITEA__database__PATH: /var/lib/gitea/data/gitea.db
       GITEA__service__DISABLE_REGISTRATION: "true"
-      GITEA__service__REQUIRE_SIGNIN_VIEW: "true"
+      # Public repositories can be browsed and cloned without an account, so a
+      # forge can publish code. Private repositories still need a sign-in.
+      GITEA__service__REQUIRE_SIGNIN_VIEW: "false"
       GITEA__actions__ENABLED: "true"
       # Where a bare `uses: actions/checkout@v4` is resolved from.
       GITEA__actions__DEFAULT_ACTIONS_URL: github
