@@ -1,0 +1,79 @@
+name: audiobookshelf
+
+services:
+  audiobookshelf-init:
+    image: busybox:latest
+    user: root
+    volumes:
+      - /DATA:/DATA
+    command: >
+      sh -c "
+      mkdir -p /DATA/AppData/audiobookshelf/config &&
+      mkdir -p /DATA/AppData/audiobookshelf/metadata &&
+      mkdir -p /DATA/Media/Audiobooks &&
+      mkdir -p /DATA/Media/Podcasts &&
+      chown -R 1000:1000 /DATA/AppData/audiobookshelf /DATA/Media/Audiobooks /DATA/Media/Podcasts &&
+      chmod -R 755 /DATA/AppData/audiobookshelf /DATA/Media/Audiobooks /DATA/Media/Podcasts &&
+      echo 'Directories created successfully'
+      "
+    restart: "no"
+    networks:
+      - pcs
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    restart: unless-stopped
+    depends_on:
+      - audiobookshelf-init
+
+    # Keep Audiobookshelf listening on its default container port (80)
+    # Only publish a host port to it
+    ports:
+      - target: 80
+        published: ${WEBUI_PORT:-13378}
+        protocol: tcp
+
+    environment:
+      - TZ=Etc/UTC
+      - HOST=0.0.0.0
+      # Keep this only if your Yundera/CasaOS opens apps under a subpath
+      - ROUTER_BASE_PATH=/audiobookshelf
+
+    volumes:
+      - /DATA/AppData/audiobookshelf/config:/config
+      - /DATA/AppData/audiobookshelf/metadata:/metadata
+      - /DATA/Media/Audiobooks:/audiobooks
+      - /DATA/Media/Podcasts:/podcasts
+    networks:
+      - pcs  
+      
+networks:
+  pcs:
+    external: true      
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: audiobookshelf
+  scheme: http
+  index: /audiobookshelf/
+  port_map: ${WEBUI_PORT:-13378}
+  store_app_id: audiobookshelf
+  title:
+    en_us: Audiobookshelf
+  tagline:
+    en_us: Self hosted audiobooks and podcasts
+  description:
+    en_us: |
+      Stream your personal audiobooks and podcasts on any device. Easy library management, chapters, metadata, users, and backups. Perfect fit for Yundera PCS.
+  developer: advplyr
+  category: Media
+  tips:
+    before_install:
+      en_us: |
+        Directories will be created automatically on first run.
+        Media folders:
+        /DATA/Media/Audiobooks
+        /DATA/Media/Podcasts
+        You can change the paths in the compose if your media lives elsewhere.
