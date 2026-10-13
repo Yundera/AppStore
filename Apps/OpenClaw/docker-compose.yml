@@ -14,7 +14,7 @@ services:
     # container_name, or Docker defaults the hostname to the random container ID.
     hostname: openclaw
     restart: unless-stopped
-    cpu_shares: 50
+    cpu_shares: 80
     expose:
       - 80
     labels:
@@ -55,7 +55,7 @@ services:
       resources:
         limits:
           memory: 2048M
-    cpu_shares: 90
+    cpu_shares: 70
     healthcheck:
       # curl, not wget: despite the `alpine/` namespace (a Docker Hub org name, not a
       # base image) this image is Debian bookworm and ships no wget, so the old
