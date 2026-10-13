@@ -2,7 +2,7 @@ name: rclone
 services:
   rclone:
     user: $PUID:$PGID
-    image: rclone/rclone:1.74.4
+    image: rclone/rclone:1.75.1
     container_name: rclone
     hostname: rclone
     restart: unless-stopped
@@ -89,7 +89,6 @@ x-casaos:
     - screenshot-2.png
     - screenshot-3.png
   icon: icon.png
-  thumbnail: thumbnail.png
   category: Cloud
   title:
     en_us: Rclone
