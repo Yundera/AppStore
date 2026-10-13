@@ -3,7 +3,7 @@ services:
   # Main container — Chromium + Playwright + MCP server + noVNC viewer.
   # Reachable at browsermcp-backend:9746 on the pcs network. Beacon discovery on UDP 9099.
   browsermcp-backend:
-    image: ghcr.io/worph/browser-mcp:1.1.4
+    image: ghcr.io/worph/browser-mcp:1.1.8
     container_name: browsermcp-backend
     hostname: browsermcp-backend
     restart: unless-stopped
@@ -47,7 +47,7 @@ services:
   browsermcp-proxy:
     # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
     # OAUTH_SCOPE names and a configurable protected path.
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: browsermcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -156,6 +156,18 @@ x-casaos:
       - 在浏览器上下文中执行 JavaScript 进行高级自动化
       - 通过内置 noVNC 网页查看器实时查看浏览器
       - 访问 Web UI 仪表板进行状态监控
+    ko_kr: |
+      **MCP를 통해 AI가 제어하는 클라우드 Chromium 브라우저**
+
+      Browser MCP는 Chromium 브라우저, Playwright 자동화, MCP(Model Context Protocol) 서버를 하나의 컨테이너에 통합합니다. LLM과 AI 어시스턴트가 웹사이트를 탐색하고, 요소를 클릭하고, 폼을 입력하고, 스크린샷을 찍고, 콘텐츠를 추출할 수 있습니다.
+
+      **주요 기능:**
+      - MCP 호환 AI 어시스턴트에서 실제 Chromium 브라우저 제어
+      - 웹사이트 탐색, 요소 클릭, 폼 입력, 웹 페이지 상호작용
+      - 시각적 피드백 루프를 위한 스크린샷 (스크린샷 → 판단 → 실행)
+      - 브라우저 컨텍스트에서 JavaScript 실행
+      - 내장 noVNC 웹 뷰어로 브라우저 실시간 확인
+      - Web UI 대시보드에서 상태 모니터링
   icon: icon.png
   screenshot_link:
     - screenshot-1.png
@@ -165,6 +177,7 @@ x-casaos:
     en_us: AI-controlled web browser via MCP
     fr_fr: Navigateur web controle par l'IA via MCP
     zh_cn: 通过 MCP 由 AI 控制的网页浏览器
+    ko_kr: MCP를 통해 AI가 제어하는 웹 브라우저
   thumbnail: thumbnail.png
   title:
     en_us: Browser MCP
@@ -177,7 +190,7 @@ x-casaos:
       en_us: |
         **Getting Started**
 
-        After installation, Chromium launches automatically inside a virtual display.
+        After installation, open the Web UI and click **Save Config** to start the Chromium browser.
         The Web UI is protected by your server's single sign-on — you sign in with your existing server account.
 
         **Web Interface:**
@@ -257,7 +270,7 @@ x-casaos:
       zh_cn: |
         **快速开始**
 
-        安装后，Chromium 将在虚拟显示中自动启动。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。
+        安装后，打开 Web 界面并点击 **Save Config** 以启动 Chromium 浏览器。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。
 
         **Web 界面：**
         - **主 UI** — 带有实时 noVNC 浏览器视图、状态和工具信息的仪表板
@@ -317,6 +330,75 @@ x-casaos:
         | `get_cookies` | 获取浏览器 cookies |
         | `set_cookies` | 设置浏览器 cookies |
         | `clear_cookies` | 清除所有浏览器 cookies |
+      ko_kr: |
+        **시작하기**
+
+        설치 후, Web UI를 열고 **Save Config** 버튼을 클릭하여 Chromium 브라우저를 시작하세요.
+        Web UI는 서버의 싱글 사인온(SSO)으로 보호됩니다 — 기존 서버 계정으로 로그인하세요.
+
+        **웹 인터페이스:**
+        - **메인 UI** — 실시간 noVNC 브라우저 뷰, 상태, 도구 정보가 포함된 대시보드
+
+        **MCP 연동 (AI/LLM용):**
+
+        AI 어시스턴트를 연결하여 브라우저를 제어할 수 있습니다.
+
+        **옵션 1: 공개 URL (OAuth)**
+
+        `/mcp` 엔드포인트는 OAuth 2.1로 보호됩니다. 아래 URL을 클라이언트에 설정하세요.
+        OAuth 디스커버리를 지원하는 클라이언트(claude.ai, Claude Desktop)는 자동으로
+        등록되며 서버 계정(SSO)으로 승인합니다.
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "https://browsermcp-${APP_DOMAIN}/mcp"
+            }
+          }
+        }
+        ```
+        client_id/client_secret가 필요한 클라이언트(n8n, 커스텀 스크립트)는
+        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 에서 생성하세요.
+
+        **옵션 2: 로컬 Docker 연결 (인증 불필요)**
+
+        같은 서버에서 실행 중인 AI 어시스턴트는 Docker 네트워크로 직접 연결:
+        ```json
+        {
+          "mcpServers": {
+            "browser-mcp": {
+              "type": "http",
+              "url": "http://browsermcp-backend:9746/mcp"
+            }
+          }
+        }
+        ```
+        *참고: AI 어시스턴트가 `pcs` Docker 네트워크에 있어야 합니다.*
+
+        **옵션 3: Beacon 경유 (통합)**
+
+        **Beacon**이 설치되어 있으면 Browser MCP가 자동 등록되며, `browser-mcp__*` 네임스페이스에서 도구를 사용할 수 있습니다.
+
+        **사용 가능한 MCP 도구:**
+        | 도구 | 설명 |
+        |------|------|
+        | `navigate` | URL로 브라우저 이동 |
+        | `click` | CSS/텍스트 선택자로 요소 클릭 |
+        | `type` | 입력 요소에 텍스트 입력 |
+        | `screenshot` | 현재 페이지 스크린샷 |
+        | `evaluate` | 브라우저에서 JavaScript 실행 |
+        | `get_text` | 요소의 텍스트 내용 가져오기 |
+        | `get_page_content` | 현재 페이지 전체 HTML 가져오기 |
+        | `wait_for` | 요소가 특정 상태에 도달할 때까지 대기 |
+        | `go_back` | 브라우저 뒤로 가기 |
+        | `go_forward` | 브라우저 앞으로 가기 |
+        | `set_viewport` | 브라우저 뷰포트 크기 설정 |
+        | `get_console_logs` | 브라우저 콘솔 로그 가져오기 |
+        | `pdf` | 현재 페이지 PDF 생성 |
+        | `get_cookies` | 브라우저 쿠키 가져오기 |
+        | `set_cookies` | 브라우저 쿠키 설정 |
+        | `clear_cookies` | 모든 브라우저 쿠키 삭제 |
 
 x-compose-app:
   schema_version: 2
