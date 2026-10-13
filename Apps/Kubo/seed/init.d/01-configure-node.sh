@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 # Applied on every start, before the daemon binds anything: Kubo's entrypoint runs
 # /container-init.d/*.sh after `ipfs init` and before `exec ipfs daemon`, so these are
 # offline edits of the repo config, not API calls.
