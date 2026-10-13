@@ -2,7 +2,7 @@ name: clauderoot
 
 services:
   clauderoot:
-    image: ghcr.io/worph/claude-code-container:1.0.26
+    image: ghcr.io/worph/claude-code-container:1.0.28
     container_name: clauderoot
     restart: unless-stopped
     user: 0:0
