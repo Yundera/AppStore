@@ -1,0 +1,303 @@
+name: kopia
+
+# Kopia as Maison's off-site backup engine, for a box with no backup provisioned by
+# its platform (the stock FOSS mesh stack). A Yundera PCS already runs a `kopia` stack
+# of its own, and Maison refuses to install this app over it.
+#
+# Three containers, the same shape the Yundera platform stack uses:
+#
+#   kopia         AppShield gate. The only public entrypoint (kopia-${APP_DOMAIN}).
+#   kopia-app     `kopia server --ui` — kopia's own web UI, to browse and restore.
+#   kopia-engine  `maison-engine serve` — the container Maison `docker exec`s into.
+#
+# Setup is two files in /DATA/AppData/kopia/engine/ (examples are seeded beside them):
+# connect.json (bucket, endpoint, region, prefix) and credentials.env (the storage key).
+# The engine connects the repository on its own once they are there, then Maison asks
+# the admin to enable it in Settings > Backups. See rationale.md.
+
+services:
+  kopia:
+    image: ghcr.io/yundera/appshield:3.2.0
+    container_name: kopia
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via
+    # the container's PTR record, rejecting any redirect URI that doesn't match. Must
+    # equal the app name, or Docker defaults the hostname to the random container ID
+    # and OIDC registration fails.
+    hostname: kopia
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: "kopia-app"
+      BACKEND_PORT: "51515"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      SESSION_DURATION_HOURS: "720"
+    expose:
+      - 80
+    labels:
+      caddy_0: kopia-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: kopia-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: kopia-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - kopia-app
+    networks:
+      # On `pcs` because Caddy and auth-registrar must reach it, and on the app's
+      # own network because that is where kopia's UI lives.
+      - pcs
+      - kopia-internal
+    cpu_shares: 40
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  kopia-app:
+    image: ghcr.io/yundera/maison-kopia-engine:1.3.0
+    container_name: kopia-app
+    restart: unless-stopped
+    # The UI is kopia's own server over the repository the engine connected. Until
+    # the engine has connected one there is nothing to serve, so it waits for the
+    # files instead of crash-looping; the gate answers 502 meanwhile.
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        E=/DATA/AppData/kopia/engine
+        until [ -f "$$E/repository.config" ] && [ -f "$$E/repository.password" ]; do
+          echo "waiting for the engine to connect a repository in $$E"
+          sleep 30
+        done
+        if [ -f "$$E/credentials.env" ]; then set -a; . "$$E/credentials.env"; set +a; fi
+        export KOPIA_PASSWORD="$$(cat "$$E/repository.password")"
+        exec /bin/kopia server start \
+          --config-file="$$E/repository.config" \
+          --address=0.0.0.0:51515 \
+          --ui \
+          --ui-preferences-file="$$E/ui-preferences.json" \
+          --insecure \
+          --without-password \
+          --allow-extremely-dangerous-unauthenticated-server-on-the-network \
+          --no-grpc \
+          --no-check-for-updates
+    # Root with five capabilities, like the engine: browsing and restoring files
+    # owned by other apps' uids. See rationale.md.
+    user: 0:0
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_READ_SEARCH
+      - DAC_OVERRIDE
+      - CHOWN
+      - FOWNER
+      - FSETID
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      KOPIA_CACHE_DIRECTORY: "/DATA/AppData/kopia/engine/cache"
+      KOPIA_LOG_DIR: "/DATA/AppData/kopia/engine/logs"
+      TZ: $TZ
+    volumes:
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}
+        target: /DATA
+        bind:
+          propagation: rshared
+    expose:
+      - 51515
+    # No Caddy labels and NOT on `pcs`: the server runs without a password of its
+    # own, so the gate must be the only way in. DO NOT move this service onto `pcs`.
+    networks:
+      - kopia-internal
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  kopia-engine:
+    image: ghcr.io/yundera/maison-kopia-engine:1.3.0
+    container_name: kopia-engine
+    # The identity snapshots are filed under (pcs@kopia-pcs). It is written once into
+    # repository.config at connect, and Maison only execs into a container whose
+    # hostname matches it — change it and every backup becomes a new source.
+    hostname: kopia-pcs
+    restart: unless-stopped
+    # Resident: connects the repository from connect.json + credentials.env when
+    # they appear, writes the adapter.json Maison discovers, then idles while Maison
+    # runs `maison-engine <verb>` in it with `docker exec`.
+    command: ["serve", "--repo-dir=/DATA/AppData/kopia/engine"]
+    user: 0:0
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_READ_SEARCH   # read app data owned by other uids
+      - DAC_OVERRIDE      # restore into it
+      - CHOWN             # put recorded ownership back on restore
+      - FOWNER
+      - FSETID
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # What serve writes into adapter.json. MAISON_ENGINE_IMAGE must be the exact
+      # string of `image:` above: Maison only enables an engine whose container
+      # runs the image its descriptor names.
+      MAISON_ENGINE_IMAGE: "ghcr.io/yundera/maison-kopia-engine:1.3.0"
+      MAISON_ENGINE_CONTAINER: "kopia-engine"
+      KOPIA_CACHE_DIRECTORY: "/DATA/AppData/kopia/engine/cache"
+      KOPIA_LOG_DIR: "/DATA/AppData/kopia/engine/logs"
+      TZ: $TZ
+    volumes:
+      # The whole of /DATA: it is what gets backed up and restored. Maison passes
+      # the paths; the engine never derives them.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}
+        target: /DATA
+        bind:
+          propagation: rshared
+    tmpfs:
+      - /run/maison-ops
+    # Needs the internet to reach the bucket, but nothing needs to reach it.
+    networks:
+      - kopia-internal
+    cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  kopia-internal:
+    name: kopia-internal
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: kopia
+  developer: Kopia Authors
+  category: Backup
+  tags: ["backup", "personal"]
+  description:
+    en_us: |
+      💾 **What is Kopia?**
+
+      **Kopia** is a fast, encrypted, deduplicating backup tool. This app plugs it into
+      your server's **Backups** page as an off-site destination: your apps and your
+      Documents, Downloads and Media are backed up every night to a storage bucket you
+      own — Backblaze B2, or any S3-compatible service.
+
+      ✅ **What you get**
+      • Nightly, incremental, end-to-end encrypted backups to your own bucket
+      • Restore an app or your files from the Backups page, like a local backup
+      • Kopia's own web UI to browse snapshots and restore single files
+
+      🔑 **You hold the key.** The repository password is generated on this server and
+      never leaves it unless you save it. Without it, nobody — including you — can read
+      the backups. Save it somewhere off the server.
+
+      ⚠️ **For servers without a provided backup.** A Yundera PCS already includes
+      Yundera Backup; this app is for self-hosted servers that do not.
+    fr_fr: |
+      💾 **Qu'est-ce que Kopia ?**
+
+      **Kopia** est un outil de sauvegarde rapide, chiffré et dédupliqué. Cette
+      application le branche sur la page **Sauvegardes** de votre serveur comme
+      destination externe : vos applications ainsi que vos Documents, Téléchargements
+      et Médias sont sauvegardés chaque nuit vers un bucket qui vous appartient —
+      Backblaze B2 ou tout service compatible S3.
+
+      ✅ **Ce que vous obtenez**
+      • Des sauvegardes nocturnes, incrémentales et chiffrées de bout en bout
+      • La restauration d'une application ou de vos fichiers depuis la page Sauvegardes
+      • L'interface web de Kopia pour parcourir les instantanés et restaurer un fichier
+
+      🔑 **Vous détenez la clé.** Le mot de passe du dépôt est généré sur ce serveur et
+      ne le quitte pas tant que vous ne l'avez pas sauvegardé. Sans lui, personne — vous
+      compris — ne peut lire les sauvegardes. Conservez-le hors du serveur.
+
+      ⚠️ **Pour les serveurs sans sauvegarde fournie.** Un PCS Yundera inclut déjà
+      Yundera Backup ; cette application s'adresse aux serveurs auto-hébergés.
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  tagline:
+    en_us: Encrypted nightly backups of your server to your own Backblaze B2 or S3 bucket.
+    fr_fr: Des sauvegardes nocturnes chiffrées de votre serveur vers votre propre bucket Backblaze B2 ou S3.
+  tips:
+    before_install:
+      en_us: |
+        Setup takes three steps
+
+        1. Create a private bucket and an application key limited to it (on Backblaze:
+           Buckets › Create, then Application Keys › Add, restricted to that bucket).
+        2. In /DATA/AppData/kopia/engine/, copy connect.json.example to connect.json and
+           credentials.env.example to credentials.env, and fill both in. The engine
+           connects within a minute; check the kopia-engine logs if it does not.
+        3. Open Settings › Backups and click Enable on Kopia, then tick it for the
+           nightly backup.
+
+        Save the repository password (Settings › Backups offers it by email or on
+        screen). It is the only way to read these backups on another server.
+
+        What this app can reach
+
+        The engine and the UI mount the whole of /DATA, run as root with five file
+        capabilities, and are only reachable through your server's sign-in.
+
+        Not for a Yundera PCS, which ships its own Kopia engine.
+      fr_fr: |
+        La configuration tient en trois étapes
+
+        1. Créez un bucket privé et une clé d'application limitée à ce bucket (chez
+           Backblaze : Buckets › Create, puis Application Keys › Add).
+        2. Dans /DATA/AppData/kopia/engine/, copiez connect.json.example en connect.json
+           et credentials.env.example en credentials.env, puis remplissez-les. Le moteur
+           se connecte en moins d'une minute ; sinon, consultez les logs de kopia-engine.
+        3. Ouvrez Paramètres › Sauvegardes, cliquez sur Activer pour Kopia, puis
+           cochez-le pour la sauvegarde nocturne.
+
+        Conservez le mot de passe du dépôt (Paramètres › Sauvegardes le propose par
+        e-mail ou à l'écran). C'est le seul moyen de lire ces sauvegardes ailleurs.
+
+        Ce à quoi cette application a accès
+
+        Le moteur et l'interface montent tout /DATA, tournent en root avec cinq
+        capacités de fichiers, et ne sont joignables qu'après connexion à votre serveur.
+
+        Pas pour un PCS Yundera, qui embarque déjà son propre moteur Kopia.
+  title:
+    en_us: Kopia
+  index: /
+  webui_port: 80
+  store_app_id: kopia
+
+x-compose-app:
+  schema_version: 2
+  version: "1.3.0"
+  # The engine directory holds the repository password and the storage key, so it is
+  # 0700. Everything in it is written by the root engine, which copies this
+  # directory's owner onto what it creates.
+  folders:
+    - path: /DATA/AppData/$AppID
+    - path: /DATA/AppData/$AppID/engine
+      mode: "0700"
+    - path: /DATA/AppData/$AppID/engine/cache
+    - path: /DATA/AppData/$AppID/engine/logs
+  # The engine's own state is not app data: the repository config and password are
+  # useless inside the very repository they open, and the cache is rebuilt on demand.
+  backup:
+    skip: true
+    exclude:
+      - "**/cache/"
+      - "**/logs/"
+  webui-host: kopia-${domain}
+  webui-path: /

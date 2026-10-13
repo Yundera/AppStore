@@ -1,0 +1,6 @@
+{
+  "bucket": "my-pcs-backups",
+  "endpoint": "https://s3.eu-central-003.backblazeb2.com",
+  "region": "eu-central-003",
+  "prefix": "my-pcs/"
+}
