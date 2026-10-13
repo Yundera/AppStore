@@ -151,6 +151,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.2.12"
   # Maison resolves ${domain} on every render; x-casaos.hostname uses the
   # compose-time ${APP_DOMAIN}, which reaches the tile as an unsubstituted
   # literal and makes the Open action land on chrome-error://. Declaring

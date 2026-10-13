@@ -387,6 +387,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "2026.6.9"
   # Directories Maison creates and chowns to $PUID:$PGID before any image is pulled
   # and before any hook runs. Declared here rather than mkdir'd in the hook: a hook
   # mkdir runs inside the Maison container and lands root-owned, which is exactly

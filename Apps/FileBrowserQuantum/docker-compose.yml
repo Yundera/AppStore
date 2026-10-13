@@ -212,6 +212,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.5.5"
   # No init containers: Quantum creates its own database on first start, and the
   # admin account comes from FILEBROWSER_ADMIN_PASSWORD rather than a seeding CLI
   # call. config.yaml arrives via the seed tree (seed/data/config.yaml), which is

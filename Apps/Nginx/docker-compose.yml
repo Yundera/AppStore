@@ -161,6 +161,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.29.3"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
   # before images are pulled, before the seed/ tree is applied, and before any
   # container starts, on the first boot and every one after it.

@@ -26,6 +26,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] No hardcoded credentials in the compose file - use environment variables or secrets
 - [ ] Credentials are **per app**: generated under `x-compose-app.secrets` and shown with `x-compose-app.credentials` — not `$APP_DEFAULT_PASSWORD`, which every app on the box shares and is being phased out (see [First-run setup](#first-run-setup), *Credentials*)
 - [ ] Specific version tag (no `:latest`)
+- [ ] `x-compose-app.version` says which release this is, and is bumped with the image tag. See [`version` and `data_version`](#version-and-data_version--what-the-user-sees-and-what-the-data-is)
 
 ### Functionality Checklist
 - [ ] Works immediately after installation - no need to check logs or run commands - the app's `seed/` tree and declared secrets provide sensible defaults
@@ -35,7 +36,7 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] CPU field cpu_shares is set appropriately (on all services)
 - [ ] fresh installation tested
 - [ ] uninstall/reinstall tested - An application should be able to be uninstalled and reinstalled without losing user data or configuration (See the keep user data option when uninstalling)
-- [ ] Upgrade from previous version tested - installing the new version on top of existing `/DATA/AppData/[AppName]/` data from a previous version must not corrupt, erase, or downgrade user data or configuration. Only incremental migration is supported (to go from v1.1 to v1.4, the user must pass through v1.2 and v1.3 first).
+- [ ] Upgrade from previous version tested - installing the new version on top of existing `/DATA/AppData/[AppName]/` data from a previous version must not corrupt, erase, or downgrade user data or configuration. The store serves only its latest version, so a user may jump several releases in one update: anything the image cannot convert by itself on first start (a PostgreSQL major, a schema the app will not upgrade, a moved config file) needs a **data migration** — see [`version` and `data_version`](#version-and-data_version--what-the-user-sees-and-what-the-data-is)
 
 
 ### Documentation Checklist
@@ -117,7 +118,7 @@ Applications must be designed to preserve user data across uninstallation and re
 **Implementation Guidelines:**
 - Map all persistent data to `/DATA/AppData/[AppName]/` subdirectories
 - Use initialization scripts that check for existing data before creating defaults — and remember `&&` chains propagate the failure: one initialiser refusing to overwrite an existing file takes the whole hook down with it
-- Ensure database migrations are handled gracefully on version updates
+- Ensure database migrations are handled gracefully on version updates — and when the image cannot do it alone, declare a data migration (see [`version` and `data_version`](#version-and-data_version--what-the-user-sees-and-what-the-data-is))
 - Test uninstall/reinstall scenarios to verify data persistence
 
 **Example Volume Mapping:**
@@ -706,6 +707,67 @@ is a review question, not a default.
 
 Whether the app is backed up is its own key, `backup.skip` (see Maison's
 `docs/x-compose-app.md`).
+
+##### `version` and `data_version` — what the user sees, and what the data is
+
+```yaml
+x-compose-app:
+  schema_version: 2
+  version: "2.4.0"      # the release, as people read it — display only
+  # data_version: 2     # only once the app has needed its first migration
+```
+
+**`version`** is shown on the tile, the store card and the Update tab
+(`2.3.1 → 2.4.0`). Nothing compares it, so it is free-form — use the main app's image
+tag without the leading `v` or a variant suffix (`ghost:6.59.0-alpine` → `"6.59.0"`),
+and for a gated app the tag of the app behind the gate, not AppShield's. Quote it, and
+**bump it in the same commit as the image tag**. Leave it out only when there is no
+release to name (an image pinned by digest).
+
+**`data_version`** is the shape of the app's *data*, an integer that starts at 1 and
+rises by exactly one per migration. **Don't declare it until the app needs its first
+migration** — absent means 1, and keeping it off every other app keeps each diff that
+touches it meaningful. Maison records where an install's data is in
+`/DATA/AppData/<app>/.data-version` (written at install; absent on installs that
+predate it, which count as the installed compose's `data_version`).
+
+**When an update needs a migration.** Most releases don't: the image converts its own
+data on first start, and only `version` changes. When it can't — a PostgreSQL major,
+Odoo 18 → 19 (OpenUpgrade), a config file that moved, an app that must boot every
+intermediate major — raise `data_version` by one and add one step under `migrations`
+with that `id`:
+
+```yaml
+x-compose-app:
+  version: "19.0"
+  data_version: 2
+  migrations:
+    - id: 2
+      name: odoo-18-to-19
+      blocked: |
+        Odoo 18 → 19 changes the database schema and needs OpenUpgrade.
+        Follow https://… on a copy, then reinstall from that copy.
+```
+
+A step is exactly one of a **container** (`image:` plus the `init`-step keys —
+preferred), a **script** (`script: migrations/0002-….sh`, run like a hook), or
+**`blocked:`** (a message; the update is refused before anything is pulled). Every step
+from 2 to `data_version` must exist exactly once, and only the store's compose
+declares them. A step must check the data's actual state and exit 0 when there is
+nothing to do: exit 0 means *applied*, there is no "try next time". The full contract —
+step forms, ordering, rollback — is Maison's
+[`docs/migrations.md`](https://github.com/Yundera/maison/blob/main/docs/migrations.md).
+
+**What Maison does with it today** (v1.1.56): an update that raises `data_version`
+is **refused**, with the step's message if it is `blocked`; the runner that executes
+container and script steps is not shipped yet. An older Maison ignores the fields
+entirely and would update straight past a step onto unconverted data — so **do not
+merge a store app that declares a migration until v1.1.56 or later is on the fleet**.
+
+**The invariant to review against:** a fresh install of data version N must end up
+where an install of any earlier version plus every migration up to N ends up. A
+change to what `seed/`, `files`, `folders` or `init` produce on disk never reaches
+existing installs — unless a migration carries it.
 
 ##### Keys Maison writes itself
 

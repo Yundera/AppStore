@@ -206,6 +206,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "2.31.1"
   # The 64-char hex key that encrypts AIOStreams' saved configuration. Generated
   # once and kept in the app's .env, which the backup archives with the rest of
   # the folder — the SQLite config store is unreadable without the same key, so it

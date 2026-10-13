@@ -145,6 +145,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.94.2"
   # The node has no UI of its own, so the tile opens the place you actually manage it
   # from. Mirrors the x-casaos scheme/hostname/index above, which Maison does not read
   # — the two blocks must agree so a CasaOS-only consumer lands on the same page.

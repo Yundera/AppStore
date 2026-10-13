@@ -298,6 +298,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "0.70.3"
   # The 32-byte hex secret Docmost signs sessions with. Generated once and kept in
   # the app's .env; a key that changes logs every user out, so it is never
   # regenerated once set.

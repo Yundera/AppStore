@@ -226,6 +226,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.0.0"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`,
   # one per trailing-slash bind mount in `volumes:` above.
   folders:

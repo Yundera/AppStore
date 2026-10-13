@@ -214,6 +214,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.0.0"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   folders:
     - path: /DATA/AppData/discordmcp

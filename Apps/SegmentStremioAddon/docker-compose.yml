@@ -157,5 +157,6 @@ x-casaos:
     fr_fr: Addon Stremio Segment
 
 x-compose-app:
+  version: "1.3.1"
   webui-host: ssa-${domain}
   webui-path: "/"

@@ -745,6 +745,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "2.7.0"
   # Directories Maison creates and chowns to $PUID:$PGID before any image is
   # pulled and before any container starts. The app image runs as its own `wger`
   # user (uid 1000), which is what $PUID is on a PCS -- without this, compose

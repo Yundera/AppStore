@@ -321,6 +321,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.27.3"
   folders:
     - path: /DATA/AppData/$AppID/data
       user: $PUID

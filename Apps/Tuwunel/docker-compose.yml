@@ -185,6 +185,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.8.2"
   # Element's config carries the deployment's domain, so it is re-rendered on
   # every up rather than written once at install. The hook this replaces ran
   # exactly once: change the PCS domain afterwards and Element kept pointing at

@@ -413,6 +413,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "stable-855"
   # Both halves of the seeding are containers — hubs-seed's own image — so they
   # are declared rather than shelled out to. bootstrap is idempotent: it reuses an
   # existing keypair and preserves every secret already in secrets/.env, so a

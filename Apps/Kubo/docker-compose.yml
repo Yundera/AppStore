@@ -278,6 +278,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "0.43.1"
   folders:
     # The fs-repo: keys, config, block store, pins. Kubo drops to the container's own
     # uid when started as root, but `user:` above pins it to $PUID:$PGID, so the repo

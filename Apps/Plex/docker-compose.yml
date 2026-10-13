@@ -194,6 +194,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.43.0"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`,
   # mirroring the trailing-slash bind mounts in `volumes:` above — with one
   # deliberate omission, so re-check this against a gen-folders.py run rather

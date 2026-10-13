@@ -419,6 +419,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.6.1"
   # Outline's three signing/encryption secrets are state, not config: SECRET_KEY
   # encrypts the authentications table, so a key that changed would leave the
   # stored OIDC credentials undecryptable. They are generated once into the app's

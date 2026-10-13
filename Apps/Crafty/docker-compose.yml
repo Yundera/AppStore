@@ -134,6 +134,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "4.10.7"
   # Why this is an init container and not a seed/ file.
   #
   # crafty-4's docker_launcher.sh bootstraps its config ONLY when the directory is

@@ -101,6 +101,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "2.4.0.0"
   # Encrypts the sensitive fields of Duplicati-server.sqlite. It must stay
   # constant for the life of /DATA/AppData/duplicati/config, so it cannot be
   # $APP_DEFAULT_PASSWORD - that is the platform password, which the user may

@@ -294,6 +294,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.0.2"
   # The app's own state — trash, thumbnail cache, upload staging — lives here
   # (STATE_DIR defaults to $DATA_ROOT/AppData/files). The backend runs as root and
   # would create it itself, root-owned; declaring it here is what makes it

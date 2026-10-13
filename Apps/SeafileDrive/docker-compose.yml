@@ -179,6 +179,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.74.4"
   # rclone's config carries the WebDAV password in rclone's own obscured form, which
   # only rclone can produce — so a one-shot container produces it and the value is
   # substituted into seed/config/rclone.conf.tmpl. It runs only while there is no

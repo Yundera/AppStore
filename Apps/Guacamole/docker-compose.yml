@@ -136,6 +136,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.6.0"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` -
   # the two bind-mount sources above. Declared here rather than mkdir'd in the
   # hook: a hook's mkdir runs inside the Maison container, so the directories

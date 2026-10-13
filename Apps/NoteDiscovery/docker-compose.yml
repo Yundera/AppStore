@@ -225,6 +225,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "0.19.2"
   # The key Starlette's SessionMiddleware signs NoteDiscovery's auth cookie with.
   # Left unset, the image falls back to the public default secret_key baked into
   # config.yaml, and anyone can forge an authenticated session cookie. Generated

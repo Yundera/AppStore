@@ -303,6 +303,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "2.63.23"
   # Seeding the database needs filebrowser's own binary, so it stays a container —
   # but the container is declared, not shelled out to. The guard replaces the
   # `if [ ! -f ]` the hook opened with: `config init` refuses to overwrite an

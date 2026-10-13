@@ -208,6 +208,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "14.368.0"
   # Rendered into the app's .env on every up. The template resolves to whatever the
   # user already saved (or to empty on a fresh install), so this never overwrites an
   # entered value — it only makes sure the rows exist in the Env tab to be filled in.

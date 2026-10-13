@@ -215,6 +215,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "3.0.3"
   hooks:
     # Postgres reads POSTGRES_PASSWORD only at initdb time, so an install whose pgdata was
     # created by an earlier revision of this app keeps the password it was initialised with

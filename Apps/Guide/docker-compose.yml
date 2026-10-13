@@ -125,4 +125,5 @@ x-casaos:
       마치고 Guide에서 App Store로 이동해 원하는 앱을 설치할 수 있습니다.
 
 x-compose-app:
+  version: "1.0.3"
   webui-host: guide-${domain}

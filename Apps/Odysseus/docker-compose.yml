@@ -405,6 +405,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.0.2-dev.7c8070f"
   # SearXNG's session secret. Generated once by Maison and kept in the app's .env,
   # then substituted into seed/searxng/settings.yml.tmpl on first start.
   #

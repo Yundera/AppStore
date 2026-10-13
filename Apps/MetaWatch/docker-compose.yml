@@ -408,6 +408,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "1.0.34"
   # Directories Maison creates (and chowns where a service drops privileges)
   # before any image is pulled or container starts.
   folders:
