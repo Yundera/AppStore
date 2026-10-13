@@ -54,7 +54,7 @@ services:
   # shim shares the backend's network namespace and republishes the UI on 0.0.0.0:8086
   # so the sidecar can reach it as tribler-backend:8086 over the pcs network.
   tribler-fwd:
-    image: alpine/socat:1.8.0.0
+    image: alpine/socat:1.8.1.3
     container_name: tribler-fwd
     restart: unless-stopped
     network_mode: "service:tribler-backend"
@@ -143,7 +143,10 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+<<<<<<< HEAD
   thumbnail: thumbnail.png
+=======
+>>>>>>> 7871733 (Update Tribler socat to 1.8.1.3, remove icon-resize thumbnail)
   tagline:
     en_us: Anonymous, decentralized BitTorrent client with a built-in onion network.
     fr_fr: Client BitTorrent anonyme et décentralisé avec un réseau onion intégré.
