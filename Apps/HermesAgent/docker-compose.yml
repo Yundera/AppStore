@@ -43,7 +43,7 @@ services:
       # registration below cannot complete. No signing secret is set, so these
       # sessions are deliberately dropped on restart.
       HERMES_DASHBOARD_BASIC_AUTH_USERNAME: admin
-      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: $APP_DEFAULT_PASSWORD
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: $HERMESAGENT_ADMIN_PASSWORD
     volumes:
       # Everything the agent owns lives here: config.yaml, .env (API keys),
       # sessions, memories, skills, cron jobs, logs, and the per-profile HOME
@@ -196,7 +196,7 @@ x-casaos:
       en_us: |
         **Signing in**
 
-        Click the app and sign in with your server account — the same one you use for this dashboard. A second method, `admin` / `$APP_DEFAULT_PASSWORD`, is on the sign-in page as a fallback.
+        Click the app and sign in with your server account — the same one you use for this dashboard. A second method, the `admin` account, is on the sign-in page as a fallback — its password is shown when you open the app (tile menu → Credentials).
 
         **Add a model before your first message**
 
@@ -214,7 +214,7 @@ x-casaos:
       fr_fr: |
         **Connexion**
 
-        Cliquez sur l'application et connectez-vous avec votre compte serveur — le même que pour ce tableau de bord. Une seconde méthode, `admin` / `$APP_DEFAULT_PASSWORD`, figure sur la page de connexion en secours.
+        Cliquez sur l'application et connectez-vous avec votre compte serveur — le même que pour ce tableau de bord. Une seconde méthode, le compte `admin`, figure sur la page de connexion en secours — son mot de passe s'affiche à l'ouverture de l'application (menu de la tuile → Identifiants).
 
         **Ajoutez un modèle avant votre premier message**
 
@@ -232,7 +232,7 @@ x-casaos:
       es_es: |
         **Iniciar sesión**
 
-        Abre la aplicación e inicia sesión con tu cuenta del servidor, la misma de este panel. Como alternativa, en la página de acceso está `admin` / `$APP_DEFAULT_PASSWORD`.
+        Abre la aplicación e inicia sesión con tu cuenta del servidor, la misma de este panel. Como alternativa, en la página de acceso está la cuenta `admin`; su contraseña se muestra al abrir la aplicación (menú del icono → Credenciales).
 
         **Añade un modelo antes del primer mensaje**
 
@@ -250,7 +250,7 @@ x-casaos:
       zh_cn: |
         **登录**
 
-        点击应用，用你的服务器账户登录 —— 与登录本面板的账户相同。登录页上还有一种备用方式：`admin` / `$APP_DEFAULT_PASSWORD`。
+        点击应用，用你的服务器账户登录 —— 与登录本面板的账户相同。登录页上还有一种备用方式：`admin` 账户，其密码会在打开应用时显示（磁贴菜单 → 凭据）。
 
         **发第一条消息前先添加模型**
 
@@ -268,7 +268,7 @@ x-casaos:
       ko_kr: |
         **로그인**
 
-        앱을 열고 서버 계정으로 로그인하세요. 이 대시보드에 쓰는 계정과 같습니다. 로그인 화면에는 대체 수단으로 `admin` / `$APP_DEFAULT_PASSWORD` 도 있습니다.
+        앱을 열고 서버 계정으로 로그인하세요. 이 대시보드에 쓰는 계정과 같습니다. 로그인 화면에는 대체 수단으로 `admin` 계정도 있으며, 비밀번호는 앱을 열 때 표시됩니다(타일 메뉴 → 자격 증명).
 
         **첫 메시지 전에 모델을 추가하세요**
 
@@ -287,6 +287,25 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2026.9.14"
+  secrets:
+    # The fallback basic-auth password. Seeded: an installed app keeps the shared
+    # password it already had; a fresh install gets its own.
+    HERMESAGENT_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label:
+        en_us: Fallback sign-in
+        fr_fr: Connexion de secours
+        es_es: Acceso alternativo
+        zh_cn: 备用登录
+        ko_kr: 대체 로그인
+      username: admin
+      password: ${HERMESAGENT_ADMIN_PASSWORD}
+      note:
+        en_us: Sign in with your server account first; this account is a fallback for when single sign-on is unavailable.
+        fr_fr: Connectez-vous d'abord avec votre compte serveur ; ce compte sert de secours si l'authentification unique est indisponible.
+        es_es: Inicia sesión primero con tu cuenta del servidor; esta cuenta es una alternativa por si el inicio de sesión único no está disponible.
+        zh_cn: 请优先使用服务器账户登录；此账户仅在单点登录不可用时作为备用。
+        ko_kr: 먼저 서버 계정으로 로그인하세요. 이 계정은 통합 로그인을 쓸 수 없을 때를 위한 대체 수단입니다.
   folders:
     - path: /DATA/AppData/$AppID
       user: $PUID

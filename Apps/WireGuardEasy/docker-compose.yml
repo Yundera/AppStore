@@ -23,7 +23,7 @@ services:
       DISABLE_IPV6: 'true'
       INIT_ENABLED: 'true'
       INIT_USERNAME: admin
-      INIT_PASSWORD: $APP_DEFAULT_PASSWORD
+      INIT_PASSWORD: ${WGEASY_ADMIN_PASSWORD}
       INIT_HOST: $APP_PUBLIC_IP
       INIT_PORT: '51820'
       INIT_DNS: '9.9.9.9'
@@ -156,9 +156,7 @@ x-casaos:
       en_us: |
         # Default Account
 
-        | Username | Password                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        The username and password are shown when you open the app (tile menu → Credentials).
 
         This is **WireGuard Easy v15**. The admin account is auto-configured. VPN settings can be changed from the web UI after login.
 
@@ -174,9 +172,7 @@ x-casaos:
       ko_kr: |
         # 기본 계정
 
-        | 사용자명 | 비밀번호                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        앱을 열면 사용자 이름과 비밀번호가 표시됩니다 (타일 메뉴 → 자격 증명).
 
         **WireGuard Easy v15** 버전입니다. 관리자 계정이 자동 설정됩니다. VPN 설정은 로그인 후 웹 UI에서 변경할 수 있습니다.
 
@@ -192,9 +188,7 @@ x-casaos:
       zh_cn: |
         # 默认账户
 
-        | 用户名   | 密码                    |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
 
         这是 **WireGuard Easy v15** 版本。管理员账户已自动配置。登录后可在 Web UI 中更改 VPN 设置。
 
@@ -210,9 +204,7 @@ x-casaos:
       fr_fr: |
         # Compte par defaut
 
-        | Nom d'utilisateur | Mot de passe            |
-        | ----------------- | ----------------------- |
-        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+        L'identifiant et le mot de passe s'affichent à l'ouverture de l'application (menu de la tuile → Identifiants).
 
         Ceci est **WireGuard Easy v15**. Le compte administrateur est configure automatiquement. Les parametres VPN peuvent etre modifies depuis l'interface web apres connexion.
 
@@ -228,9 +220,7 @@ x-casaos:
       es_es: |
         # Cuenta predeterminada
 
-        | Usuario  | Contrasena              |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        El usuario y la contraseña se muestran al abrir la aplicación (menú del icono → Credenciales).
 
         Esta es la version **WireGuard Easy v15**. La cuenta de administrador se configura automaticamente. La configuracion VPN se puede cambiar desde la interfaz web despues de iniciar sesion.
 
@@ -245,5 +235,14 @@ x-casaos:
         Asi, todos los clientes de la VPN pueden acceder a las carpetas compartidas y al Escritorio remoto de ese PC. Mantenga el mismo nombre de tunel al reimportar una configuracion; de lo contrario, Windows lo trata como una nueva red Publica.
 
 x-compose-app:
+  schema_version: 2
   version: "15.3.0"
   webui-host: wgeasy-${domain}
+  secrets:
+    # Seeded: an installed app provisioned its admin at first boot with the former
+    # shared password, which it keeps; a fresh install gets its own.
+    WGEASY_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${WGEASY_ADMIN_PASSWORD}

@@ -24,8 +24,8 @@ and the user already has `/DATA/AppDataShared` if that is all they want.
   (English and Chinese), and again in the app `description`, so the user sees the
   full extent of the access on the install screen rather than after installing.
 - Authentication is on by default and enforced by dufs itself: `--auth
-  admin:$APP_DEFAULT_PASSWORD@/:rw` seeds a single `admin` account with the
-  per-server password, never a hardcoded one. There is no anonymous access — an
+  admin:${DUFS_ADMIN_PASSWORD}@/:rw` seeds a single `admin` account with the
+  per-app `DUFS_ADMIN_PASSWORD` secret, never a hardcoded one. There is no anonymous access — an
   unauthenticated request to any path answers `401` with a Digest/Basic challenge.
 - The container runs as `$PUID:$PGID`, not root, so it can only touch what the
   server user can touch — it cannot escalate beyond the owner's own files.
@@ -92,5 +92,5 @@ rule is `@/:rw`, so there is no anonymous read path and no second account to aud
 Dufs keeps no state of its own — there is no database, no config file and nothing
 under `/DATA/AppData/dufs/`; everything it shows is the user's own files, which
 survive uninstall and reinstall because they were never the app's to begin with.
-Revoking access is therefore a matter of changing `$APP_DEFAULT_PASSWORD` and
-restarting, or uninstalling the app, and costs no configuration either way.
+Revoking access is therefore a matter of changing `DUFS_ADMIN_PASSWORD` in the app's
+`.env` and restarting, or uninstalling the app, and costs no configuration either way.

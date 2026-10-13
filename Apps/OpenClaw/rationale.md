@@ -68,7 +68,8 @@ it has to be a `.tmpl`. The three entries mirror the `caddy_0/1/2` labels.
   equal `openclaw`, which is what `auth-registrar` attests via the container's PTR
   record; a mismatch fails registration rather than falling open.
 - **The gateway still holds a credential of its own.** `OPENCLAW_GATEWAY_TOKEN` is
-  set to `$APP_DEFAULT_PASSWORD` — the per-install random value Maison injects, so it
+  its own secret — `OPENCLAW_GATEWAY_TOKEN`, seeded from the old shared password so
+  existing installs keep their token, generated per install otherwise — so it
   is distinct on every PCS and is never a shipped literal. It is *required*: from
   2026.6.x the image refuses to bind to a non-loopback interface without a token or
   password, and the two control-UI flags above do not satisfy that guard. So the

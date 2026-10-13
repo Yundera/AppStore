@@ -19,9 +19,9 @@ Docmost is itself the login gate. Nothing sits in front of it, and nothing behin
 anonymous.
 
 - **No pre-seeded credential exists.** The compose sets no admin user, password or API
-  token. `$APP_DEFAULT_PASSWORD` appears only as the Postgres role password
-  (`POSTGRES_PASSWORD`, and inside `DATABASE_URL`) — never as an application credential —
-  so there is no shipped account for a visitor to try.
+  token. The only password it carries is the per-app `DOCMOST_DB_PASSWORD` secret, used
+  as the Postgres role password (`POSTGRES_PASSWORD`, and inside `DATABASE_URL`) — never
+  as an application credential — so there is no shipped account for a visitor to try.
 - **The first user to register becomes the workspace admin**, through Docmost's own
   `/setup/register` page. That is stated to the user *before* they install, in
   `tips.before_install` in all five supported locales.
@@ -86,7 +86,7 @@ mixed-access one.
    break clients that authenticate straight against the Docmost API with a JWT instead of
    an interactive browser flow (`Apps/DocmostMCP` is one such client in this store), and
    it would stack a second login in front of Docmost's own workspace/member model.
-2. **Pre-seeding an owner account with `$APP_DEFAULT_PASSWORD`** — rejected. Docmost
+2. **Pre-seeding an owner account with a generated password** — rejected. Docmost
    0.70.3 creates the workspace and its first user in one transaction through
    `POST /api/auth/setup`; there is no environment variable or CLI for it, so seeding
    would mean inserting rows into Postgres by hand and keeping that insert in step with

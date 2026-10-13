@@ -17,7 +17,7 @@ either way, and putting AppShield in front adds a *second* credential in front o
 login the user still has to pass. The store's checklist accepts "the app's own
 built-in auth (e.g. Jellyfin, Immich onboarding)" as an alternative, which is what
 this is: the login gate is on by default, on every route, and the shipped credential
-is the deployment's generated `$APP_DEFAULT_PASSWORD`, not a published default.
+is the app's own generated `WGER_ADMIN_PASSWORD` secret, not a published default.
 
 Two settings that would weaken that gate are turned off explicitly, because upstream's
 own defaults enable them:
@@ -85,8 +85,8 @@ slot resumes from where it stopped; deleting the slot is both lossier and needs
 - No host port is published by any service.
 - Every credential is generated per deployment: `WGER_SECRET_KEY` and
   `WGER_DB_PASSWORD` and `WGER_PS_STORAGE_PASSWORD` through `x-compose-app.secrets`, the
-  JWT signing keypair through the `pre_install` hook, and the admin password from
-  `$APP_DEFAULT_PASSWORD`.
+  JWT signing keypair through the `pre_install` hook, and the admin password from the
+  per-app `WGER_ADMIN_PASSWORD` secret (shown by Maison as the app's credentials).
 - `PS_STORAGE_PG_URI` is set explicitly rather than left to the app's default, which is
   the literal `postgres://powersync_storage:powersync_password@db:5432/wger` — inheriting
   it would give the deployment a database role whose password is published upstream.

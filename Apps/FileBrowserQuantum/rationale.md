@@ -68,10 +68,12 @@ the source in `config.yaml` can lower it.
 - **Authentication is on and cannot be turned off from the store side.** Password
   auth is enabled in the seeded `config.yaml`, and `signup: false` — no self-service
   account creation on the login page.
-- The admin password is the per-server `$APP_DEFAULT_PASSWORD`, never a hardcoded
-  one. It is passed via `FILEBROWSER_ADMIN_PASSWORD`, which Quantum re-applies on
-  every start; the tip and the env description both say so, and both give the two
-  ways around it (clear the variable, or create a second account).
+- The admin password is the app's own `FILEBROWSERQUANTUM_ADMIN_PASSWORD` secret —
+  generated per install (an install that predates it keeps the box-wide password it
+  was set up with), never a hardcoded one, and shown via `credentials`. It is passed
+  via `FILEBROWSER_ADMIN_PASSWORD`, which Quantum re-applies on every start; the
+  tip and the env description both say so, and both give the two ways around it
+  (clear the variable, or create a second account).
 - Session tokens last 30 days (`tokenExpirationHours: 720`), matching the PCS-wide
   session policy rather than Quantum's own 2-hour default.
 - The container runs as `$PUID:$PGID`, not root — the image's own default user is

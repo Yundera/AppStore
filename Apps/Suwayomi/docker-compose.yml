@@ -28,7 +28,7 @@ services:
       BIND_PORT: 80
       AUTH_MODE: simple_login
       AUTH_USERNAME: admin
-      AUTH_PASSWORD: $APP_DEFAULT_PASSWORD
+      AUTH_PASSWORD: ${SUWAYOMI_ADMIN_PASSWORD}
       DOWNLOAD_AS_CBZ: true
       AUTO_DOWNLOAD_CHAPTERS: false
       WEB_UI_CHANNEL: bundled
@@ -146,9 +146,7 @@ x-casaos:
     before_install:
       en_us: |
         **Getting Started**
-        | Username | Password               |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        The username and password are shown when you open the app (tile menu → Credentials).
 
         **How to use:**
         1. Open the app and log in
@@ -159,9 +157,7 @@ x-casaos:
         **Tip:** Download chapters on WiFi, then read offline during commutes!
       fr_fr: |
         **Pour commencer**
-        | Utilisateur | Mot de passe           |
-        | ----------- | ---------------------- |
-        | `admin`     | `$APP_DEFAULT_PASSWORD` |
+        L'identifiant et le mot de passe s'affichent à l'ouverture de l'application (menu de la tuile → Identifiants).
 
         **Comment utiliser :**
         1. Ouvrez l'app et connectez-vous
@@ -170,9 +166,7 @@ x-casaos:
         4. Commencez à lire — votre progression se sauvegarde automatiquement
       es_es: |
         **Para empezar**
-        | Usuario  | Contraseña             |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        El usuario y la contraseña se muestran al abrir la aplicación (menú del icono → Credenciales).
 
         **Cómo usar:**
         1. Abre la app e inicia sesión
@@ -181,9 +175,7 @@ x-casaos:
         4. Comienza a leer — tu progreso se guarda automáticamente
       zh_cn: |
         **开始使用**
-        | 用户名   | 密码                   |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
 
         **使用方法：**
         1. 打开应用并登录
@@ -192,9 +184,7 @@ x-casaos:
         4. 开始阅读 — 进度自动保存
       ko_kr: |
         **시작하기**
-        | 사용자명 | 비밀번호               |
-        | -------- | ---------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        앱을 열면 사용자 이름과 비밀번호가 표시됩니다 (타일 메뉴 → 자격 증명).
 
         **사용 방법:**
         1. 앱을 열고 로그인
@@ -216,3 +206,10 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: suwayomi-${domain}
+  secrets:
+    # Seeded: an installed app keeps the login it already had (the former shared password).
+    SUWAYOMI_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${SUWAYOMI_ADMIN_PASSWORD}

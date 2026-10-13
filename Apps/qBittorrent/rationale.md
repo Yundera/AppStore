@@ -79,7 +79,7 @@ not path `/`, so it keeps its headers.
 
 AppShield protects a whole origin and is the platform's single sign-on. Left as
 it was, a user would sign in to the server, then be asked for a second password
-(`admin` / `$APP_DEFAULT_PASSWORD`) by qBittorrent itself — the same double login
+(`admin` / `$QBITTORRENT_ADMIN_PASSWORD`) by qBittorrent itself — the same double login
 that was rejected for Vaultwarden. The whitelist covers the Docker private ranges,
 which is the only place the backend can be reached from at all: it has no Caddy
 labels and publishes no HTTP port to the host, so the gate is the only route in
@@ -146,8 +146,9 @@ Caddy → AppShield → backend) on wisera by substituting an echoing backend:
 - **Leave the WebUI login in place and accept a second password.** Coherent, and
   it is what the app did before the gate. Rejected on the same grounds as
   Vaultwarden: the platform login is meant to be the only one, and
-  `$APP_DEFAULT_PASSWORD` is a PCS-wide value present in every app's environment,
-  so it is not much of a second factor anyway.
+  on any install that predates the per-app `QBITTORRENT_ADMIN_PASSWORD` that
+  password is the PCS-wide shared value it was seeded from, present in every app's
+  environment, so it is not much of a second factor anyway.
 - **Give the backend the bare name `qbittorrent` and the gate a different one.**
   Not possible: AppShield builds its OIDC redirect URIs from `os.hostname()` and
   the auth-registrar attests the app via the container's PTR record, so the gate

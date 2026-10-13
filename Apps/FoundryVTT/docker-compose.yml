@@ -25,7 +25,7 @@ services:
       FOUNDRY_PASSWORD: ${FOUNDRY_PASSWORD:-}
       FOUNDRY_LICENSE_KEY: ${FOUNDRY_LICENSE_KEY:-}
       # Administrator password for the setup screen (worlds, systems, modules).
-      FOUNDRY_ADMIN_KEY: $APP_DEFAULT_PASSWORD
+      FOUNDRY_ADMIN_KEY: $FOUNDRYVTT_ADMIN_PASSWORD
       # Behind Caddy on HTTPS 443: invitation links and A/V need to know it.
       FOUNDRY_HOSTNAME: foundryvtt-${APP_DOMAIN}
       FOUNDRY_PROXY_SSL: "true"
@@ -188,11 +188,8 @@ x-casaos:
         **2. Open the app**
 
         Accept the license agreement, then log in to the setup screen with the
-        administrator password:
-
-        | Administrator password |
-        | ---------------------- |
-        | `$APP_DEFAULT_PASSWORD` |
+        administrator password — it is shown when you open the app (tile menu →
+        Credentials).
 
         Install a game system, create a world and launch it.
 
@@ -209,6 +206,14 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "14.368.0"
+  secrets:
+    # Seeded: an installed app keeps the shared password it already has; a fresh
+    # install gets its own. The image re-applies it as the admin key on every start.
+    FOUNDRYVTT_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator (setup screen)
+      password: ${FOUNDRYVTT_ADMIN_PASSWORD}
+      note: Unlocks Foundry's setup screen (worlds, systems, modules). Players log in as the world's own users instead.
   # Rendered into the app's .env on every up. The template resolves to whatever the
   # user already saved (or to empty on a fresh install), so this never overwrites an
   # entered value — it only makes sure the rows exist in the Env tab to be filled in.

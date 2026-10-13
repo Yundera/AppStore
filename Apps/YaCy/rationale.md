@@ -11,7 +11,7 @@ YaCy is a search engine: its search page is meant to be public, the way any sear
 portal is. Its administration (crawler, index, settings, account pages, every `*_p.html`
 page) is behind YaCy's own login, which is **enabled at install**: the seeded
 `data/SETTINGS/yacy.conf` sets user `admin` with a password hash derived from
-`$APP_DEFAULT_PASSWORD`. Putting AppShield in front would also hide the search page,
+the per-app `YACY_ADMIN_PASSWORD` secret. Putting AppShield in front would also hide the search page,
 which defeats the point of running a search portal.
 
 ## Security mitigations in place

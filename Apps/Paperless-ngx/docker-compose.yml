@@ -29,8 +29,8 @@ services:
       PAPERLESS_DBHOST: db
       PAPERLESS_DBNAME: paperless
       PAPERLESS_DBUSER: paperless
-      PAPERLESS_DBPASS: $APP_DEFAULT_PASSWORD
-      PAPERLESS_SECRET_KEY: $APP_DEFAULT_PASSWORD
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
       PAPERLESS_URL: https://paperlessngx-${APP_DOMAIN}
       PAPERLESS_TIKA_ENABLED: 1
       PAPERLESS_TIKA_ENDPOINT: http://tika:9998
@@ -38,7 +38,7 @@ services:
       PAPERLESS_TIME_ZONE: UTC
       PAPERLESS_OCR_LANGUAGE: eng
       PAPERLESS_ADMIN_USER: admin
-      PAPERLESS_ADMIN_PASSWORD: $APP_DEFAULT_PASSWORD
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
       PAPERLESS_ADMIN_MAIL: admin@paperless.local
       USERMAP_UID: $PUID
       USERMAP_GID: $PGID
@@ -108,7 +108,7 @@ services:
     environment:
       POSTGRES_DB: paperless
       POSTGRES_USER: paperless
-      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
+      POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U paperless -d paperless"]
       interval: 10s
@@ -226,9 +226,7 @@ x-casaos:
       en_us: |
         **Quick Start:**
 
-        After installation, log in with:
-        - **Username:** `admin`
-        - **Password:** `$APP_DEFAULT_PASSWORD`
+        After installation, log in as `admin`; the password is shown when you open the app (tile menu → Credentials).
 
         **Add documents:**
         - **Web upload:** Drag and drop files directly in the browser
@@ -242,9 +240,7 @@ x-casaos:
       ko_kr: |
         **빠른 시작:**
 
-        설치 후 로그인 정보:
-        - **사용자명:** `admin`
-        - **비밀번호:** `$APP_DEFAULT_PASSWORD`
+        설치 후 `admin` 으로 로그인하세요. 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
 
         **문서 추가:**
         - **웹 업로드:** 브라우저에서 파일을 드래그 앤 드롭
@@ -258,6 +254,20 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "3.0.5"
+  # One secret per purpose, all seeded from the box-wide password they replace:
+  # an installed app keeps the values its database, its Django sessions/tokens
+  # (SECRET_KEY) and its admin account were initialised with; a fresh install
+  # gets its own.
+  secrets:
+    PAPERLESS_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    PAPERLESS_SECRET_KEY: ${APP_DEFAULT_PASSWORD}|alnum:32
+    PAPERLESS_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label:
+        en_us: Administrator
+        ko_kr: 관리자
+      username: admin
+      password: ${PAPERLESS_ADMIN_PASSWORD}
   # Directories Maison creates and chowns to $PUID:$PGID before images are
   # pulled and before any container starts - on the first boot and every one
   # after it. Declared here rather than mkdir'd in a hook: a hook runs inside

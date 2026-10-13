@@ -28,9 +28,9 @@ services:
       DOLI_DB_HOST: dolibarr-db
       DOLI_DB_NAME: dolibarr
       DOLI_DB_USER: dolibarr
-      DOLI_DB_PASSWORD: $APP_DEFAULT_PASSWORD
+      DOLI_DB_PASSWORD: ${DOLIBARR_DB_PASSWORD}
       DOLI_ADMIN_LOGIN: admin
-      DOLI_ADMIN_PASSWORD: $APP_DEFAULT_PASSWORD
+      DOLI_ADMIN_PASSWORD: ${DOLIBARR_ADMIN_PASSWORD}
       DOLI_URL_ROOT: https://dolibarr-${APP_DOMAIN}
       DOLI_INSTALL_AUTO: 1
       DOLI_PROD: 1
@@ -62,10 +62,10 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/db:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
+      MYSQL_ROOT_PASSWORD: ${DOLIBARR_DB_ROOT_PASSWORD}
       MYSQL_DATABASE: dolibarr
       MYSQL_USER: dolibarr
-      MYSQL_PASSWORD: $APP_DEFAULT_PASSWORD
+      MYSQL_PASSWORD: ${DOLIBARR_DB_PASSWORD}
       MARIADB_AUTO_UPGRADE: 1
       MARIADB_DISABLE_UPGRADE_BACKUP: 1
     healthcheck:
@@ -187,9 +187,7 @@ x-casaos:
       en_us: |
         # Default Account
 
-        | Username | Password                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        Log in as `admin`. The password is shown when you open the app (tile menu → Credentials).
 
         The database and admin account are configured automatically. Just open the app and log in.
 
@@ -197,9 +195,7 @@ x-casaos:
       ko_kr: |
         # 기본 계정
 
-        | 사용자명 | 비밀번호                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        `admin`으로 로그인하세요. 비밀번호는 앱을 열 때 표시됩니다(타일 메뉴 → Credentials).
 
         데이터베이스와 관리자 계정은 자동으로 설정됩니다. 앱을 열고 로그인하세요.
 
@@ -207,9 +203,7 @@ x-casaos:
       zh_cn: |
         # 默认账户
 
-        | 用户名   | 密码                    |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        使用 `admin` 登录。打开应用时会显示密码（磁贴菜单 → Credentials）。
 
         数据库和管理员账户已自动配置。打开应用并登录即可。
 
@@ -217,9 +211,7 @@ x-casaos:
       fr_fr: |
         # Compte par defaut
 
-        | Nom d'utilisateur | Mot de passe            |
-        | ----------------- | ----------------------- |
-        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+        Connectez-vous en tant que `admin`. Le mot de passe s'affiche a l'ouverture de l'application (menu de la tuile → Identifiants).
 
         La base de donnees et le compte administrateur sont configures automatiquement. Ouvrez l'application et connectez-vous.
 
@@ -227,9 +219,7 @@ x-casaos:
       es_es: |
         # Cuenta predeterminada
 
-        | Usuario  | Contrasena              |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        Inicie sesion como `admin`. La contrasena se muestra al abrir la aplicacion (menu del icono → Credenciales).
 
         La base de datos y la cuenta de administrador se configuran automaticamente. Abra la aplicacion e inicie sesion.
 
@@ -238,6 +228,16 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "22.0.5"
+  # Seeded from the box-wide password, which an installed app's database and admin
+  # account were initialised with; a fresh install gets its own values.
+  secrets:
+    DOLIBARR_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    DOLIBARR_DB_ROOT_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    DOLIBARR_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${DOLIBARR_ADMIN_PASSWORD}
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   folders:
     - path: /DATA/AppData/$AppID/documents

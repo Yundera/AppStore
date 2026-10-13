@@ -131,7 +131,7 @@ services:
     environment:
       MARIADB_DATABASE: nntmux
       MARIADB_USER: nntmux
-      MARIADB_PASSWORD: "$APP_DEFAULT_PASSWORD"
+      MARIADB_PASSWORD: "${NNTMUX_DB_PASSWORD}"
       MARIADB_RANDOM_ROOT_PASSWORD: "yes"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/nntmux/db:/var/lib/mysql
@@ -473,6 +473,18 @@ x-casaos:
 # outright rather than starting it without its directories.
 x-compose-app:
   schema_version: 2
+  # Seeded: an installed NNTmux created its admin account and database with the
+  # box-wide password and keeps it; a fresh install gets its own values.
+  secrets:
+    NNTMUX_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    NNTMUX_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${NNTMUX_ADMIN_PASSWORD}
+      note:
+        en_us: Change it after the first login.
+        fr_fr: Changez-le après la première connexion.
   # Created and chowned by Maison before the containers start. NOT `recursive`
   # on the nzb store: it holds one file per release (a million+ on a real
   # catalog), and the image's own boot already walks it for minutes.
@@ -498,8 +510,8 @@ x-compose-app:
   # shown in the install dialog). `${VAR}`s resolve from this app's .env.
   tips:
     en_us: |
-      **Login:** user `admin`, password `${APP_DEFAULT_PASSWORD}`. Change it after
-      the first login.
+      **Login:** user `admin`; the password is shown when you open the app (tile
+      menu › Credentials). Change it after the first login.
 
       **Set up in App settings › Env** (Save applies it):
       - `NNTP_SERVER`, `NNTP_PORT`, `NNTP_USERNAME`, `NNTP_PASSWORD` — your Usenet
@@ -518,7 +530,8 @@ x-compose-app:
       **API key for a client** (Prowlarr, Sonarr…):
       `docker exec nntmux-scanner nntmux-setup api-user <name>`
     fr_fr: |
-      **Connexion :** utilisateur `admin`, mot de passe `${APP_DEFAULT_PASSWORD}`.
+      **Connexion :** utilisateur `admin` ; le mot de passe s'affiche à l'ouverture
+      de l'app (menu de la tuile › Credentials).
 
       **Configuration dans Réglages de l'app › Env** : `NNTP_SERVER`, `NNTP_PORT`,
       `NNTP_USERNAME`, `NNTP_PASSWORD` (fournisseur), `NNTMUX_GROUPS` (groupes),
@@ -536,7 +549,7 @@ x-compose-app:
       DB_PORT=3306
       DB_SOCKET=
       DB_USERNAME=nntmux
-      DB_PASSWORD=$APP_DEFAULT_PASSWORD
+      DB_PASSWORD=$NNTMUX_DB_PASSWORD
       DB_DATABASE=nntmux
 
       MANTICORESEARCH_HOST=nntmux-manticore
@@ -578,7 +591,7 @@ x-compose-app:
       # documentation, it is a type change.
 
       ADMIN_USER=admin
-      ADMIN_PASS=$APP_DEFAULT_PASSWORD
+      ADMIN_PASS=$NNTMUX_ADMIN_PASSWORD
       ADMIN_EMAIL=admin@$APP_DOMAIN
 
       APP_NAME=NNTmux

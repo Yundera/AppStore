@@ -9,9 +9,9 @@
 # This replaces upstream's 002-create-admin-user.sql, which seeds the constant,
 # publicly-known guacadmin/guacadmin credential. Guacamole never forces a
 # password change at first login and this app publishes itself on the public
-# internet, so the account is created here with the per-deployment password
-# Yundera generates ($APP_DEFAULT_PASSWORD, passed in as
-# GUACAMOLE_ADMIN_PASSWORD) and a fresh random salt.
+# internet, so the account is created here with the app's own generated
+# password (the GUACAMOLE_ADMIN_PASSWORD secret, passed in under the same name)
+# and a fresh random salt.
 #
 # Password hashing matches guacamole-auth-jdbc's PasswordEncryptionService:
 #     hash = SHA-256( UTF8(password) || UPPERCASE_HEX(salt) )

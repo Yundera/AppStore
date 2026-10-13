@@ -47,8 +47,8 @@ all see one library rather than three private copies.
 - **A unique password per app, per install.** `x-compose-app.secrets` generates
   `RADARR_ADMIN_PASSWORD` as `alnum:24` (~143 bits) once into the app's `.env`. It is not
   shared with any other app and is not the platform password.
-- **The credential is disclosed before install** in `tips.before_install`, so the user can
-  sign in without reading a log or a config file.
+- **The credential is shown by Maison** through `x-compose-app.credentials` (on first open
+  and from the tile menu), so the user can sign in without reading a log or a config file.
 - **`/initialize.json` is gated.** With `AuthenticationMethod=None` that endpoint serves the
   admin API key to anonymous callers; under Forms it redirects to `/login`.
 - **Least privilege.** The container runs as `$PUID:$PGID` (never root), uses `expose:` with

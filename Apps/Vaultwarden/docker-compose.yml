@@ -106,8 +106,7 @@ services:
       SMTP_HOST: smtp
       SMTP_PORT: 587
       SMTP_SECURITY: off
-      SMTP_USERNAME: casaos
-      SMTP_PASSWORD: $APP_DEFAULT_PASSWORD
+      # No SMTP_USERNAME / SMTP_PASSWORD: the box gateway accepts mail on 587 without auth.
       SMTP_FROM: vaultwarden@$APP_DOMAIN
       SMTP_FROM_NAME: Vaultwarden
     volumes:

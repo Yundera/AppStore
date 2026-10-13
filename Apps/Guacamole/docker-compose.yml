@@ -11,7 +11,7 @@ services:
       POSTGRESQL_HOSTNAME: postgres
       POSTGRESQL_DATABASE: guacamole_db
       POSTGRESQL_USER: guacamole_user
-      POSTGRESQL_PASSWORD: '$APP_DEFAULT_PASSWORD'
+      POSTGRESQL_PASSWORD: '$GUACAMOLE_DB_PASSWORD'
     depends_on:
       guacd:
         condition: service_started
@@ -46,12 +46,12 @@ services:
     restart: unless-stopped
     cpu_shares: 70
     environment:
-      POSTGRES_PASSWORD: '$APP_DEFAULT_PASSWORD'
+      POSTGRES_PASSWORD: '$GUACAMOLE_DB_PASSWORD'
       POSTGRES_USER: 'guacamole_user'
       POSTGRES_DB: 'guacamole_db'
       # Consumed by 002-create-admin-user.sh below - the administrator account
-      # is created with this deployment's generated password, never a constant.
-      GUACAMOLE_ADMIN_PASSWORD: '$APP_DEFAULT_PASSWORD'
+      # is created with this app's generated password, never a constant.
+      GUACAMOLE_ADMIN_PASSWORD: '$GUACAMOLE_ADMIN_PASSWORD'
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/guacamole/postgresql/:/var/lib/postgresql/data/
       # Schema + admin bootstrap, shipped in the app's seed/ tree. The stock postgres
@@ -117,9 +117,8 @@ x-casaos:
       en_us: |
         Default Account
 
-        | Username    | Password                |
-        | --------    | ----------------------- |
-        | `guacadmin` | `$APP_DEFAULT_PASSWORD` |
+        Sign in as `guacadmin`. The password is shown when you open the app (tile
+        menu -> Credentials).
 
         The administrator password is generated for your server at install time.
         Change it from **Settings -> Preferences** after your first login.
@@ -130,13 +129,25 @@ x-casaos:
       zh_cn: |
         默认账号
 
-        | 用户名      | 密码                    |
-        | --------    | ----------------------- |
-        | `guacadmin` | `$APP_DEFAULT_PASSWORD` |
+        使用 `guacadmin` 登录。密码会在打开应用时显示（磁贴菜单 -> 凭据）。
 
 x-compose-app:
   schema_version: 2
   version: "1.6.0"
+  # Seeded: an installed app keeps the shared password its database and
+  # guacadmin account were initialised with; a fresh install gets its own.
+  secrets:
+    GUACAMOLE_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    GUACAMOLE_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label:
+        en_us: Administrator
+        zh_cn: 管理员
+      username: guacadmin
+      password: ${GUACAMOLE_ADMIN_PASSWORD}
+      note:
+        en_us: Change it from Settings -> Preferences after your first login.
+        zh_cn: 首次登录后请在 设置 -> 偏好设置 中修改。
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` -
   # the two bind-mount sources above. Declared here rather than mkdir'd in the
   # hook: a hook's mkdir runs inside the Maison container, so the directories

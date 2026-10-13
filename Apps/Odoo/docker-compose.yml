@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: odoo
-      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
+      POSTGRES_PASSWORD: ${ODOO_DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata/
       PUID: "0"
       PGID: "0"
@@ -52,7 +52,7 @@ services:
     environment:
       HOST: postgres
       USER: odoo
-      PASSWORD: $APP_DEFAULT_PASSWORD
+      PASSWORD: ${ODOO_DB_PASSWORD}
       PUID: "0"
       PGID: "0"
       TZ: $TZ
@@ -132,7 +132,7 @@ x-casaos:
         
         | Item | Value |
         | --- | --- |
-        | Master Password | `$APP_DEFAULT_PASSWORD` |
+        | Master Password | Shown when you open the app (tile menu → Credentials) |
         | Database Name | `odoo` |
         | Email | Admin email address |
         | Password | Admin account password |
@@ -149,7 +149,7 @@ x-casaos:
         
         | 항목 | 값 |
         | --- | --- |
-        | 마스터 비밀번호 | `$APP_DEFAULT_PASSWORD` |
+        | 마스터 비밀번호 | 앱을 열 때 표시됨 (타일 메뉴 → Credentials) |
         | 데이터베이스 이름 | `odoo` |
         | 이메일 | 관리자 이메일 주소 |
         | 비밀번호 | 관리자 계정 비밀번호 |
@@ -166,7 +166,7 @@ x-casaos:
         
         | 项目 | 值 |
         | --- | --- |
-        | 主密码 | `$APP_DEFAULT_PASSWORD` |
+        | 主密码 | 打开应用时显示（磁贴菜单 → Credentials） |
         | 数据库名称 | `odoo` |
         | 电子邮件 | 管理员电子邮件地址 |
         | 密码 | 管理员帐户密码 |
@@ -183,7 +183,7 @@ x-casaos:
         
         | Elemento | Valor |
         | --- | --- |
-        | Contraseña maestra | `$APP_DEFAULT_PASSWORD` |
+        | Contraseña maestra | Se muestra al abrir la aplicación (menú del icono → Credentials) |
         | Nombre de la base de datos | `odoo` |
         | Correo electrónico | Dirección de correo electrónico del administrador |
         | Contraseña | Contraseña de la cuenta de administrador |
@@ -200,7 +200,7 @@ x-casaos:
         
         | Élément | Valeur |
         | --- | --- |
-        | Mot de passe principal | `$APP_DEFAULT_PASSWORD` |
+        | Mot de passe principal | Affiché à l'ouverture de l'application (menu de la tuile → Credentials) |
         | Nom de la base de données | `odoo` |
         | Email | Adresse e-mail de l'administrateur |
         | Mot de passe | Mot de passe du compte administrateur |
@@ -210,11 +210,33 @@ x-casaos:
         **Remarque**: 
         - La configuration initiale peut prendre quelques minutes
         - Après la création de la base de données, vous pouvez vous connecter avec votre compte administrateur
-  pre-install-cmd: |
-    # The only thing left here is a repair for installs made BEFORE admin_passwd
-    # was written into odoo.conf. The config itself now comes from
-    # seed/config/odoo.conf.tmpl, which is create-if-absent and so never touches
-    # a file an existing install already has — including a broken one.
+  index: /
+  scheme: https
+
+x-compose-app:
+  schema_version: 2
+  version: "19.0"
+  # Seeded: an installed Odoo keeps the box-wide password its database and
+  # odoo.conf admin_passwd were set up with; a fresh install gets its own.
+  secrets:
+    ODOO_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    ODOO_MASTER_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label:
+        en_us: Master password (database manager)
+        ko_kr: 마스터 비밀번호 (데이터베이스 관리자)
+        zh_cn: 主密码（数据库管理器）
+        es_es: Contraseña maestra (gestor de bases de datos)
+        fr_fr: Mot de passe principal (gestionnaire de bases de données)
+      password: ${ODOO_MASTER_PASSWORD}
+      note:
+        en_us: Asked when you create the database on first access, and by /web/database/manager. Your login is the admin account you create there.
+        fr_fr: Demandé à la création de la base au premier accès, et par /web/database/manager. Votre connexion est le compte administrateur que vous y créez.
+  hooks:
+    # A repair for installs made BEFORE admin_passwd was written into odoo.conf.
+    # The config itself comes from seed/config/odoo.conf.tmpl, which is
+    # create-if-absent and so never touches a file an existing install already
+    # has — including a broken one.
     #
     # It matters because the config bind mount masks the image's own /etc/odoo:
     # with no admin_passwd, Odoo falls back to the literal 'admin' and
@@ -222,20 +244,16 @@ x-casaos:
     # drop the user's database. Appending a key to a file the app also writes is
     # the one shape the declarative sections deliberately do not express.
     #
-    # It must NOT create the file. pre_install runs before the seed step, so a
-    # bare '>>' leaves a headerless odoo.conf that the create-if-absent seed
-    # template then skips, and Odoo dies on MissingSectionHeaderError. Hence the
-    # -f guard, wrapped in an `if` so a fresh install still exits 0.
-    if [ -f /DATA/AppData/odoo/config/odoo.conf ] &&
-       ! grep -q '^[[:space:]]*admin_passwd[[:space:]]*=' /DATA/AppData/odoo/config/odoo.conf; then
-      printf 'admin_passwd = %s\n' "$APP_DEFAULT_PASSWORD" >> /DATA/AppData/odoo/config/odoo.conf
-    fi
-  index: /
-  scheme: https
-
-x-compose-app:
-  schema_version: 2
-  version: "19.0"
+    # pre_up, not pre_install: it needs ODOO_MASTER_PASSWORD, and secrets are
+    # only generated into .env by the up sequence, after pre_install has run. By
+    # pre_up the seed step has also run, so a fresh install already has a
+    # complete odoo.conf and this is a no-op; it never creates the file. The
+    # grep guard makes it idempotent, and the `if` keeps the exit status 0.
+    pre_up: |
+      if [ -f /DATA/AppData/odoo/config/odoo.conf ] &&
+         ! grep -q '^[[:space:]]*admin_passwd[[:space:]]*=' /DATA/AppData/odoo/config/odoo.conf; then
+        printf 'admin_passwd = %s\n' "$ODOO_MASTER_PASSWORD" >> /DATA/AppData/odoo/config/odoo.conf
+      fi
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

@@ -584,9 +584,7 @@ x-casaos:
     before_install:
       en_us: |
         **Your account**
-        | Username | Password |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        The username and password are shown when you open the app (tile menu → Credentials).
 
         **⚠️ Change the password after your first login** (avatar menu → Preferences).
 
@@ -616,9 +614,7 @@ x-casaos:
         more. The barcode scanner still fetches products one at a time as you scan them.
       fr_fr: |
         **Votre compte**
-        | Utilisateur | Mot de passe |
-        | ----------- | ----------------------- |
-        | `admin`     | `$APP_DEFAULT_PASSWORD` |
+        L'identifiant et le mot de passe s'affichent à l'ouverture de l'application (menu de la tuile → Identifiants).
 
         **⚠️ Changez le mot de passe après la première connexion** (menu avatar →
         Préférences).
@@ -651,9 +647,7 @@ x-casaos:
         produit à la volée.
       de_de: |
         **Dein Konto**
-        | Benutzername | Passwort |
-        | ------------ | ----------------------- |
-        | `admin`      | `$APP_DEFAULT_PASSWORD` |
+        Benutzername und Passwort werden beim Öffnen der App angezeigt (Kachelmenü → Zugangsdaten).
 
         **⚠️ Ändere das Passwort nach der ersten Anmeldung** (Avatar-Menü →
         Einstellungen).
@@ -684,9 +678,7 @@ x-casaos:
         Megabyte groß. Der Barcode-Scanner holt Produkte trotzdem einzeln beim Scannen.
       es_es: |
         **Tu cuenta**
-        | Usuario | Contraseña |
-        | ------- | ----------------------- |
-        | `admin` | `$APP_DEFAULT_PASSWORD` |
+        El usuario y la contraseña se muestran al abrir la aplicación (menú del icono → Credenciales).
 
         **⚠️ Cambia la contraseña tras el primer inicio de sesión** (menú de avatar →
         Preferencias).
@@ -717,9 +709,7 @@ x-casaos:
         escáner de códigos de barras sigue trayendo cada producto al escanearlo.
       zh_cn: |
         **你的账号**
-        | 用户名  | 密码 |
-        | ------- | ----------------------- |
-        | `admin` | `$APP_DEFAULT_PASSWORD` |
+        打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
 
         **⚠️ 首次登录后请修改密码**（头像菜单 → 偏好设置）。
 
@@ -786,6 +776,15 @@ x-compose-app:
     # Alphanumeric for the same reason as the one above -- it is substituted
     # into a postgres:// URL.
     WGER_PS_STORAGE_PASSWORD: alnum:32
+    # The admin login, set by the rotate-admin-password init step below. Seeded:
+    # an installed app's admin was rotated to the former shared password, which it
+    # keeps; a fresh install gets its own.
+    WGER_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${WGER_ADMIN_PASSWORD}
+      note: Change it after your first login (avatar menu → Preferences).
   files:
     # These three are declared rather than left to the seed tree, which is
     # create-if-absent: an app update that changes nginx's routing or the sync
@@ -950,7 +949,7 @@ x-compose-app:
         DJANGO_CACHE_BACKEND: django_redis.cache.RedisCache
         DJANGO_CACHE_LOCATION: redis://wger-cache:6379/1
         DJANGO_CACHE_CLIENT_CLASS: django_redis.client.DefaultClient
-        WGER_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}
+        WGER_ADMIN_PASSWORD: ${WGER_ADMIN_PASSWORD}
         WGER_ADMIN_EMAIL: ${APP_EMAIL}
         WGER_SEED_PASSWORD: adminadmin
       entrypoint:
@@ -1012,7 +1011,7 @@ x-compose-app:
     # command and appended to the app's .env.
     #
     # Append, never `>`: Maison has already written APP_DOMAIN, PUID, PGID,
-    # APP_DEFAULT_PASSWORD and APP_NET into this file. The guard makes the hook a
+    # APP_NET and the secrets above into this file. The guard makes the hook a
     # no-op on a reinstall over existing data, which matters -- regenerating the
     # keypair would invalidate every phone still logged in.
     #

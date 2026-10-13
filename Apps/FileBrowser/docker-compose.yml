@@ -304,6 +304,12 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.63.23"
+  # Password of the `admin` account the add-admin init step creates. With
+  # `noauth` (set-noauth below) nobody logs in with it, so no `credentials` entry;
+  # it only matters if password login is ever turned back on. Seeded from the
+  # box-wide password, which installed apps created that account with.
+  secrets:
+    FILEBROWSER_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   # Seeding the database needs filebrowser's own binary, so it stays a container —
   # but the container is declared, not shelled out to. The guard replaces the
   # `if [ ! -f ]` the hook opened with: `config init` refuses to overwrite an
@@ -321,7 +327,7 @@ x-compose-app:
       user: $PUID:$PGID
       volumes:
         - /DATA/AppData/$AppID/db:/db
-      command: ["users", "add", "admin", "$APP_DEFAULT_PASSWORD", "--perm.admin", "--database", "/db/database.db"]
+      command: ["users", "add", "admin", "${FILEBROWSER_ADMIN_PASSWORD}", "--perm.admin", "--database", "/db/database.db"]
       when: once
     # Hands authentication to the AppShield gate. `noauth` resolves every request to
     # user ID 1 — the `admin` seeded just above — so the app opens straight into the

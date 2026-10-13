@@ -74,15 +74,15 @@ dashboard resolves its providers once, at start.
 ### 4. A second sign-in method with a shipped password
 
 `HERMES_DASHBOARD_BASIC_AUTH_USERNAME`/`_PASSWORD` are set to `admin` /
-`$APP_DEFAULT_PASSWORD`. This is deliberate belt-and-braces, and it is a real if narrow
+`$HERMESAGENT_ADMIN_PASSWORD`, shown to the operator via `credentials`. This is deliberate belt-and-braces, and it is a real if narrow
 widening of the attack surface: whoever knows that value reaches the dashboard without
 passing the server's SSO.
 
 It is accepted because the alternative is worse. The gate fails closed; if the OIDC
 registration cannot complete — registrar down at install time, a PCS whose identity
 provider is not yet up — a dashboard with no provider serves nothing to anybody, and the
-app is unreachable with no way in short of editing files on the host. `$APP_DEFAULT_PASSWORD`
-is a per-install random value, never a shipped literal.
+app is unreachable with no way in short of editing files on the host. `$HERMESAGENT_ADMIN_PASSWORD`
+is this app's own random secret, never a shipped literal nor shared with other apps.
 
 No `HERMES_DASHBOARD_BASIC_AUTH_SECRET` is set. The image then generates a random signing
 key per process, which means fallback sessions are dropped on every restart. That is the

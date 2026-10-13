@@ -13,7 +13,7 @@
 game. Those players have no account on the PCS, so a gate in front of the whole app
 would lock them out. Foundry enforces its own login on every route: the setup screen
 (worlds, systems, modules, server settings) requires the administrator key, which is
-set to `$APP_DEFAULT_PASSWORD` on every start, and a world can only be joined as one of
+set to the app's `FOUNDRYVTT_ADMIN_PASSWORD` secret on every start, and a world can only be joined as one of
 its users. The guide accepts the app's own login as the authentication method.
 
 **Account required.** Foundry VTT is commercial software and may not be redistributed,
@@ -29,8 +29,8 @@ then the container logs the missing credentials and retries with exponential bac
 
 - Only port 30000 is `expose`d, to Caddy on the `pcs` network. Nothing is published on
   the host.
-- The administrator password is the per-instance `$APP_DEFAULT_PASSWORD`, not a
-  literal, and the image re-applies it at every start.
+- The administrator password is the app's own `FOUNDRYVTT_ADMIN_PASSWORD` secret, not a
+  literal, and the image re-applies it at every start. Maison shows it via `credentials`.
 - Foundry's default world users have no password. `tips.before_install` tells the game
   master to set one per user before sharing the link.
 - The foundryvtt.com password sits in the app's `.env`, in plain text, like every other

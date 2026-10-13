@@ -44,8 +44,9 @@ most likely to want on a network drive.
 ## Security mitigations in place
 
 - **Authentication is on by default and cannot be bypassed.** The share is created
-  with `USER: admin` / `PASS: $APP_DEFAULT_PASSWORD` — the per-server generated
-  password, never a hardcoded one. There is no guest or anonymous share; an
+  with `USER: admin` / `PASS: $SAMBA_ADMIN_PASSWORD` — the app's own generated
+  secret (seeded from the old shared password on installs that predate it), never
+  a hardcoded one. There is no guest or anonymous share; an
   unauthenticated SMB session is rejected by `smbd`.
 - **The mount is disclosed before install**, in the app `description` and in
   `x-casaos.tips.before_install`, so the user sees the extent of the access on the
@@ -100,5 +101,5 @@ Nothing in the container's startup erases or rewrites the mounted tree: the imag
 only exports the existing directory as a share. Files written over SMB are created
 as `UID:GID` = `$PUID:$PGID`, so they stay owned by the server user and remain
 readable and editable by every other app and by the user over SSH. Revoking
-access is a matter of changing `$APP_DEFAULT_PASSWORD` and restarting, or
+access is a matter of changing `SAMBA_ADMIN_PASSWORD` in the app's `.env` and restarting, or
 uninstalling the app — neither costs any configuration.

@@ -14,7 +14,7 @@ services:
       # UI instead, clear this variable; to keep it and still have a personal
       # login, create a second account under Settings > Users - that one is left
       # alone.
-      FILEBROWSER_ADMIN_PASSWORD: $APP_DEFAULT_PASSWORD
+      FILEBROWSER_ADMIN_PASSWORD: $FILEBROWSERQUANTUM_ADMIN_PASSWORD
     volumes:
       # config.yaml (seeded on first start), database.db and the thumbnail cache.
       - type: bind
@@ -120,9 +120,8 @@ x-casaos:
       en_us: |
         Default account
 
-        | Username | Password                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        Sign in as `admin`. The password is shown when you open the app (tile
+        menu → Credentials).
 
         This password is re-applied on every restart, from the
         `FILEBROWSER_ADMIN_PASSWORD` variable. Changing it inside the app will not
@@ -151,9 +150,8 @@ x-casaos:
       fr_fr: |
         Compte par défaut
 
-        | Nom d'utilisateur | Mot de passe            |
-        | ----------------- | ----------------------- |
-        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+        Connectez-vous en tant que `admin`. Le mot de passe s'affiche à l'ouverture
+        de l'application (menu de la tuile → Identifiants).
 
         Ce mot de passe est réappliqué à chaque redémarrage, depuis la variable
         `FILEBROWSER_ADMIN_PASSWORD`. Le modifier dans l'application ne sera pas
@@ -182,9 +180,7 @@ x-casaos:
       zh_cn: |
         默认账户
 
-        | 用户名   | 密码                    |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        使用 `admin` 登录。密码会在打开应用时显示（磁贴菜单 → 凭据）。
 
         该密码由 `FILEBROWSER_ADMIN_PASSWORD` 变量在每次重启时重新应用。只要该变量存在，
         在应用内修改密码就不会生效——请先清除该变量，或在「设置 > 用户」中为自己创建
@@ -213,6 +209,21 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.5.5"
+  secrets:
+    # Seeded: an installed app keeps the shared password its admin already has;
+    # a fresh install gets its own.
+    FILEBROWSERQUANTUM_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label:
+        en_us: Administrator
+        fr_fr: Administrateur
+        zh_cn: 管理员
+      username: admin
+      password: ${FILEBROWSERQUANTUM_ADMIN_PASSWORD}
+      note:
+        en_us: Re-applied on every restart from FILEBROWSER_ADMIN_PASSWORD; a change made inside the app does not stick while that variable is set.
+        fr_fr: Réappliqué à chaque redémarrage depuis FILEBROWSER_ADMIN_PASSWORD ; une modification faite dans l'application n'est pas conservée tant que cette variable est définie.
+        zh_cn: 每次重启都会从 FILEBROWSER_ADMIN_PASSWORD 重新应用；只要该变量存在，在应用内的修改不会保留。
   # No init containers: Quantum creates its own database on first start, and the
   # admin account comes from FILEBROWSER_ADMIN_PASSWORD rather than a seeding CLI
   # call. config.yaml arrives via the seed tree (seed/data/config.yaml), which is

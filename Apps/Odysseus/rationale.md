@@ -139,7 +139,8 @@ original `Host`, so the origins the app sees are unchanged.
   first start. Both must be set together, or `setup.py` falls back to printing a
   random password into the container log. **`ODYSSEUS_ADMIN_PASSWORD` must be at
   least 8 characters** — below that, `setup.py` errors out and creates no admin
-  at all. `$APP_DEFAULT_PASSWORD` is 12 characters on a PCS.
+  at all. `ODYSSEUS_ADMIN_PASSWORD` is a per-app secret generated at 24 characters
+  (installs that predate it keep the 12-character box-wide password they were set up with).
 - `ALLOWED_ORIGINS` is a comma-separated list of *exact* origins with no wildcard
   support, so all three published hostnames are listed. Omitting the `.nip.io`
   and `.sslip.io` entries breaks login on those URLs.
@@ -210,7 +211,7 @@ Earlier validation of the pre-AppShield packaging, on 2026-07-29/30:
 - ChromaDB connects and creates its collections; FastEmbed loads the MiniLM model
   (384 dimensions); SearXNG returns JSON results to the app.
 - `https://odysseus-<domain>/` redirects to `/login` and serves the UI; login with
-  `admin` / `$APP_DEFAULT_PASSWORD` returns 200 and sets a `Secure; HttpOnly`
+  `admin` / the admin password (then the box-wide default, now `ODYSSEUS_ADMIN_PASSWORD`) returns 200 and sets a `Secure; HttpOnly`
   session cookie; authenticated requests to `/` and `/api/models` return 200.
 - Appears as a managed app tile in the CasaOS dashboard, with the `tips.before_install`
   block rendering correctly in the ⋮ → Tips dialog.

@@ -40,10 +40,10 @@ inferred from the compose file.
 ## Security mitigations in place
 
 - **Authentication is on by default.** `INIT_ENABLED: 'true'` with
-  `INIT_USERNAME: admin` and `INIT_PASSWORD: $APP_DEFAULT_PASSWORD` provisions the
-  admin account at first boot, so the app is never published in its unauthenticated
-  first-run setup state. The credentials are surfaced in `tips.before_install` in all
-  five supported locales.
+  `INIT_USERNAME: admin` and `INIT_PASSWORD: ${WGEASY_ADMIN_PASSWORD}` (a per-app secret)
+  provisions the admin account at first boot, so the app is never published in its
+  unauthenticated first-run setup state. Maison shows the credentials when the app is
+  opened (`x-compose-app.credentials`).
 - **The sysctls are container-scoped.** They are declared under the service's
   `sysctls:` key, which the kernel applies inside the container's own network
   namespace. This app does **not** run with `network_mode: host`, so they do not

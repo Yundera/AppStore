@@ -34,7 +34,8 @@ Two:
 - The database is on `n8n-internal`, a compose-private bridge, and is **not** attached to
   the shared `pcs` network. Nothing outside this compose project can reach it, and it has
   no Caddy labels and publishes no host port.
-- The database password is `$APP_DEFAULT_PASSWORD`, the per-install generated secret, not a
+- The database password is `N8N_DB_PASSWORD`, an app-specific secret (seeded from the old
+  box-wide password on installs that already had it, generated otherwise), not a
   literal baked into the compose file.
 - `n8n` runs as `$PUID:$PGID`, not root.
 - No host ports are published by either service; the web UI is reachable only through Caddy

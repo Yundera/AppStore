@@ -55,7 +55,7 @@ services:
     environment:
       - PORT=80
       - SCHEME=https
-      - HASH_API_SEED=$APP_DEFAULT_PASSWORD
+      - HASH_API_SEED=${SSA_HASH_API_SEED}
     restart: unless-stopped
     cpu_shares: 70
     # Runs as root - see rationale.md. Both user-directory mounts are read-only and this
@@ -142,7 +142,7 @@ x-casaos:
         4. Your media library will appear as "SSA" in Stremio's catalog
 
         The addon scans /DATA/Downloads and /DATA/Media for video files.
-        API key protection is enabled by default using your app password.
+        API key protection is enabled by default with a key generated for this app.
       fr_fr: |
         Après l'installation:
         1. Ouvrez la page de l'addon à https://ssa-username.nsl.sh
@@ -151,12 +151,18 @@ x-casaos:
         4. Votre bibliothèque multimédia apparaîtra comme "SSA" dans le catalogue Stremio
 
         L'addon scanne /DATA/Downloads et /DATA/Media pour les fichiers vidéo.
-        La protection par clé API est activée par défaut avec votre mot de passe d'application.
+        La protection par clé API est activée par défaut avec une clé générée pour cette application.
   title:
     en_us: Segment Stremio Addon
     fr_fr: Addon Stremio Segment
 
 x-compose-app:
+  schema_version: 2
   version: "1.3.1"
   webui-host: ssa-${domain}
   webui-path: "/"
+  secrets:
+    # Seeded: the API key in every published manifest URL is sha256(seed)[:16]. An
+    # installed addon keeps its old seed (the former shared password) so the Stremio
+    # installs that already carry its URL keep working; a fresh install gets its own.
+    SSA_HASH_API_SEED: ${APP_DEFAULT_PASSWORD}|alnum:32

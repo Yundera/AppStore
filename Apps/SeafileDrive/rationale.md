@@ -40,10 +40,13 @@ app makes.
   the libraries that account owns or has been given, so the folder can never show
   more than that user could see in the web UI. It is an authenticated view, not a
   bypass.
-- **Credentials are never plaintext in the compose.** The WebDAV password is passed
-  through `rclone obscure` by a one-shot `init` container and only the obscured form
-  is written to `config/rclone.conf`, which is created `0644` under `$PUID:$PGID`
-  inside AppData.
+- **Credentials are never plaintext in the compose.** The WebDAV password — Seafile's
+  admin password, read from the Seafile app's own `.env` (`SEAFILE_ADMIN_PASSWORD`) —
+  is passed through `rclone obscure` by a one-shot `init` container and only the
+  obscured form is written to `config/rclone.conf`, which is created `0644` under
+  `$PUID:$PGID` inside AppData. That one-shot container mounts `/DATA/AppData`
+  read-only to reach that file, runs only while `rclone.conf` does not exist, and
+  reads nothing else.
 - **Memory is capped** at 512M (`cpu_shares: 30`), which a metadata-only mount stays
   well inside; a runaway transfer is bounded rather than able to squeeze the rest of
   the machine.

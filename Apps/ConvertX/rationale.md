@@ -36,7 +36,7 @@ While running as root, the following security measures are in place:
    - `ACCOUNT_REGISTRATION=false` prevents unauthorized account creation
 
 2. **JWT Secret Protection**
-   - Uses `$APP_DEFAULT_PASSWORD` for JWT secret generation
+   - Uses its own `CONVERTX_JWT_SECRET` (an `x-compose-app` secret, generated once per install) as the JWT secret
    - Session tokens are cryptographically secure
 
 3. **Auto-cleanup**

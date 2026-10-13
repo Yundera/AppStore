@@ -68,9 +68,10 @@ knowingly rather than inheriting it.
 ## Security mitigations in place
 
 - **Authentication is on by default.** `INIT_ENABLED: 'true'` with
-  `INIT_USERNAME: admin` and `INIT_PASSWORD: $APP_DEFAULT_PASSWORD` provisions the admin
-  account at first boot, so the app is never published in its unauthenticated first-run
-  wizard state. The credentials appear in `tips.before_install`.
+  `INIT_USERNAME: admin` and `INIT_PASSWORD: ${WGEASYHOST_ADMIN_PASSWORD}` (a per-app
+  secret) provisions the admin account at first boot, so the app is never published in its
+  unauthenticated first-run wizard state. Maison shows the credentials when the app is
+  opened (`x-compose-app.credentials`).
 - **The default tunnel is split, not a catch-all.** `INIT_ALLOWED_IPS: '10.9.0.0/24'`
   seeds new clients with the VPN subnet only — not `0.0.0.0/0`. A connected client
   reaches host services and other peers; its normal internet traffic stays direct and

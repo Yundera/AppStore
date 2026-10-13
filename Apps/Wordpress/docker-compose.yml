@@ -25,7 +25,7 @@ services:
     environment:
       WORDPRESS_DB_HOST: wordpress-db:3306
       WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: $APP_DEFAULT_PASSWORD
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_CONFIG_EXTRA: |
         define('FS_METHOD', 'direct');
@@ -49,10 +49,10 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/db/:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: $APP_DEFAULT_PASSWORD
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
-      MYSQL_PASSWORD: $APP_DEFAULT_PASSWORD
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
       MARIADB_AUTO_UPGRADE: 1
       MARIADB_DISABLE_UPGRADE_BACKUP: 1
     healthcheck:
@@ -256,3 +256,8 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: wordpress-${domain}
+  secrets:
+    # Seeded: an installed app's MariaDB was initialised with the former shared
+    # password for both accounts, which it keeps; a fresh install gets its own.
+    WORDPRESS_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    WORDPRESS_DB_ROOT_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32

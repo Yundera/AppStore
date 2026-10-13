@@ -84,5 +84,6 @@ container.
 
 The only credential the app generates is the runner registration token, which
 is rewritten on every start and is worthless without network access to Gitea.
-The admin password is the deployment's own `APP_DEFAULT_PASSWORD`; it is never
-written to disk by this app beyond Gitea's own salted hash.
+The admin password is the app's own `GITEA_ADMIN_PASSWORD` secret, generated per
+install and shown via `credentials`; beyond the app's `.env` it is never written to
+disk by this app except as Gitea's own salted hash.

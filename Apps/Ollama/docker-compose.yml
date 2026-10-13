@@ -23,7 +23,7 @@ services:
     environment:
       OLLAMA_BASE_URL: http://ollama-api:11434
       WEBUI_URL: https://ollama-${APP_DOMAIN}
-      WEBUI_SECRET_KEY: $APP_DEFAULT_PASSWORD
+      WEBUI_SECRET_KEY: ${OLLAMA_WEBUI_SECRET_KEY}
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/ollama/webui:/app/backend/data
     depends_on:
@@ -212,6 +212,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "0.30.7"
+  # Open WebUI's session/JWT signing key. Seeded: an installed app keeps the
+  # box-wide password it was set up with (so sessions survive the update); a
+  # fresh install gets its own.
+  secrets:
+    OLLAMA_WEBUI_SECRET_KEY: ${APP_DEFAULT_PASSWORD}|alnum:32
   folders:
     - path: /DATA/AppData/ollama
       user: $PUID

@@ -31,7 +31,7 @@ services:
       URL: https://outline-${APP_DOMAIN}
       SECRET_KEY: ${OUTLINE_SECRET_KEY}
       UTILS_SECRET: ${OUTLINE_UTILS_SECRET}
-      DATABASE_URL: postgres://outline:${APP_DEFAULT_PASSWORD}@outline-postgres:5432/outline
+      DATABASE_URL: postgres://outline:${OUTLINE_DB_PASSWORD}@outline-postgres:5432/outline
       REDIS_URL: redis://outline-redis:6379
       PGSSLMODE: disable
       FILE_STORAGE: local
@@ -106,7 +106,7 @@ services:
     environment:
       POSTGRES_DB: outline
       POSTGRES_USER: outline
-      POSTGRES_PASSWORD: $APP_DEFAULT_PASSWORD
+      POSTGRES_PASSWORD: ${OUTLINE_DB_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/outline/pgdata/:/var/lib/postgresql/data/
@@ -278,10 +278,7 @@ x-casaos:
       en_us: |
         **Default Login**
 
-        | Field | Value |
-        |-------|-------|
-        | Email | `$APP_EMAIL` |
-        | Password | `$APP_DEFAULT_PASSWORD` |
+        Log in with the email `$APP_EMAIL`; the password is shown when you open the app (tile menu → Credentials).
 
         **Getting Started:**
 
@@ -316,10 +313,7 @@ x-casaos:
       ko_kr: |
         **기본 로그인**
 
-        | 항목 | 값 |
-        |------|-----|
-        | 이메일 | `$APP_EMAIL` |
-        | 비밀번호 | `$APP_DEFAULT_PASSWORD` |
+        이메일 `$APP_EMAIL` 로 로그인하세요. 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
 
         **시작하기:**
 
@@ -354,10 +348,7 @@ x-casaos:
       zh_cn: |
         **默认登录**
 
-        | 字段 | 值 |
-        |------|-----|
-        | 邮箱 | `$APP_EMAIL` |
-        | 密码 | `$APP_DEFAULT_PASSWORD` |
+        使用邮箱 `$APP_EMAIL` 登录；密码会在打开应用时显示（磁贴菜单 → Credentials）。
 
         **开始使用：**
 
@@ -377,10 +368,7 @@ x-casaos:
       fr_fr: |
         **Connexion par defaut**
 
-        | Champ | Valeur |
-        |-------|--------|
-        | Email | `$APP_EMAIL` |
-        | Mot de passe | `$APP_DEFAULT_PASSWORD` |
+        Connectez-vous avec l'email `$APP_EMAIL` ; le mot de passe est affiche a l'ouverture de l'app (menu de la tuile → Credentials).
 
         **Pour commencer :**
 
@@ -398,10 +386,7 @@ x-casaos:
       es_es: |
         **Inicio de sesion predeterminado**
 
-        | Campo | Valor |
-        |-------|-------|
-        | Email | `$APP_EMAIL` |
-        | Contrasena | `$APP_DEFAULT_PASSWORD` |
+        Inicia sesion con el email `$APP_EMAIL`; la contrasena se muestra al abrir la app (menu del icono → Credentials).
 
         **Para comenzar:**
 
@@ -430,12 +415,28 @@ x-compose-app:
   # was written non-empty anyway, and the app ran with empty secrets.
   #
   # The bcrypt hash was a `docker run dex hash` with a `docker run python + pip
-  # install bcrypt` fallback behind it. It is a generator now.
+  # install bcrypt` fallback behind it. It is a generator now, hashing the app's
+  # own admin password.
+  #
+  # The database and admin passwords used to be the box-wide shared password. They
+  # are seeded from it: an installed app keeps the values its database and its dex
+  # login were initialised with, and a fresh install gets its own.
   secrets:
     OUTLINE_SECRET_KEY: hex:32
     OUTLINE_UTILS_SECRET: hex:32
     OUTLINE_OIDC_SECRET: hex:32
-    OUTLINE_DEX_PASSWORD_HASH: bcrypt:${APP_DEFAULT_PASSWORD}
+    OUTLINE_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    OUTLINE_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+    OUTLINE_DEX_PASSWORD_HASH: bcrypt:${OUTLINE_ADMIN_PASSWORD}
+  credentials:
+    - label:
+        en_us: Administrator
+        fr_fr: Administrateur
+        es_es: Administrador
+        zh_cn: 管理员
+        ko_kr: 관리자
+      username: ${APP_EMAIL}
+      password: ${OUTLINE_ADMIN_PASSWORD}
   # Dex's config carries the deployment's domain in its issuer, and Outline's own
   # OIDC_AUTH_URI (in the environment above) is re-resolved on every up. The two
   # have to move together: the hook this replaces rendered the issuer once at

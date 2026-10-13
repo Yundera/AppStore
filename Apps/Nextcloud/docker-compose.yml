@@ -32,13 +32,13 @@ services:
       - PUID=$PUID
       - PGID=$PGID
       - TZ=$TZ
-      # Auto-install: skip the setup wizard, log in directly with admin / $APP_DEFAULT_PASSWORD
+      # Auto-install: skip the setup wizard, log in directly with admin / $NEXTCLOUD_ADMIN_PASSWORD
       - NEXTCLOUD_ADMIN_USER=admin
-      - NEXTCLOUD_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
       - MYSQL_HOST=db
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
       # Do NOT set REDIS_HOST here. The official entrypoint reacts to it by writing
       # /usr/local/etc/php/conf.d/redis-session.ini, a root-owned path baked into
       # the image that no volume covers, so this container (running as
@@ -48,7 +48,7 @@ services:
       # and file-locking backend by post-install-cmd instead (memcache.local
       # stays APCu, from the image's own apcu.config.php). The password below is
       # inert for the entrypoint and is what post-install-cmd reads.
-      - REDIS_HOST_PASSWORD=$APP_DEFAULT_PASSWORD
+      - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
       - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN nextcloud-$APP_PUBLIC_IP_DASH.nip.io nextcloud-$APP_PUBLIC_IP_DASH.sslip.io
       - OVERWRITEPROTOCOL=https
       - OVERWRITEHOST=nextcloud-$APP_DOMAIN
@@ -90,10 +90,10 @@ services:
         max-file: "2"
     environment:
       - TZ=$TZ
-      - MYSQL_ROOT_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_ROOT_PASSWORD=${NEXTCLOUD_DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
       - MARIADB_AUTO_UPGRADE=1
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/nextcloud/db/:/var/lib/mysql/
@@ -114,7 +114,7 @@ services:
     # Stated explicitly per the Permission Strategy, and it matches the ownership
     # `x-compose-app.folders` gives /DATA/AppData/nextcloud/redis.
     user: $PUID:$PGID
-    command: redis-server --requirepass $APP_DEFAULT_PASSWORD
+    command: redis-server --requirepass ${NEXTCLOUD_REDIS_PASSWORD}
     logging:
       driver: "json-file"
       options:
@@ -128,7 +128,7 @@ services:
     networks:
       - nextcloud-network
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $APP_DEFAULT_PASSWORD ping | grep -q PONG"]
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a ${NEXTCLOUD_REDIS_PASSWORD} ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -533,11 +533,7 @@ x-casaos:
       en_us: |
         **Login**
 
-        After installation, log in with:
-        | Field | Value |
-        |-------|-------|
-        | Username | `admin` |
-        | Password | `$APP_DEFAULT_PASSWORD` |
+        After installation, log in as `admin`. The password is shown when you open the app (tile menu → Credentials).
 
         First-time install takes 1–3 minutes. If the page shows "Gateway time-out" or appears stuck, **refresh** after a minute and the login screen will appear.
 
@@ -545,11 +541,7 @@ x-casaos:
       ko_kr: |
         **로그인**
 
-        설치 후 다음 정보로 로그인하세요:
-        | 필드 | 값 |
-        |-------|-------|
-        | 사용자명 | `admin` |
-        | 비밀번호 | `$APP_DEFAULT_PASSWORD` |
+        설치 후 `admin` 사용자로 로그인하세요. 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
 
         최초 설치는 1~3분 소요됩니다. 페이지에 "Gateway time-out"이 표시되거나 멈춘 것처럼 보이면 1분 후 **새로고침**하면 로그인 화면이 나타납니다.
 
@@ -557,11 +549,7 @@ x-casaos:
       zh_cn: |
         **登录**
 
-        安装后使用以下信息登录：
-        | 字段 | 值 |
-        |-------|-------|
-        | 用户名 | `admin` |
-        | 密码 | `$APP_DEFAULT_PASSWORD` |
+        安装后以 `admin` 用户登录。密码会在打开应用时显示（磁贴菜单 → Credentials）。
 
         首次安装需要 1~3 分钟。如果页面显示 "Gateway time-out" 或看起来卡住，请等待 1 分钟后**刷新页面**即可看到登录界面。
 
@@ -569,11 +557,7 @@ x-casaos:
       fr_fr: |
         **Connexion**
 
-        Après l'installation, connectez-vous avec :
-        | Champ | Valeur |
-        |-------|-------|
-        | Utilisateur | `admin` |
-        | Mot de passe | `$APP_DEFAULT_PASSWORD` |
+        Après l'installation, connectez-vous avec l'utilisateur `admin`. Le mot de passe s'affiche à l'ouverture de l'application (menu de la tuile → Credentials).
 
         La première installation prend 1 à 3 minutes. Si la page affiche "Gateway time-out" ou semble bloquée, **rafraîchissez** après une minute pour voir l'écran de connexion.
 
@@ -581,11 +565,7 @@ x-casaos:
       es_es: |
         **Inicio de sesión**
 
-        Después de la instalación, inicia sesión con:
-        | Campo | Valor |
-        |-------|-------|
-        | Usuario | `admin` |
-        | Contraseña | `$APP_DEFAULT_PASSWORD` |
+        Después de la instalación, inicia sesión con el usuario `admin`. La contraseña se muestra al abrir la aplicación (menú del icono → Credentials).
 
         La primera instalación tarda 1-3 minutos. Si la página muestra "Gateway time-out" o parece bloqueada, **actualiza** después de un minuto para ver la pantalla de inicio de sesión.
 
@@ -594,6 +574,19 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "33.0.3"
+  # Seeded: an installed Nextcloud was initialised (admin account, MariaDB,
+  # Redis config written into config.php) with the box-wide password and keeps
+  # it; a fresh install gets its own values.
+  secrets:
+    NEXTCLOUD_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    NEXTCLOUD_DB_ROOT_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    NEXTCLOUD_REDIS_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    NEXTCLOUD_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${NEXTCLOUD_ADMIN_PASSWORD}
+      note: Change it in Nextcloud under Settings → Personal → Security.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

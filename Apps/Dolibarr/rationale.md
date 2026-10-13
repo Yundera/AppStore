@@ -1,7 +1,7 @@
 # Dolibarr — Rationale
 
 ## What deviation / exception is being requested
-Both services run as `user: "0:0"` (root). Authentication uses Dolibarr's built-in login with auto-configured admin credentials (`$APP_DEFAULT_PASSWORD`).
+Both services run as `user: "0:0"` (root). Authentication uses Dolibarr's built-in login with auto-configured admin credentials (the per-app `DOLIBARR_ADMIN_PASSWORD` secret, shown by Maison under Credentials).
 
 ## Why it is necessary
 - **Dolibarr**: The official image requires root to manage Apache, write to `/var/www/documents`, install modules, and handle file permissions. The image uses `WWW_USER_ID` / `WWW_GROUP_ID` environment variables to control the web server user internally. Running as non-root causes permission errors on document uploads and module installation.
@@ -13,7 +13,7 @@ Both services run as `user: "0:0"` (root). Authentication uses Dolibarr's built-
 - Memory limits on both services (1G each)
 - Database isolated on internal `dolibarr-network` — not exposed on `pcs`
 - MariaDB healthcheck ensures DB is fully ready before Dolibarr starts (`depends_on: condition: service_healthy`)
-- Admin credentials use `$APP_DEFAULT_PASSWORD` (no hardcoded secrets)
+- Admin and database credentials are per-app secrets (`DOLIBARR_ADMIN_PASSWORD`, `DOLIBARR_DB_PASSWORD`, `DOLIBARR_DB_ROOT_PASSWORD`) generated once per install (no hardcoded secrets)
 - `DOLI_PROD: 1` disables debug output in production
 
 ## Alternatives considered and rejected

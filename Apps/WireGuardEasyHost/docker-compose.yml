@@ -18,7 +18,7 @@ services:
       DISABLE_IPV6: 'true'
       INIT_ENABLED: 'true'
       INIT_USERNAME: admin
-      INIT_PASSWORD: $APP_DEFAULT_PASSWORD
+      INIT_PASSWORD: ${WGEASYHOST_ADMIN_PASSWORD}
       INIT_HOST: $APP_PUBLIC_IP   # endpoint written into client configs
       INIT_PORT: '51820'          # WireGuard UDP port on the host
       INIT_DNS: '9.9.9.9'
@@ -213,9 +213,7 @@ x-casaos:
       en_us: |
         # Default Account
 
-        | Username | Password                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        The username and password are shown when you open the app (tile menu → Credentials).
 
         This is **WireGuard Easy v15 in host-networking mode**. The admin account is auto-configured; VPN settings can be changed from the web UI after login.
 
@@ -242,9 +240,7 @@ x-casaos:
       fr_fr: |
         # Compte par defaut
 
-        | Nom d'utilisateur | Mot de passe            |
-        | ----------------- | ----------------------- |
-        | `admin`           | `$APP_DEFAULT_PASSWORD` |
+        L'identifiant et le mot de passe s'affichent à l'ouverture de l'application (menu de la tuile → Identifiants).
 
         Ceci est **WireGuard Easy v15 en mode reseau hote**. Le compte admin est configure automatiquement ; les parametres VPN sont modifiables depuis l'interface web apres connexion.
 
@@ -285,3 +281,11 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: wgeasyhost-${domain}
+  secrets:
+    # Seeded: an installed app provisioned its admin at first boot with the former
+    # shared password, which it keeps; a fresh install gets its own.
+    WGEASYHOST_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${WGEASYHOST_ADMIN_PASSWORD}

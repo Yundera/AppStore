@@ -47,7 +47,7 @@ services:
       # --- Registration: token-gated (open signup on a federated server invites abuse).
       # First registered user becomes the server admin.
       TUWUNEL_ALLOW_REGISTRATION: "true"
-      TUWUNEL_REGISTRATION_TOKEN: $APP_DEFAULT_PASSWORD
+      TUWUNEL_REGISTRATION_TOKEN: ${TUWUNEL_REGISTRATION_TOKEN}
       TUWUNEL_NEW_USER_DISPLAYNAME_SUFFIX: ""
       # --- Federation ---
       TUWUNEL_ALLOW_FEDERATION: "true"
@@ -153,7 +153,7 @@ x-casaos:
       🚀 **Getting started**
 
       1. Install the app and open it — Element loads, already pointed at your server
-      2. **Create an account** — use your server's default password as the *registration token*
+      2. **Create an account** — use the *registration token* shown when you open the app (tile menu → Credentials)
       3. The **first account created becomes the server admin**
       4. On mobile, install the Element app and enter `matrix-<your-domain>` as the homeserver
 
@@ -169,11 +169,10 @@ x-casaos:
 
         **🔑 Registration**
 
-        Account creation requires a **registration token**. The **first account registered becomes the admin**.
+        Account creation requires a **registration token**. The **first account registered becomes the admin**. The token is shown when you open the app (tile menu → Credentials).
 
         | Setting | Value |
         |---------|-------|
-        | Registration Token | `$APP_DEFAULT_PASSWORD` |
         | Web Client (Element) | [🔗 Open Element](https://tuwunel-$APP_DOMAIN/) |
         | Homeserver (for mobile apps) | `matrix-$APP_DOMAIN` |
 
@@ -208,3 +207,11 @@ x-compose-app:
       group: $PGID
   # Mirrors the caddy_0 label on the main service, so the tile renders an open action.
   webui-host: tuwunel-${domain}
+  secrets:
+    # Seeded: an installed server keeps the token its owner already handed out (the
+    # former shared password); a fresh install gets its own.
+    TUWUNEL_REGISTRATION_TOKEN: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Registration token
+      password: ${TUWUNEL_REGISTRATION_TOKEN}
+      note: Share it only with people you invite — anyone who has it can create an account on your server.

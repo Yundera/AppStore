@@ -20,7 +20,7 @@ services:
       TZ: $TZ
       NAME: "DATA"
       USER: "admin"
-      PASS: $APP_DEFAULT_PASSWORD
+      PASS: ${SAMBA_ADMIN_PASSWORD}
       UID: $PUID
       GID: $PGID
       RW: "true"
@@ -113,9 +113,11 @@ x-casaos:
     before_install:
       en_us: |
         Default SMB Access
-        | Username   | Password       | Share Name    |
-        | --------   | ------------   | ----------    |
-        | `admin`    | `$APP_DEFAULT_PASSWORD` | DATA  |
+        | Username   | Share Name    |
+        | --------   | ----------    |
+        | `admin`    | DATA          |
+
+        The password is shown from the app's tile menu → Credentials.
         
         Network Access Instructions:
         • Windows: File Explorer → Network → \\ip_or_host\DATA
@@ -135,3 +137,15 @@ x-casaos:
 
   title:
     en_us: Samba
+
+x-compose-app:
+  schema_version: 2
+  # The SMB login. Seeded from the box-wide password it replaces, so an installed
+  # app keeps the password every client that mapped the share has saved; a fresh
+  # install gets its own.
+  secrets:
+    SAMBA_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: SMB share (DATA)
+      username: admin
+      password: ${SAMBA_ADMIN_PASSWORD}

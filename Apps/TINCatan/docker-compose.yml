@@ -27,7 +27,7 @@ services:
       BACKEND_PORT: "4567"
       LISTEN_PORT: "80"
       USER: "admin"
-      PASSWORD: $APP_DEFAULT_PASSWORD
+      PASSWORD: ${TINCATAN_PASSWORD}
     depends_on:
       tincatan-backend:
         condition: service_started
@@ -197,12 +197,9 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Sign-in** — the game is protected by a shared login. Give these to the
-        friends you want to play with; anyone without them cannot reach the board.
-
-        | Username | Password                |
-        | -------- | ----------------------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        **Sign-in** — the game is protected by a shared login. Give it to the
+        friends you want to play with; anyone without it cannot reach the board.
+        The username and password are shown when you open the app (tile menu → Credentials).
         -----------------------------
         **First start takes a few minutes.** TINC is compiled from source the first
         time it runs. The tile turns healthy on its own once the build finishes —
@@ -221,25 +218,25 @@ x-casaos:
         trading, development cards, Longest Road and Largest Army, and the robber
         on a roll of 7. Works on desktop, tablet and mobile browsers.
       fr_fr: |
-        **Connexion** — le jeu est protégé par un identifiant partagé :
-        `admin` / `$APP_DEFAULT_PASSWORD`. Communiquez-le à vos joueurs.
+        **Connexion** — le jeu est protégé par un identifiant partagé, affiché à
+        l'ouverture de l'application (menu de la tuile → Identifiants). Communiquez-le à vos joueurs.
         -----------------------------
         Le premier démarrage prend quelques minutes : TINC est compilé depuis les
         sources. Attendez simplement — les démarrages suivants sont immédiats.
       ko_kr: |
-        **로그인** — 게임은 공유 계정으로 보호됩니다:
-        `admin` / `$APP_DEFAULT_PASSWORD`. 함께 플레이할 친구에게 알려주세요.
+        **로그인** — 게임은 공유 계정으로 보호되며, 앱을 열면 표시됩니다
+        (타일 메뉴 → 자격 증명). 함께 플레이할 친구에게 알려주세요.
         -----------------------------
         첫 실행은 몇 분 걸립니다. TINC를 소스에서 컴파일하기 때문입니다.
         기다리기만 하면 되며, 이후 실행은 즉시 시작됩니다.
       zh_cn: |
-        **登录** — 游戏由共享账号保护：`admin` / `$APP_DEFAULT_PASSWORD`。
+        **登录** — 游戏由共享账号保护，打开应用时会显示（磁贴菜单 → 凭据）。
         请将其告知一起游戏的朋友。
         -----------------------------
         首次启动需要几分钟：TINC 从源码编译。稍候即可，之后的启动会很快。
       es_es: |
-        **Acceso** — el juego está protegido por una credencial compartida:
-        `admin` / `$APP_DEFAULT_PASSWORD`. Compártela con tus jugadores.
+        **Acceso** — el juego está protegido por una credencial compartida, que se
+        muestra al abrir la aplicación (menú del icono → Credenciales). Compártela con tus jugadores.
         -----------------------------
         El primer arranque tarda unos minutos: TINC se compila desde el código
         fuente. Solo hay que esperar; los arranques posteriores son inmediatos.
@@ -261,3 +258,16 @@ x-compose-app:
   # The URL port, not the container port: the gateway serves this on 443.
   webui-port: ""
   webui-path: "/home"
+  secrets:
+    # Seeded: an installed app keeps the login its players already have (the former
+    # shared password); a fresh install gets its own.
+    TINCATAN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label:
+        en_us: Player login
+        fr_fr: Identifiant des joueurs
+      username: admin
+      password: ${TINCATAN_PASSWORD}
+      note:
+        en_us: Shared with everyone you play with.
+        fr_fr: Partagé avec tous vos joueurs.

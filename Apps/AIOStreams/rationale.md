@@ -27,7 +27,8 @@ not separable by prefix.
 ## Security mitigations in place
 
 - The configure page and dashboard are gated by the app's own login, set via
-  `AIOSTREAMS_AUTH: admin:$APP_DEFAULT_PASSWORD` **and**
+  `AIOSTREAMS_AUTH: admin:${AIOSTREAMS_ADMIN_PASSWORD}` (a per-app secret, shown by
+  Maison under Credentials) **and**
   `AIOSTREAMS_AUTH_REQUIRED: "true"`. Both are required: `AIOSTREAMS_AUTH` only
   defines the credential map, and the enforcement flag defaults to `false`, which
   would leave the configure page public.

@@ -34,7 +34,7 @@ services:
       DOCKER_ENABLE_SECURITY: true
       SECURITY_ENABLELOGIN: true
       SECURITY_INITIALLOGIN_USERNAME: admin
-      SECURITY_INITIALLOGIN_PASSWORD: $APP_DEFAULT_PASSWORD
+      SECURITY_INITIALLOGIN_PASSWORD: ${STIRLINGPDF_ADMIN_PASSWORD}
       DISABLE_ADDITIONAL_FEATURES: true
       # Lock CORS to this app's own published origins. Upstream's default is an
       # empty list, which does NOT disable CORS - it reflects any request Origin
@@ -219,9 +219,7 @@ x-casaos:
         This app takes about 5-10 minutes to set up after installation. Please be patient and wait before trying to access it.
 
         **🔒 Login Required:**
-        | Username | Password |
-        | -------- | -------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        The username and password are shown when you open the app (tile menu → Credentials).
 
         **✨ Features Available:**
         • Split, merge, and organize PDFs
@@ -238,7 +236,7 @@ x-casaos:
         This app can read **and write** your `Downloads` folder (`/DATA/Downloads`), so you can open PDFs you already saved and write results straight back to it. Everything else it stores stays inside its own app folder.
 
         **💡 Version:**
-        Ships Stirling PDF **2.14.3** — PDF commenting, RFC 3161 timestamps, Pdfium rendering and advanced multi-page layouts. Login stays enabled on your server, so use the credentials above.
+        Ships Stirling PDF **2.14.3** — PDF commenting, RFC 3161 timestamps, Pdfium rendering and advanced multi-page layouts. Login stays enabled on your server, so use the credentials shown when you open the app.
 
         **How to use:**
         Upload PDF files through your web browser and start editing them right away!
@@ -247,9 +245,7 @@ x-casaos:
         이 앱은 설치 후 설정이 완료되기까지 약 5-10분이 걸립니다. 인내심을 갖고 접속하기 전에 기다려 주세요.
 
         **🔒 로그인 필요:**
-        | 사용자명 | 비밀번호 |
-        | -------- | -------- |
-        | `admin`  | `$APP_DEFAULT_PASSWORD` |
+        앱을 열면 사용자 이름과 비밀번호가 표시됩니다 (타일 메뉴 → 자격 증명).
 
         **✨ 사용 가능한 기능:**
         • PDF 분할, 병합, 정리
@@ -266,7 +262,7 @@ x-casaos:
         이 앱은 `Downloads` 폴더(`/DATA/Downloads`)를 **읽고 쓸 수** 있습니다. 이미 저장한 PDF를 열고 결과를 바로 저장할 수 있습니다. 그 외 데이터는 모두 앱 전용 폴더에 저장됩니다.
 
         **💡 버전:**
-        Stirling PDF **2.14.3** 제공 — PDF 댓글, RFC 3161 타임스탬프, Pdfium 렌더링, 고급 다중 페이지 레이아웃. 이 서버에서는 로그인이 활성화되어 있으므로 위의 자격 증명을 사용하세요.
+        Stirling PDF **2.14.3** 제공 — PDF 댓글, RFC 3161 타임스탬프, Pdfium 렌더링, 고급 다중 페이지 레이아웃. 이 서버에서는 로그인이 활성화되어 있으므로 앱을 열 때 표시되는 자격 증명을 사용하세요.
 
         **사용 방법:**
         웹 브라우저를 통해 PDF 파일을 업로드하고 바로 편집을 시작할 수 있습니다!
@@ -275,9 +271,7 @@ x-casaos:
         此应用在安装后需要约5-10分钟来完成设置。请耐心等待,在尝试访问之前请等待。
 
         **🔒 需要登录:**
-        | 用户名 | 密码 |
-        | ------ | ---- |
-        | `admin` | `$APP_DEFAULT_PASSWORD` |
+        打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
 
         **✨ 可用功能:**
         • PDF拆分、合并和整理
@@ -294,7 +288,7 @@ x-casaos:
         此应用可以**读写**您的 `Downloads` 文件夹(`/DATA/Downloads`),因此您可以打开已保存的PDF并将结果直接写回。其他所有数据都保存在应用自己的文件夹中。
 
         **💡 版本:**
-        提供 Stirling PDF **2.14.3** — PDF评论、RFC 3161 时间戳、Pdfium 渲染和高级多页面布局。在您的服务器上登录保持启用,请使用上面的凭据。
+        提供 Stirling PDF **2.14.3** — PDF评论、RFC 3161 时间戳、Pdfium 渲染和高级多页面布局。在您的服务器上登录保持启用,请使用打开应用时显示的凭据。
 
         **如何使用:**
         通过网页浏览器上传PDF文件并立即开始编辑!
@@ -303,9 +297,7 @@ x-casaos:
         Cette application prend environ 5-10 minutes pour s'installer après l'installation. Veuillez être patient et attendre avant d'essayer d'y accéder.
 
         **🔒 Connexion requise :**
-        | Nom d'utilisateur | Mot de passe |
-        | ----------------- | ------------ |
-        | `admin` | `$APP_DEFAULT_PASSWORD` |
+        L'identifiant et le mot de passe s'affichent à l'ouverture de l'application (menu de la tuile → Identifiants).
 
         **✨ Fonctionnalités disponibles :**
         • Diviser, fusionner et organiser les PDF
@@ -322,7 +314,7 @@ x-casaos:
         Cette application peut **lire et écrire** dans votre dossier `Downloads` (`/DATA/Downloads`), afin d'ouvrir les PDF déjà enregistrés et d'y réécrire les résultats. Toutes ses autres données restent dans son propre dossier d'application.
 
         **💡 Version :**
-        Fournit Stirling PDF **2.14.3** — commentaires PDF, horodatage RFC 3161, rendu Pdfium et mises en page multi-pages avancées. La connexion reste activée sur votre serveur : utilisez les identifiants ci-dessus.
+        Fournit Stirling PDF **2.14.3** — commentaires PDF, horodatage RFC 3161, rendu Pdfium et mises en page multi-pages avancées. La connexion reste activée sur votre serveur : utilisez les identifiants affichés à l'ouverture de l'application.
 
         **Comment utiliser :**
         Téléchargez des fichiers PDF via votre navigateur web et commencez à les éditer immédiatement !
@@ -331,9 +323,7 @@ x-casaos:
         Esta aplicación toma aproximadamente 5-10 minutos para configurarse después de la instalación. Por favor ten paciencia y espera antes de intentar acceder.
 
         **🔒 Inicio de sesión requerido:**
-        | Usuario | Contraseña |
-        | ------- | ---------- |
-        | `admin` | `$APP_DEFAULT_PASSWORD` |
+        El usuario y la contraseña se muestran al abrir la aplicación (menú del icono → Credenciales).
 
         **✨ Características disponibles:**
         • Dividir, combinar y organizar PDFs
@@ -350,7 +340,7 @@ x-casaos:
         Esta aplicación puede **leer y escribir** en tu carpeta `Downloads` (`/DATA/Downloads`), para abrir los PDF que ya guardaste y escribir los resultados directamente allí. Todos sus demás datos permanecen en su propia carpeta de aplicación.
 
         **💡 Versión:**
-        Incluye Stirling PDF **2.14.3** — comentarios PDF, marcas de tiempo RFC 3161, renderizado Pdfium y diseños multipágina avanzados. El inicio de sesión permanece habilitado en tu servidor: usa las credenciales de arriba.
+        Incluye Stirling PDF **2.14.3** — comentarios PDF, marcas de tiempo RFC 3161, renderizado Pdfium y diseños multipágina avanzados. El inicio de sesión permanece habilitado en tu servidor: usa las credenciales que se muestran al abrir la aplicación.
 
         **Cómo usar:**
         ¡Sube archivos PDF a través de tu navegador web y comienza a editarlos de inmediato!
@@ -386,3 +376,10 @@ x-compose-app:
       group: $PGID
   webui-host: stirlingpdf-${domain}
   webui-path: "/login"
+  secrets:
+    # Seeded: an installed app created its admin account with the former shared password.
+    STIRLINGPDF_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${STIRLINGPDF_ADMIN_PASSWORD}

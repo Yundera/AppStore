@@ -112,7 +112,7 @@ x-casaos:
         **Getting started**
 
         Login: `admin`
-        Password: `$APP_DEFAULT_PASSWORD!`
+        The password is shown when you open the app (tile menu → Credentials).
 
         **Creating a server**
 
@@ -135,6 +135,12 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "4.10.7"
+  secrets:
+    CRAFTY_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${CRAFTY_ADMIN_PASSWORD}!
   # Why this is an init container and not a seed/ file.
   #
   # crafty-4's docker_launcher.sh bootstraps its config ONLY when the directory is
@@ -154,6 +160,13 @@ x-compose-app:
   # change. `cp` without -n so an image upgrade refreshes the upstream files, then the
   # credential is rewritten last.
   #
+  # The admin password is CRAFTY_ADMIN_PASSWORD with a literal "!" appended. Crafty
+  # itself only requires 8+ characters (minimum_password_length, no symbol rule); the
+  # "!" is historical — the listing has always written `<password>!`, so installed
+  # boxes log in with it. CRAFTY_ADMIN_PASSWORD is seeded from the box-wide password,
+  # so for them `${CRAFTY_ADMIN_PASSWORD}!` is exactly the password they have. Keep the
+  # suffix here and in `credentials` together.
+  #
   # Keyed on credits.json rather than `once`: the `once` marker lives with the compose
   # and an uninstall-keep-data removes it, so `once` would re-run on reinstall and
   # reset a password the user had changed.
@@ -164,7 +177,7 @@ x-compose-app:
       volumes:
         - /DATA/AppData/$AppID/config:/out
       environment:
-        CRAFTY_PASSWORD: ${APP_DEFAULT_PASSWORD}
+        CRAFTY_PASSWORD: ${CRAFTY_ADMIN_PASSWORD}
       entrypoint: ["/bin/sh", "-c"]
       # `command` must be a LIST whose single element is the whole script. As a plain
       # folded string it is word-split into argv, so `sh -c` receives only "cp" as its

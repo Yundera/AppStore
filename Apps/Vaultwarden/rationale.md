@@ -61,8 +61,8 @@ Three, all documented below:
 ### Why it is necessary
 
 **The admin token was a shared secret, not a secret.** The app previously set
-`ADMIN_TOKEN: $APP_DEFAULT_PASSWORD` and printed it in `tips.before_install`.
-`APP_DEFAULT_PASSWORD` is a PCS-wide value injected into *every* app's environment, so the
+`ADMIN_TOKEN` to the box-wide default app password and printed it in `tips.before_install`.
+That password is a PCS-wide value injected into *every* app's environment, so the
 password manager's admin panel was gated by a credential that every other container on the
 box already holds, in plaintext, in its own `docker inspect` output.
 
@@ -86,7 +86,7 @@ AppShield is that layer, and the Caddy split below is what confines it to `/admi
 ### Alternatives considered and rejected
 
 - **Argon2 PHC hash for `ADMIN_TOKEN`** (upstream's `vaultwarden hash`). Keeps the
-  plaintext out of `docker inspect`, but the plaintext *is* `APP_DEFAULT_PASSWORD`, which
+  plaintext out of `docker inspect`, but the plaintext *is* the box-wide default password, which
   stays readable in every other app's environment. Hides the copy, not the secret.
 - **Dropping the admin panel entirely** (leaving `ADMIN_TOKEN` unset disables it). Loses
   signup control, user management and diagnostics.
@@ -177,7 +177,7 @@ shipped in `Apps/qBittorrent`.
 3. **A container on the shared `pcs` network can reach `http://vaultwarden-backend/admin`
    with no credential** — this is the "and locally" upstream warns about. The backend stays
    on `pcs` because it has to resolve the `smtp` mail gateway. It is not a regression: the
-   shipped `ADMIN_TOKEN` was `APP_DEFAULT_PASSWORD`, which those same containers already
+   shipped `ADMIN_TOKEN` was the box-wide default password, which those same containers already
    hold.
 
 ## Verification

@@ -117,8 +117,8 @@ every `docker compose up`.
 
 ## Alternatives considered and rejected
 
-- **`inet_exposure = 5` plus SABnzbd's own login** (`admin` /
-  `$APP_DEFAULT_PASSWORD`, seeded the way `Apps/Sonarr` seeds `config.xml`). This
+- **`inet_exposure = 5` plus SABnzbd's own login** (`admin` / a per-app generated
+  secret, seeded the way `Apps/Sonarr` seeds `config.xml`). This
   is genuinely tempting, because `check_hostname()` returns `True` immediately when
   a username *and* password are configured — so it would make exception 3 and the
   whole init step unnecessary, and would be immune to a domain change. Rejected

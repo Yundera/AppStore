@@ -34,8 +34,8 @@ Per CONTRIBUTING, either one alone requires this file; together they are the
 ## Security mitigations in place
 
 - **Authentication is on by default and not optional.** `DOCKER_ENABLE_SECURITY=true`
-  and `SECURITY_ENABLELOGIN=true`; the initial account is `admin` with the per-PCS
-  `$APP_DEFAULT_PASSWORD`, surfaced in `tips.before_install`. `index` / `webui-path`
+  and `SECURITY_ENABLELOGIN=true`; the initial account is `admin` with the per-app
+  secret `STIRLINGPDF_ADMIN_PASSWORD`, shown by Maison as the app's credentials. `index` / `webui-path`
   point at `/login`, so the first thing a visitor meets is the login gate.
 - **No inbound port publishing.** The service uses `expose:` only and is reached through
   the shared `pcs` Caddy network over TLS; nothing is bound on the host.

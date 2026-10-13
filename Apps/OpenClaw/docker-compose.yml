@@ -79,11 +79,11 @@ services:
       # OPENCLAW_GATEWAY_TOKEN or OPENCLAW_GATEWAY_PASSWORD" — it then exits and
       # restarts on a ~10s loop, never listening on 8080, so AppShield answers 502
       # behind a tile that reports `running`. The two control-UI flags below do NOT
-      # satisfy the guard; only a token or password does. $APP_DEFAULT_PASSWORD is the
-      # per-install random value Maison injects, so this is a distinct secret per PCS
-      # and never a shipped literal. It gates the gateway's own API as a second layer
+      # satisfy the guard; only a token or password does. OPENCLAW_GATEWAY_TOKEN is this
+      # app's own secret (x-compose-app.secrets), so it is distinct per install and
+      # never a shipped literal. It gates the gateway's own API as a second layer
       # behind the sidecar; it is not what the browser authenticates with.
-      OPENCLAW_GATEWAY_TOKEN: $APP_DEFAULT_PASSWORD
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
       # The Control UI's own device-pairing flow is disabled because authentication is
       # delegated to the AppShield sidecar in front of it. Safe only because this
       # service sits on an app-private bridge and has no route of its own.
@@ -261,7 +261,7 @@ x-casaos:
         **First-Time Setup**
 
         1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your server account (single sign-on)
-        2. **Unlock the gateway**: if the Control UI asks for a gateway token or password, paste `$APP_DEFAULT_PASSWORD`
+        2. **Unlock the gateway**: if the Control UI asks for a gateway token or password, paste the gateway token shown when you open the app (tile menu → Credentials)
         3. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
         4. **Start chatting**: Use the built-in WebChat or connect messaging platforms
 
@@ -289,7 +289,7 @@ x-casaos:
         **Configuration initiale**
 
         1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte serveur (authentification unique)
-        2. **Deverrouiller la passerelle** : si l'interface demande un token ou un mot de passe, collez `$APP_DEFAULT_PASSWORD`
+        2. **Deverrouiller la passerelle** : si l'interface demande un token ou un mot de passe, collez le token de passerelle affiche a l'ouverture de l'app (menu de la tuile → Credentials)
         3. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
 
         **Deja installe depuis une version anterieure ?**
@@ -310,7 +310,7 @@ x-casaos:
         **Ersteinrichtung**
 
         1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Server-Konto an (Single Sign-on)
-        2. **Gateway entsperren**: Fragt die Control UI nach einem Token oder Passwort, fugen Sie `$APP_DEFAULT_PASSWORD` ein
+        2. **Gateway entsperren**: Fragt die Control UI nach einem Token oder Passwort, fugen Sie das Gateway-Token ein, das beim Offnen der App angezeigt wird (Kachelmenu → Credentials)
         3. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
 
         **Bereits aus einer fruheren Version installiert?**
@@ -331,7 +331,7 @@ x-casaos:
         **Configuracion inicial**
 
         1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta del servidor (inicio de sesion unico)
-        2. **Desbloquear el gateway**: si la interfaz pide un token o contrasena, pega `$APP_DEFAULT_PASSWORD`
+        2. **Desbloquear el gateway**: si la interfaz pide un token o contrasena, pega el token del gateway que se muestra al abrir la app (menu del icono → Credentials)
         3. **Configurar clave API**: Agrega tu clave API en la seccion Config
 
         **Ya instalado desde una version anterior?**
@@ -352,7 +352,7 @@ x-casaos:
         **首次设置**
 
         1. **访问Web界面**：点击应用图标，使用您的服务器账户登录（单点登录）
-        2. **解锁网关**：如果控制界面要求输入网关令牌或密码，请粘贴 `$APP_DEFAULT_PASSWORD`
+        2. **解锁网关**：如果控制界面要求输入网关令牌或密码，请粘贴打开应用时显示的网关令牌（磁贴菜单 → Credentials）
         3. **配置API密钥**：在Config部分添加您的API密钥
 
         **从旧版本升级？**
@@ -373,7 +373,7 @@ x-casaos:
         **최초 설정**
 
         1. **웹 UI 접속**: 앱 아이콘을 클릭하고 서버 계정으로 로그인 (통합 인증)
-        2. **게이트웨이 잠금 해제**: 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구하면 `$APP_DEFAULT_PASSWORD` 를 붙여넣으세요
+        2. **게이트웨이 잠금 해제**: 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구하면 앱을 열 때 표시되는 게이트웨이 토큰(타일 메뉴 → Credentials)을 붙여넣으세요
         3. **API 키 구성**: Config 섹션에서 API 키 추가
 
         **이전 버전에서 이미 설치했나요?**
@@ -388,6 +388,27 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2026.6.9"
+  # The gateway token (see OPENCLAW_GATEWAY_TOKEN above). Seeded: an install that
+  # predates this secret keeps the token it was running with — which the user may
+  # have pasted into a Control UI — and a fresh install gets its own.
+  secrets:
+    OPENCLAW_GATEWAY_TOKEN: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label:
+        en_us: Gateway token
+        fr_fr: Token de passerelle
+        de_de: Gateway-Token
+        es_es: Token del gateway
+        zh_cn: 网关令牌
+        ko_kr: 게이트웨이 토큰
+      password: ${OPENCLAW_GATEWAY_TOKEN}
+      note:
+        en_us: Sign-in is your server account (single sign-on). Paste this only if the Control UI asks for a gateway token or password.
+        fr_fr: La connexion se fait avec votre compte serveur (authentification unique). Collez ceci uniquement si l'interface demande un token ou un mot de passe de passerelle.
+        de_de: Die Anmeldung erfolgt mit Ihrem Server-Konto (Single Sign-on). Nur einfugen, wenn die Control UI nach einem Gateway-Token oder Passwort fragt.
+        es_es: El inicio de sesion usa tu cuenta del servidor (inicio de sesion unico). Pegalo solo si la interfaz pide un token o contrasena del gateway.
+        zh_cn: 登录使用您的服务器账户（单点登录）。仅当控制界面要求输入网关令牌或密码时才粘贴此值。
+        ko_kr: 로그인은 서버 계정(통합 인증)으로 합니다. 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구할 때만 붙여넣으세요.
   # Directories Maison creates and chowns to $PUID:$PGID before any image is pulled
   # and before any hook runs. Declared here rather than mkdir'd in the hook: a hook
   # mkdir runs inside the Maison container and lands root-owned, which is exactly
