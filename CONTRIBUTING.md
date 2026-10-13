@@ -26,7 +26,6 @@ Before submitting your PR, ensure your app meets these requirements:
 - [ ] No hardcoded credentials in the compose file - use environment variables or secrets
 - [ ] Credentials are **per app**: generated under `x-compose-app.secrets` and shown with `x-compose-app.credentials` — not `$APP_DEFAULT_PASSWORD`, which every app on the box shares and is being phased out (see [First-run setup](#first-run-setup), *Credentials*)
 - [ ] Specific version tag (no `:latest`)
-- [ ] `x-compose-app.version` says which release this is, and is bumped with the image tag. See [`version` and `data_version`](#version-and-data_version--what-the-user-sees-and-what-the-data-is)
 
 ### Functionality Checklist
 - [ ] Works immediately after installation - no need to check logs or run commands - the app's `seed/` tree and declared secrets provide sensible defaults
@@ -713,16 +712,16 @@ Whether the app is backed up is its own key, `backup.skip` (see Maison's
 ```yaml
 x-compose-app:
   schema_version: 2
-  version: "2.4.0"      # the release, as people read it — display only
+  version: "2.4.0"      # optional — the release, as people read it, display only
   # data_version: 2     # only once the app has needed its first migration
 ```
 
-**`version`** is shown on the tile, the store card and the Update tab
-(`2.3.1 → 2.4.0`). Nothing compares it, so it is free-form — use the main app's image
-tag without the leading `v` or a variant suffix (`ghost:6.59.0-alpine` → `"6.59.0"`),
-and for a gated app the tag of the app behind the gate, not AppShield's. Quote it, and
-**bump it in the same commit as the image tag**. Leave it out only when there is no
-release to name (an image pinned by digest).
+**`version`** is **optional** and purely informational: nothing in Maison compares it
+or decides anything from it, and it is not what an update is detected by (that is the
+compose file itself). If you set it, use the main app's image tag without the leading
+`v` or a variant suffix (`ghost:6.59.0-alpine` → `"6.59.0"`) — for a gated app, the
+app behind the gate, not AppShield — quote it, and keep it in step with the tag.
+Migrations never depend on it: that is `data_version`'s job.
 
 **`data_version`** is the shape of the app's *data*, an integer that starts at 1 and
 rises by exactly one per migration. **Don't declare it until the app needs its first
@@ -758,11 +757,15 @@ nothing to do: exit 0 means *applied*, there is no "try next time". The full con
 step forms, ordering, rollback — is Maison's
 [`docs/migrations.md`](https://github.com/Yundera/maison/blob/main/docs/migrations.md).
 
-**What Maison does with it today** (v1.1.56): an update that raises `data_version`
-is **refused**, with the step's message if it is `blocked`; the runner that executes
-container and script steps is not shipped yet. An older Maison ignores the fields
-entirely and would update straight past a step onto unconverted data — so **do not
-merge a store app that declares a migration until v1.1.56 or later is on the fleet**.
+**Maison version.** Maison runs migration steps from **v1.1.58** (v1.1.56–1.1.57 parse
+them and refuse any update that has one pending). An update with steps always takes a
+rollback point — *Update without backup* is refused for it — runs in the background
+with each step's `timeout` (default `2h`) added to its time budget, and is rolled back
+whole (compose, data, marker) if a step fails. A script must live under the app's
+`migrations/` folder, the only part of the app folder an update carries over. A Maison
+older than v1.1.56 ignores these fields and would update straight past a step onto
+unconverted data, so **do not merge a store app that declares a migration until
+v1.1.58 or later is on the fleet**.
 
 **The invariant to review against:** a fresh install of data version N must end up
 where an install of any earlier version plus every migration up to N ends up. A
