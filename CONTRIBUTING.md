@@ -738,15 +738,42 @@ with that `id`:
 
 ```yaml
 x-compose-app:
-  version: "19.0"
+  version: "2.4.0"
   data_version: 2
   migrations:
     - id: 2
-      name: odoo-18-to-19
-      blocked: |
-        Odoo 18 → 19 changes the database schema and needs OpenUpgrade.
-        Follow https://… on a copy, then reinstall from that copy.
+      name: postgres-15-to-17
+      image: pgautoupgrade/pgautoupgrade:17.6-trixie
+      environment:
+        PGAUTO_ONESHOT: "yes"
+        POSTGRES_USER: myapp       # = the postgres service's POSTGRES_USER
+        POSTGRES_DB: myapp         # = its POSTGRES_DB (defaults to the user name)
+        PGDATA: /var/lib/postgresql/data/pgdata   # only if the service sets PGDATA
+      volumes:
+        - /DATA/AppData/${AppID}/db:/var/lib/postgresql/data
 ```
+
+`pgautoupgrade` runs `pg_upgrade` once and exits, and exits untouched on a cluster
+already at the target. Its user and database **must** match the app's postgres
+service: by default it connects as `postgres` to a database named after the user,
+fails with `role "postgres" does not exist`, and leaves the data directory split into
+`old/` and `new/` until the rollback restores it. Use the `-trixie` (Debian) variant
+for data written by the Debian-based `postgres:` images, so the collation library
+matches.
+
+**Every install today is at data version 1 — whatever version it runs.** No app had a
+`.data-version` marker before migrations existed, so an install made a year ago and one
+made yesterday both start the first migration from 1. Write the step to read the data
+and do nothing when it is already converted, as `pgautoupgrade` does with `PG_VERSION`.
+The same reason rules out `blocked` for a conversion the store already shipped:
+`blocked` cannot look at the data, so it refuses the old installs *and* every install
+that is already on the new version. Reach for `blocked` only when the step lands
+together with the image bump that needs it. When the old shape cannot be converted
+automatically but some installs are already past it, use a script that checks and
+fails instead — the update is rolled back and the app keeps running its old version.
+`Apps/Odoo` is the worked example: its step 2 reads every database's Odoo version and
+refuses an Odoo 18 database (OpenUpgrade is not safe unattended), and its step 3 is
+the `pgautoupgrade` above.
 
 A step is exactly one of a **container** (`image:` plus the `init`-step keys —
 preferred), a **script** (`script: migrations/0002-….sh`, run like a hook), or
@@ -763,9 +790,15 @@ rollback point — *Update without backup* is refused for it — runs in the bac
 with each step's `timeout` (default `2h`) added to its time budget, and is rolled back
 whole (compose, data, marker) if a step fails. A script must live under the app's
 `migrations/` folder, the only part of the app folder an update carries over. A Maison
-older than v1.1.56 ignores these fields and would update straight past a step onto
-unconverted data, so **do not merge a store app that declares a migration until
-v1.1.58 or later is on the fleet**.
+older than v1.1.56 ignores these fields and updates straight to the new compose. That
+decides when a migration may be merged:
+
+- **The step lands with the image bump that needs it** (the usual case): an old Maison
+  would put the new image on unconverted data, so do not merge until v1.1.58 or later
+  is on the fleet.
+- **The store already ships the new image** (a conversion that was missed, like Odoo):
+  old Maisons are already updating onto it, so the migration only adds protection and
+  can be merged at once.
 
 **The invariant to review against:** a fresh install of data version N must end up
 where an install of any earlier version plus every migration up to N ends up. A

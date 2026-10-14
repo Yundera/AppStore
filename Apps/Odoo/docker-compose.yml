@@ -216,6 +216,35 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "19.0"
+  # Until 2026-03-28 (d5d7d47) the store shipped odoo:18.0 on postgres:15.15. Installs
+  # from either side predate .data-version, so both arrive at data version 1: the steps
+  # read the data to tell them apart, and are no-ops on an install already on 19 / 18.3.
+  data_version: 3
+  migrations:
+    # Odoo does not convert its schema between majors: 19 on an 18 database answers
+    # 500 on every page while the container looks healthy (yunderateam, 2026-10-07).
+    # That needs OpenUpgrade, which is not safe unattended, so an 18 database fails
+    # the update and the backup puts Odoo 18 back. A `blocked` step cannot be used:
+    # it would also refuse every install already on 19.
+    - id: 2
+      name: require-odoo-19-database
+      script: migrations/0002-require-odoo-19-database.sh
+      images: [postgres:15.15, postgres:18.3]
+      timeout: 10m
+    # postgres:18.3 will not start on a 15 cluster. pgautoupgrade runs pg_upgrade
+    # once and exits; on a cluster already at 18 it exits without touching it.
+    # POSTGRES_USER / POSTGRES_DB must match the postgres service: pgautoupgrade
+    # connects as `postgres` to a database named after the user unless told.
+    - id: 3
+      name: postgres-15-to-18
+      image: pgautoupgrade/pgautoupgrade:18.3-trixie
+      environment:
+        PGAUTO_ONESHOT: "yes"
+        POSTGRES_USER: odoo
+        POSTGRES_DB: postgres
+        PGDATA: /var/lib/postgresql/data/pgdata
+      volumes:
+        - /DATA/AppData/${AppID}/postgres-data:/var/lib/postgresql/data
   # Seeded: an installed Odoo keeps the box-wide password its database and
   # odoo.conf admin_passwd were set up with; a fresh install gets its own.
   secrets:
