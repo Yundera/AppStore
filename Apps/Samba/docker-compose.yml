@@ -149,3 +149,10 @@ x-compose-app:
     - label: SMB share (DATA)
       username: admin
       password: ${SAMBA_ADMIN_PASSWORD}
+      # The image re-applies PASS to the Samba user on every start (CLEAR=Y is its
+      # default), so a new value in .env plus a recreate is the whole change.
+      change:
+        apply: env
+        policy:
+          min_length: 8
+          max_length: 64
