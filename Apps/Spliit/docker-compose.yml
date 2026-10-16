@@ -217,6 +217,118 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.19.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: Spliit
+  title:
+    en_us: Spliit
+    ko_kr: Spliit
+    zh_cn: Spliit
+    fr_fr: Spliit
+    es_es: Spliit
+  tagline:
+    en_us: Free and Open Source Expense Sharing App
+    ko_kr: 무료 오픈소스 비용 분할 앱
+    zh_cn: 免费开源费用分摊应用
+    es_es: Aplicación Gratuita para Compartir Gastos
+    fr_fr: Application Gratuite de Partage de Dépenses
+  description:
+    en_us: |
+      Split expenses with friends - no signup, no hassle. Spliit is the simplest way to share expenses. Whether splitting dinner bills, vacation costs, or household expenses, everyone can see who owes what instantly. No accounts needed - just create a group and share the link.
+
+      **Key features:**
+      • Create expense groups in seconds
+      • Add participants by name only
+      • Split by percentage, shares, or exact amounts
+      • See optimized settlements (who pays whom)
+      • Works on any device
+      • Complete privacy - data stays on your server
+
+      **Perfect for:** Roommates splitting rent, friends sharing vacation costs, couples managing household expenses, group dinners, or any shared activity.
+    ko_kr: |
+      친구와 비용 분할 - 가입 없이, 번거로움 없이. Spliit은 비용을 공유하는 가장 간단한 방법입니다. 저녁 식사비, 휴가 비용, 가계 지출 등 누가 얼마를 빚졌는지 즉시 확인할 수 있습니다.
+    zh_cn: |
+      与朋友分摊费用 - 无需注册，没有麻烦。Spliit 是分摊费用最简单的方式。无论是分摊晚餐账单、度假费用还是家庭开支，每个人都能立即看到谁欠谁多少。
+    es_es: |
+      Divide gastos con amigos - sin registro, sin complicaciones. Spliit es la forma más simple de compartir gastos. Ya sea dividiendo cuentas de cena, costos de vacaciones o gastos del hogar.
+    fr_fr: |
+      Partagez les dépenses avec vos amis - sans inscription, sans tracas. Spliit est le moyen le plus simple de partager les dépenses. Qu'il s'agisse de diviser l'addition du dîner, les frais de vacances ou les dépenses du foyer.
+  developer: Spliit Team
+  category: Finance
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: spliit-proxy
+  tips:
+    en_us: |
+      **Sign-in:** Spliit is protected by your server's single sign-on. Access is
+      handled by that one login - everyone who opens the app, including guests you
+      send a group link to, signs in with their server account (single sign-on).
+      -----------------------------
+      **How to use:**
+      1. Click "Create a group"
+      2. Name it (e.g., "Beach Trip 2024")
+      3. Add people (just their names)
+      4. Start adding expenses
+      5. Check "Balances" to see who owes whom
+      -----------------------------
+      Share the group link with friends - they sign in with their server account to open it.
+    ko_kr: |
+      **로그인:** Spliit은 서버 통합 로그인(SSO)으로 보호됩니다. 로그인은 이 하나로 통합되어,
+      공유 링크로 접속하는 사람을 포함해 모든 사용자가 이 서버의 계정으로 로그인합니다.
+      -----------------------------
+      **사용 방법:**
+      1. "그룹 만들기" 클릭
+      2. 이름 지정 (예: "제주도 여행 2024")
+      3. 사람 추가 (이름만)
+      4. 비용 추가 시작
+      5. "잔액"을 확인하여 누가 누구에게 빚졌는지 확인
+      -----------------------------
+      그룹 링크를 친구와 공유하세요 - 친구는 서버 계정으로 로그인하여 접속합니다.
+    zh_cn: |
+      **登录：** Spliit 由您服务器的单点登录（SSO）保护。登录统一由它管理；
+      包括通过共享链接访问的访客在内，所有人都使用本服务器上的账户登录。
+      -----------------------------
+      **使用方法：**
+      1. 点击"创建群组"
+      2. 命名（例如："2024海滩之旅"）
+      3. 添加人员（只需姓名）
+      4. 开始添加费用
+      5. 查看"余额"了解谁欠谁
+      -----------------------------
+      与朋友分享群组链接 - 他们使用服务器账户登录即可访问。
+    es_es: |
+      **Inicio de sesión:** Spliit está protegido por el inicio de sesión único (SSO) de
+      tu servidor. Ese acceso único lo gestiona todo: todos, incluidos los invitados
+      que abren un enlace compartido, inician sesión con una cuenta de este servidor.
+      -----------------------------
+      **Cómo usar:**
+      1. Haz clic en "Crear un grupo"
+      2. Nómbralo (ej: "Viaje Playa 2024")
+      3. Añade personas (solo nombres)
+      4. Empieza a añadir gastos
+      5. Revisa "Saldos" para ver quién debe a quién
+      -----------------------------
+      Comparte el enlace del grupo con amigos - iniciarán sesión con su cuenta del servidor.
+    fr_fr: |
+      **Connexion :** Spliit est protégé par l'authentification unique (SSO) du serveur.
+      Cet identifiant unique gère tous les accès : tout le monde, y compris les
+      invités qui ouvrent un lien partagé, se connecte avec un compte de ce serveur.
+      -----------------------------
+      **Comment utiliser:**
+      1. Cliquez sur "Créer un groupe"
+      2. Nommez-le (ex: "Voyage Plage 2024")
+      3. Ajoutez des personnes (juste les noms)
+      4. Commencez à ajouter des dépenses
+      5. Vérifiez "Soldes" pour voir qui doit à qui
+      -----------------------------
+      Partagez le lien du groupe avec vos amis - ils se connectent avec leur compte du serveur.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

@@ -192,6 +192,41 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "10.11.11"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: jellyfin
+  title:
+    en_us: Jellyfin
+  tagline:
+    en_us: This is your Movie Hub. Watch your own movies, shows, and live TV - just like a streaming app, but fully hosted by you.
+    fr_fr: Votre serveur de streaming multimédia personnel sans contraintes
+    es_es: Tu servidor personal de transmisión multimedia sin ataduras
+    zh_cn: 您的个人媒体流媒体服务器，完全自由
+    ko_kr: 완전히 자유로운 개인 미디어 스트리밍 서버
+  description:
+    en_us: Jellyfin - The Free Software Media System that puts you in control of managing and streaming your media. Stream to any device from your own server.
+    fr_fr: Jellyfin - Le système multimédia libre qui vous donne le contrôle total de la gestion et du streaming de vos médias. Diffusez vers n'importe quel appareil depuis votre propre serveur.
+    es_es: Jellyfin - El sistema multimedia de software libre que te da control total sobre la gestión y transmisión de tus medios. Transmite a cualquier dispositivo desde tu propio servidor.
+    zh_cn: Jellyfin - 免费开源媒体系统，让您完全控制媒体的管理和流媒体播放。从您自己的服务器流式传输到任何设备。
+    ko_kr: Jellyfin - 미디어 관리 및 스트리밍을 완전히 제어할 수 있는 무료 오픈소스 미디어 시스템입니다. 자체 서버에서 모든 기기로 스트리밍하세요.
+  developer: Jellyfin Project
+  category: Media
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: jellyfin-proxy
+  tips:
+    en_us: "\U0001F4A1 **Tips**: Jellyfin gives you a Netflix-style interface for the TV shows and movies stored on your computer or server.\n\n\U0001F4D6 **Setup guide**: [Set up your own streaming service](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)\n\n\U0001F3AC **Enjoy!** ❓ Questions? Contact us at help@yundera.com\n\n**Getting Started:**\n1. Open Jellyfin after installation\n2. Follow the setup wizard to create your admin account\n3. Add your media libraries (Movies, TV Shows, Music)\n\n**Media Location:**\n- Movies: `/DATA/Media/Movies/`\n- TV Shows: `/DATA/Media/TV Shows/`\n- Music: `/DATA/Media/Music/`\n\n**Tip:** Jellyfin is completely free with no subscriptions or limitations.\n"
+    ko_kr: "\U0001F4A1 **팁**: Jellyfin은 컴퓨터나 서버에 저장된 TV 프로그램과 영화를 위한 Netflix 스타일 인터페이스를 제공합니다.\n\n\U0001F4D6 **설정 가이드**: [나만의 스트리밍 서비스 설정하기](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)\n\n\U0001F3AC **즐기세요!** ❓ 궁금한 점이 있으신가요? help@yundera.com으로 연락주세요\n\n**시작하기:**\n1. 설치 후 Jellyfin 열기\n2. 설정 마법사를 따라 관리자 계정 생성\n3. 미디어 라이브러리 추가 (영화, TV 프로그램, 음악)\n\n**미디어 위치:**\n- 영화: `/DATA/Media/Movies/`\n- TV 프로그램: `/DATA/Media/TV Shows/`\n- 음악: `/DATA/Media/Music/`\n\n**팁:** Jellyfin은 구독이나 제한 없이 완전히 무료입니다.\n"
+    zh_cn: "\U0001F4A1 **提示**: Jellyfin 为存储在您计算机或服务器上的电视节目和电影提供 Netflix 风格的界面。\n\n\U0001F4D6 **设置指南**: [设置您自己的流媒体服务](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)\n\n\U0001F3AC **尽情享受！** ❓ 有问题？请联系 help@yundera.com\n\n**开始使用：**\n1. 安装后打开 Jellyfin\n2. 按照设置向导创建管理员账户\n3. 添加您的媒体库（电影、电视节目、音乐）\n\n**媒体位置：**\n- 电影：`/DATA/Media/Movies/`\n- 电视节目：`/DATA/Media/TV Shows/`\n- 音乐：`/DATA/Media/Music/`\n\n**提示：** Jellyfin 完全免费，没有订阅或限制。\n"
+    es_es: "\U0001F4A1 **Consejos**: Jellyfin te ofrece una interfaz estilo Netflix para los programas de TV y películas almacenados en tu computadora o servidor.\n\n\U0001F4D6 **Guía de configuración**: [Configura tu propio servicio de streaming](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)\n\n\U0001F3AC **¡Disfruta!** ❓ ¿Preguntas? Contáctanos en help@yundera.com\n\n**Para empezar:**\n1. Abre Jellyfin después de la instalación\n2. Sigue el asistente de configuración para crear tu cuenta de administrador\n3. Añade tus bibliotecas multimedia (Películas, Series, Música)\n\n**Ubicación de medios:**\n- Películas: `/DATA/Media/Movies/`\n- Series: `/DATA/Media/TV Shows/`\n- Música: `/DATA/Media/Music/`\n\n**Consejo:** Jellyfin es completamente gratuito sin suscripciones ni limitaciones.\n"
+    fr_fr: "\U0001F4A1 **Conseils**: Jellyfin vous offre une interface de style Netflix pour les émissions TV et films stockés sur votre ordinateur ou serveur.\n\n\U0001F4D6 **Guide de configuration**: [Configurez votre propre service de streaming](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)\n\n\U0001F3AC **Profitez-en !** ❓ Des questions ? Contactez-nous à help@yundera.com\n\n**Pour commencer :**\n1. Ouvrez Jellyfin après l'installation\n2. Suivez l'assistant de configuration pour créer votre compte administrateur\n3. Ajoutez vos bibliothèques multimédia (Films, Séries TV, Musique)\n\n**Emplacement des médias :**\n- Films : `/DATA/Media/Movies/`\n- Séries TV : `/DATA/Media/TV Shows/`\n- Musique : `/DATA/Media/Music/`\n\n**Astuce :** Jellyfin est entièrement gratuit sans abonnement ni limitation.\n"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

@@ -292,6 +292,193 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.7"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Chronos MCP
+  tagline:
+    en_us: Cron-based scheduler for MCP tool calls
+    zh_cn: 基于 cron 的 MCP 工具调用调度器
+  description:
+    en_us: |
+      **Schedule MCP tool calls with cron expressions**
+
+      Chronos MCP is a cron-based scheduler that triggers MCP (Model Context Protocol) tool calls at configured times. It connects to any MCP-compatible server via stdio or HTTP transports and invokes tools on a schedule.
+
+      **What you can do:**
+      - Define cron rules to call any tool on any MCP server on a schedule
+      - Use dynamic parameter templates with date/time variables (e.g. `{{date}}`, `{{now}}`)
+      - Monitor execution history and results from the web dashboard
+      - Manage rules via the Web UI or directly from an AI assistant via its built-in MCP server
+
+      **Think of it like:** A cron scheduler, but instead of running shell commands, it calls MCP tools.
+
+      **Perfect if you:** Want to automate recurring tasks across your MCP-enabled services — daily reports, periodic health checks, scheduled notifications, and more.
+    zh_cn: |
+      **使用 cron 表达式调度 MCP 工具调用**
+
+      Chronos MCP 是一个基于 cron 的调度器，可在配置的时间触发 MCP（模型上下文协议）工具调用。它通过 stdio 或 HTTP 传输连接到任何兼容 MCP 的服务器，并按计划调用工具。
+
+      **功能：**
+      - 定义 cron 规则，按计划调用任何 MCP 服务器上的任何工具
+      - 使用日期/时间变量的动态参数模板（例如 `{{date}}`、`{{now}}`）
+      - 从 Web 仪表板监控执行历史和结果
+      - 通过 Web UI 或内置 MCP 服务器直接从 AI 助手管理规则
+  developer: Worph
+  category: Utilities
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+  main: chronosmcp-proxy
+  tips:
+    en_us: |
+      **Getting Started**
+
+      Chronos MCP is ready to use immediately after installation.
+
+      **How to use:**
+      1. Open the Web UI and create a new cron rule
+      2. Set a cron schedule (e.g. `0 9 * * 1-5` for weekdays at 9am)
+      3. Configure the target MCP server (stdio command or HTTP URL)
+      4. Choose the tool to call and set parameters
+      5. Enable the rule — Chronos will call the tool on schedule
+
+      **Parameter Templates:**
+      Use dynamic values in your parameters that resolve at trigger time:
+      - `{{date}}` → `2025-01-15`
+      - `{{now}}` → ISO 8601 timestamp
+      - `{{time}}` → `09:00:00`
+      - `{{timestamp}}` → Unix timestamp
+
+      **MCP Integration (for AI/LLMs):**
+
+      Chronos itself exposes an MCP server, allowing AI assistants to create, update, and manage cron rules.
+
+      **Option 1: Public URL (OAuth)**
+
+      The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+      URL below — clients that support OAuth discovery (claude.ai, Claude
+      Desktop) register themselves and open a browser for you to approve with
+      your server account (single sign-on).
+      ```json
+      {
+        "mcpServers": {
+          "chronos-mcp": {
+            "type": "http",
+            "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
+          }
+        }
+      }
+      ```
+      For clients that need a pre-created client_id/client_secret (n8n, custom
+      scripts), open **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** and
+      create one there.
+
+      **Option 2: Local Docker connection (no auth required) — on your server, use Option 1 instead**
+
+      On a plain Docker host you could reach the backend directly over the
+      shared network:
+      ```json
+      {
+        "mcpServers": {
+          "chronos-mcp": {
+            "type": "http",
+            "url": "http://chronosmcp-backend:9054/mcp"
+          }
+        }
+      }
+      ```
+      *Use Option 1 here.* On your server the launcher attaches the backend to
+      this app's private network only, so `chronosmcp-backend` cannot be
+      resolved from the shared `pcs` network — a client on `pcs` will not reach
+      it. Use **Option 1** above, which is OAuth-gated and works from anywhere.
+
+      **Available MCP Tools:**
+      | Tool | Description |
+      |------|-------------|
+      | `list_rules` | List all cron rules |
+      | `create_rule` | Create a new scheduled rule |
+      | `update_rule` | Update an existing rule |
+      | `delete_rule` | Delete a rule |
+      | `toggle_rule` | Enable or disable a rule |
+      | `trigger_rule` | Manually trigger a rule now |
+      | `get_logs` | View execution logs |
+      | `clear_logs` | Clear logs for a rule |
+      | `get_status` | Get scheduler status |
+    zh_cn: |
+      **快速开始**
+
+      Chronos MCP 安装后即可立即使用。
+
+      **使用方法：**
+      1. 打开 Web UI 并创建新的 cron 规则
+      2. 设置 cron 计划（例如 `0 9 * * 1-5` 表示工作日上午9点）
+      3. 配置目标 MCP 服务器（stdio 命令或 HTTP URL）
+      4. 选择要调用的工具并设置参数
+      5. 启用规则 — Chronos 将按计划调用工具
+
+      **参数模板：**
+      在参数中使用在触发时解析的动态值：
+      - `{{date}}` → `2025-01-15`
+      - `{{now}}` → ISO 8601 时间戳
+      - `{{time}}` → `09:00:00`
+      - `{{timestamp}}` → Unix 时间戳
+
+      **MCP 集成（用于 AI/LLM）：**
+
+      Chronos 本身暴露一个 MCP 服务器，允许 AI 助手创建、更新和管理 cron 规则。
+
+      **选项 1：公共 URL（OAuth）**
+
+      `/mcp` 端点受 OAuth 2.1 保护。将客户端指向以下 URL — 支持 OAuth 发现的客户端
+      （claude.ai、Claude Desktop）会自动注册并打开浏览器，让您使用服务器账号（单点登录）授权。
+      ```json
+      {
+        "mcpServers": {
+          "chronos-mcp": {
+            "type": "http",
+            "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
+          }
+        }
+      }
+      ```
+      对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
+      **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** 创建。
+
+      **选项 2：本地 Docker 连接（无需认证）— 在您的服务器上请改用选项 1**
+
+      在普通 Docker 主机上，可以通过共享网络直接连接后端：
+      ```json
+      {
+        "mcpServers": {
+          "chronos-mcp": {
+            "type": "http",
+            "url": "http://chronosmcp-backend:9054/mcp"
+          }
+        }
+      }
+      ```
+      *在您的服务器上请使用选项 1*：启动器只把后端接入本应用的专用网络，
+      因此共享 `pcs` 网络上的客户端无法解析 `chronosmcp-backend`。请使用上面的
+      **选项 1**（OAuth 保护，任何位置均可访问）。
+
+      **可用 MCP 工具：**
+      | 工具 | 描述 |
+      |------|------|
+      | `list_rules` | 列出所有 cron 规则 |
+      | `create_rule` | 创建新的定时规则 |
+      | `update_rule` | 更新现有规则 |
+      | `delete_rule` | 删除规则 |
+      | `toggle_rule` | 启用或禁用规则 |
+      | `trigger_rule` | 立即手动触发规则 |
+      | `get_logs` | 查看执行日志 |
+      | `clear_logs` | 清除规则的日志 |
+      | `get_status` | 获取调度器状态 |
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

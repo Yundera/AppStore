@@ -301,6 +301,57 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "13.0.19"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: seafile
+  title:
+    en_us: Seafile
+  tagline:
+    en_us: Professional file sync and collaboration platform
+    es_es: Plataforma profesional de sincronización y colaboración de archivos
+    fr_fr: Plateforme professionnelle de synchronisation et collaboration de fichiers
+    ko_kr: 전문 파일 동기화 및 협업 플랫폼
+    zh_cn: 专业文件同步和协作平台
+  description:
+    en_us: Seafile is a file hosting and collaboration platform with privacy protection and teamwork features. It allows you to create private clouds for file sharing and collaboration, supporting automatic sync across devices, version control, and secure file encryption. Perfect for teams and individuals who need reliable cloud storage with advanced sharing capabilities.
+    es_es: Seafile es una plataforma de alojamiento y colaboración de archivos con protección de privacidad y características de trabajo en equipo. Te permite crear nubes privadas para compartir archivos y colaborar, con sincronización automática entre dispositivos, control de versiones y cifrado seguro de archivos.
+    fr_fr: Seafile est une plateforme d'hébergement et de collaboration de fichiers avec protection de la confidentialité et fonctionnalités de travail d'équipe. Elle vous permet de créer des nuages privés pour le partage et la collaboration de fichiers, prenant en charge la synchronisation automatique entre appareils, le contrôle de version et le chiffrement sécurisé des fichiers.
+    ko_kr: Seafile은 개인정보 보호와 팀워크 기능을 갖춘 파일 호스팅 및 협업 플랫폼입니다. 파일 공유와 협업을 위한 프라이빗 클라우드를 생성할 수 있으며, 기기 간 자동 동기화, 버전 제어, 보안 파일 암호화를 지원합니다.
+    zh_cn: Seafile 是一个文件托管和协作平台，具有隐私保护和团队协作功能。它允许您创建私有云进行文件共享和协作，支持设备间自动同步、版本控制和安全文件加密。
+  developer: Seafile Ltd.
+  category: Cloud
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+    - screenshot-4.png
+  architectures:
+    - amd64
+    - arm64
+  main: seafile
+  tips:
+    en_us: |
+      **Default Admin Account**
+
+      Log in as `admin@$APP_DOMAIN`; the password is shown when you open the app (tile menu → Credentials).
+
+      **Features:**
+      - File sync across devices with desktop and mobile apps
+      - Team libraries with granular permissions
+      - Version control and file history
+      - Online document editing with Seadoc
+      - Secure file sharing with password protection
+      - WebDAV support for third-party app integration
+
+      **Post-Installation:**
+      - Access via your domain to set up additional users
+      - Download desktop/mobile apps for automatic sync
+      - Configure team libraries for collaborative work
+      - Set up two-factor authentication for enhanced security
+      - Install **Seafile Virtual Folder** to mount your libraries at `/DATA/Seafile`,
+        where the file manager, the SMB share and every other app can reach them
   # One secret per purpose. Every one is seeded from the box-wide password it
   # replaces: an installed app keeps the values its MariaDB, its seafile DB user,
   # its admin account and its signed tokens were initialised with; a fresh install

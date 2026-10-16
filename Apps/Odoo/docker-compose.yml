@@ -216,6 +216,59 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "19.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Odoo
+    ko_kr: 오두
+    zh_cn: Odoo
+    es_es: Odoo
+    fr_fr: Odoo
+  tagline:
+    en_us: Open Source ERP and CRM
+    ko_kr: 오픈소스 ERP 및 CRM 솔루션
+    zh_cn: 开源ERP和CRM解决方案
+    es_es: ERP y CRM de código abierto
+    fr_fr: ERP et CRM open source
+  description:
+    en_us: |
+      Odoo is a suite of open source business apps that cover all your company needs: CRM, eCommerce, accounting, inventory, point of sale, project management, and more.
+
+      Odoo's unique value proposition is to be at the same time very easy to use and fully integrated.
+    ko_kr: |
+      Odoo는 CRM, 전자상거래, 회계, 재고 관리, POS, 프로젝트 관리 등 회사의 모든 비즈니스 요구사항을 충족하는 오픈 소스 비즈니스 앱 모음입니다.
+
+      Odoo의 고유한 가치는 사용이 매우 쉬우면서도 완전히 통합되어 있다는 점입니다.
+    zh_cn: |
+      Odoo 是一套开源业务应用程序,涵盖公司的所有需求:CRM、电子商务、会计、库存、销售点、项目管理等。
+
+      Odoo 的独特价值主张是同时非常易于使用且完全集成。
+    es_es: |
+      Odoo es un conjunto de aplicaciones empresariales de código abierto que cubren todas las necesidades de su empresa: CRM, comercio electrónico, contabilidad, inventario, punto de venta, gestión de proyectos y más.
+
+      La propuesta de valor única de Odoo es ser al mismo tiempo muy fácil de usar y totalmente integrado.
+    fr_fr: |
+      Odoo est une suite d'applications commerciales open source qui couvrent tous les besoins de votre entreprise : CRM, commerce électronique, comptabilité, inventaire, point de vente, gestion de projet et plus encore.
+
+      La proposition de valeur unique d'Odoo est d'être à la fois très facile à utiliser et entièrement intégré.
+  developer: Odoo S.A.
+  category: Business
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: odoo
+  tips:
+    en_us: "## Initial Setup Information\n\nAfter installation, use the following information to create your database on first access:\n\n| Item | Value |\n| --- | --- |\n| Master Password | Shown when you open the app (tile menu → Credentials) |\n| Database Name | `odoo` |\n| Email | Admin email address |\n| Password | Admin account password |\n| Language | Select your preferred language |\n| Country | Your country |\n\n**Note**: \n- Initial setup may take a few minutes\n- After database creation, you can log in with your admin account\n"
+    ko_kr: "## 초기 설정 정보\n\n설치 후 첫 접속시 다음 정보를 사용하여 데이터베이스를 생성하세요:\n\n| 항목 | 값 |\n| --- | --- |\n| 마스터 비밀번호 | 앱을 열 때 표시됨 (타일 메뉴 → Credentials) |\n| 데이터베이스 이름 | `odoo` |\n| 이메일 | 관리자 이메일 주소 |\n| 비밀번호 | 관리자 계정 비밀번호 |\n| 언어 | 원하는 언어 선택 |\n| 국가 | 대한민국 |\n\n**참고**: \n- 첫 설정 시 몇 분이 소요될 수 있습니다\n- 데이터베이스 생성 후 관리자 계정으로 로그인할 수 있습니다\n"
+    zh_cn: "## 初始设置信息\n\n安装后首次访问时,使用以下信息创建数据库:\n\n| 项目 | 值 |\n| --- | --- |\n| 主密码 | 打开应用时显示（磁贴菜单 → Credentials） |\n| 数据库名称 | `odoo` |\n| 电子邮件 | 管理员电子邮件地址 |\n| 密码 | 管理员帐户密码 |\n| 语言 | 选择您的首选语言 |\n| 国家 | 您的国家 |\n\n**注意**: \n- 初始设置可能需要几分钟\n- 创建数据库后,您可以使用管理员帐户登录\n"
+    es_es: "## Información de configuración inicial\n\nDespués de la instalación, use la siguiente información para crear su base de datos en el primer acceso:\n\n| Elemento | Valor |\n| --- | --- |\n| Contraseña maestra | Se muestra al abrir la aplicación (menú del icono → Credentials) |\n| Nombre de la base de datos | `odoo` |\n| Correo electrónico | Dirección de correo electrónico del administrador |\n| Contraseña | Contraseña de la cuenta de administrador |\n| Idioma | Seleccione su idioma preferido |\n| País | Su país |\n\n**Nota**: \n- La configuración inicial puede tardar unos minutos\n- Después de crear la base de datos, puede iniciar sesión con su cuenta de administrador\n"
+    fr_fr: "## Informations de configuration initiale\n\nAprès l'installation, utilisez les informations suivantes pour créer votre base de données lors du premier accès:\n\n| Élément | Valeur |\n| --- | --- |\n| Mot de passe principal | Affiché à l'ouverture de l'application (menu de la tuile → Credentials) |\n| Nom de la base de données | `odoo` |\n| Email | Adresse e-mail de l'administrateur |\n| Mot de passe | Mot de passe du compte administrateur |\n| Langue | Sélectionnez votre langue préférée |\n| Pays | Votre pays |\n\n**Remarque**: \n- La configuration initiale peut prendre quelques minutes\n- Après la création de la base de données, vous pouvez vous connecter avec votre compte administrateur\n"
   # Until 2026-03-28 (d5d7d47) the store shipped odoo:18.0 on postgres:15.15. Installs
   # from either side predate .data-version, so both arrive at data version 1: the steps
   # read the data to tell them apart, and are no-ops on an install already on 19 / 18.3.

@@ -246,6 +246,111 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.1.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Docmost MCP
+  tagline:
+    en_us: MCP server for Docmost — read, write, search, move pages
+    fr_fr: Serveur MCP pour Docmost — lire, ecrire, rechercher, deplacer des pages
+  description:
+    en_us: |
+      **Docmost knowledge base control for AI assistants via MCP**
+
+      Docmost MCP exposes the [Docmost](https://docmost.com) REST API as an MCP (Model Context Protocol) server, letting LLMs and AI assistants list and search spaces, read pages, create and update content, move and duplicate pages, and manage comments — all against your self-hosted Docmost instance.
+
+      Wraps the community [`aleksvin8888/local-docmost-mcp`](https://github.com/aleksvin8888/local-docmost-mcp) Python server with a streamable-HTTP transport shim so any MCP-compatible client can connect (Claude Desktop, Claude Code, Cursor, VS Code, etc.).
+
+      **Think of it like:** A programmable remote control for your Docmost wiki, driven by natural language.
+
+      **Perfect if you:** Have a self-hosted Docmost and want AI assistants to read from, write to, or maintain it without paying for Docmost's Enterprise plan (which is the only tier with built-in MCP support).
+    fr_fr: |
+      **Controle de base de connaissances Docmost pour les assistants IA via MCP**
+
+      Docmost MCP expose l'API REST de [Docmost](https://docmost.com) en tant que serveur MCP (Model Context Protocol), permettant aux LLMs et assistants IA de lister et rechercher des espaces, lire des pages, creer et mettre a jour du contenu, deplacer et dupliquer des pages, et gerer les commentaires — sur votre instance Docmost auto-hebergee.
+
+      Enveloppe le serveur Python communautaire [`aleksvin8888/local-docmost-mcp`](https://github.com/aleksvin8888/local-docmost-mcp) avec un shim de transport streamable-HTTP pour que tout client compatible MCP puisse se connecter (Claude Desktop, Claude Code, Cursor, VS Code, etc.).
+
+      **Parfait si vous:** Avez un Docmost auto-heberge et voulez que des assistants IA lisent, ecrivent ou maintiennent son contenu sans payer le plan Enterprise de Docmost (le seul niveau avec support MCP integre).
+  category: Developer
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  main: docmostmcp-proxy
+  tips:
+    en_us: |
+      **Set your Docmost credentials in the config UI after install**
+
+      You set the credentials after install rather than in an install form — the app installs with `DOCMOST_EMAIL` and `DOCMOST_PASSWORD` empty and the MCP server starts, but every Docmost call fails until you set them. Click **Open** on the app card to land on the bundled **config UI** at `/`, where you enter the credentials, run a live **Test connection** against Docmost, and copy the ready-to-paste public MCP URL. What you save is written to `/DATA/AppData/docmostmcp/data/config.json` and survives redeploys.
+
+      **Prerequisites:**
+      1. A running **Docmost** instance reachable from the `pcs` Docker network (typically the companion Docmost app installed from this store)
+      2. A Docmost user account — **strongly recommended** to create a dedicated service account in Docmost rather than reusing admin, since this MCP can read/write/move every page that account can see
+
+      **MCP Integration (for AI/LLMs):**
+
+      **Option 1: Public URL (OAuth)**
+
+      The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the URL
+      below — clients that support OAuth discovery (claude.ai, Claude Desktop)
+      register themselves and open a browser for you to approve with your
+      server account (single sign-on).
+      ```json
+      {
+        "mcpServers": {
+          "docmost-mcp": {
+            "type": "http",
+            "url": "https://docmostmcp-${APP_DOMAIN}/mcp"
+          }
+        }
+      }
+      ```
+      For clients that need a pre-created client_id/client_secret (n8n, custom
+      scripts), open **https://docmostmcp-${APP_DOMAIN}/AppShield/oauth** and
+      create one there.
+
+      **Option 2: Local Docker connection (no auth required)**
+
+      For AI assistants running on the same server, connect directly via the Docker network:
+      ```json
+      {
+        "mcpServers": {
+          "docmost-mcp": {
+            "type": "http",
+            "url": "http://docmostmcp-backend:8000/mcp"
+          }
+        }
+      }
+      ```
+      *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+      **Option 3: Via Beacon (aggregated)**
+
+      If you have **Beacon** installed, Docmost MCP auto-registers there via the bundled `beaconify` sidecar and its tools show up under the `docmost-mcp__*` namespace — no extra config.
+
+      **Available MCP Tools:**
+      | Tool | Description |
+      |------|-------------|
+      | `list_spaces` | List all workspace spaces |
+      | `search_docs` | Full-text search across pages |
+      | `get_page` | Read page content as Markdown |
+      | `create_space` | Create a new space |
+      | `create_page` | Create a new page from Markdown |
+      | `update_page` | Update title/content (replace / append / prepend) |
+      | `duplicate_page` | Duplicate a page (recursive) |
+      | `move_page` | Move a page within the hierarchy |
+      | `move_page_to_space` | Move a page across spaces |
+      | `create_comment` | Add a comment to a page |
+      | `resolve_comment` | Resolve a comment with a note |
+
+      **Security:**
+      - Docmost credentials are stored only in `/DATA/AppData/docmostmcp/data/config.json` on this server and never logged or returned via the API
+      - Authentication is on by default: the config UI is behind the server's single sign-on, and `/mcp` is behind OAuth 2.1. Nothing is reachable unauthenticated from the public URL
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

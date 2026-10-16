@@ -206,6 +206,138 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "14.368.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: foundryvtt
+  title:
+    en_us: Foundry Virtual Tabletop
+  tagline:
+    en_us: Host your own tabletop role-playing games in the browser.
+    fr_fr: Hébergez vos propres parties de jeu de rôle sur table dans le navigateur.
+    ko_kr: 브라우저에서 나만의 테이블탑 롤플레잉 게임을 호스팅하세요.
+    zh_cn: 在浏览器中托管您自己的桌面角色扮演游戏。
+    es_es: Aloja tus propias partidas de rol de mesa en el navegador.
+  description:
+    en_us: |
+      Foundry Virtual Tabletop is a modern, self-hosted virtual tabletop for
+      playing role-playing games online. The game master runs the server and
+      players join from any web browser — no account or install on their side.
+
+      - Dynamic lighting, fog of war, walls and vision
+      - Interactive maps, tokens, measured templates and a dice engine
+      - Hundreds of game systems (D&D 5e, Pathfinder, Call of Cthulhu, …) and
+        thousands of community modules, installed from inside the app
+      - Built-in audio/video chat, journals, playlists and compendiums
+      - Your worlds and assets stay on your server
+
+      **A paid Foundry license is required.** Foundry VTT is commercial software,
+      sold once per game master at [foundryvtt.com](https://foundryvtt.com);
+      players do not need a license. This app downloads Foundry with your
+      foundryvtt.com account the first time it starts.
+    fr_fr: |
+      Foundry Virtual Tabletop est une table virtuelle moderne et auto-hébergée
+      pour jouer à des jeux de rôle en ligne. Le meneur de jeu fait tourner le
+      serveur et les joueurs rejoignent la partie depuis n'importe quel
+      navigateur — sans compte ni installation de leur côté.
+
+      - Éclairage dynamique, brouillard de guerre, murs et vision
+      - Cartes interactives, jetons, gabarits et moteur de dés
+      - Des centaines de systèmes de jeu (D&D 5e, Pathfinder, L'Appel de
+        Cthulhu, …) et des milliers de modules communautaires, installés depuis
+        l'application
+      - Chat audio/vidéo intégré, journaux, playlists et compendiums
+      - Vos mondes et ressources restent sur votre serveur
+
+      **Une licence Foundry payante est nécessaire.** Foundry VTT est un logiciel
+      commercial, vendu une fois par meneur de jeu sur
+      [foundryvtt.com](https://foundryvtt.com) ; les joueurs n'ont pas besoin de
+      licence. L'application télécharge Foundry avec votre compte foundryvtt.com
+      au premier démarrage.
+    ko_kr: |
+      Foundry Virtual Tabletop은 온라인으로 롤플레잉 게임을 즐기기 위한 현대적인
+      자체 호스팅 가상 테이블탑입니다. 게임 마스터가 서버를 운영하고 플레이어는
+      계정이나 설치 없이 웹 브라우저로 참여합니다.
+
+      - 동적 조명, 전장의 안개, 벽과 시야
+      - 인터랙티브 지도, 토큰, 범위 템플릿, 주사위 엔진
+      - 수백 가지 게임 시스템(D&D 5e, Pathfinder 등)과 수천 개의 커뮤니티 모듈
+      - 내장 음성/영상 채팅, 저널, 재생 목록, 컴펜디움
+      - 월드와 에셋은 내 서버에 저장됩니다
+
+      **유료 Foundry 라이선스가 필요합니다.** Foundry VTT는 게임 마스터 1인당
+      [foundryvtt.com](https://foundryvtt.com)에서 구매하는 상용 소프트웨어이며
+      플레이어는 라이선스가 필요 없습니다. 첫 실행 시 foundryvtt.com 계정으로
+      Foundry를 다운로드합니다.
+    zh_cn: |
+      Foundry Virtual Tabletop 是一款现代化的自托管虚拟桌面，用于在线进行角色扮演
+      游戏。主持人运行服务器，玩家只需使用浏览器即可加入，无需注册或安装。
+
+      - 动态光照、战争迷雾、墙体与视野
+      - 交互式地图、指示物、范围模板和骰子引擎
+      - 数百种游戏系统（D&D 5e、Pathfinder 等）和数千个社区模组
+      - 内置音视频聊天、日志、播放列表和资料库
+      - 您的世界和素材保存在您自己的服务器上
+
+      **需要付费的 Foundry 许可证。** Foundry VTT 是商业软件，每位主持人在
+      [foundryvtt.com](https://foundryvtt.com) 购买一次，玩家无需许可证。本应用会在
+      首次启动时使用您的 foundryvtt.com 账户下载 Foundry。
+    es_es: |
+      Foundry Virtual Tabletop es una mesa virtual moderna y autoalojada para
+      jugar a rol en línea. El máster ejecuta el servidor y los jugadores se unen
+      desde cualquier navegador, sin cuenta ni instalación por su parte.
+
+      - Iluminación dinámica, niebla de guerra, muros y visión
+      - Mapas interactivos, fichas, plantillas de área y motor de dados
+      - Cientos de sistemas de juego (D&D 5e, Pathfinder, La llamada de
+        Cthulhu, …) y miles de módulos de la comunidad
+      - Chat de audio/vídeo integrado, diarios, listas de reproducción y compendios
+      - Tus mundos y recursos se quedan en tu servidor
+
+      **Se necesita una licencia de Foundry de pago.** Foundry VTT es software
+      comercial que cada máster compra una vez en
+      [foundryvtt.com](https://foundryvtt.com); los jugadores no necesitan
+      licencia. La aplicación descarga Foundry con tu cuenta de foundryvtt.com en
+      el primer arranque.
+  developer: Foundry Gaming LLC
+  category: Games
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  main: foundryvtt
+  tips:
+    en_us: |
+      **You need a Foundry VTT license** — buy one at
+      [foundryvtt.com](https://foundryvtt.com/purchase/) first.
+
+      **1. Enter your foundryvtt.com account**
+
+      The app does not start until it knows your account. After install, open
+      the app's **settings → Env** tab, fill in `FOUNDRY_USERNAME` and
+      `FOUNDRY_PASSWORD` with your foundryvtt.com login, and save. The app
+      restarts, downloads Foundry and activates your license — allow a minute
+      or two. If your account owns several licenses, also set
+      `FOUNDRY_LICENSE_KEY` to the one this server should use.
+
+      **2. Open the app**
+
+      Accept the license agreement, then log in to the setup screen with the
+      administrator password — it is shown when you open the app (tile menu →
+      Credentials).
+
+      Install a game system, create a world and launch it.
+
+      **3. Invite your players**
+
+      Players join at `https://foundryvtt-$APP_DOMAIN` from any browser.
+      Foundry's built-in users have **no password** until you set one: in the
+      world, open **Settings → User Management** and give every user a password
+      before sharing the link.
+
+      Your worlds, systems, modules and uploads live in
+      `/DATA/AppData/foundryvtt/data/`.
   secrets:
     # Seeded: an installed app keeps the shared password it already has; a fresh
     # install gets its own. The image re-applies it as the admin key on every start.

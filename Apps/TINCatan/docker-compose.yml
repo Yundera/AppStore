@@ -244,6 +244,112 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: TINC - Settlers of Catan
+  tagline:
+    en_us: Web-based Settlers of Catan game with advanced features
+    fr_fr: Jeu Colons de Catane en ligne avec fonctionnalités avancées
+    ko_kr: 고급 기능이 포함된 웹 기반 카탄 게임
+    zh_cn: 具有高级功能的基于网络的卡坦岛游戏
+    es_es: Juego Colonos de Catán basado en web con características avanzadas
+  description:
+    en_us: "TINC (This Is Not Catan) is a full-featured web implementation of Settlers of Catan.\nPlay directly in your browser with no downloads required!\n\nFeatures:\n- \U0001F310 100% browser-based gameplay\n- \U0001F465 2-4 player multiplayer support\n- \U0001F3AE Complete Catan game mechanics\n- \U0001F4B0 Advanced economic features (optional)\n- \U0001F4F1 Mobile-friendly interface\n- \U0001F3AF AI bots for practice games\n- ⚡ Real-time gameplay with WebSockets\n\nGame Modes:\n- Standard Catan (10 victory points)\n- Custom victory point goals\n- Advanced economy with decimal resources\n- Dynamic exchange rates\n"
+    fr_fr: |
+      TINC (This Is Not Catan) est une implémentation web complète de Colons de Catane.
+      Jouez directement dans votre navigateur sans téléchargement!
+
+      Caractéristiques:
+      - Gameplay 100% basé sur navigateur
+      - Support multijoueur 2-4 joueurs
+      - Mécaniques de jeu Catan complètes
+      - Fonctionnalités économiques avancées (optionnel)
+    ko_kr: |
+      TINC (This Is Not Catan)는 카탄의 완전한 웹 구현입니다.
+      다운로드 없이 브라우저에서 바로 플레이하세요!
+
+      특징:
+      - 100% 브라우저 기반 게임플레이
+      - 2-4명 멀티플레이어 지원
+      - 완전한 카탄 게임 메커니즘
+      - 고급 경제 기능 (선택 사항)
+      - 모바일 친화적 인터페이스
+    zh_cn: |
+      TINC（This Is Not Catan）是卡坦岛的完整网络实现。
+      无需下载，直接在浏览器中游戏！
+
+      特点：
+      - 100%基于浏览器的游戏
+      - 2-4人多人游戏支持
+      - 完整的卡坦游戏机制
+      - 高级经济功能（可选）
+    es_es: |
+      TINC (This Is Not Catan) es una implementación web completa de Colonos de Catán.
+      ¡Juega directamente en tu navegador sin descargas!
+
+      Características:
+      - Juego 100% basado en navegador
+      - Soporte multijugador para 2-4 jugadores
+      - Mecánicas completas del juego Catán
+      - Características económicas avanzadas (opcional)
+  developer: Sean Segal & Contributors
+  category: Games
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: tincatan
+  tips:
+    en_us: |
+      **Sign-in** — the game is protected by a shared login. Give it to the
+      friends you want to play with; anyone without it cannot reach the board.
+      The username and password are shown when you open the app (tile menu → Credentials).
+      -----------------------------
+      **First start takes a few minutes.** TINC is compiled from source the first
+      time it runs. The tile turns healthy on its own once the build finishes —
+      there is nothing to do but wait, and later starts come up in seconds.
+      -----------------------------
+      **How to play**
+
+      1. Type your name on the home screen
+      2. "Create Game" for a new room, or "Join Game" to enter one
+      3. Pick the number of players (2-4) and the victory-point goal (default 10)
+      4. Optionally enable the advanced economy — decimal resources, dynamic
+         exchange rates, market-based trading
+      5. The game starts once every player is ready
+
+      Classic rules throughout: settlements, cities and roads, player and bank
+      trading, development cards, Longest Road and Largest Army, and the robber
+      on a roll of 7. Works on desktop, tablet and mobile browsers.
+    fr_fr: |
+      **Connexion** — le jeu est protégé par un identifiant partagé, affiché à
+      l'ouverture de l'application (menu de la tuile → Identifiants). Communiquez-le à vos joueurs.
+      -----------------------------
+      Le premier démarrage prend quelques minutes : TINC est compilé depuis les
+      sources. Attendez simplement — les démarrages suivants sont immédiats.
+    ko_kr: |
+      **로그인** — 게임은 공유 계정으로 보호되며, 앱을 열면 표시됩니다
+      (타일 메뉴 → 자격 증명). 함께 플레이할 친구에게 알려주세요.
+      -----------------------------
+      첫 실행은 몇 분 걸립니다. TINC를 소스에서 컴파일하기 때문입니다.
+      기다리기만 하면 되며, 이후 실행은 즉시 시작됩니다.
+    zh_cn: |
+      **登录** — 游戏由共享账号保护，打开应用时会显示（磁贴菜单 → 凭据）。
+      请将其告知一起游戏的朋友。
+      -----------------------------
+      首次启动需要几分钟：TINC 从源码编译。稍候即可，之后的启动会很快。
+    es_es: |
+      **Acceso** — el juego está protegido por una credencial compartida, que se
+      muestra al abrir la aplicación (menú del icono → Credenciales). Compártela con tus jugadores.
+      -----------------------------
+      El primer arranque tarda unos minutos: TINC se compila desde el código
+      fuente. Solo hay que esperar; los arranques posteriores son inmediatos.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

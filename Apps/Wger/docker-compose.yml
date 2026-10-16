@@ -733,6 +733,275 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.7.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: wger
+  title:
+    en_us: wger
+  tagline:
+    en_us: Track your workouts, body weight and nutrition
+    fr_fr: Suivez vos entraînements, votre poids et votre alimentation
+    de_de: Trainingspläne, Körpergewicht und Ernährung im Blick
+    es_es: Registra tus entrenamientos, tu peso y tu alimentación
+    zh_cn: 记录你的训练、体重和饮食
+  description:
+    en_us: |
+      **Your training log, on your own server**
+
+      wger is a workout and nutrition tracker. Build a routine, log every set you
+      actually lift, and watch the numbers move over weeks and months instead of
+      guessing whether you are making progress.
+
+      **What you can do:**
+      • Build workout routines from a database of hundreds of exercises, with pictures
+      • Log each session set by set, and see your history per exercise
+      • Track body weight and measurements (arms, chest, waist) as charts over time
+      • Plan meals and count calories, protein, carbs and fat
+      • Scan a product barcode to add what you ate
+      • Use the wger phone app against this server, so the log is on you at the gym
+
+      **Think of it like:** the training notebook people carry between machines, except
+      it draws the graphs for you and you can search five years of it.
+
+      **Perfect if you:** lift, run or cycle regularly and want to see long-term
+      progress, or want your health data somewhere you control.
+    fr_fr: |
+      **Votre carnet d'entraînement, sur votre propre serveur**
+
+      wger suit vos entraînements et votre alimentation. Créez un programme, notez chaque
+      série réellement effectuée, et regardez les chiffres évoluer au fil des semaines au
+      lieu de deviner si vous progressez.
+
+      **Ce que vous pouvez faire :**
+      • Créer des programmes à partir d'une base de centaines d'exercices illustrés
+      • Enregistrer chaque séance série par série et consulter l'historique par exercice
+      • Suivre poids et mensurations (bras, poitrine, taille) sous forme de courbes
+      • Planifier vos repas et compter calories, protéines, glucides et lipides
+      • Scanner le code-barres d'un produit pour l'ajouter à votre journal
+      • Utiliser l'application mobile wger avec ce serveur, pour l'avoir sur vous à la salle
+
+      **Pensez-y comme :** le carnet d'entraînement qu'on trimballe entre les machines,
+      sauf qu'il trace les courbes et qu'on peut y chercher cinq ans en arrière.
+
+      **Parfait si vous :** vous entraînez régulièrement et voulez voir votre progression
+      sur le long terme, ou voulez garder vos données de santé chez vous.
+    de_de: |
+      **Dein Trainingstagebuch auf deinem eigenen Server**
+
+      wger protokolliert Training und Ernährung. Leg einen Trainingsplan an, trag jeden
+      Satz ein, den du wirklich gemacht hast, und sieh über Wochen und Monate, wie sich
+      die Zahlen entwickeln, statt zu raten, ob es vorangeht.
+
+      **Was du machen kannst:**
+      • Trainingspläne aus einer Datenbank mit hunderten bebilderten Übungen bauen
+      • Jede Einheit satzweise protokollieren und den Verlauf pro Übung ansehen
+      • Körpergewicht und Maße (Arme, Brust, Taille) als Kurven verfolgen
+      • Mahlzeiten planen und Kalorien, Eiweiß, Kohlenhydrate und Fett zählen
+      • Produkte per Barcode scannen und ins Ernährungstagebuch übernehmen
+      • Die wger-App mit diesem Server nutzen, damit alles im Gym dabei ist
+
+      **Stell es dir vor wie:** das Trainingsheft, das man zwischen den Geräten mitnimmt --
+      nur dass es die Kurven selbst zeichnet und fünf Jahre durchsuchbar bleiben.
+
+      **Ideal wenn du:** regelmäßig trainierst und langfristige Fortschritte sehen willst
+      oder deine Gesundheitsdaten selbst verwalten möchtest.
+    es_es: |
+      **Tu cuaderno de entrenamiento, en tu propio servidor**
+
+      wger registra tus entrenamientos y tu alimentación. Crea una rutina, anota cada serie
+      que realmente levantas y observa cómo cambian los números durante semanas y meses en
+      lugar de adivinar si estás progresando.
+
+      **Lo que puedes hacer:**
+      • Crear rutinas desde una base de cientos de ejercicios con imágenes
+      • Registrar cada sesión serie a serie y ver el historial de cada ejercicio
+      • Seguir peso corporal y medidas (brazos, pecho, cintura) en gráficas
+      • Planificar comidas y contar calorías, proteínas, carbohidratos y grasas
+      • Escanear el código de barras de un producto para añadir lo que comiste
+      • Usar la app móvil de wger contra este servidor y llevarlo al gimnasio
+
+      **Piénsalo como:** la libreta de entrenamiento que se lleva entre máquinas, solo que
+      dibuja las gráficas por ti y puedes buscar en cinco años de registros.
+
+      **Perfecto si:** entrenas con regularidad y quieres ver tu progreso a largo plazo, o
+      quieres tus datos de salud bajo tu control.
+    zh_cn: |
+      **属于你自己的训练日志**
+
+      wger 是训练与营养记录工具。制定训练计划，记录你真正完成的每一组，用数周数月的数据
+      看清进展，而不是凭感觉猜测。
+
+      **你可以做什么：**
+      • 从数百个带图示的动作库中编排训练计划
+      • 逐组记录每次训练，按动作查看历史记录
+      • 以曲线追踪体重与围度（手臂、胸围、腰围）
+      • 规划饮食，统计热量、蛋白质、碳水和脂肪
+      • 扫描商品条码，快速记录吃了什么
+      • 用 wger 手机应用连接此服务器，训练时随身可查
+
+      **可以这样想：** 健身房里随身携带的训练笔记本，只是它会自动画出曲线，还能检索五年
+      前的记录。
+
+      **非常适合：** 长期规律训练、想看到长期进步，或希望自己掌控健康数据的人。
+  developer: wger Project
+  category: Utilities
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: wger
+  tips:
+    en_us: |
+      **Your account**
+      The username and password are shown when you open the app (tile menu → Credentials).
+
+      To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
+
+      **The first start takes a few minutes** while the app sets up its database and
+      prepares its files. Later starts take about a minute.
+
+      **The exercise database is there from the first login** -- around 900 exercises.
+      Their pictures download in the background over the next few minutes, so tiles
+      that look blank at first fill in on their own.
+
+      **How to use:**
+      1. Log in with the details above
+      2. Routines → add a routine, then add exercises and set your target sets and reps
+      3. On training day, open the routine and log each set as you go
+      4. Body weight → add today's weight; the chart builds itself over time
+      5. Nutrition → create a plan and log meals, or scan a product barcode
+
+      **On your phone:** install the wger app from your app store, choose "custom
+      server" and enter this app's address. Everything you log there shows up here.
+
+      **New accounts:** sign-up is closed, so the address cannot be used by strangers
+      to make accounts on your server. To add someone -- a partner, a training buddy --
+      use User list in the admin menu.
+
+      **Two heavy background jobs are off by default:** the bulk food-database import
+      and the exercise video downloads, both of which run to hundreds of megabytes or
+      more. The barcode scanner still fetches products one at a time as you scan them.
+    fr_fr: |
+      **Votre compte**
+      L'identifiant et le mot de passe s'affichent à l'ouverture de l'application (menu de la tuile → Identifiants).
+
+      Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
+
+      **Le premier démarrage prend quelques minutes**, le temps que l'application
+      prépare sa base et ses fichiers. Les démarrages suivants prennent environ une
+      minute.
+
+      **La base d'exercices est disponible dès la première connexion** -- environ 900
+      exercices. Leurs images se téléchargent en arrière-plan dans les minutes qui
+      suivent, les vignettes vides se remplissent donc toutes seules.
+
+      **Comment l'utiliser :**
+      1. Connectez-vous avec les identifiants ci-dessus
+      2. Programmes → créez un programme, ajoutez des exercices, séries et répétitions
+      3. Le jour J, ouvrez le programme et notez chaque série au fur et à mesure
+      4. Poids → saisissez le poids du jour ; la courbe se construit toute seule
+      5. Nutrition → créez un plan et notez vos repas, ou scannez un code-barres
+
+      **Sur votre téléphone :** installez l'application wger, choisissez « serveur
+      personnalisé » et saisissez l'adresse de cette application.
+
+      **Nouveaux comptes :** les inscriptions sont fermées, l'adresse ne peut donc pas
+      servir à créer des comptes chez vous. Pour ajouter quelqu'un, passez par la liste
+      des utilisateurs dans le menu d'administration.
+
+      **Deux tâches de fond lourdes sont désactivées :** l'import en masse de la base
+      alimentaire et le téléchargement des vidéos d'exercices, qui pèsent plusieurs
+      centaines de mégaoctets. Le scanner de code-barres récupère quand même chaque
+      produit à la volée.
+    de_de: |
+      **Dein Konto**
+      Benutzername und Passwort werden beim Öffnen der App angezeigt (Kachelmenü → Zugangsdaten).
+
+      Ändere es über die App-Einstellungen in Maison (Tab „Sicherheit“), damit der Zugangsdaten-Dialog stimmt.
+
+      **Der erste Start dauert einige Minuten**, während die App ihre Datenbank und
+      ihre Dateien vorbereitet. Spätere Starts dauern etwa eine Minute.
+
+      **Die Übungsdatenbank ist ab der ersten Anmeldung da** -- rund 900 Übungen. Die
+      Bilder dazu werden in den folgenden Minuten im Hintergrund geladen; anfangs leere
+      Kacheln füllen sich also von selbst.
+
+      **So geht's:**
+      1. Mit den Daten oben anmelden
+      2. Trainingspläne → Plan anlegen, Übungen mit Sätzen und Wiederholungen ergänzen
+      3. Am Trainingstag den Plan öffnen und jeden Satz direkt eintragen
+      4. Körpergewicht → heutiges Gewicht eintragen; die Kurve entsteht von selbst
+      5. Ernährung → Plan anlegen und Mahlzeiten erfassen oder Barcode scannen
+
+      **Auf dem Handy:** die wger-App installieren, „eigener Server" wählen und die
+      Adresse dieser App eintragen.
+
+      **Neue Konten:** Die Registrierung ist geschlossen, über die Adresse kann sich
+      also niemand ein Konto anlegen. Zum Hinzufügen einer Person die Benutzerliste im
+      Administrationsmenü verwenden.
+
+      **Zwei schwere Hintergrundjobs sind aus:** der Massenimport der
+      Lebensmitteldatenbank und der Download der Übungsvideos, beide mehrere hundert
+      Megabyte groß. Der Barcode-Scanner holt Produkte trotzdem einzeln beim Scannen.
+    es_es: |
+      **Tu cuenta**
+      El usuario y la contraseña se muestran al abrir la aplicación (menú del icono → Credenciales).
+
+      Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
+
+      **El primer arranque tarda unos minutos** mientras la aplicación prepara su base
+      de datos y sus archivos. Los arranques posteriores tardan alrededor de un minuto.
+
+      **La base de ejercicios está disponible desde el primer inicio de sesión** -- unos
+      900 ejercicios. Sus imágenes se descargan en segundo plano en los minutos
+      siguientes, así que las miniaturas vacías se completan solas.
+
+      **Cómo usarlo:**
+      1. Inicia sesión con los datos de arriba
+      2. Rutinas → crea una rutina y añade ejercicios con series y repeticiones
+      3. El día de entreno, abre la rutina y registra cada serie sobre la marcha
+      4. Peso corporal → añade el peso de hoy; la gráfica se construye sola
+      5. Nutrición → crea un plan y registra comidas, o escanea un código de barras
+
+      **En el móvil:** instala la app de wger, elige «servidor personalizado» e
+      introduce la dirección de esta aplicación.
+
+      **Cuentas nuevas:** el registro está cerrado, así que nadie puede crearse una
+      cuenta desde esta dirección. Para añadir a alguien, usa la lista de usuarios del
+      menú de administración.
+
+      **Dos tareas pesadas están desactivadas:** la importación masiva de la base de
+      alimentos y la descarga de vídeos de ejercicios, ambas de cientos de megabytes. El
+      escáner de códigos de barras sigue trayendo cada producto al escanearlo.
+    zh_cn: |
+      **你的账号**
+      打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
+
+      如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
+
+      **首次启动需要几分钟**，应用会准备数据库和静态文件。之后的启动大约一分钟。
+
+      **动作库首次登录时即可使用** —— 约 900 个动作。配图会在随后的几分钟内于后台
+      下载，一开始空白的图块会自动补齐。
+
+      **使用方法：**
+      1. 用上面的信息登录
+      2. 训练计划 → 新建计划，添加动作并设定组数与次数
+      3. 训练当天打开计划，边练边记录每一组
+      4. 体重 → 记录今天的体重，曲线会自动生成
+      5. 营养 → 创建饮食计划记录三餐，或扫描商品条码
+
+      **在手机上：** 安装 wger 手机应用，选择"自定义服务器"并填入本应用的地址。
+
+      **新账号：** 注册已关闭，别人无法通过这个地址在你的服务器上注册。要添加成员，
+      请使用管理菜单中的用户列表。
+
+      **两项耗资源的后台任务默认关闭：** 食物数据库批量导入和动作视频下载，两者都有
+      数百兆甚至更多。条码扫描仍会在扫描时逐个获取商品信息。
   # Directories Maison creates and chowns to $PUID:$PGID before any image is
   # pulled and before any container starts. The app image runs as its own `wger`
   # user (uid 1000), which is what $PUID is on a PCS -- without this, compose

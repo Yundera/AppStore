@@ -152,6 +152,35 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.2.12"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: stremio
+  title:
+    en_us: Stremio
+  tagline:
+    en_us: Stream movies & series (Community Edition)
+  description:
+    en_us: |
+      Stremio Community Edition.
+      Features:
+      - Clean subdomain (served on a plain HTTPS address)
+      - All-in-one streaming server with FFmpeg transcoding
+      - Protected by the server's single sign-on (Authelia SSO)
+  category: Entertainment
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  main: stremio
+  tips:
+    en_us: |
+      Access is protected by the server's single sign-on: opening the app
+      sends you to the usual login page, where your server account signs you in.
+      You can find Stremio addons at https://addons.strem.io/
   # Maison resolves ${domain} on every render; x-casaos.hostname uses the
   # compose-time ${APP_DOMAIN}, which reaches the tile as an unsubstituted
   # literal and makes the Open action land on chrome-error://. Declaring

@@ -40,7 +40,8 @@ Before submitting your PR, ensure your app meets these requirements:
 
 ### Documentation Checklist
 - [ ] Clear description of the application
-- [ ] A mount that exposes a broad slice of `/DATA` (`/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, or `/DATA` itself) is called out — in the app `description`, in `tips.before_install`, or in `rationale.md`. The user has to be able to see what the app can reach before they install it
+- [ ] **The store card is declared under `x-compose-app`** (`title`, `tagline`, `description`, `developer`, `category`, `icon`, `screenshots`, `architectures`, `main`, `tips`), and the `x-casaos` block repeats the same values. Maison reads only `x-compose-app`; `x-casaos` is kept for CasaOS and older Maison builds. See [Store info](#store-info-x-compose-app-mirrored-in-x-casaos)
+- [ ] A mount that exposes a broad slice of `/DATA` (`/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, or `/DATA` itself) is called out — in the app `description`, in `tips`, or in `rationale.md`. The user has to be able to see what the app can reach before they install it
 - [ ] An app that needs inbound connections from the internet (it publishes a non-HTTP `ports:` entry) carries the `needs-public-ip` tag. See [Publishing host ports](#publishing-host-ports)
 - [ ] `icon.png` and at least one screenshot are present and meet specifications - files and URLs point to this Yundera repository (eg https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Duplicati/screenshot-1.png). `thumbnail.png` is optional: supply a purpose-made tile or omit it and let the store fall back to `screenshot-1.png`
 
@@ -53,7 +54,7 @@ To ensure easy testing, please follow these steps:
 
 1. Start with a regular compose app, which is a directory containing a `docker-compose.yml` file. Test it on your own machine to ensure you can start it successfully. In your instance, you can edit the compose file with a text editor and restart the app to check if the changes work. Use SSH to do `docker compose up -d` if needed.
 
-2. Copy the compose onto a PCS under the app's own folder, e.g. `/DATA/AppData/MyApp/docker-compose.yml`, add the required metadata (`x-casaos`, `x-compose-app`), and test it there over SSH with `docker compose up -d`. A hand-run `docker compose up -d` in the app's folder is exactly what Maison does — it copies your `docker-compose.yml` byte-for-byte and never edits it; the only things it adds are the app's `.env` (the deployment's variables) and `docker-compose.override.yml` (the extra domains it publishes on). So if it works by hand with a real `.env`, it works as an installed app. Step 4 still proves the listing itself — metadata, icon, `seed/` tree.
+2. Copy the compose onto a PCS under the app's own folder, e.g. `/DATA/AppData/MyApp/docker-compose.yml`, add the required metadata (`x-compose-app`, mirrored in `x-casaos`), and test it there over SSH with `docker compose up -d`. A hand-run `docker compose up -d` in the app's folder is exactly what Maison does — it copies your `docker-compose.yml` byte-for-byte and never edits it; the only things it adds are the app's `.env` (the deployment's variables) and `docker-compose.override.yml` (the extra domains it publishes on). So if it works by hand with a real `.env`, it works as an installed app. Step 4 still proves the listing itself — metadata, icon, `seed/` tree.
 
 3. When the local setup is stable, push to your forked repo. Create a new directory under `Apps` with your app name (along with logo, screenshot, and description files), e.g., `MyApp`.
 
@@ -420,37 +421,59 @@ Each directory under [Apps](Apps) corresponds to a Compose App. The directory sh
       BASE_URL: https://myapp-${APP_DOMAIN}
     ```
 
-- CasaOS specific metadata, also called *store info*, are stored under the [extension](https://docs.docker.com/compose/compose-file/#extension) property `x-casaos`.
+- The app's *store info* — what the store card and the dashboard tile show — lives under
+  the [extension](https://docs.docker.com/compose/compose-file/#extension) property
+  `x-compose-app`, Maison's definition of an app.
 
-  #### Compose App Level Configuration
+  #### Store info: `x-compose-app`, mirrored in `x-casaos`
 
-  For the same example, at the bottom of the [`docker-compose.yml` of Syncthing](Apps/Syncthing/docker-compose.yml):
+  ```yaml
+  x-compose-app:
+    schema_version: 2
+    id: syncthing                   # equals the folder name / Compose project name
+    title:                          # a plain string, or one entry per locale
+      en_us: Syncthing
+    tagline:
+      en_us: Free, secure, and distributed file synchronisation tool.
+    description:
+      en_us: Syncthing is a continuous file synchronization program. It synchronizes files between two or more computers in real time, safely protected from prying eyes.
+    developer: Syncthing
+    category: Backup
+    icon: icon.png                  # beside the compose; an absolute URL also works
+    thumbnail: thumbnail.png
+    screenshots:
+      - screenshot-1.png
+    architectures:                  # the architectures the app supports
+      - amd64
+      - arm64
+    main: syncthing                 # the service under `services` that is the app
+    tips:                           # Markdown, shown from the tile menu
+      en_us: |
+        (notes for the user, such as the preset username — markdown is supported!)
+    webui-host: syncthing-${domain} # the same host as the caddy_0 label
+    webui-path: /
+  ```
 
-    ```yaml
-    x-casaos:
-        architectures:                  # a list of architectures that the app supports
-            - amd64
-            - arm
-            - arm64
-        main: syncthing                 # the name of the main service under `services`
-        author: CasaOS Team
-        category: Backup
-        description:                    # multiple locales are supported
-            en_us: Syncthing is a continuous file synchronization program. It synchronizes files between two or more computers in real time, safely protected from prying eyes. Your data is your data alone and you deserve to choose where it is stored, whether it is shared with some third party, and how it's transmitted over the internet.
-        developer: Syncthing
-        icon: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Syncthing/icon.png
-        tagline:                        # multiple locales are supported
-            en_us: Free, secure, and distributed file synchronisation tool.
-        thumbnail: https://cdn.jsdelivr.net/gh/IceWhaleTech/CasaOS-AppStore@main/Apps/Jellyfin/thumbnail.jpg
-        title:                          # multiple locales are supported
-            en_us: Syncthing
-        tips:
-            before_install:
-                en_us: |
-                    (some notes for user to read prior to installation, such as preset `username` and `password` - markdown is supported!)
-        index: /                        # the index page for web UI, e.g. index.html
-        port_map: "8384"                # the port for web UI
-    ```
+  **Keep an `x-casaos` block with the same values**, under its CasaOS names. Maison reads
+  `x-compose-app` alone and ignores `x-casaos` beside it, but CasaOS reads only
+  `x-casaos`, and so does the store listing of Maison builds that predate
+  `x-compose-app`-only support — an app without `x-casaos` vanishes from their catalog.
+  The two must say the same thing:
+
+  | `x-compose-app` | `x-casaos` |
+  |---|---|
+  | `id` | `store_app_id` |
+  | `title`, `tagline`, `description` | same names |
+  | `developer` | `developer` (older apps: `author`) |
+  | `category`, `icon`, `thumbnail`, `architectures`, `main` | same names |
+  | `screenshots` | `screenshot_link` |
+  | `tips` | `tips.before_install` |
+  | `webui-host` / `webui-scheme` / `webui-path` | `hostname` / `scheme` / `index` |
+
+  `tags` (see [`needs-public-ip`](#reserved-tag-needs-public-ip)) has no `x-compose-app`
+  key yet and stays in `x-casaos` only. Do **not** raise `schema_version` above 2 for any
+  of this: a Maison build that predates the declared version drops the whole
+  `x-compose-app` block, folders and secrets included.
 
 #### show the default account with `credentials`
 Generate the password per app and let Maison show it — copy buttons, masked until
@@ -464,8 +487,8 @@ x-compose-app:
       username: admin
       password: ${MYAPP_ADMIN_PASSWORD}
 ```
-`tips.before_install` is still the place for anything else the user should read
-before installing; it no longer needs to carry the password table.
+`tips` is still the place for anything else the user should read; it no longer
+needs to carry the password table.
 
 Add a `change` block when the password can be replaced after install, so the
 operator changes it from Maison's **Security** tab and the dialog stays truthful:
@@ -489,28 +512,31 @@ policy keys: Maison's
 
 ### Features
 
-Apps are configured through two extension blocks: `x-casaos`, inherited from the
-CasaOS store format, and `x-compose-app`, read by Yundera's own dashboard.
+Apps are configured through `x-compose-app`, the extension block Yundera's own
+dashboard reads. The `x-casaos` block inherited from the CasaOS store format is kept
+beside it as a mirror (see [Store info](#store-info-x-compose-app-mirrored-in-x-casaos)).
 
 #### Maison and `x-compose-app`
 
-Yundera's dashboard is **Maison**. It consumes the unmodified CasaOS `x-casaos`
-block, so every existing store app keeps working unchanged — but it also reads its
-own Compose extension, `x-compose-app`, and **prefers it for every field it
-defines**, falling back for anything it omits:
+Yundera's dashboard is **Maison**, and `x-compose-app` is its definition of an app.
+It reads **one block or the other, never both**:
 
 ```
-x-compose-app  →  x-casaos  →  runtime derivation
+compose has x-compose-app  →  x-compose-app only (x-casaos beside it is ignored)
+otherwise                  →  x-casaos, translated whole (plain CasaOS apps)
 ```
 
-Maison reads the **app-level** `x-casaos` block. It does *not* read the per-service
-`x-casaos.envs` / `x-casaos.volumes` / `ports` / `devices` description lists that the
-CasaOS UI used to render as a per-field config form — the struct is parsed and then
-never consumed, so those `description:` entries reach no user. **Don't write them in
+So a field that exists only in this store's `x-casaos` block is invisible to Maison.
+Older Maison builds merged the two field by field, which is why the store still
+mirrors its store info into `x-casaos`; current ones do not.
+
+Maison never reads the per-service `x-casaos.envs` / `x-casaos.volumes` / `ports` /
+`devices` description lists that the CasaOS UI used to render as a per-field config
+form, so those `description:` entries reach no user. **Don't write them in
 new apps.** They survive in a handful of older apps (`Apps/FileBrowser`,
 `Apps/Stremio`) as inert metadata; leave them alone rather than churning the files.
 Anything a user genuinely needs to know before installing belongs in the app
-`description`, in `tips.before_install`, or in `rationale.md`.
+`description`, in `tips`, or in `rationale.md`.
 
 Most apps in this store already carry an `x-compose-app` block. Its load-bearing
 keys are **`folders`**, **`secrets`**, **`credentials`**, **`variables`**, **`files`**,
@@ -626,10 +652,9 @@ x-compose-app:
 ```
 
 `pre_install` / `post_install` generalise the CasaOS `pre-install-cmd` /
-`post-install-cmd` and **win over them** when both are present. An app carrying only
-`x-casaos` keeps working with no change — both run through the same machinery, with
-the same environment — but every hook in this store is written under
-`x-compose-app.hooks`, and new ones should be too. The requirements in
+`post-install-cmd`. Maison runs `pre-install-cmd` only for a compose with **no**
+`x-compose-app` block; beside one it never runs. Every hook in this store is written
+under `x-compose-app.hooks`, and new ones must be too. The requirements in
 [Install hooks](#install-hooks--the-last-resort) apply identically.
 
 **Failure semantics.** `pre_install` and `pre_up` are **fatal**: a pre-hook is the
@@ -1120,7 +1145,11 @@ networks:
     name: ${APP_NET:-pcs}
     external: true
 
-x-casaos:
+x-compose-app:
+  main: immich
+  webui-host: immich-${domain}
+
+x-casaos:                           # the CasaOS mirror
   main: immich
   webui_port: 80
 ```
@@ -1154,7 +1183,11 @@ networks:
     name: ${APP_NET:-pcs}
     external: true
 
-x-casaos:
+x-compose-app:
+  main: duplicati
+  webui-host: duplicati-${domain}
+
+x-casaos:                           # the CasaOS mirror
   main: duplicati
   webui_port: 8200
 ```
@@ -1197,7 +1230,7 @@ When you do publish:
 
 **Ship it enabled if the app needs it to work.** Comment a `ports:` block out only when
 the app is genuinely useful without it and the port is a pure enhancement — and then say
-so in `tips.before_install` so the user knows what to uncomment.
+so in `tips` so the user knows what to uncomment.
 
 #### Reserved tag: `needs-public-ip`
 
@@ -1218,7 +1251,7 @@ directly reachable address for raw TCP/UDP. On such a host the app installs and 
 fine, and then quietly underperforms — a torrent client that never gets inbound peers,
 a game server nobody can join. The tag is what lets the user see that before installing.
 
-The tag is the whole requirement — no extra `tips.before_install` boilerplate is
+The tag is the whole requirement — no extra `tips` boilerplate is
 expected. Add a note there only if the app has something specific to say (a port to
 forward, what degrades without it).
 
@@ -1232,8 +1265,9 @@ Caddy handles:
 - The main service must `expose` the web UI port
 - Add all three Caddy label blocks (caddy_0, caddy_1, caddy_2)
 - Connect the service to the `pcs` network
-- The `webui_port` field must match the exposed port number
-- The `main` field must reference the service with Caddy labels
+- `x-compose-app.webui-host` is the `caddy_0` host (`myapp-${domain}`), so the tile opens the route
+- `x-compose-app.main` (and its `x-casaos` mirror) must reference the service with Caddy labels
+- In the `x-casaos` mirror, `webui_port` must match the exposed port number
 
 **Important Notes:**
 - Add Caddy labels only to the main web UI service (not to database or backend services)
@@ -1246,11 +1280,12 @@ Caddy handles:
 > Compose resolves an external network from its key, so the wire network is still
 > `pcs` — but Maison's launcher treats an external network whose `name:` equals its
 > own key as one *it* generated, deletes the entry, and detaches it from **every**
-> service. Only `x-casaos.main` then gets the app network back. Writing
+> service. Only `main` then gets the app network back. Writing
 > `name: pcs` therefore strands every other service on the compose default bridge,
 > where Docker's embedded DNS does not resolve container names.
 
-> **`x-casaos.main` must name the service carrying the `caddy_N` labels.** Maison
+> **`main` must name the service carrying the `caddy_N` labels** (in `x-compose-app`,
+> and in its `x-casaos` mirror). Maison
 > attaches the app network to that service and no other, and the tile's health
 > follows it. Point `main` at a backend and the public-facing sidecar is left off the
 > network entirely: Caddy has no upstream and every request 502s or 503s, behind a
@@ -1281,8 +1316,12 @@ services:
     depends_on:
       - database
 
-x-casaos:
+x-compose-app:
     main: webui-service             # References the service with Caddy labels
+    webui-host: myapp-${domain}     # The caddy host
+
+x-casaos:                           # the CasaOS mirror
+    main: webui-service
     webui_port: 8080               # Must match the exposed port
 ```
 
@@ -1350,10 +1389,15 @@ networks:
     name: ${APP_NET:-pcs}
     external: true
 
-x-casaos:
+x-compose-app:
   main: myapp                       # the SIDECAR — the service carrying the caddy_N
                                     # labels. Never the backend: see the rules above.
-  index: /                          # launch path; the SSO gate handles authentication
+  webui-host: myapp-${domain}
+  webui-path: /                     # launch path; the SSO gate handles authentication
+
+x-casaos:                           # the CasaOS mirror
+  main: myapp
+  index: /
   webui_port: 80                    # optional; keep at 80 if set
 ```
 
@@ -1396,7 +1440,7 @@ x-casaos:
 - [ ] Caddy labels are attached **only to the AppShield sidecar**, never to the backend — otherwise the backend is exposed unauthenticated.
 - [ ] The sidecar carries the full env set: `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL`, `REDIRECT_HOST_SUFFIXES`.
 - [ ] No `AUTH_HASH` anywhere: not in `environment:`, and no `/?hash=…` in `x-casaos.index`, `x-compose-app.webui-path`, or a tip. It resolves to nothing under Maison.
-- [ ] `x-casaos.main` points at the primary service.
+- [ ] `main` points at the sidecar, in `x-compose-app` and in its `x-casaos` mirror.
 - [ ] Backend service has no public Caddy labels, and does **not** publish its **HTTP/UI** port to the host — the UI must be reachable only through the sidecar, over the shared network. Publishing a *non-HTTP* port the app genuinely needs (BitTorrent peer, game server, SMB, WireGuard, …) is fine and expected: that traffic cannot pass through an HTTP sidecar, and blocking it would just break the app. See [Publishing host ports](#publishing-host-ports).
 - [ ] The sidecar's `container_name` equals the top-level `name:` (lowercase alnum + `-`, not starting with a digit). `auth-registrar` derives the OIDC `client_id` from the container name via PTR lookup on the `pcs` network, so the `container_name` is load-bearing — it must be stable across reinstalls. The compose **service name itself may differ** (shipped apps use `myapp`, `myapp-proxy`, `nginxhashlock`, etc.).
 - [ ] The sidecar sets `hostname:` to the **same value** as its `container_name`. AppShield's auth-service builds its OIDC redirect URIs from `os.hostname()` (as `<app>-<suffix>`), and `auth-registrar` independently attests the app name via the container's PTR record and **rejects any redirect URI that doesn't match**. If `hostname:` is omitted, Docker defaults it to the random container ID, the submitted redirect URIs won't match the attested name, and OIDC registration fails at first login. (`container_name` alone does **not** set the in-container hostname.)

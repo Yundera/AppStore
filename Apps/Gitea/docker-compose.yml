@@ -322,6 +322,189 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.27.3"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: gitea
+  title:
+    en_us: Gitea
+  tagline:
+    en_us: A git forge with CI and a container registry, on your own domain.
+    fr_fr: Une forge git avec intégration continue et registre de conteneurs, sur votre domaine.
+    zh_cn: 运行在你自己域名下的 Git 托管，内建 CI 与容器仓库。
+  description:
+    en_us: |
+      Gitea — a git forge with CI and a container registry
+
+      Gitea is a lightweight, self-contained software forge: repositories, issues, pull requests, releases, a CI engine and an OCI container registry in a single service that is happy on a small machine.
+
+      What it gives you here:
+
+      • Git hosting over HTTPS, with issues, pull requests, releases and wikis
+      • Actions — CI workflows in GitHub Actions syntax, so existing workflow files usually run unchanged
+      • A built-in container registry, so a workflow can build an image and push it next to the code it came from
+      • Pull mirrors — point a repository at any git URL and it is re-fetched on a schedule, and each sync starts the same workflows a push would
+
+      That last pair is what makes it useful in front of a git source that has no webhooks of its own: mirror the repository, and the mirror's own updates drive the build.
+
+      A runner ships with the app, with its own Docker daemon inside it, so workflows can build container images out of the box.
+    fr_fr: |
+      Gitea — une forge git avec CI et registre de conteneurs
+
+      Gitea est une forge logicielle légère et autonome : dépôts, tickets, pull requests, versions, moteur d'intégration continue et registre de conteneurs OCI dans un seul service, à l'aise sur une petite machine.
+
+      Ce que vous obtenez ici :
+
+      • Hébergement git en HTTPS, avec tickets, pull requests, versions et wikis
+      • Actions — des workflows d'intégration continue en syntaxe GitHub Actions, si bien qu'un fichier de workflow existant tourne généralement tel quel
+      • Un registre de conteneurs intégré : un workflow peut construire une image et la publier à côté du code dont elle provient
+      • Miroirs — pointez un dépôt vers n'importe quelle URL git, il est re-synchronisé périodiquement, et chaque synchronisation déclenche les mêmes workflows qu'un push
+
+      Ces deux derniers points sont ce qui rend Gitea utile devant une source git dépourvue de webhooks : mettez le dépôt en miroir, et ce sont les mises à jour du miroir qui pilotent la construction.
+
+      Un runner est fourni avec l'application, avec son propre démon Docker embarqué, afin que les workflows puissent construire des images de conteneurs dès l'installation.
+    zh_cn: |
+      Gitea — 带 CI 与容器仓库的 Git 代码托管
+
+      Gitea 是轻量、自足的软件协作平台：仓库、议题、合并请求、发布、CI 引擎与 OCI 容器仓库集于一个服务，在小型机器上也能流畅运行。
+
+      它在这里提供：
+
+      • 通过 HTTPS 托管 Git，附带议题、合并请求、发布与百科
+      • Actions —— 采用 GitHub Actions 语法的 CI 工作流，现有的工作流文件通常无需修改即可运行
+      • 内置容器仓库，工作流可以构建镜像并发布在源代码旁边
+      • 拉取镜像同步 —— 将仓库指向任意 Git URL，它会按计划重新拉取，每次同步都会触发与推送相同的工作流
+
+      后两项让 Gitea 特别适合放在没有 webhook 的 Git 源前面：把仓库设为镜像，镜像的更新就会驱动构建。
+
+      应用自带一个运行器，内含独立的 Docker 守护进程，因此工作流开箱即可构建容器镜像。
+  developer: Gitea
+  category: Developer
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+  main: gitea
+  tips:
+    en_us: |
+      Signing in
+
+      | | |
+      | --- | --- |
+      | Address | `https://gitea-$APP_DOMAIN` |
+      | User | `gitea_admin` |
+      | Password | shown when you open the app (tile menu → Credentials) |
+
+      Gitea uses its own account system. Self-registration is off, so
+      `gitea_admin` is the only account until you create more under
+      Site Administration.
+
+      Building from a repository that has no webhooks
+
+      New Migration → check **This repository will be a mirror**, and give it
+      the git URL. Gitea re-fetches on a schedule, and each sync raises the
+      same `push` event a real push would — so a workflow with `on: push`
+      runs. Commit the workflow to `.gitea/workflows/` in the mirrored
+      repository itself (`.github/workflows/` also works; `.forgejo/` does
+      not).
+
+      One thing to change by hand: a migrated repository arrives with
+      **Actions switched off**. Repository → Settings → Advanced Settings →
+      tick **Actions**, or nothing will ever run, however correct the
+      workflow is.
+
+      Publishing images
+
+      The registry lives at the same address as the web UI. In a workflow,
+      log in to `gitea-$APP_DOMAIN` and push to
+      `gitea-$APP_DOMAIN/<user>/<image>:<tag>`. Use an access token with the
+      `write:package` scope, kept as a repository secret — the token Actions
+      injects as `secrets.GITHUB_TOKEN` is rejected by the registry.
+
+      The CI runner
+
+      The runner holds a Docker daemon of its own and therefore runs
+      privileged. It is what lets a workflow build container images. If you
+      do not intend to run CI, stop the `gitea-runner` container — Gitea
+      itself is unaffected.
+    fr_fr: |
+      Connexion
+
+      | | |
+      | --- | --- |
+      | Adresse | `https://gitea-$APP_DOMAIN` |
+      | Utilisateur | `gitea_admin` |
+      | Mot de passe | affiché à l'ouverture de l'application (menu de la tuile → Identifiants) |
+
+      Gitea gère ses propres comptes. L'auto-inscription est désactivée :
+      `gitea_admin` est donc le seul compte tant que vous n'en créez pas
+      d'autres depuis l'administration du site.
+
+      Construire depuis un dépôt sans webhooks
+
+      Nouvelle migration → cochez **Ce dépôt sera un miroir** et indiquez
+      l'URL git. Gitea re-synchronise périodiquement, et chaque
+      synchronisation lève l'événement `push` qu'un vrai push aurait levé —
+      un workflow `on: push` se déclenche donc. Le fichier de workflow se
+      place dans `.gitea/workflows/` du dépôt mis en miroir
+      (`.github/workflows/` fonctionne aussi ; `.forgejo/` non).
+
+      Une chose à changer à la main : un dépôt migré arrive avec **Actions
+      désactivé**. Dépôt → Paramètres → Paramètres avancés → cochez
+      **Actions**, sinon rien ne se déclenchera, si correct que soit le
+      workflow.
+
+      Publier des images
+
+      Le registre est à la même adresse que l'interface web. Dans un
+      workflow, connectez-vous à `gitea-$APP_DOMAIN` puis publiez vers
+      `gitea-$APP_DOMAIN/<utilisateur>/<image>:<tag>`. Utilisez un jeton
+      d'accès de portée `write:package`, conservé en secret de dépôt : le
+      jeton fourni par Actions (`secrets.GITHUB_TOKEN`) est refusé par le
+      registre.
+
+      Le runner d'intégration continue
+
+      Le runner embarque son propre démon Docker et tourne donc en mode
+      privilégié. C'est ce qui permet à un workflow de construire des images
+      de conteneurs. Si vous ne comptez pas utiliser l'intégration continue,
+      arrêtez le conteneur `gitea-runner` — Gitea lui-même n'en dépend pas.
+    zh_cn: |
+      登录
+
+      | | |
+      | --- | --- |
+      | 地址 | `https://gitea-$APP_DOMAIN` |
+      | 用户 | `gitea_admin` |
+      | 密码 | 打开应用时显示（磁贴菜单 → 凭据） |
+
+      Gitea 使用自己的账户体系。自助注册已关闭，因此在你于站点管理中创建更多账户之前，
+      `gitea_admin` 是唯一的账户。
+
+      为没有 webhook 的仓库构建
+
+      新建迁移 → 勾选**将此仓库设为镜像**并填入 git URL。Gitea 会按计划重新拉取，
+      每次同步都会触发与真实推送相同的 `push` 事件，因此 `on: push` 工作流会运行。
+      工作流文件请提交到被镜像仓库自身的 `.gitea/workflows/` 目录
+      （`.github/workflows/` 同样有效，`.forgejo/` 无效）。
+
+      有一处需要手动调整：迁移而来的仓库默认**关闭 Actions**。
+      进入 仓库 → 设置 → 高级设置 → 勾选 **Actions**，否则工作流再正确也不会运行。
+
+      发布镜像
+
+      容器仓库与网页界面位于同一地址。在工作流中登录 `gitea-$APP_DOMAIN`，
+      并推送到 `gitea-$APP_DOMAIN/<用户>/<镜像>:<标签>`。请使用具有
+      `write:package` 权限的访问令牌并存为仓库机密 —— Actions 注入的
+      `secrets.GITHUB_TOKEN` 会被容器仓库拒绝。
+
+      CI 运行器
+
+      运行器内含独立的 Docker 守护进程，因此以特权模式运行，这正是工作流能够构建
+      容器镜像的原因。若不打算使用 CI，可停止 `gitea-runner` 容器 —— 这不影响 Gitea 本身。
   secrets:
     # Seeded: an installed app keeps the shared password its admin account was
     # created with; a fresh install gets its own.

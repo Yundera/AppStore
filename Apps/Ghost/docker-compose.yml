@@ -247,6 +247,150 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "6.59.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: ghost
+  title:
+    en_us: Ghost
+  tagline:
+    en_us: Professional publishing platform for newsletters and blogs
+    ko_kr: 뉴스레터와 블로그를 위한 프로페셔널 퍼블리싱 플랫폼
+    zh_cn: 专业的新闻通讯和博客发布平台
+    fr_fr: Plateforme de publication professionnelle pour newsletters et blogs
+    es_es: Plataforma de publicacion profesional para newsletters y blogs
+  description:
+    en_us: |
+      **Professional publishing platform for modern creators**
+
+      Ghost is a powerful, open-source publishing platform for building newsletters, blogs, and content-driven websites. Used by major organizations and independent creators worldwide.
+
+      **What you can do:**
+      - Create and publish blog posts with a beautiful editor
+      - Build and send email newsletters to subscribers
+      - Manage paid memberships and subscriptions
+      - Customize your site with themes and integrations
+      - Use the Admin API to automate content publishing
+      - Built-in SEO, social sharing, and analytics
+
+      **Perfect for:** Content creators, journalists, tech bloggers, newsletter publishers, and anyone who wants a professional publishing platform without the complexity of WordPress.
+    ko_kr: |
+      **현대적인 크리에이터를 위한 프로페셔널 퍼블리싱 플랫폼**
+
+      Ghost는 뉴스레터, 블로그, 콘텐츠 중심 웹사이트를 구축하기 위한 강력한 오픈소스 퍼블리싱 플랫폼입니다. 전 세계 주요 조직과 독립 크리에이터들이 사용합니다.
+
+      **할 수 있는 것:**
+      - 아름다운 에디터로 블로그 포스트 작성 및 게시
+      - 구독자에게 이메일 뉴스레터 발송
+      - 유료 멤버십 및 구독 관리
+      - 테마와 통합으로 사이트 커스터마이징
+      - Admin API로 콘텐츠 게시 자동화
+      - SEO, 소셜 공유, 분석 기능 내장
+
+      **이런 분께 완벽해요:** 콘텐츠 크리에이터, 기자, 테크 블로거, 뉴스레터 발행인, WordPress의 복잡함 없이 프로페셔널한 퍼블리싱 플랫폼이 필요한 분.
+    zh_cn: |
+      **面向现代创作者的专业发布平台**
+
+      Ghost 是一个强大的开源发布平台，用于构建新闻通讯、博客和内容驱动的网站。被全球主要组织和独立创作者广泛使用。
+
+      **您可以做的事:**
+      - 使用精美的编辑器创建和发布博客文章
+      - 向订阅者构建和发送电子邮件通讯
+      - 管理付费会员和订阅
+      - 使用主题和集成自定义您的网站
+      - 使用 Admin API 自动化内容发布
+      - 内置 SEO、社交分享和分析功能
+
+      **完美适合:** 内容创作者、记者、技术博客作者、新闻通讯发行者，以及需要专业发布平台而不想要 WordPress 复杂性的任何人。
+    fr_fr: |
+      **Plateforme de publication professionnelle pour createurs modernes**
+
+      Ghost est une puissante plateforme de publication open source pour creer des newsletters, des blogs et des sites web axes sur le contenu. Utilisee par des organisations majeures et des createurs independants dans le monde entier.
+
+      **Ce que vous pouvez faire:**
+      - Creer et publier des articles de blog avec un bel editeur
+      - Construire et envoyer des newsletters par email aux abonnes
+      - Gerer les abonnements et adhesions payantes
+      - Personnaliser votre site avec des themes et integrations
+      - Utiliser l'API Admin pour automatiser la publication de contenu
+      - SEO, partage social et analytiques integres
+
+      **Parfait pour:** Les createurs de contenu, journalistes, blogueurs tech, editeurs de newsletters et toute personne souhaitant une plateforme de publication professionnelle sans la complexite de WordPress.
+    es_es: |
+      **Plataforma de publicacion profesional para creadores modernos**
+
+      Ghost es una potente plataforma de publicacion de codigo abierto para crear newsletters, blogs y sitios web centrados en contenido. Utilizada por importantes organizaciones y creadores independientes en todo el mundo.
+
+      **Lo que puedes hacer:**
+      - Crear y publicar articulos de blog con un hermoso editor
+      - Construir y enviar newsletters por email a suscriptores
+      - Gestionar membresias y suscripciones de pago
+      - Personalizar tu sitio con temas e integraciones
+      - Usar la API Admin para automatizar la publicacion de contenido
+      - SEO, compartir en redes sociales y analiticas integradas
+
+      **Perfecto para:** Creadores de contenido, periodistas, bloggers de tecnologia, editores de newsletters y cualquiera que quiera una plataforma de publicacion profesional sin la complejidad de WordPress.
+  developer: Ghost Foundation
+  category: Blog
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: ghost
+  tips:
+    en_us: |
+      # Setup Guide
+
+      After installation, the app opens the **admin page** (`/ghost`) directly.
+
+      You'll create your own admin account on first visit.
+
+      **Public site URL:** Your blog is available at `https://ghost-<your-domain>` (without `/ghost` at the end). Share this URL with your readers.
+
+      **Email:** Ghost 6 emails a one-time code every time you sign in to `/ghost`, and uses the same transport for password resets and newsletters. This app is pre-wired to the server's built-in SMTP relay, so sign-in and recovery work out of the box — nothing to configure. For large newsletter sends you can still point Ghost at an external provider (Mailgun, SendGrid, etc.) from **Settings > Email newsletter**.
+    ko_kr: |
+      # 설정 가이드
+
+      설치 후 앱을 열면 **관리자 페이지** (`/ghost`)로 바로 이동합니다.
+
+      첫 방문 시 직접 관리자 계정을 생성합니다.
+
+      **블로그 주소:** 일반 방문자용 블로그는 `https://ghost-<도메인>` 입니다 (뒤에 `/ghost` 없이). 이 주소를 독자에게 공유하세요.
+
+      **이메일:** Ghost 6는 `/ghost`에 로그인할 때마다 일회용 코드를 이메일로 보내며, 비밀번호 재설정과 뉴스레터도 같은 전송 경로를 사용합니다. 이 앱은 서버 내장 SMTP 릴레이에 미리 연결되어 있어 로그인과 계정 복구가 별도 설정 없이 동작합니다. 대량 뉴스레터 발송이 필요하면 **Settings > Email newsletter**에서 외부 제공자(Mailgun, SendGrid 등)를 지정할 수 있습니다.
+    zh_cn: |
+      # 设置指南
+
+      安装后，应用会直接打开 **管理页面** (`/ghost`)。
+
+      首次访问时即可创建自己的管理员账户。
+
+      **博客地址:** 访客可通过 `https://ghost-<您的域名>` 访问博客（末尾不带 `/ghost`）。请将此地址分享给读者。
+
+      **邮件:** Ghost 6 每次登录 `/ghost` 都会通过邮件发送一次性验证码，密码重置和新闻通讯也使用同一发信通道。本应用已预先接入服务器内置的 SMTP 中继，登录与账号找回开箱即用，无需配置。若需大量发送新闻通讯，可在 **Settings > Email newsletter** 中改用外部服务商（Mailgun、SendGrid 等）。
+    fr_fr: |
+      # Guide de configuration
+
+      Apres l'installation, l'application ouvre directement la **page d'administration** (`/ghost`).
+
+      Vous creez votre propre compte admin lors de la premiere visite.
+
+      **URL du blog:** Votre blog est accessible a `https://ghost-<votre-domaine>` (sans `/ghost` a la fin). Partagez cette URL avec vos lecteurs.
+
+      **Email:** Ghost 6 envoie un code a usage unique par email a chaque connexion a `/ghost`, et utilise le meme transport pour la reinitialisation du mot de passe et les newsletters. Cette application est deja reliee au relais SMTP integre du serveur : la connexion et la recuperation de compte fonctionnent sans configuration. Pour des envois massifs de newsletters, vous pouvez toujours choisir un fournisseur externe (Mailgun, SendGrid, etc.) depuis **Settings > Email newsletter**.
+    es_es: |
+      # Guia de configuracion
+
+      Despues de la instalacion, la aplicacion abre directamente la **pagina de administracion** (`/ghost`).
+
+      Creara su propia cuenta de administrador en la primera visita.
+
+      **URL del blog:** Su blog esta disponible en `https://ghost-<su-dominio>` (sin `/ghost` al final). Comparta esta URL con sus lectores.
+
+      **Email:** Ghost 6 envia un codigo de un solo uso por email cada vez que inicia sesion en `/ghost`, y usa el mismo transporte para el restablecimiento de contrasena y las newsletters. Esta aplicacion ya esta conectada al relay SMTP integrado del servidor, asi que el inicio de sesion y la recuperacion funcionan sin configurar nada. Para envios masivos de newsletters puede apuntar Ghost a un proveedor externo (Mailgun, SendGrid, etc.) desde **Settings > Email newsletter**.
   # Seeded: an installed app keeps the shared password its database was
   # initialised with; a fresh install gets its own.
   secrets:

@@ -295,6 +295,97 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.2"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: files
+  title:
+    en_us: Files
+  tagline:
+    en_us: Your files, in your browser. Browse, edit and upload without leaving the page.
+    fr_fr: Vos fichiers, dans votre navigateur. Parcourir, éditer et téléverser sans quitter la page.
+    zh_cn: 在浏览器里管理你的文件：浏览、编辑、上传，无需离开页面。
+  description:
+    en_us: "\U0001F4C1 **What is Files?**\n\n**Files** is the file manager for your Personal Cloud Server. It gives you\neverything under `/DATA` — Documents, Downloads, Media and your app data —\nin one browser window that looks and works like the rest of your server.\n\n✅ **What you can do**\n• Browse in a grid or a list, with image thumbnails\n• Upload files *and whole folders* by dragging them in — uploads resume if your connection drops\n• Create, rename, copy, move and delete\n• Edit text, YAML and Markdown in place, with a live Markdown preview\n• Preview images, video, audio and PDFs without downloading them\n• Search by name inside any folder\n\n\U0001F5D1️ **Deleting is not permanent.** Files you delete move to a Trash you can\nsee, restore from, and empty yourself. They are cleared automatically after\n30 days.\n\n\U0001F512 **Signed in already.** Files has no separate login — it uses your server\naccount, like the rest of your PCS. There is no sharing and no second set of\nusers to manage.\n\n⚠️ **It can see everything.** That includes the data folders of your other\napps. Deleting an app's database here will break that app, so take the same\ncare you would in a terminal.\n"
+    fr_fr: "\U0001F4C1 **Qu'est-ce que Files ?**\n\n**Files** est le gestionnaire de fichiers de votre serveur cloud personnel.\nIl vous donne accès à tout ce qui se trouve sous `/DATA` — Documents,\nTéléchargements, Médias et les données de vos applications — dans une seule\nfenêtre de navigateur, dans le même style que le reste de votre serveur.\n\n✅ **Ce que vous pouvez faire**\n• Naviguer en grille ou en liste, avec des vignettes d'images\n• Téléverser des fichiers *et des dossiers entiers* par glisser-déposer — les envois reprennent si la connexion est coupée\n• Créer, renommer, copier, déplacer et supprimer\n• Éditer du texte, du YAML et du Markdown sur place, avec un aperçu Markdown en direct\n• Prévisualiser images, vidéos, audio et PDF sans les télécharger\n• Rechercher par nom dans n'importe quel dossier\n\n\U0001F5D1️ **Supprimer n'est pas définitif.** Les fichiers supprimés vont dans une\ncorbeille que vous pouvez consulter, restaurer et vider vous-même. Ils sont\neffacés automatiquement au bout de 30 jours.\n\n\U0001F512 **Déjà connecté.** Files n'a pas de connexion séparée : il utilise le\ncompte de votre serveur, comme le reste de votre PCS. Il n'y a ni partage ni\nsecond jeu d'utilisateurs à gérer.\n\n⚠️ **Il voit tout.** Y compris les dossiers de données de vos autres\napplications. Supprimer ici la base de données d'une application la cassera,\nalors soyez aussi prudent que dans un terminal.\n"
+    zh_cn: "\U0001F4C1 **Files 是什么？**\n\n**Files** 是你的个人云服务器的文件管理器。它把 `/DATA` 下的一切——Documents、\nDownloads、Media 以及你的应用数据——集中在一个浏览器窗口里，外观和操作都与\n服务器的其他部分一致。\n\n✅ **你可以做什么**\n• 以网格或列表浏览，图片带缩略图\n• 拖入文件*或整个文件夹*上传——连接中断后可续传\n• 新建、重命名、复制、移动和删除\n• 就地编辑文本、YAML 和 Markdown，并实时预览 Markdown\n• 无需下载即可预览图片、视频、音频和 PDF\n• 在任意文件夹内按名称搜索\n\n\U0001F5D1️ **删除不是永久的。** 删除的文件会进入回收站，你可以查看、还原，也可以自己\n清空。它们会在 30 天后自动清除。\n\n\U0001F512 **已经登录。** Files 没有单独的登录页，它使用你的服务器账户，和 PCS 的其余\n部分一样。没有分享功能，也不需要管理第二套用户。\n\n⚠️ **它能看到一切。** 包括其他应用的数据目录。在这里删除某个应用的数据库会让\n那个应用无法运行，请像在终端里一样小心。\n"
+  developer: Yundera
+  category: Cloud
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: files
+  tips:
+    en_us: |
+      What this app can reach
+
+      Files mounts the whole of `/DATA` read-write. That includes
+      `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
+      `/DATA/AppData` — the last one holding the databases, configuration and
+      secrets of every other app installed on this server. Anyone who can sign in
+      to your server account can browse, edit and delete all of it.
+
+      Sign-in
+
+      Files is protected by your server's single sign-on — the same account you
+      use for the dashboard. Open the app and you are already in. It has no
+      login of its own, no second password and no sharing.
+
+      Replacing FileBrowser
+
+      Files replaces FileBrowser, whose upstream was archived in September 2026.
+      The two can be installed side by side — Files keeps no state FileBrowser
+      uses, and nothing is migrated or removed. If you were using FileBrowser's
+      share links, note that Files has no sharing: those links have no
+      equivalent here and will stop working when you uninstall FileBrowser.
+    fr_fr: |
+      Ce à quoi cette application a accès
+
+      Files monte l'intégralité de `/DATA` en lecture-écriture : cela inclut
+      `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
+      `/DATA/AppData`, qui contient les bases de données, configurations et
+      secrets de toutes les autres applications du serveur. Toute personne
+      pouvant se connecter à votre compte serveur peut parcourir, modifier et
+      supprimer l'ensemble.
+
+      Connexion
+
+      Files est protégé par l'authentification unique de votre serveur — le même
+      compte que pour le tableau de bord. Vous ouvrez l'application et vous y
+      êtes déjà. Elle n'a ni connexion propre, ni second mot de passe, ni
+      partage.
+
+      Remplacement de FileBrowser
+
+      Files remplace FileBrowser, dont le projet amont a été archivé en
+      septembre 2026. Les deux peuvent cohabiter : Files n'utilise aucun état de
+      FileBrowser, et rien n'est migré ni supprimé. Si vous utilisiez les liens
+      de partage de FileBrowser, notez que Files ne propose pas de partage : ces
+      liens n'ont pas d'équivalent ici et cesseront de fonctionner lorsque vous
+      désinstallerez FileBrowser.
+    zh_cn: |
+      此应用可以访问的范围
+
+      Files 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
+      `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
+      数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户的人都可以浏览、
+      编辑和删除这些内容。
+
+      登录方式
+
+      Files 由服务器的统一登录保护，与你登录控制面板所用的是同一个账户。打开应用
+      即已登录。它没有自己的登录页、没有第二个密码，也没有分享功能。
+
+      替代 FileBrowser
+
+      Files 用于替代 FileBrowser，后者的上游项目已于 2026 年 9 月归档。两者可以
+      同时安装——Files 不使用 FileBrowser 的任何数据，也不会迁移或删除任何内容。
+      如果你在使用 FileBrowser 的分享链接，请注意 Files 没有分享功能：这些链接在
+      这里没有对应物，卸载 FileBrowser 后它们将失效。
   # The app's own state — trash, thumbnail cache, upload staging — lives here
   # (STATE_DIR defaults to $DATA_ROOT/AppData/files). The backend runs as root and
   # would create it itself, root-owned; declaring it here is what makes it

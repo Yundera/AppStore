@@ -152,4 +152,81 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.4.2"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: SegmentPlayer
+    fr_fr: SegmentPlayer
+  tagline:
+    en_us: Stream any video file as HLS on-the-fly with live transcoding
+    fr_fr: Diffusez n'importe quel fichier vidéo en HLS à la volée avec transcodage live
+  description:
+    en_us: |
+      SegmentPlayer is a media streaming application that serves your video files as HLS streams on-the-fly.
+
+      Features:
+      - Browse and play any video from your Downloads and Media folders
+      - On-demand HLS packaging with nginx-vod-module (no pre-transcoding needed)
+      - Live segment-level transcoding for incompatible codecs
+      - Instant seeking support
+      - Multi-audio track selection
+      - Embedded subtitle extraction (ASS, SRT to WebVTT)
+      - Modern responsive web player with hls.js
+
+      Supported formats: MP4, MKV, MOV, AVI, WebM
+      - Direct streaming: H.264/H.265 video with AAC audio
+      - With live transcoding: Any FFmpeg-supported codec (HEVC, VP9, AV1, 10-bit, etc.)
+
+      Simply drop video files into your Downloads or Media folder and they become instantly streamable!
+    fr_fr: |
+      SegmentPlayer est une application de streaming qui sert vos fichiers vidéo en flux HLS à la volée.
+
+      Fonctionnalités:
+      - Parcourir et lire n'importe quelle vidéo de vos dossiers Downloads et Media
+      - Packaging HLS à la demande avec nginx-vod-module (pas de transcodage préalable)
+      - Transcodage live segment par segment pour codecs incompatibles
+      - Support de recherche instantané
+      - Sélection de piste audio multiple
+      - Extraction des sous-titres embarqués (ASS, SRT vers WebVTT)
+      - Lecteur web moderne et responsive avec hls.js
+
+      Formats supportés: MP4, MKV, MOV, AVI, WebM
+      - Streaming direct: vidéo H.264/H.265 avec audio AAC
+      - Avec transcodage live: tout codec supporté par FFmpeg (HEVC, VP9, AV1, 10-bit, etc.)
+
+      Déposez simplement vos fichiers vidéo dans vos dossiers Downloads ou Media et ils deviennent instantanément streamables!
+  developer: Worph
+  category: Media
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  main: segment
+  tips:
+    en_us: |
+      This app reads your whole Downloads and Media folders (/DATA/Downloads and /DATA/Media)
+      and streams every video it finds there. Both are mounted read-only: the app can play
+      your files but can never modify or delete them.
+
+      For best performance, use videos with:
+      - H.264 or H.265 video codec
+      - AAC audio codec
+
+      Videos with incompatible codecs (like VP9, AV1, AC3 audio, or 10-bit video) will be
+      transcoded on-the-fly at the segment level for smooth playback.
+    fr_fr: |
+      Cette application lit l'intégralité de vos dossiers Downloads et Media (/DATA/Downloads
+      et /DATA/Media) et diffuse toutes les vidéos qui s'y trouvent. Les deux sont montés en
+      lecture seule : l'application peut lire vos fichiers mais ne peut jamais les modifier
+      ni les supprimer.
+
+      Pour de meilleures performances, utilisez des vidéos avec:
+      - Codec vidéo H.264 ou H.265
+      - Codec audio AAC
+
+      Les vidéos avec des codecs incompatibles (comme VP9, AV1, audio AC3, ou vidéo 10-bit)
+      seront transcodées à la volée segment par segment pour une lecture fluide.
   webui-host: segment-${domain}

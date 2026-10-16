@@ -377,6 +377,121 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.3"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Nextcloud MCP
+  tagline:
+    en_us: AI-powered Nextcloud — read, write, chat, all via MCP
+    fr_fr: Nextcloud pilote par IA — lire, ecrire, discuter, le tout via MCP
+    zh_cn: AI 驱动的 Nextcloud — 通过 MCP 读取、写入、聊天
+  description:
+    en_us: |
+      **Your entire Nextcloud — Notes, Calendar, Contacts, Files, Deck, Talk — exposed to AI assistants via MCP.**
+
+      Nextcloud MCP wraps the open-source `cbcoutinho/nextcloud-mcp-server` to give Claude, Cursor, and any MCP-compatible LLM direct, authenticated access to your Nextcloud. Plus, with one toggle, Claude will auto-respond to your Talk DMs and direct @mentions on your behalf — no bot registration, no `occ` commands, no public URL required.
+
+      **What you can do:**
+      - Let AI read/write your Notes, Calendar events, Contacts, Deck cards, Tables, Cookbook recipes, News feeds, Collectives pages, and files (WebDAV).
+      - Auto-respond to incoming Talk DMs with Claude — replies land in the chat within seconds.
+      - Reply to `@<you>` mentions in group chats automatically (presence-immune — works even when you have Talk open).
+      - Send chat messages to anyone in Nextcloud from an AI prompt (`talk_send_to_user` — resolves name to 1-on-1 and posts).
+      - Drive it all through the Beacon MCP aggregator (auto-detected) for unified access.
+
+      **138 tools — 118 Nextcloud + 20 Talk — in one MCP server.** Single app-password setup. Polling-based (no admin CLI). See the built-in docs for the full rationale.
+
+      **Think of it like:** a personal AI assistant that genuinely lives inside your Nextcloud — messages go to *you*, answers come from Claude, your team gets replies within seconds.
+    fr_fr: |
+      **Votre Nextcloud entier — Notes, Calendrier, Contacts, Fichiers, Deck, Talk — expose aux assistants IA via MCP.**
+
+      Nextcloud MCP enveloppe le serveur open-source `cbcoutinho/nextcloud-mcp-server` pour donner a Claude, Cursor et a tout LLM compatible MCP un acces authentifie direct a votre Nextcloud. De plus, avec un seul interrupteur, Claude repondra automatiquement a vos messages prives Talk et aux mentions @ a votre place — sans enregistrement de bot, sans commandes `occ`, sans URL publique requise.
+
+      **Ce que vous pouvez faire:**
+      - Laisser l'IA lire/ecrire vos Notes, evenements de Calendrier, Contacts, cartes Deck, Tables, recettes Cookbook, flux News, pages Collectives et fichiers (WebDAV).
+      - Reponse automatique aux messages prives Talk entrants avec Claude — les reponses arrivent dans la conversation en quelques secondes.
+      - Reponse automatique aux mentions `@<vous>` dans les discussions de groupe (insensible a la presence — fonctionne meme si Talk est ouvert).
+      - Envoyer des messages a n'importe qui dans Nextcloud depuis une invite IA (`talk_send_to_user` — resout le nom en conversation 1-a-1 et poste).
+      - Piloter l'ensemble via l'agregateur MCP Beacon (auto-detecte) pour un acces unifie.
+
+      **138 outils — 118 Nextcloud + 20 Talk — dans un seul serveur MCP.** Configuration par mot de passe d'application unique. Base sur le polling (pas de CLI admin). Voir la documentation integree pour la justification complete.
+
+      **Comme si:** un assistant IA personnel qui vit vraiment dans votre Nextcloud — les messages vous arrivent, les reponses viennent de Claude, votre equipe obtient des reponses en quelques secondes.
+    zh_cn: |
+      **将整个 Nextcloud — 笔记、日历、通讯录、文件、Deck、Talk — 通过 MCP 暴露给 AI 助手。**
+
+      Nextcloud MCP 封装了开源的 `cbcoutinho/nextcloud-mcp-server`，让 Claude、Cursor 和任何兼容 MCP 的 LLM 可以直接、经过身份验证地访问您的 Nextcloud。此外，通过一个开关，Claude 将代表您自动回复 Talk 私信和直接 @提及 — 无需机器人注册，无需 `occ` 命令，也不需要公共 URL。
+
+      **功能：**
+      - 让 AI 读取/写入您的笔记、日历事件、联系人、Deck 卡片、表格、食谱、新闻订阅、Collectives 页面和文件（WebDAV）。
+      - 使用 Claude 自动回复 Talk 私信 — 几秒内回复到达聊天。
+      - 自动回复群聊中的 `@<您>` 提及（免受在线状态影响 — 即使您打开 Talk 也能工作）。
+      - 从 AI 提示向 Nextcloud 中的任何人发送聊天消息（`talk_send_to_user` — 将名称解析为 1 对 1 并发布）。
+      - 通过 Beacon MCP 聚合器（自动检测）统一驱动所有功能。
+
+      **138 个工具 — 118 个 Nextcloud + 20 个 Talk — 合并为一个 MCP 服务器。** 一次应用密码设置。基于轮询（无需管理员 CLI）。详见内置文档。
+  category: Utilities
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+  main: nextcloudmcp-proxy
+  tips:
+    en_us: "**Getting Started**\n\nNextcloud MCP needs access to a Nextcloud account (the sibling `Nextcloud` app works great). After installation:\n\n1. In Nextcloud, go to **Settings → Personal → Security → Devices & sessions** and click **Create new app password** (name it `nextcloudmcp`).\n2. Open the Nextcloud MCP Web UI (you'll sign in with your server account — the same single sign-on you already use) and paste the URL, username, and app-password.\n3. Click **Test connection**, then **Save**.\n4. (Optional) In the **LLM Target** panel, click **Rescan Beacon** — if an LLM MCP (e.g. ClaudeCode) is installed on the same server, it's auto-selected.\n5. (Optional) Enable **Auto-respond** to let Claude reply to your Talk DMs and `@<you>` mentions automatically.\n\n**MCP Integration (for AI/LLMs):**\n\nThe app exposes one MCP server, `nextcloud-mcp`, with 138 tools: 118 for Nextcloud and 20 for Talk chat.\n\n**Option 1: Via Beacon (recommended)**\nIf Beacon is installed, the server is auto-discovered and its tools namespaced:\n- `nextcloud-mcp__nc_notes_*`, `nextcloud-mcp__nc_calendar_*`, `nextcloud-mcp__deck_*`, etc.\n- `nextcloud-mcp__talk_send_to_user`, `nextcloud-mcp__talk_list_conversations`, etc.\n\n**Option 2: Public URL (OAuth)**\n\n`/mcp` is protected by OAuth 2.1. Clients that support OAuth discovery\n(claude.ai, Claude Desktop) register themselves and open a browser for\nyou to approve with your server login (single sign-on). For clients needing a\npre-created client_id/client_secret (n8n, custom scripts), create one at\n**https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth**.\n```json\n{\n  \"mcpServers\": {\n    \"nextcloud-mcp\": {\n      \"type\": \"http\",\n      \"url\": \"https://nextcloudmcp-${APP_DOMAIN}/mcp\"\n    }\n  }\n}\n```\n**Option 3: Local Docker connection (no auth required)**\n```json\n{\n  \"mcpServers\": {\n    \"nextcloud-mcp\": {\n      \"type\": \"http\",\n      \"url\": \"http://nextcloudmcp-backend:9650/mcp\"\n    }\n  }\n}\n```\n*Note: Requires the AI assistant to be on the `pcs` Docker network.*\n\n**Available MCP Tools:**\n\n| Category | Prefix | Examples |\n|---|---|---|\n| Notes | `nc_notes_*` | `create_note`, `update_note`, `search_notes` |\n| Calendar & Todos | `nc_calendar_*` | `create_event`, `find_availability`, `create_todo` |\n| Contacts | `nc_contacts_*` | `list_contacts`, `create_contact`, `update_contact` |\n| Files (WebDAV) | `nc_webdav_*` | `list_directory`, `read_file`, `write_file`, `search_files` |\n| Deck (Kanban) | `deck_*` | `create_board`, `create_card`, `assign_user_to_card` |\n| Cookbook | `nc_cookbook_*` | `list_recipes`, `import_recipe`, `search_recipes` |\n| Tables | `nc_tables_*` | `list_tables`, `insert_row`, `update_row` |\n| Sharing | `nc_share_*` | `share_create`, `share_list`, `share_update` |\n| News | `nc_news_*` | `list_feeds`, `list_items`, `get_starred_items` |\n| Collectives | `collectives_*` | `create_page`, `search_pages`, `assign_tag` |\n| **Talk (chat)** | `talk_*` | `send_to_user`, `list_conversations`, `get_messages` |\n\n**Auto-respond Mode:**\n\nWhen enabled, the app long-polls every DM and group chat your account is in. A real user's DM or a direct `@<you>` mention in a group triggers a call to the configured LLM (Claude Code via Beacon by default). The reply is posted back to Talk — prefixed with `\U0001F916 ` so humans can tell AI-generated answers apart.\n\n- Presence-immune: works even while you have Talk open in a browser.\n- Own-message-aware: never responds to its own replies or to messages you typed from another client.\n- Gapless: resumes at the right cursor after restarts (state in `data/poll-state.json`).\n\n**Security:**\n- Your Nextcloud app-password is stored only in `/DATA/AppData/nextcloudmcp/config.json` and is never logged or returned via the API.\n- The Web UI is protected by the server's single sign-on — you sign in once with your server account.\n"
+    fr_fr: "**Demarrage**\n\nNextcloud MCP a besoin d'acces a un compte Nextcloud (l'app soeur `Nextcloud` fonctionne parfaitement). Apres installation:\n\n1. Dans Nextcloud, allez dans **Parametres → Personnel → Securite → Appareils et sessions** et cliquez sur **Creer un nouveau mot de passe d'application** (nommez-le `nextcloudmcp`).\n2. Ouvrez l'interface Web de Nextcloud MCP (vous vous connecterez avec votre compte serveur — la meme authentification unique que d'habitude) et collez l'URL, le nom d'utilisateur et le mot de passe d'application.\n3. Cliquez sur **Tester la connexion**, puis **Enregistrer**.\n4. (Optionnel) Dans le panneau **LLM Target**, cliquez sur **Rescan Beacon** — si un LLM MCP (ex. ClaudeCode) est installe sur le meme serveur, il est auto-selectionne.\n5. (Optionnel) Activez **Reponse automatique** pour laisser Claude repondre automatiquement a vos messages prives Talk et aux mentions `@<vous>`.\n\n**Integration MCP (pour IA/LLMs):**\n\nL'app expose un seul serveur MCP, `nextcloud-mcp`, avec 138 outils : 118 pour Nextcloud et 20 pour le chat Talk.\n\n**Option 1: Via Beacon (recommande)**\nSi Beacon est installe, le serveur est auto-decouvert et ses outils namespaces:\n- `nextcloud-mcp__nc_notes_*`, `nextcloud-mcp__nc_calendar_*`, `nextcloud-mcp__deck_*`, etc.\n- `nextcloud-mcp__talk_send_to_user`, `nextcloud-mcp__talk_list_conversations`, etc.\n\n**Option 2: URL publique (OAuth)**\n\n`/mcp` est protege par OAuth 2.1. Les clients compatibles avec la\ndecouverte OAuth (claude.ai, Claude Desktop) s'enregistrent seuls et\nouvrent un navigateur pour que vous autorisiez avec votre compte\nserveur (authentification unique). Pour les clients necessitant un client_id/client_secret\npre-cree (n8n, scripts), creez-en un sur\n**https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth**.\n```json\n{\n  \"mcpServers\": {\n    \"nextcloud-mcp\": {\n      \"type\": \"http\",\n      \"url\": \"https://nextcloudmcp-${APP_DOMAIN}/mcp\"\n    }\n  }\n}\n```\n**Option 3: Connexion Docker locale (pas d'auth requise)**\n```json\n{\n  \"mcpServers\": {\n    \"nextcloud-mcp\": {\n      \"type\": \"http\",\n      \"url\": \"http://nextcloudmcp-backend:9650/mcp\"\n    }\n  }\n}\n```\n*Note: Requiert que l'assistant IA soit sur le reseau Docker `pcs`.*\n\n**Mode Reponse automatique:**\n\nLorsqu'active, l'app interroge en long-poll chaque message prive et discussion de groupe dont votre compte fait partie. Un message prive d'un vrai utilisateur ou une mention directe `@<vous>` dans un groupe declenche un appel au LLM configure (Claude Code via Beacon par defaut). La reponse est postee dans Talk — prefixee de `\U0001F916 ` pour distinguer les reponses IA.\n\n- Insensible a la presence: fonctionne meme si Talk est ouvert dans un navigateur.\n- Conscient des messages propres: ne repond jamais a ses propres reponses ni aux messages que vous avez tapes depuis un autre client.\n- Sans trou: reprend au bon curseur apres redemarrage (etat dans `data/poll-state.json`).\n\n**Securite:**\n- Votre mot de passe d'application Nextcloud est stocke uniquement dans `/DATA/AppData/nextcloudmcp/config.json` et n'est jamais journalise ni retourne via l'API.\n- L'interface Web est protegee par l'authentification unique du serveur (SSO) — vous vous connectez avec votre compte serveur.\n"
+    zh_cn: |
+      **快速开始**
+
+      Nextcloud MCP 需要访问 Nextcloud 账户（同级 `Nextcloud` 应用即可）。安装后：
+
+      1. 在 Nextcloud 中，转到 **设置 → 个人 → 安全 → 设备和会话**，点击 **创建新的应用密码**（命名为 `nextcloudmcp`）。
+      2. 打开 Nextcloud MCP Web UI（使用您的服务器账户（单点登录）登录——与平时相同的登录方式），粘贴 URL、用户名和应用密码。
+      3. 点击 **测试连接**，然后 **保存**。
+      4. （可选）在 **LLM Target** 面板中，点击 **重新扫描 Beacon** — 如果同一服务器上安装了 LLM MCP（例如 ClaudeCode），它将被自动选中。
+      5. （可选）启用 **自动回复**，让 Claude 自动回复您的 Talk 私信和 `@<您>` 提及。
+
+      **MCP 集成（用于 AI/LLM）：**
+
+      应用公开一个 MCP 服务器 `nextcloud-mcp`，共 138 个工具：118 个 Nextcloud 工具和 20 个 Talk 聊天工具。
+
+      **选项 1：通过 Beacon（推荐）**
+      如果安装了 Beacon，该服务器会自动发现，其工具会加上命名空间。
+
+      **选项 2：公共 URL（OAuth）**
+
+      `/mcp` 受 OAuth 2.1 保护。支持 OAuth 发现的客户端（claude.ai、Claude Desktop）
+      会自动注册并打开浏览器，让您使用服务器账户（单点登录）授权。对于需要预先创建
+      client_id/client_secret 的客户端（n8n、自定义脚本），请在
+      **https://nextcloudmcp-${APP_DOMAIN}/AppShield/oauth** 创建。
+      ```json
+      {
+        "mcpServers": {
+          "nextcloud-mcp": {
+            "type": "http",
+            "url": "https://nextcloudmcp-${APP_DOMAIN}/mcp"
+          }
+        }
+      }
+      ```
+
+      **选项 3：本地 Docker 连接（无需认证）**
+      ```json
+      {
+        "mcpServers": {
+          "nextcloud-mcp": {
+            "type": "http",
+            "url": "http://nextcloudmcp-backend:9650/mcp"
+          }
+        }
+      }
+      ```
+      *注意：需要 AI 助手在 `pcs` Docker 网络上。*
+
+      **安全：**
+      - Nextcloud 应用密码仅存储在 `/DATA/AppData/nextcloudmcp/config.json` 中，不会被记录或通过 API 返回。
+      - Web UI 受服务器的单点登录 (SSO) 保护——使用您的服务器账户登录即可。
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

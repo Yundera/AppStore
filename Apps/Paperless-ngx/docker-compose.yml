@@ -254,6 +254,126 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "3.0.5"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: paperless-ngx
+  title:
+    en_us: Paperless-ngx
+  tagline:
+    en_us: Transform your paper documents into a searchable digital archive
+    fr_fr: Transformez vos documents papier en archive numerique consultable
+    ko_kr: 종이 문서를 검색 가능한 디지털 보관소로 변환하세요
+    zh_cn: 将纸质文档转换为可搜索的数字档案
+    es_es: Transforma tus documentos en papel en un archivo digital con busqueda
+  description:
+    en_us: |
+      **Go paperless. Find any document in seconds.**
+
+      Paperless-ngx is a powerful, open-source document management system that transforms your physical documents into a searchable online archive. Scan once, find anything instantly.
+
+      **What you can do:**
+      - Scan and upload documents from any scanner, phone, or folder
+      - Full-text OCR search across all your documents in seconds
+      - Auto-tag and organize documents with AI-powered suggestions
+      - Support for PDF, images, Word docs, spreadsheets, and more
+      - Share documents and assign permissions to multiple users
+      - Export and backup your entire archive anytime
+
+      **How it works:**
+      1. Drop documents into the consume folder (via scanner, email, or file upload)
+      2. Paperless automatically OCR-processes and indexes them
+      3. Search and retrieve any document instantly
+
+      **Perfect for:** Home offices, small businesses, accountants, lawyers, and anyone tired of paper clutter. Store tax records, invoices, contracts, manuals — everything searchable and organized.
+    ko_kr: |
+      **종이 없는 사무실. 어떤 문서도 몇 초 안에 찾으세요.**
+
+      Paperless-ngx는 물리적 문서를 검색 가능한 온라인 보관소로 변환하는 강력한 오픈소스 문서 관리 시스템입니다. 한 번 스캔하면, 언제든지 즉시 찾을 수 있습니다.
+
+      **할 수 있는 것:**
+      - 스캐너, 스마트폰, 폴더에서 문서 스캔 및 업로드
+      - 모든 문서에서 전문 OCR 텍스트 검색
+      - AI 기반 제안으로 자동 태그 및 정리
+      - PDF, 이미지, Word, 스프레드시트 등 지원
+      - 다중 사용자 문서 공유 및 권한 설정
+      - 언제든지 전체 보관소 내보내기 및 백업
+
+      **이런 분께 완벽해요:** 홈 오피스, 소규모 사업장, 회계사, 법무사, 종이 서류 정리에 지친 모든 분.
+    zh_cn: |
+      **无纸化办公。几秒内找到任何文档。**
+
+      Paperless-ngx 是一个强大的开源文档管理系统，将您的纸质文档转化为可搜索的在线档案。扫描一次，随时即时查找。
+
+      **您可以做的事:**
+      - 从任何扫描仪、手机或文件夹扫描和上传文档
+      - 在几秒内对所有文档进行全文 OCR 搜索
+      - 使用 AI 驱动的建议自动标记和整理文档
+      - 支持 PDF、图像、Word 文档、电子表格等
+      - 为多个用户共享文档并分配权限
+      - 随时导出和备份整个档案
+    fr_fr: |
+      **Passez au numerique. Retrouvez n'importe quel document en quelques secondes.**
+
+      Paperless-ngx est un puissant systeme de gestion documentaire open source qui transforme vos documents physiques en archive numerique consultable.
+
+      **Ce que vous pouvez faire:**
+      - Scanner et telecharger des documents depuis n'importe quel scanner, telephone ou dossier
+      - Recherche OCR en texte integral dans tous vos documents en quelques secondes
+      - Tagger et organiser automatiquement les documents avec des suggestions IA
+      - Support PDF, images, Word, tableurs et plus
+      - Partager des documents et assigner des permissions a plusieurs utilisateurs
+      - Exporter et sauvegarder toute votre archive a tout moment
+    es_es: |
+      **Digitaliza tu oficina. Encuentra cualquier documento en segundos.**
+
+      Paperless-ngx es un potente sistema de gestion documental de codigo abierto que transforma tus documentos fisicos en un archivo digital con busqueda.
+
+      **Lo que puedes hacer:**
+      - Escanear y subir documentos desde cualquier escaner, telefono o carpeta
+      - Busqueda OCR de texto completo en todos tus documentos en segundos
+      - Etiquetar y organizar automaticamente documentos con sugerencias de IA
+      - Soporte para PDF, imagenes, Word, hojas de calculo y mas
+      - Compartir documentos y asignar permisos a multiples usuarios
+      - Exportar y hacer copia de seguridad de todo tu archivo en cualquier momento
+  developer: paperless-ngx
+  category: Utilities
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: paperless
+  tips:
+    en_us: |
+      **Quick Start:**
+
+      After installation, log in as `admin`; the password is shown when you open the app (tile menu → Credentials).
+
+      **Add documents:**
+      - **Web upload:** Drag and drop files directly in the browser
+      - **Consume folder:** Place files in `/DATA/AppData/paperlessngx/consume/` for automatic import
+      - **Email import:** Configure an email account in Settings → Mail
+
+      **Tips:**
+      - OCR processing runs automatically in the background after upload
+      - Use tags, correspondents, and document types to organize your archive
+      - Enable auto-tagging in Settings for AI-powered document classification
+    ko_kr: |
+      **빠른 시작:**
+
+      설치 후 `admin` 으로 로그인하세요. 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
+
+      **문서 추가:**
+      - **웹 업로드:** 브라우저에서 파일을 드래그 앤 드롭
+      - **소비 폴더:** `/DATA/AppData/paperlessngx/consume/`에 파일을 넣으면 자동 가져오기
+      - **이메일 가져오기:** 설정 → 메일에서 이메일 계정 구성
+
+      **팁:**
+      - OCR 처리는 업로드 후 자동으로 백그라운드에서 실행됩니다
+      - 태그, 발신자, 문서 유형으로 보관소를 정리하세요
   # One secret per purpose, all seeded from the box-wide password they replace:
   # an installed app keeps the values its database, its Django sessions/tokens
   # (SECRET_KEY) and its admin account were initialised with; a fresh install

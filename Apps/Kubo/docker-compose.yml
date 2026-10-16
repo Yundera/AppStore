@@ -279,6 +279,90 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "0.43.1"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: kubo
+  title:
+    en_us: Kubo
+  tagline:
+    en_us: Run your own IPFS node — add files, pin what you want to keep, share a link.
+    fr_fr: Votre propre nœud IPFS — ajoutez des fichiers, épinglez ce que vous gardez, partagez un lien.
+    es_es: Tu propio nodo IPFS — añade archivos, fija lo que quieras conservar y comparte un enlace.
+    zh_cn: 运行属于您自己的 IPFS 节点 —— 添加文件、固定要保留的内容、分享链接。
+    ko_kr: 나만의 IPFS 노드 — 파일을 추가하고, 보관할 것을 고정하고, 링크로 공유하세요.
+  description:
+    en_us: |
+      Kubo is the reference IPFS implementation — a node on the InterPlanetary File System, the
+      content-addressed peer-to-peer network where a file is named by the hash of what it contains
+      rather than by where it sits. Add a file and you get a CID that resolves to those exact bytes
+      anywhere on the network, forever, and cannot be altered without changing the name.
+      The bundled web interface covers the whole job: drag files in, organise them in folders,
+      see what is pinned, watch which peers you are connected to. The node is configured for a
+      small always-on machine — it queries the network without taking on the work of serving it —
+      and idles at around 100 MB of memory.
+      Whatever you pin is readable over plain HTTPS at a second, login-free address, so you can
+      hand someone a link without asking them to install anything; that address serves only your
+      own pinned content.
+    fr_fr: |
+      Kubo est l'implémentation de référence d'IPFS — un nœud du système de fichiers interplanétaire,
+      le réseau pair-à-pair adressé par contenu où un fichier porte le nom de l'empreinte de ce qu'il
+      contient plutôt que celui de son emplacement. Ajoutez un fichier et vous obtenez un CID qui
+      résout vers ces octets exacts partout sur le réseau, pour toujours, et qui ne peut être modifié
+      sans changer de nom.
+      L'interface web intégrée couvre tout : glissez-déposez vos fichiers, organisez-les en dossiers,
+      consultez vos épinglages, observez vos pairs connectés. Le nœud est réglé pour une petite
+      machine allumée en permanence — il interroge le réseau sans en assurer le service — et
+      consomme environ 100 Mo de mémoire au repos.
+      Tout ce que vous épinglez est lisible en HTTPS à une seconde adresse sans connexion, ce qui
+      permet de partager un lien sans rien faire installer ; cette adresse ne sert que vos propres
+      contenus épinglés.
+    es_es: |
+      Kubo es la implementación de referencia de IPFS — un nodo del Sistema de Archivos
+      Interplanetario, la red entre pares direccionada por contenido donde un archivo se nombra por
+      el hash de lo que contiene y no por dónde está. Añade un archivo y obtienes un CID que
+      resuelve a esos bytes exactos en cualquier punto de la red, para siempre, y que no puede
+      alterarse sin cambiar de nombre.
+      La interfaz web incluida cubre todo el trabajo: arrastra archivos, organízalos en carpetas,
+      revisa lo que tienes fijado y observa a qué pares estás conectado. El nodo está ajustado para
+      una máquina pequeña siempre encendida — consulta la red sin asumir el trabajo de servirla — y
+      en reposo usa alrededor de 100 MB de memoria.
+      Todo lo que fijes se lee por HTTPS en una segunda dirección sin inicio de sesión, así puedes
+      pasar un enlace sin pedirle a nadie que instale nada; esa dirección sirve únicamente tu propio
+      contenido fijado.
+    zh_cn: |
+      Kubo 是 IPFS 的参考实现 —— 星际文件系统上的一个节点。这是一个基于内容寻址的点对点网络，
+      文件以其内容的哈希命名，而不是以存放位置命名。添加一个文件就会得到一个 CID，它在网络的任
+      何角落都指向这些完全相同的字节，永久有效，且内容一改名字就变。
+      内置的网页界面涵盖全部操作：拖入文件、整理文件夹、查看已固定内容、观察已连接的节点。该节
+      点针对长期开机的小型机器做了调优 —— 它查询网络但不承担为网络提供服务的负担 —— 空闲时内存
+      占用约为 100 MB。
+      凡是您固定的内容，都可以通过第二个免登录地址以 HTTPS 读取，您可以直接把链接发给别人而无需
+      对方安装任何东西；该地址只提供您自己固定的内容。
+    ko_kr: |
+      Kubo는 IPFS의 표준 구현체로, 행성간 파일 시스템의 노드입니다. 콘텐츠 주소 기반 P2P
+      네트워크에서 파일은 저장 위치가 아니라 그 내용의 해시로 이름이 정해집니다. 파일을 추가하면
+      CID를 얻게 되며, 이 CID는 네트워크 어디에서나 정확히 같은 바이트를 영구히 가리키고, 내용이
+      바뀌면 이름도 바뀝니다.
+      기본 제공되는 웹 인터페이스가 모든 작업을 처리합니다. 파일을 끌어다 놓고, 폴더로 정리하고,
+      고정된 항목을 확인하고, 연결된 피어를 살펴볼 수 있습니다. 이 노드는 항상 켜져 있는 작은
+      장비에 맞게 설정되어 있으며 — 네트워크에 질의하되 네트워크를 떠받치는 부담은 지지 않습니다 —
+      유휴 상태에서 메모리 사용량이 약 100MB입니다.
+      고정한 자료는 로그인이 필요 없는 두 번째 주소에서 HTTPS로 읽을 수 있으므로, 상대방이 무언가를
+      설치하지 않아도 링크만 건네면 됩니다. 이 주소는 직접 고정한 자료만 제공합니다.
+  developer: Protocol Labs / Shipyard
+  category: Dapps
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: kubo
+  tips:
+    en_us: "\U0001F510 **Protected by your server account (single sign-on).** The node's web\ninterface and its control API open with your existing server login.\n\n\U0001F517 **Sharing is a second address.** Anything you pin is readable at\n`https://kubo-gateway-${APP_DOMAIN}/ipfs/<cid>`, open to whoever you send the\nlink to — they sign into nothing and install nothing. That address serves\n**only what you have pinned**: every other CID answers 404, so it stays your\nshare link rather than a gateway to the rest of the network.\n\n⚙️ **Two settings to make *Share link* use that address.** The web interface\nstores them in your browser, so set them once, per browser, under *Settings*:\nput `https://kubo-gateway-${APP_DOMAIN}` in **Local HTTP Gateway**, and choose\n**Local gateway, path link** under **Sharing IPFS links**. File previews and the\n*Share link* button then both point at your own server. Left alone, they assume\na gateway on the machine the browser is running on.\n\n\U0001F4CC **Pins are what you keep.** Files you add are pinned and kept forever. Blocks\nyou merely visited are cached up to `IPFS_STORAGE_MAX` (20 GB by default) and\nswept hourly. Everything lives in `/DATA/AppData/kubo/`.\n\n\U0001F4E1 **Port 4001 is published** (TCP and UDP) so other peers can dial this node —\nthat is what lets them fetch what you pin, and what earns the node its\n`libp2p.direct` certificate. On a PCS with no directly reachable public address\nthe node still works, it just reaches fewer peers.\n"
   folders:
     # The fs-repo: keys, config, block store, pins. Kubo drops to the container's own
     # uid when started as root, but `user:` above pins it to $PUID:$PGID, so the repo

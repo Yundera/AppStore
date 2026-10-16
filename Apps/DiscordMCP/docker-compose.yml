@@ -215,6 +215,125 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Discord MCP
+  tagline:
+    en_us: Let your AI send messages to Discord via MCP
+    fr_fr: Laissez votre IA envoyer des messages sur Discord via MCP
+  description:
+    en_us: |
+      **Let your AI talk to Discord — send messages, embeds, and more via MCP**
+
+      Discord MCP connects your AI assistant to [Discord](https://discord.com) through the Model Context Protocol. Once installed, Beacon discovers it automatically and your AI gains the ability to post messages and rich embeds to any Discord channel your bot can reach.
+
+      Wraps the [`BookJJun-IJ/DiscordMCP`](https://github.com/BookJJun-IJ/DiscordMCP) server (built on discord.js) with a streamable-HTTP transport so any MCP-compatible client can connect (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus a Web UI for entering the bot token.
+
+      **What you can do:**
+      - Send text messages to Discord channels from any MCP-compatible AI
+      - Post rich embeds with titles, descriptions, fields, and colors
+      - List all text channels in your Discord server
+      - Configure everything through a simple web dashboard
+      - Zero-config Beacon discovery — just install and it works
+
+      **Perfect if you:** Want Claude / Cursor / any MCP client to post alerts, summaries or results to a Discord server — and pair it with other MCP apps (Beacon, n8n, Chronos) for end-to-end AI workflows.
+    fr_fr: |
+      **Laissez votre IA parler a Discord — envoyez messages, embeds et plus via MCP**
+
+      Discord MCP connecte votre assistant IA a [Discord](https://discord.com) via le Model Context Protocol. Une fois installe, Beacon le decouvre automatiquement et votre IA peut publier des messages et des embeds riches dans n'importe quel salon Discord accessible a votre bot.
+
+      Enveloppe le serveur [`BookJJun-IJ/DiscordMCP`](https://github.com/BookJJun-IJ/DiscordMCP) (base sur discord.js) avec un transport streamable-HTTP pour que tout client compatible MCP puisse se connecter (Claude Desktop, Claude Code, Cursor, VS Code, etc.), plus une interface Web pour saisir le token du bot.
+
+      **Ce que vous pouvez faire:**
+      - Envoyer des messages texte dans des salons Discord depuis toute IA compatible MCP
+      - Publier des embeds riches avec titres, descriptions, champs et couleurs
+      - Lister tous les salons texte de votre serveur Discord
+      - Tout configurer depuis un tableau de bord Web simple
+      - Decouverte Beacon sans configuration — installez et c'est pret
+  developer: BookJJun-IJ
+  category: Chat
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+  main: discordmcp-proxy
+  tips:
+    en_us: |
+      **Getting Started**
+
+      Discord MCP needs a Discord bot token. You set it in the app's Web UI after install.
+
+      **Prerequisites:**
+      1. Create an application at https://discord.com/developers/applications and add a **Bot** to it
+      2. Copy the **bot token**
+      3. Invite the bot to your Discord server with the "Send Messages" (and "Embed Links") permission
+
+      **Setup:**
+      1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server)
+      2. Paste your **bot token** (optionally a default guild and channel ID) and click **Save & Restart**
+
+      **MCP Integration (for AI/LLMs):**
+
+      **Option 1: Public URL (OAuth)**
+
+      The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+      URL below — clients that support OAuth discovery (claude.ai, Claude
+      Desktop) register themselves and open a browser for you to approve with
+      your server account (single sign-on).
+      ```json
+      {
+        "mcpServers": {
+          "discord": {
+            "type": "http",
+            "url": "https://discordmcp-${APP_DOMAIN}/mcp"
+          }
+        }
+      }
+      ```
+
+      For clients that need a pre-created client_id/client_secret (n8n, custom
+      scripts), open **https://discordmcp-${APP_DOMAIN}/AppShield/oauth** and
+      create one there.
+
+      **Option 2: Local Docker connection (no auth required)**
+
+      For AI assistants running on the same server, connect directly via the Docker network:
+      ```json
+      {
+        "mcpServers": {
+          "discord": {
+            "type": "http",
+            "url": "http://discordmcp-backend:9640/mcp"
+          }
+        }
+      }
+      ```
+      *Note: Requires the AI assistant to be on the `pcs` Docker network. The Web UI
+      shows `http://discordmcp:9640/mcp` (hard-coded upstream) — use
+      `discordmcp-backend` instead.*
+
+      **Option 3: Via Beacon (aggregated)**
+
+      If you have **Beacon** installed, Discord MCP auto-registers there via its built-in UDP discovery — no extra config.
+
+      **Available MCP Tools:**
+      | Tool | Description |
+      |------|-------------|
+      | `send_message` | Send a text message to a Discord channel |
+      | `send_embed` | Send a rich embed message to a Discord channel |
+      | `list_channels` | List all text channels in a Discord server |
+      | `echo` | Echo a message back (test tool) |
+
+      **Security:**
+      - The bot token is stored only in `/DATA/AppData/discordmcp/config.json` on this server
+      - The Web UI is protected by the server's single sign-on
+      - `/mcp` is gated separately on OAuth 2.1 Bearer tokens. Only the in-network address
+        `http://discordmcp-backend:9640/mcp` (Option 2) is unauthenticated, and it is not
+        published outside the `pcs` Docker network
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   folders:
     - path: /DATA/AppData/discordmcp

@@ -216,6 +216,58 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "3.0.3"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: immich
+  title:
+    en_us: Immich
+  tagline:
+    en_us: Your Private Photo Library, Fully Under Your Control
+    fr_fr: Votre bibliothèque photo privée, entièrement sous votre contrôle
+  description:
+    en_us: |
+      Immich gives you a modern, self-hosted photo and video gallery, without the limits or tracking of traditional cloud services.
+
+      Automatically back up your photos and videos from your phone. Organize them by date, location, or face. Browse everything from a sleek web app, stream in 4K to your smart TV, and share albums privately with family and friends : no account or app needed.
+
+      **New in v2.x:** Optical Character Recognition (OCR) lets you search for text within your photos, supporting English, Chinese, Japanese, Korean, Russian, Greek, Thai, and Latin-script languages.
+
+      Unlike other platforms, Immich runs on your own private server. That means:
+
+      * **Unlimited storage** - You can upgrade the storage anytime at market price on your server interface
+      * **No data mining**
+      * **Lightning-fast access on your local network**
+      * **Multi-user support**, so everyone in your home has their own space
+
+      Perfect for photographers, families, or anyone who wants to take back control of their memories. Immich works beautifully on your Personal Cloud Server, so your media stays **yours : forever**.
+    fr_fr: |
+      Immich vous offre une galerie moderne de photos et vidéos auto-hébergée, sans les limites ou le suivi des services cloud traditionnels.
+
+      Sauvegardez automatiquement vos photos et vidéos depuis votre téléphone. Organisez-les par date, lieu ou visage. Parcourez tout depuis une application web élégante, diffusez en 4K sur votre smart TV, et partagez des albums en privé avec votre famille et vos amis : aucun compte ou application nécessaire.
+
+      Contrairement aux autres plateformes, Immich fonctionne sur votre propre serveur privé. Cela signifie :
+
+      * **Stockage illimité** - Vous pouvez mettre à niveau le stockage à tout moment au prix du marché sur l'interface de votre serveur
+      * **Aucune exploitation de données**
+      * **Accès ultra-rapide sur votre réseau local**
+      * **Support multi-utilisateur**, pour que chacun dans votre foyer ait son propre espace
+
+      Parfait pour les photographes, les familles, ou quiconque veut reprendre le contrôle de ses souvenirs. Immich fonctionne parfaitement sur votre serveur cloud personnel, ainsi vos médias restent **les vôtres : pour toujours**.
+  developer: alextran1502
+  category: Gallery
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: immich
+  tips:
+    en_us: "**Setup Information:**\n\n\U0001F510 **First Setup**:\n1. Wait 5 minutes for Immich to fully start\n2. Visit `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` and create your admin account\n3. **Always use this sslip.io URL** for unlimited uploads\n\n| Access Type | URL | Upload Limit |\n|-------------|-----|--------------|\n| **Recommended** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Unlimited |\n| Standard | `https://immich-$APP_DOMAIN/` | 100 MB |\n\n\U0001F4F1 **Mobile App**: Download the Immich app and connect using the sslip.io URL above for unlimited photo/video backup.\n\n\U0001F50D **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.\n\n\U0001F4C1 **Import Existing Photos**: To import photos already on your PCS:\n1. Place files in `/DATA/Gallery/` using the Files app\n2. In Immich, go to **Administration → External Libraries**\n3. Create a library, add import path: `/import`\n4. Click **Scan Library**\n"
+    fr_fr: "**Informations de configuration :**\n\n\U0001F510 **Première configuration** :\n1. Attendez 5 minutes le démarrage complet d'Immich\n2. Visitez `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` et créez votre compte admin\n3. **Utilisez toujours cette URL sslip.io** pour des uploads illimités\n\n| Type d'accès | URL | Limite d'upload |\n|--------------|-----|-----------------|\n| **Recommandé** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Illimité |\n| Standard | `https://immich-$APP_DOMAIN/` | 100 Mo |\n\n\U0001F4F1 **Application mobile** : Téléchargez l'app Immich et connectez-vous avec l'URL sslip.io ci-dessus pour une sauvegarde illimitée de vos photos/vidéos.\n\n\U0001F50D **OCR (Recherche de texte)** : Immich v2.x inclut l'OCR pour rechercher du texte dans vos photos. Pour activer l'OCR sur les photos existantes, allez dans Administration > Job Settings et lancez le job OCR.\n\n\U0001F4C1 **Importer des photos existantes** : Pour importer des photos déjà sur votre PCS :\n1. Placez les fichiers dans `/DATA/Gallery/` via l'app Files\n2. Dans Immich, allez dans **Administration → External Libraries**\n3. Créez une bibliothèque, ajoutez le chemin : `/import`\n4. Cliquez sur **Scan Library**\n"
   secrets:
     # Seeded: an installed app keeps the shared password its cluster was initialised
     # with (so the re-assert below is a no-op there); a fresh install gets its own.

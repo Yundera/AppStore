@@ -141,6 +141,92 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "4.23.10"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Samba
+  tagline:
+    en_us: Universal Samba file server - native network file sharing for all devices
+    zh_cn: 通用 Samba 文件服务器 - 所有设备的原生网络文件共享
+  description:
+    en_us: |
+      SMB File Server - Universal Network File Sharing
+
+      SMB (Server Message Block) is the industry-standard network file sharing protocol used by Windows, macOS, and Linux systems. This lightweight SMB server provides seamless file access across all your devices with native operating system integration.
+
+      Network File Sharing Features:
+      • Native SMB/CIFS protocol support for universal compatibility
+      • Direct integration with Windows File Explorer, macOS Finder, and Linux file managers
+      • No additional software required - uses built-in OS networking
+      • Fast local network file transfers with optimal performance
+      • Automatic network discovery on Windows networks
+      • Secure authentication with username/password protection
+
+      Cross-Platform Access:
+      • Windows: Access via File Explorer network locations
+      • macOS: Mount as network volume in Finder
+      • Linux: Connect through file managers or command line
+      • Mobile: Compatible with SMB client apps on iOS and Android
+      • Media Players: Direct streaming to smart TVs and media devices
+
+      Perfect for home networks, small offices, or anywhere you need reliable file sharing without cloud dependencies. Built on proven Samba technology with minimal resource usage and maximum compatibility.
+    zh_cn: |
+      SMB 文件服务器 - 通用网络文件共享
+
+      SMB（服务器消息块）是 Windows、macOS 和 Linux 系统使用的行业标准网络文件共享协议。这个轻量级 SMB 服务器通过原生操作系统集成，为您的所有设备提供无缝文件访问。
+
+      网络文件共享功能：
+      • 原生 SMB/CIFS 协议支持，具有通用兼容性
+      • 与 Windows 文件资源管理器、macOS Finder 和 Linux 文件管理器直接集成
+      • 无需额外软件 - 使用内置 OS 网络功能
+      • 快速本地网络文件传输，性能最优
+      • Windows 网络自动发现
+      • 用户名/密码安全认证
+
+      跨平台访问：
+      • Windows：通过文件资源管理器网络位置访问
+      • macOS：在 Finder 中挂载为网络卷
+      • Linux：通过文件管理器或命令行连接
+      • 移动设备：兼容 iOS 和 Android 上的 SMB 客户端应用
+      • 媒体播放器：直接流式传输到智能电视和媒体设备
+
+      非常适合家庭网络、小型办公室或任何需要可靠文件共享而无需云依赖的地方。基于成熟的 Samba 技术构建，资源使用最少，兼容性最大。
+  developer: Dockur
+  category: Cloud
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  tips:
+    en_us: |
+      Default SMB Access
+      | Username   | Share Name    |
+      | --------   | ----------    |
+      | `admin`    | DATA          |
+
+      The password is shown from the app's tile menu → Credentials.
+
+      Network Access Instructions:
+      • Windows: File Explorer → Network → \\ip_or_host\DATA
+      • macOS: Finder → Go → Connect to Server → smb://ip_or_host/DATA
+      • Linux: Files → Other Locations → smb://ip_or_host/DATA
+
+
+      Note: SMB runs on standard network ports (445) for native OS integration. No web interface is provided as SMB integrates directly with your operating system's file manager.
+
+      In the settings page you can bind the port to a specific IP address if needed.
+      | Host       | Container   |
+      | --------   | ------------|
+      | <ip>:445   | 445         |
+
+      VPN integration:
+      Using tailscale app : run `tailscale ip -4` to get the tailscale ip address and use that to bind samba server to tailscale only.
   # The SMB login. Seeded from the box-wide password it replaces, so an installed
   # app keeps the password every client that mapped the share has saved; a fresh
   # install gets its own.

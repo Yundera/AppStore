@@ -414,6 +414,240 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: radicle
+  title:
+    en_us: Radicle
+  tagline:
+    en_us: Your own peer-to-peer Git forge — a Radicle node and web explorer on your domain.
+    fr_fr: Votre forge Git pair-à-pair — un nœud Radicle et son explorateur web sur votre domaine.
+    zh_cn: 你自己的点对点 Git 托管——运行在你域名下的 Radicle 节点与网页浏览器。
+  description:
+    en_us: |
+      Radicle — your own peer-to-peer forge
+
+      Radicle is a sovereign alternative to GitHub and GitLab. Instead of a company's server holding the canonical copy of your code, every participant keeps a full replica and gossips changes directly to peers. Repositories, issues and patches are all Git objects, signed by their author and replicated across the network — there is no central service to go down, change its terms, or lock you out.
+
+      This app runs a complete Radicle node on your server, plus the official Radicle Explorer web interface to browse it:
+
+      • Your node stays online and keeps your repositories available even when your laptop is not
+      • Anything you push from your machine is replicated here and served to the network
+      • Issues, patches and code are browsable in your own web UI, on your own domain
+      • Anyone can clone your repositories over plain HTTPS, no account required
+
+      The web interface is for browsing. Creating repositories, opening issues and proposing patches happen with the `rad` command line on your own machine — the node here is what keeps them alive and reachable.
+
+      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow — or set your own Node ID as the owner in the app's settings, and every repository you publish from your machine is seeded here automatically.
+    fr_fr: |
+      Radicle — votre forge pair-à-pair
+
+      Radicle est une alternative souveraine à GitHub et GitLab. Plutôt qu'un serveur d'entreprise détenant la copie de référence de votre code, chaque participant conserve un réplica complet et propage ses modifications directement à ses pairs. Dépôts, tickets et patches sont tous des objets Git, signés par leur auteur et répliqués sur le réseau — aucun service central ne peut tomber, changer ses conditions ou vous verrouiller dehors.
+
+      Cette application fait tourner un nœud Radicle complet sur votre serveur, ainsi que l'interface web officielle Radicle Explorer pour le parcourir :
+
+      • Votre nœud reste en ligne et garde vos dépôts disponibles même quand votre portable ne l'est pas
+      • Tout ce que vous poussez depuis votre machine est répliqué ici et servi au réseau
+      • Tickets, patches et code se consultent dans votre propre interface web, sur votre domaine
+      • N'importe qui peut cloner vos dépôts en HTTPS, sans compte
+
+      L'interface web sert à consulter. Créer des dépôts, ouvrir des tickets et proposer des patches se fait avec la ligne de commande `rad` sur votre machine — le nœud installé ici est ce qui les maintient vivants et accessibles.
+
+      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué — ou indiquez votre propre Node ID comme propriétaire dans les réglages de l'application, et chaque dépôt que vous publiez depuis votre machine est suivi ici automatiquement.
+    zh_cn: |
+      Radicle — 属于你自己的点对点代码托管
+
+      Radicle 是 GitHub 与 GitLab 的自主替代方案。代码的权威副本不再由某家公司的服务器保管，而是每个参与者都持有完整副本，并直接向对等节点传播更改。仓库、议题和补丁都是 Git 对象，由作者签名并在网络中复制——没有中心服务会宕机、修改条款或将你拒之门外。
+
+      此应用在你的服务器上运行一个完整的 Radicle 节点，并附带官方的 Radicle Explorer 网页界面：
+
+      • 节点持续在线，即使你的笔记本关机，仓库依然可用
+      • 你从本机推送的内容会复制到这里，并向网络提供服务
+      • 议题、补丁和代码都可以在你自己的域名下浏览
+      • 任何人都可以通过 HTTPS 克隆你的仓库，无需账户
+
+      网页界面用于浏览。创建仓库、提交议题和提出补丁请在本机使用 `rad` 命令行完成——这里的节点负责让它们保持在线、可被获取。
+
+      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容——或者在应用设置中把你自己的 Node ID 设为所有者，此后你从本机发布的每个仓库都会自动在这里跟随。
+  developer: Radicle
+  category: Developer
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+  main: radicle
+  tips:
+    en_us: |
+      This app is public on purpose
+
+      A Radicle node is a participant in a public peer-to-peer network. Both of
+      its addresses are served directly to the public, bypassing the server's
+      single sign-on:
+
+      | Address | What it serves |
+      | ------- | -------------- |
+      | `https://radicle-$APP_DOMAIN` | The web interface |
+      | `https://radicle-api-$APP_DOMAIN/api/v1` | The read-only API the interface calls |
+
+      Only **public** repositories are served, the API has no write endpoints, and
+      a fresh node holds nothing until you seed something. See `rationale.md`.
+
+      Connecting your machine
+
+      Install the `rad` CLI from [radicle.dev](https://radicle.dev) and create your
+      identity with `rad auth`. Then point your node at this one: in
+      `~/.radicle/config.json`, add this address to both `preferredSeeds` and
+      `node.connect`, and restart your node (`rad node stop && rad node start`):
+
+      ```
+      <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+      ```
+
+      `<nid>` is this server's Node ID, the `nid` field at
+      `https://radicle-api-$APP_DOMAIN/api/v1`. With it in `preferredSeeds`, your
+      pushes reach this node without a separate `rad sync`.
+
+      Let this node seed your repositories
+
+      Open this app's settings, **Env** tab, and set `RADICLE_OWNER` to your own Node
+      ID — `rad self --nid` on your machine (add the variable if it isn't listed).
+      From then on every repository your node announces is seeded here within a
+      couple of minutes, with no command on the server. Left empty, nothing is
+      seeded automatically; several IDs may be given, comma-separated.
+
+      Publishing a repository
+
+      ```
+      cd my-project
+      rad init --public      # creates it and adds a `rad` git remote
+      git push rad main      # every later push
+      ```
+
+      Your own node must be running (`rad node start`) when you push: the push is
+      stored on your machine and only leaves it through your node. The repository
+      then shows up at `https://radicle-$APP_DOMAIN`. Private repositories
+      (`rad init --private`) are not announced, so they are neither seeded
+      automatically nor shown here.
+
+      Peer-to-peer port
+
+      The node publishes TCP **8776** so other peers can fetch from it. On a server
+      without a directly reachable public IP the app still works — your repositories
+      replicate outward to public seeds — but nobody fetches from you directly.
+    fr_fr: |
+      Cette application est publique, volontairement
+
+      Un nœud Radicle participe à un réseau pair-à-pair public. Ses deux adresses
+      sont servies directement au public, en contournant l'authentification
+      unique du serveur :
+
+      | Adresse | Ce qu'elle sert |
+      | ------- | --------------- |
+      | `https://radicle-$APP_DOMAIN` | L'interface web |
+      | `https://radicle-api-$APP_DOMAIN/api/v1` | L'API en lecture seule appelée par l'interface |
+
+      Seuls les dépôts **publics** sont servis, l'API n'a aucun point d'écriture, et
+      un nœud neuf ne contient rien tant que vous n'avez rien suivi. Voir
+      `rationale.md`.
+
+      Connecter votre machine
+
+      Installez la CLI `rad` depuis [radicle.dev](https://radicle.dev) et créez votre
+      identité avec `rad auth`. Faites ensuite pointer votre nœud vers celui-ci : dans
+      `~/.radicle/config.json`, ajoutez cette adresse à `preferredSeeds` et à
+      `node.connect`, puis redémarrez votre nœud (`rad node stop && rad node start`) :
+
+      ```
+      <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+      ```
+
+      `<nid>` est le Node ID de ce serveur, champ `nid` sur
+      `https://radicle-api-$APP_DOMAIN/api/v1`. Présent dans `preferredSeeds`, il
+      reçoit vos pushs sans `rad sync` séparé.
+
+      Laisser ce nœud suivre vos dépôts
+
+      Ouvrez les réglages de l'application, onglet **Env**, et donnez à
+      `RADICLE_OWNER` votre propre Node ID — `rad self --nid` sur votre machine
+      (ajoutez la variable si elle n'apparaît pas). Dès lors, chaque dépôt annoncé par
+      votre nœud est suivi ici en quelques minutes, sans aucune commande sur le
+      serveur. Vide, rien n'est suivi automatiquement ; plusieurs ID peuvent être
+      séparés par des virgules.
+
+      Publier un dépôt
+
+      ```
+      cd mon-projet
+      rad init --public      # le crée et ajoute un remote git `rad`
+      git push rad main      # chaque push suivant
+      ```
+
+      Votre propre nœud doit tourner (`rad node start`) au moment du push : le push est
+      stocké sur votre machine et n'en sort que par votre nœud. Le dépôt apparaît
+      ensuite sur `https://radicle-$APP_DOMAIN`. Les dépôts privés
+      (`rad init --private`) ne sont pas annoncés : ils ne sont ni suivis
+      automatiquement ni affichés ici.
+
+      Port pair-à-pair
+
+      Le nœud publie le port TCP **8776** pour que les autres pairs puissent récupérer
+      ses dépôts. Sur un serveur sans IP publique directement joignable, l'application
+      fonctionne quand même — vos dépôts se répliquent vers les seeds publics — mais
+      personne ne récupère directement chez vous.
+    zh_cn: |
+      此应用有意保持公开
+
+      Radicle 节点是公开点对点网络的参与者。它的两个地址都直接向公众开放，
+      绕过服务器的单点登录：
+
+      | 地址 | 提供的内容 |
+      | ---- | ---------- |
+      | `https://radicle-$APP_DOMAIN` | 网页界面 |
+      | `https://radicle-api-$APP_DOMAIN/api/v1` | 界面调用的只读 API |
+
+      仅提供**公开**仓库，API 没有任何写入接口，全新节点在你指定跟随之前不含任何内容。
+      详见 `rationale.md`。
+
+      连接你的机器
+
+      从 [radicle.dev](https://radicle.dev) 安装 `rad` 命令行，并用 `rad auth` 创建身份。
+      然后让你的节点指向此节点：在 `~/.radicle/config.json` 中，把下面的地址同时加入
+      `preferredSeeds` 和 `node.connect`，再重启节点（`rad node stop && rad node start`）：
+
+      ```
+      <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+      ```
+
+      `<nid>` 是本服务器的 Node ID，即 `https://radicle-api-$APP_DOMAIN/api/v1` 的
+      `nid` 字段。加入 `preferredSeeds` 后，你的推送无需单独执行 `rad sync` 即可到达此节点。
+
+      让此节点跟随你的仓库
+
+      打开本应用的设置，**Env** 标签页，把 `RADICLE_OWNER` 设为你自己的 Node ID——
+      在本机运行 `rad self --nid` 获取（若未列出该变量，请自行添加）。此后你的节点
+      宣告的每个仓库都会在几分钟内在这里被跟随，无需在服务器上执行任何命令。留空则
+      不会自动跟随；可填写多个 ID，以逗号分隔。
+
+      发布仓库
+
+      ```
+      cd my-project
+      rad init --public      # 创建仓库并添加名为 `rad` 的 git remote
+      git push rad main      # 之后的每次推送
+      ```
+
+      推送时你自己的节点必须在运行（`rad node start`）：推送先保存在本机，只能通过你的
+      节点发出。之后仓库会出现在 `https://radicle-$APP_DOMAIN`。私有仓库
+      （`rad init --private`）不会被宣告，因此既不会被自动跟随，也不会在这里显示。
+
+      点对点端口
+
+      节点公开 TCP **8776**，供其他对等节点抓取。若服务器没有可直接访问的公网 IP，应用
+      仍可使用——你的仓库会向公共 seed 节点复制——但别人无法直接从你这里抓取。
   folders:
     - path: /DATA/AppData/$AppID/home
       user: $PUID

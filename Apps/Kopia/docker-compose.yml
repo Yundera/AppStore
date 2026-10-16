@@ -283,6 +283,67 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.3.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: kopia
+  title:
+    en_us: Kopia
+  tagline:
+    en_us: Encrypted nightly backups of your server to your own Backblaze B2 or S3 bucket.
+    fr_fr: Des sauvegardes nocturnes chiffrées de votre serveur vers votre propre bucket Backblaze B2 ou S3.
+  description:
+    en_us: "\U0001F4BE **What is Kopia?**\n\n**Kopia** is a fast, encrypted, deduplicating backup tool. This app plugs it into\nyour server's **Backups** page as an off-site destination: your apps and your\nDocuments, Downloads and Media are backed up every night to a storage bucket you\nown — Backblaze B2, or any S3-compatible service.\n\n✅ **What you get**\n• Nightly, incremental, end-to-end encrypted backups to your own bucket\n• Restore an app or your files from the Backups page, like a local backup\n• Kopia's own web UI to browse snapshots and restore single files\n\n\U0001F511 **You hold the key.** The repository password is generated on this server and\nnever leaves it unless you save it. Without it, nobody — including you — can read\nthe backups. Save it somewhere off the server.\n\n⚠️ **For servers without a provided backup.** A Yundera PCS already includes\nYundera Backup; this app is for self-hosted servers that do not.\n"
+    fr_fr: "\U0001F4BE **Qu'est-ce que Kopia ?**\n\n**Kopia** est un outil de sauvegarde rapide, chiffré et dédupliqué. Cette\napplication le branche sur la page **Sauvegardes** de votre serveur comme\ndestination externe : vos applications ainsi que vos Documents, Téléchargements\net Médias sont sauvegardés chaque nuit vers un bucket qui vous appartient —\nBackblaze B2 ou tout service compatible S3.\n\n✅ **Ce que vous obtenez**\n• Des sauvegardes nocturnes, incrémentales et chiffrées de bout en bout\n• La restauration d'une application ou de vos fichiers depuis la page Sauvegardes\n• L'interface web de Kopia pour parcourir les instantanés et restaurer un fichier\n\n\U0001F511 **Vous détenez la clé.** Le mot de passe du dépôt est généré sur ce serveur et\nne le quitte pas tant que vous ne l'avez pas sauvegardé. Sans lui, personne — vous\ncompris — ne peut lire les sauvegardes. Conservez-le hors du serveur.\n\n⚠️ **Pour les serveurs sans sauvegarde fournie.** Un PCS Yundera inclut déjà\nYundera Backup ; cette application s'adresse aux serveurs auto-hébergés.\n"
+  developer: Kopia Authors
+  category: Backup
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  main: kopia
+  tips:
+    en_us: |
+      Setup takes three steps
+
+      1. Create a private bucket and an application key limited to it (on Backblaze:
+         Buckets › Create, then Application Keys › Add, restricted to that bucket).
+      2. In /DATA/AppData/kopia/engine/, copy connect.json.example to connect.json and
+         credentials.env.example to credentials.env, and fill both in. The engine
+         connects within a minute; check the kopia-engine logs if it does not.
+      3. Open Settings › Backups and click Enable on Kopia, then tick it for the
+         nightly backup.
+
+      Save the repository password (Settings › Backups offers it by email or on
+      screen). It is the only way to read these backups on another server.
+
+      What this app can reach
+
+      The engine and the UI mount the whole of /DATA, run as root with five file
+      capabilities, and are only reachable through your server's sign-in.
+
+      Not for a Yundera PCS, which ships its own Kopia engine.
+    fr_fr: |
+      La configuration tient en trois étapes
+
+      1. Créez un bucket privé et une clé d'application limitée à ce bucket (chez
+         Backblaze : Buckets › Create, puis Application Keys › Add).
+      2. Dans /DATA/AppData/kopia/engine/, copiez connect.json.example en connect.json
+         et credentials.env.example en credentials.env, puis remplissez-les. Le moteur
+         se connecte en moins d'une minute ; sinon, consultez les logs de kopia-engine.
+      3. Ouvrez Paramètres › Sauvegardes, cliquez sur Activer pour Kopia, puis
+         cochez-le pour la sauvegarde nocturne.
+
+      Conservez le mot de passe du dépôt (Paramètres › Sauvegardes le propose par
+      e-mail ou à l'écran). C'est le seul moyen de lire ces sauvegardes ailleurs.
+
+      Ce à quoi cette application a accès
+
+      Le moteur et l'interface montent tout /DATA, tournent en root avec cinq
+      capacités de fichiers, et ne sont joignables qu'après connexion à votre serveur.
+
+      Pas pour un PCS Yundera, qui embarque déjà son propre moteur Kopia.
   # The engine directory holds the repository password and the storage key, so it is
   # 0700. Everything in it is written by the root engine, which copies this
   # directory's owner onto what it creates.

@@ -213,6 +213,42 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.7.7"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: terminal
+  title:
+    en_us: "Terminal"
+  tagline:
+    en_us: "Admin shell on your server, in the browser"
+  description:
+    en_us: |
+      Terminal gives you a shell on your Personal Cloud Server from any browser, using ttyd.
+
+      This is an administration tool, and it is not sandboxed. Each session is a real SSH login on the server as the **`admin` user, who has passwordless `sudo`** — the same session you would get with `ssh admin@<your server>`, with the server's own hostname, network, processes and services. It can therefore read and modify everything on the server: `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`, every other app's data under `/DATA/AppData`, and the system files outside `/DATA`. Anything you could do over SSH as root, this app can do.
+
+      On start, the app creates its own SSH key in `/DATA/AppData/terminal/ssh/` and adds it to `admin`'s `authorized_keys`, restricted to connections from the server itself.
+
+      Access is protected by the server's single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in server account reaches the shell. You sign in with that same account instead of setting a separate app password.
+
+      Install it only on a PCS you administer yourself. See rationale.md for the full privilege and mitigation write-up.
+  category: Utilities
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  main: terminal
+  tips:
+    en_us: |
+      **This app is a root shell on your server.**
+
+      - Each session is an SSH login as `admin`, who has passwordless `sudo`, so it can read and change **every** file on the PCS — all of `/DATA` (Documents, Downloads, Media, Gallery, and every other app's data) as well as system files outside `/DATA`.
+      - To open that session, the app adds its own key to `admin`'s `authorized_keys` (usable only from the server itself), and its container runs `privileged` in the host's process namespace.
+      - Access is gated by the server's single sign-on (AppShield OIDC) — sign in with your server account, the same login you already use for the server.
+
+      Treat access to this app as equivalent to root SSH access to the server. If you only need to browse or edit files, install **FileBrowser** instead.
   # Tiles in Maison's System grid: a PCS ships with it preinstalled. The grid only —
   # it is still an ordinary app the user can stop, back up and uninstall.
   view: system

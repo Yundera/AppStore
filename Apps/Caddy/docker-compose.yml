@@ -182,6 +182,131 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.9.1"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Caddy
+  tagline:
+    en_us: Secure static website hosting with automatic HTTPS
+    zh_cn: 具有自动 HTTPS 的安全静态网站托管
+  description:
+    en_us: |
+      **What is Caddy?**
+
+      **Caddy** is a powerful, enterprise-ready web server with automatic HTTPS. Unlike traditional web servers, Caddy automatically provisions and renews TLS certificates, giving you secure connections out of the box with zero configuration.
+
+      Perfect for:
+      * Personal websites and portfolios
+      * Single-page applications (React, Vue, Angular)
+      * Documentation sites
+      * Landing pages and marketing sites
+      * Static site generators (Hugo, Jekyll, Gatsby)
+      * HTML/CSS/JavaScript projects
+      * Development and testing with HTTPS
+
+      **Key Features:**
+
+      * **Automatic HTTPS** - Self-signed certificates generated automatically for immediate secure access
+      * **Zero Configuration** - Drop your files in and start serving immediately
+      * **Modern & Fast** - Built in Go for high performance and low memory usage
+      * **IPv4 + IPv6** - Full dual-stack support for modern networks
+      * **Clean URLs** - Automatic HTTPS access via Caddy reverse proxy
+      * **Modern Web Support** - Full support for SPAs, PWAs, and modern JavaScript
+      * **Production Ready** - Battle-tested server trusted by thousands of sites
+
+      Simply upload your HTML, CSS, JavaScript, and assets to `/DATA/AppData/caddy/www/` and your site is instantly live with HTTPS enabled. No databases, no complex configuration, just pure static file hosting with automatic TLS.
+
+      **Why Choose Caddy?**
+
+      **Caddy** gives you the security of HTTPS without the complexity of certificate management. It's the easiest way to serve static content securely.
+
+      Why choose Caddy?
+      * **Automatic TLS** - No certificate configuration needed
+      * **Your content, your server** - No external hosting dependencies
+      * **Memory efficient** - Runs smoothly with minimal resources
+      * **Instant updates** - Edit files and changes appear immediately
+      * **Developer friendly** - Works with any static site workflow
+
+      With Caddy on **your server**, you can:
+      * Host unlimited static sites with HTTPS
+      * Deploy modern JavaScript applications securely
+      * Serve API documentation
+      * Create internal company websites
+      * Test frontend projects with real HTTPS before production
+
+      **Perfect For:**
+      * Frontend developers needing HTTPS for testing
+      * Teams needing internal documentation sites
+      * Anyone wanting simple, fast, secure web hosting
+      * Projects requiring TLS for APIs or service workers
+    zh_cn: |
+      **什么是 Caddy？**
+
+      **Caddy** 是一个强大的企业级 Web 服务器，具有自动 HTTPS 功能。与传统的 Web 服务器不同，Caddy 会自动配置和续订 TLS 证书，让您无需任何配置即可获得安全连接。
+
+      适用于：
+      * 个人网站和作品集
+      * 单页应用程序（React、Vue、Angular）
+      * 文档站点
+      * 登陆页面和营销站点
+      * 静态站点生成器（Hugo、Jekyll、Gatsby）
+      * HTML/CSS/JavaScript 项目
+      * 需要 HTTPS 的开发和测试
+
+      **主要功能：**
+
+      * **自动 HTTPS** - 自动生成自签名证书，立即获得安全访问
+      * **零配置** - 放入文件即可立即开始服务
+      * **现代且快速** - 使用 Go 构建，高性能低内存
+      * **IPv4 + IPv6** - 完全支持双栈网络
+      * **清洁 URL** - 通过 Caddy 反向代理自动 HTTPS 访问
+      * **现代 Web 支持** - 完全支持 SPA、PWA 和现代 JavaScript
+      * **生产就绪** - 经过实战检验，深受数千网站信赖
+
+      只需将您的 HTML、CSS、JavaScript 和资源上传到 `/DATA/AppData/caddy/www/`，您的网站就会立即上线并启用 HTTPS。无需数据库，无需复杂配置，只需带有自动 TLS 的纯静态文件托管。
+  developer: Caddy
+  category: WEB
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: caddy
+  tips:
+    en_us: |
+      **Warning:** This is a public website server with no login or authentication.
+      Anyone with the address can read every file you place in `www/`. Publish only
+      content you are happy to share publicly — never private notes, credentials or
+      personal data. If you need a private site, add `basic_auth` to
+      `/DATA/AppData/caddy/Caddyfile` after installing.
+
+      **Setup Instructions**
+      After installation, add your website files to:
+      `/DATA/AppData/caddy/www/`
+
+      **Quick Start:**
+      1. Install the app
+      2. Upload your website files to the www directory
+      3. Access your site at: `https://caddy-$APP_DOMAIN/`
+
+      **File Structure:**
+      ```
+      /DATA/AppData/caddy/
+      ├── www/              # Your website files go here
+      │   └── index.html   # Main page
+      ├── Caddyfile        # Caddy configuration
+      ├── data/            # TLS certificates storage
+      └── config/          # Caddy config storage
+      ```
+
+      **Access:**
+      - Via domain: `https://caddy-$APP_DOMAIN/`
+      - Direct IP: `https://caddy-$APP_PUBLIC_IP_DASH.sslip.io/`
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

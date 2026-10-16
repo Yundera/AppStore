@@ -102,6 +102,58 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.4.0.0"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Duplicati
+  tagline:
+    en_us: Your Backup App. Encrypt and back up your data to the cloud, safely and automatically. Setup guide available on our website
+    zh_cn: 您的备份应用。安全自动地加密并备份您的数据到云端。网站上提供设置指南
+    ar_sa: تطبيق النسخ الاحتياطي الخاص بك. قم بتشفير ونسخ بياناتك احتياطياً إلى السحابة، بأمان وتلقائياً. دليل الإعداد متوفر على موقعنا
+    de_de: Ihre Backup-App. Verschlüsseln und sichern Sie Ihre Daten sicher und automatisch in der Cloud. Einrichtungsanleitung auf unserer Website verfügbar
+    es_es: Su aplicación de respaldo. Cifre y haga copias de seguridad de sus datos en la nube, de forma segura y automática. Guía de configuración disponible en nuestro sitio web
+    fr_fr: Votre application de sauvegarde. Chiffrez et sauvegardez vos données dans le cloud, en toute sécurité et automatiquement. Guide de configuration disponible sur notre site web
+    hu_hu: Az Ön biztonsági mentő alkalmazása. Titkosítsa és mentse fel adatait a felhőbe, biztonságosan és automatikusan. Beállítási útmutató elérhető weboldalunkon
+    it_it: La tua app di backup. Crittografa e fai il backup dei tuoi dati nel cloud, in modo sicuro e automatico. Guida alla configurazione disponibile sul nostro sito web
+    ru_ru: Ваше приложение для резервного копирования. Шифруйте и создавайте резервные копии ваших данных в облаке безопасно и автоматически. Руководство по настройке доступно на нашем сайте
+    pl_pl: Twoja aplikacja do kopii zapasowych. Szyfruj i twórz kopie zapasowe danych w chmurze, bezpiecznie i automatycznie. Przewodnik konfiguracji dostępny na naszej stronie
+    pt_br: Seu aplicativo de backup. Criptografe e faça backup de seus dados na nuvem, com segurança e automaticamente. Guia de configuração disponível em nosso site
+    sv_se: Din backup-app. Kryptera och säkerhetskopiera dina data till molnet, säkert och automatiskt. Installationsguide tillgänglig på vår webbplats
+    uk_ua: Ваш додаток для резервного копіювання. Шифруйте та створюйте резервні копії ваших даних у хмарі безпечно та автоматично. Посібник з налаштування доступний на нашому веб-сайті
+  description:
+    en_us: Duplicati is a free, open source, backup client that securely stores encrypted, incremental, compressed backups on cloud storage services and remote file servers.
+    zh_cn: Duplicati是一个免费的开源备份客户端，它可以安全地存储加密的、增量的、压缩的备份文件到云存储服务和远程文件服务器。
+    fr_fr: Duplicati est un client de sauvegarde gratuit et open source qui stocke de manière sécurisée des sauvegardes chiffrées, incrémentales et compressées sur des services de stockage dans le cloud et des serveurs de fichiers distants.
+    ko_kr: Duplicati는 클라우드 스토리지 서비스와 원격 파일 서버에 암호화되고 증분적이며 압축된 백업을 안전하게 저장하는 무료 오픈 소스 백업 클라이언트입니다.
+    es_es: Duplicati es un cliente de copia de seguridad gratuito y de código abierto que almacena de forma segura copias de seguridad cifradas, incrementales y comprimidas en servicios de almacenamiento en la nube y servidores de archivos remotos.
+    ar_sa: Duplicati هو عميل احتياطي مفتوح المصدر مجاني ، يخزن بشكل آمن ومشفر ، مضغوط ، متزايد ، مضغوط على خدمات تخزين السحابة وخوادم الملفات البعيدة.
+    de_de: Duplicati ist ein kostenloser Open-Source-Backup-Client, der verschlüsselte, inkrementelle, komprimierte Backups sicher auf Cloud-Speicherdiensten und Remote-Dateiservern speichert.
+    hu_hu: A Duplicati egy ingyenes és nyílt forráskódú biztonsági másolat kliens, amely biztonságosan tárolja az inkrementálisan, tömörített módon titkosított biztonsági mentéseket felhőtárhelyeken és távoli fájl szervereken.
+    it_it: Duplicati è un client di backup gratuito e open source che memorizza in modo sicuro backup crittografati, incrementali e compressi su servizi di archiviazione in cloud e server file remoti.
+    ru_ru: Duplicati - это бесплатный клиент резервного копирования с открытым исходным кодом, который безопасно хранит зашифрованные, инкрементальные, сжатые резервные копии на облачных службах хранения и удаленных файловых серверах.
+    pl_pl: Duplicati to darmowy klient kopii zapasowych open source, który bezpiecznie przechowuje zaszyfrowane, inkrementalne, skompresowane kopie zapasowe na usługach chmurowych i zdalnych serwerach plików.
+    pt_br: Duplicati é um cliente de backup gratuito e de código aberto que armazena de forma segura backups criptografados, incrementais e compactados em serviços de armazenamento em nuvem e servidores de arquivos remotos.
+    sv_se: Duplicati är en gratis, öppen källkod, backup-klient som säkert lagrar krypterade, inkrementella, komprimerade säkerhetskopior på molntjänster och fjärrfiler.
+    uk_ua: Duplicati - це безкоштовний клієнт резервного копіювання з відкритим вихідним кодом, який безпечно зберігає зашифровані, інкрементні, стиснені резервні копії на хмарних службах зберігання та віддалених файлових серверах.
+  developer: Duplicati Team
+  category: Cloud
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: duplicati
+  tips:
+    en_us: |
+      The web UI password is shown when you open the app (tile menu → Credentials).
+      Your Files will appear in the `Computer/source/DATA` directory inside duplicati source panel (3).
+      On first launch Duplicati offers to connect to the Duplicati Console (their optional cloud service) - choose "Proceed without connecting to console" to keep everything local.
+      Note: Duplicati encrypts its settings database with a key generated once for this install, separate from the login password, so changing the login password does not affect it.
+      Upgrading from an older Duplicati install (before this change)? Its settings were encrypted with your server password instead. Export each backup job from the Duplicati UI first, then delete `/DATA/AppData/duplicati/config` before updating - otherwise the app will not start.
   # DUPLICATI_SETTINGS_KEY encrypts the sensitive fields of Duplicati-server.sqlite.
   # It must stay constant for the life of /DATA/AppData/duplicati/config, so it is
   # its own key and never the login password - that one the user may rotate.

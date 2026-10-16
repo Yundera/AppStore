@@ -409,6 +409,112 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.34"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: metawatch
+  title:
+    en_us: MetaWatch
+  tagline:
+    en_us: Stremio-style video player for the decentralized MetaMesh network
+    fr_fr: Lecteur vidéo façon Stremio pour le réseau décentralisé MetaMesh
+  description:
+    en_us: |
+      **A Stremio-style, video-only player for the decentralized MetaMesh network.**
+
+      MetaWatch browses curated rows and filtered search across the MetaMesh
+      federation and plays back in your browser — the server does zero media
+      work (flat byte-range streaming, no transcode). Anything without a poster
+      and a description is hidden, so the wall stays clean.
+
+      This is a **self-contained** stack: it ships its own discovery
+      (meta-search), content transport (meta-share) and a dedicated meta-core
+      for identity and user state. Install it on its own — it needs no
+      companion app.
+
+      **Key features:**
+      - **Curated rows + search** — popular / trending / top-rated / anime rows, plus federated search
+      - **Browser-side playback** — streams via Range/206; the server never transcodes
+      - **Poster-gated wall** — only titles with a poster and a description are shown
+      - **Show aggregation** — per-episode records grouped into show pages
+      - **My List + Continue Watching** — persistent, in your own user-data store
+      - **TV remote navigation** — D-pad spatial navigation for the 10-foot UI
+      - **Profiles** — multiple profiles per box, each signing in with its own key
+
+      **Two gates, not one.** AppShield (Authelia SSO) fronts the whole app, and
+      MetaWatch keeps its own profile sign-in behind it — so a shared box can
+      hold several people's lists without them seeing each other's.
+
+      **Note on content:** MetaWatch is a *client*. It discovers and plays what
+      other peers on the MetaMesh network publish, and seeds back what it
+      fetches. It ships no indexer and no content of its own. What is lawful to
+      download or share differs by jurisdiction — use it accordingly.
+    fr_fr: |
+      **Un lecteur vidéo façon Stremio pour le réseau décentralisé MetaMesh.**
+
+      MetaWatch parcourt des rangées sélectionnées et une recherche filtrée à
+      travers la fédération MetaMesh et lit la vidéo dans votre navigateur — le
+      serveur ne fait aucun travail média (streaming par plages d'octets, sans
+      transcodage). Tout ce qui n'a ni affiche ni description est masqué.
+
+      C'est une stack **autonome** : elle embarque sa propre découverte
+      (meta-search), son transport de contenu (meta-share) et un meta-core dédié
+      pour l'identité et les données utilisateur. Installez-la seule — elle ne
+      dépend d'aucune autre app.
+
+      **Fonctionnalités clés :**
+      - **Rangées + recherche** — populaire / tendances / mieux notés / anime, plus recherche fédérée
+      - **Lecture côté navigateur** — streaming en Range/206 ; le serveur ne transcode jamais
+      - **Mur à affiches** — seuls les titres avec affiche et description sont montrés
+      - **Agrégation de séries** — épisodes regroupés en pages de série
+      - **Ma Liste + Reprendre** — persistant, dans votre propre espace de données
+      - **Navigation télécommande** — navigation spatiale D-pad pour l'interface salon
+      - **Profils** — plusieurs profils par machine, chacun avec sa propre clé
+
+      **Deux barrières, pas une.** AppShield (SSO Authelia) protège toute l'app,
+      et MetaWatch conserve sa propre connexion par profil derrière — une
+      machine partagée peut donc héberger plusieurs listes sans que chacun voie
+      celle des autres.
+
+      **À propos du contenu :** MetaWatch est un *client*. Il découvre et lit ce
+      que d'autres pairs du réseau MetaMesh publient, et repartage ce qu'il
+      télécharge. Il n'embarque ni indexeur ni contenu propre. Ce qui est légal
+      de télécharger ou partager varie selon les juridictions — utilisez-le en
+      conséquence.
+  category: Media
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+  main: metawatch
+  tips:
+    en_us: |
+      **Access & sign-in**
+      - Open the app URL and sign in with your server account (single sign-on, via AppShield).
+      - Then create a MetaWatch profile. You are shown a **secret key — save
+        it**. It is the only way back in: sign-out is real, and the key is
+        never recoverable from the server without an existing session.
+      - Sign-in signs a challenge in the browser, which needs a secure
+        context: use the https URL, not a plain-http LAN address.
+
+      **Network connectivity**
+      - Peer traffic uses TCP **4003** and **4004**, published to the host.
+        Forward/open them on your router so other peers can dial in.
+      - Needs a publicly reachable IPv4. Behind CGNAT, or on a PCS routed
+        through the mesh tunnel, the app still runs but only makes outbound
+        connections — discovery works, but nobody fetches from you.
+
+      **Disk use**
+      - Everything the app fetches is cached and seeded from
+        `/DATA/AppData/metawatch/share-data`. It grows with what you watch;
+        budget accordingly and clear it if space gets tight.
+
+      **An empty wall on a fresh install is normal.** MetaWatch is a client:
+      until it discovers gateways on the network that publish records, there
+      is nothing to show. Give it a few minutes after first start.
   # Directories Maison creates (and chowns where a service drops privileges)
   # before any image is pulled or container starts.
   folders:

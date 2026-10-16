@@ -156,6 +156,40 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "8.4.2"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Tribler
+  tagline:
+    en_us: Anonymous, decentralized BitTorrent client with a built-in onion network.
+    fr_fr: Client BitTorrent anonyme et décentralisé avec un réseau onion intégré.
+    es_es: Cliente BitTorrent anónimo y descentralizado con red onion integrada.
+    zh_cn: 匿名、去中心化的 BitTorrent 客户端，内置洋葱网络。
+    ko_kr: 내장 어니언 네트워크를 갖춘 익명 분산형 BitTorrent 클라이언트.
+  description:
+    en_us: Tribler is a decentralized, privacy-focused BitTorrent client. It routes downloads through its own built-in onion network (Tor-like), so you can search for and download torrents anonymously without any central server, VPN, or tracker dependency.
+    fr_fr: Tribler est un client BitTorrent décentralisé et respectueux de la vie privée. Il achemine les téléchargements via son propre réseau onion intégré (similaire à Tor), ce qui vous permet de rechercher et de télécharger des torrents de manière anonyme, sans serveur central, VPN ni tracker.
+    es_es: Tribler es un cliente BitTorrent descentralizado y centrado en la privacidad. Enruta las descargas a través de su propia red onion integrada (similar a Tor), para que puedas buscar y descargar torrents de forma anónima sin servidor central, VPN ni rastreadores.
+    zh_cn: Tribler 是一个去中心化、注重隐私的 BitTorrent 客户端。它通过内置的洋葱网络（类似 Tor）路由下载，让您无需任何中心服务器、VPN 或 Tracker 即可匿名搜索和下载种子。
+    ko_kr: Tribler는 분산형 프라이버시 중심 BitTorrent 클라이언트입니다. 자체 내장 어니언 네트워크(Tor 유사)를 통해 다운로드를 라우팅하여 중앙 서버, VPN, 트래커 없이도 익명으로 토렌트를 검색하고 다운로드할 수 있습니다.
+  developer: Tribler
+  category: Downloader
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+  main: tribler
+  tips:
+    en_us: |
+      Tribler is protected by your server's single sign-on (Authelia) — you sign in once with
+      your server account.
+      Downloads are saved to `/DATA/Downloads`.
+      By default downloads are anonymized through Tribler's onion network (1 hop); you can
+      change the number of hops or disable anonymity per-download in the UI.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   folders:
     - path: /DATA/AppData/tribler/state

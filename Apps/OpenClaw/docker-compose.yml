@@ -388,6 +388,277 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2026.6.9"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: OpenClaw
+  tagline:
+    en_us: Open-source AI assistant that actually does things
+    fr_fr: Assistant IA open-source qui agit vraiment
+    de_de: Open-Source KI-Assistent der tatsachlich Dinge erledigt
+    es_es: Asistente de IA de codigo abierto que realmente hace cosas
+    zh_cn: 真正能执行任务的开源AI助手
+    ko_kr: 실제로 작업을 수행하는 오픈소스 AI 어시스턴트
+  description:
+    en_us: |
+      **What is OpenClaw?**
+
+      OpenClaw is an open-source personal AI assistant that actually does things. Unlike typical chatbots that only answer questions, OpenClaw can take real actions on your behalf.
+
+      **Key Features:**
+
+      - **Multi-platform messaging**: Connect via WhatsApp, Telegram, Discord, Slack, Signal, and more
+      - **Persistent memory**: Learns your preferences and remembers context
+      - **Web browsing**: Can browse the web and fill out forms
+      - **File access**: Read and write files on your system
+      - **Shell commands**: Execute scripts and system commands
+      - **Extensible**: Add community skills or write your own plugins
+      - **Self-improving**: Can write its own skills
+
+      **Practical Uses:**
+
+      - Email management and calendar operations
+      - Flight check-ins and reservations
+      - Health metric monitoring
+      - Document processing
+      - Automation of repetitive tasks
+
+      **Privacy First:**
+
+      Your data stays on your server. OpenClaw runs locally and connects to AI providers (Anthropic Claude or OpenAI) only for inference.
+
+      **Built-in Web UI:**
+
+      Access the Control UI and WebChat directly from your browser - no additional tools needed!
+    fr_fr: |
+      **Qu'est-ce qu'OpenClaw ?**
+
+      OpenClaw est un assistant IA personnel open-source qui agit vraiment. Contrairement aux chatbots typiques qui ne font que repondre aux questions, OpenClaw peut effectuer de vraies actions en votre nom.
+
+      **Fonctionnalites cles :**
+
+      - **Messagerie multi-plateforme** : Connectez-vous via WhatsApp, Telegram, Discord, Slack, Signal, et plus
+      - **Memoire persistante** : Apprend vos preferences et se souvient du contexte
+      - **Navigation web** : Peut naviguer sur le web et remplir des formulaires
+      - **Acces aux fichiers** : Lire et ecrire des fichiers sur votre systeme
+      - **Commandes shell** : Executer des scripts et commandes systeme
+      - **Extensible** : Ajoutez des competences communautaires ou ecrivez vos propres plugins
+
+      **Confidentialite d'abord :**
+
+      Vos donnees restent sur votre serveur. OpenClaw fonctionne localement et se connecte aux fournisseurs d'IA uniquement pour l'inference.
+    de_de: |
+      **Was ist OpenClaw?**
+
+      OpenClaw ist ein Open-Source personlicher KI-Assistent, der tatsachlich Dinge erledigt. Im Gegensatz zu typischen Chatbots, die nur Fragen beantworten, kann OpenClaw echte Aktionen in Ihrem Namen durchfuhren.
+
+      **Hauptfunktionen:**
+
+      - **Multi-Plattform-Messaging**: Verbinden Sie sich uber WhatsApp, Telegram, Discord, Slack, Signal und mehr
+      - **Persistenter Speicher**: Lernt Ihre Praferenzen und erinnert sich an den Kontext
+      - **Web-Browsing**: Kann im Web surfen und Formulare ausfullen
+      - **Dateizugriff**: Lesen und Schreiben von Dateien auf Ihrem System
+      - **Shell-Befehle**: Ausfuhren von Skripten und Systembefehlen
+      - **Erweiterbar**: Fugen Sie Community-Skills hinzu oder schreiben Sie Ihre eigenen Plugins
+
+      **Datenschutz zuerst:**
+
+      Ihre Daten bleiben auf Ihrem Server. OpenClaw lauft lokal und verbindet sich nur fur Inferenz mit KI-Anbietern.
+    es_es: |
+      **Que es OpenClaw?**
+
+      OpenClaw es un asistente de IA personal de codigo abierto que realmente hace cosas. A diferencia de los chatbots tipicos que solo responden preguntas, OpenClaw puede realizar acciones reales en tu nombre.
+
+      **Caracteristicas principales:**
+
+      - **Mensajeria multiplataforma**: Conectate via WhatsApp, Telegram, Discord, Slack, Signal y mas
+      - **Memoria persistente**: Aprende tus preferencias y recuerda el contexto
+      - **Navegacion web**: Puede navegar por la web y rellenar formularios
+      - **Acceso a archivos**: Leer y escribir archivos en tu sistema
+      - **Comandos shell**: Ejecutar scripts y comandos del sistema
+      - **Extensible**: Agrega habilidades de la comunidad o escribe tus propios plugins
+
+      **Privacidad primero:**
+
+      Tus datos permanecen en tu servidor. OpenClaw se ejecuta localmente y se conecta a proveedores de IA solo para inferencia.
+    zh_cn: |
+      **什么是OpenClaw？**
+
+      OpenClaw是一个开源的个人AI助手，它真正能够执行任务。与只能回答问题的典型聊天机器人不同，OpenClaw可以代表您执行实际操作。
+
+      **主要功能：**
+
+      - **多平台消息**: 通过WhatsApp、Telegram、Discord、Slack、Signal等连接
+      - **持久记忆**: 学习您的偏好并记住上下文
+      - **网页浏览**: 可以浏览网页并填写表单
+      - **文件访问**: 在您的系统上读写文件
+      - **Shell命令**: 执行脚本和系统命令
+      - **可扩展**: 添加社区技能或编写自己的插件
+
+      **隐私优先：**
+
+      您的数据保留在您的服务器上。OpenClaw在本地运行，仅在推理时连接到AI提供商。
+    ko_kr: |
+      **OpenClaw란?**
+
+      OpenClaw는 실제로 작업을 수행하는 오픈소스 개인 AI 어시스턴트입니다. 질문에만 답하는 일반적인 챗봇과 달리 OpenClaw는 사용자를 대신하여 실제 작업을 수행할 수 있습니다.
+
+      **주요 기능:**
+
+      - **멀티 플랫폼 메시징**: WhatsApp, Telegram, Discord, Slack, Signal 등을 통해 연결
+      - **지속적 메모리**: 선호도를 학습하고 컨텍스트를 기억
+      - **웹 브라우징**: 웹을 탐색하고 양식을 작성할 수 있음
+      - **파일 액세스**: 시스템에서 파일 읽기 및 쓰기
+      - **Shell 명령**: 스크립트 및 시스템 명령 실행
+      - **확장 가능**: 커뮤니티 스킬 추가 또는 자체 플러그인 작성
+
+      **개인정보 보호 우선:**
+
+      데이터는 서버에 보관됩니다. OpenClaw는 로컬에서 실행되며 추론을 위해서만 AI 제공업체에 연결됩니다.
+  developer: OpenClaw Community
+  category: AI
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  main: openclaw
+  tips:
+    en_us: |
+      **API Key Required**
+
+      OpenClaw requires an AI provider API key to function. Configure at least one:
+
+      | Provider | Environment Variable |
+      |----------|---------------------|
+      | Anthropic Claude | `ANTHROPIC_API_KEY` |
+      | OpenAI | `OPENAI_API_KEY` |
+
+      **First-Time Setup**
+
+      1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your server account (single sign-on)
+      2. **Unlock the gateway**: if the Control UI asks for a gateway token or password, paste the gateway token shown when you open the app (tile menu → Credentials)
+      3. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
+      4. **Start chatting**: Use the built-in WebChat or connect messaging platforms
+
+      **Messaging Integrations:**
+
+      OpenClaw supports WhatsApp, Telegram, Discord, Slack, Signal, and more. Configure through the Web UI after setup.
+
+      **Already installed from an earlier version?**
+
+      The gateway only accepts browser origins listed in its own config file, and that file is never overwritten once it exists - so an existing install keeps the old one. If the Web UI reports `Browser origin not allowed`, edit `/DATA/AppData/openclaw/openclaw.json`, add the block below inside `gateway.controlUi`, and restart the app:
+
+      `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`
+
+      **Documentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+    fr_fr: |
+      **Cle API requise**
+
+      OpenClaw necessite une cle API de fournisseur d'IA pour fonctionner. Configurez au moins une :
+
+      | Fournisseur | Variable d'environnement |
+      |-------------|-------------------------|
+      | Anthropic Claude | `ANTHROPIC_API_KEY` |
+      | OpenAI | `OPENAI_API_KEY` |
+
+      **Configuration initiale**
+
+      1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte serveur (authentification unique)
+      2. **Deverrouiller la passerelle** : si l'interface demande un token ou un mot de passe, collez le token de passerelle affiche a l'ouverture de l'app (menu de la tuile → Credentials)
+      3. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
+
+      **Deja installe depuis une version anterieure ?**
+
+      Le fichier de configuration existant n'est jamais ecrase. Si l'interface affiche `Browser origin not allowed`, ajoutez `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dans `gateway.controlUi` de `/DATA/AppData/openclaw/openclaw.json`, puis redemarrez l'app.
+
+      **Documentation :** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+    de_de: |
+      **API-Schlussel erforderlich**
+
+      OpenClaw benotigt einen KI-Anbieter-API-Schlussel. Konfigurieren Sie mindestens einen:
+
+      | Anbieter | Umgebungsvariable |
+      |----------|-------------------|
+      | Anthropic Claude | `ANTHROPIC_API_KEY` |
+      | OpenAI | `OPENAI_API_KEY` |
+
+      **Ersteinrichtung**
+
+      1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Server-Konto an (Single Sign-on)
+      2. **Gateway entsperren**: Fragt die Control UI nach einem Token oder Passwort, fugen Sie das Gateway-Token ein, das beim Offnen der App angezeigt wird (Kachelmenu → Credentials)
+      3. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
+
+      **Bereits aus einer fruheren Version installiert?**
+
+      Die vorhandene Konfigurationsdatei wird nie uberschrieben. Meldet die Web-UI `Browser origin not allowed`, erganzen Sie in `/DATA/AppData/openclaw/openclaw.json` unter `gateway.controlUi` den Eintrag `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` und starten Sie die App neu.
+
+      **Dokumentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+    es_es: |
+      **Clave API requerida**
+
+      OpenClaw requiere una clave API de proveedor de IA para funcionar. Configura al menos una:
+
+      | Proveedor | Variable de entorno |
+      |-----------|---------------------|
+      | Anthropic Claude | `ANTHROPIC_API_KEY` |
+      | OpenAI | `OPENAI_API_KEY` |
+
+      **Configuracion inicial**
+
+      1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta del servidor (inicio de sesion unico)
+      2. **Desbloquear el gateway**: si la interfaz pide un token o contrasena, pega el token del gateway que se muestra al abrir la app (menu del icono → Credentials)
+      3. **Configurar clave API**: Agrega tu clave API en la seccion Config
+
+      **Ya instalado desde una version anterior?**
+
+      El archivo de configuracion existente nunca se sobrescribe. Si la interfaz muestra `Browser origin not allowed`, anade `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dentro de `gateway.controlUi` en `/DATA/AppData/openclaw/openclaw.json` y reinicia la app.
+
+      **Documentacion:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+    zh_cn: |
+      **需要API密钥**
+
+      OpenClaw需要AI提供商的API密钥才能运行。请至少配置一个：
+
+      | 提供商 | 环境变量 |
+      |--------|----------|
+      | Anthropic Claude | `ANTHROPIC_API_KEY` |
+      | OpenAI | `OPENAI_API_KEY` |
+
+      **首次设置**
+
+      1. **访问Web界面**：点击应用图标，使用您的服务器账户登录（单点登录）
+      2. **解锁网关**：如果控制界面要求输入网关令牌或密码，请粘贴打开应用时显示的网关令牌（磁贴菜单 → Credentials）
+      3. **配置API密钥**：在Config部分添加您的API密钥
+
+      **从旧版本升级？**
+
+      已存在的配置文件不会被覆盖。如果界面提示 `Browser origin not allowed`，请在 `/DATA/AppData/openclaw/openclaw.json` 的 `gateway.controlUi` 中加入 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`，然后重启应用。
+
+      **文档：** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
+    ko_kr: |
+      **API 키 필요**
+
+      OpenClaw가 작동하려면 AI 제공업체 API 키가 필요합니다. 최소 하나를 구성하세요:
+
+      | 제공업체 | 환경 변수 |
+      |----------|-----------|
+      | Anthropic Claude | `ANTHROPIC_API_KEY` |
+      | OpenAI | `OPENAI_API_KEY` |
+
+      **최초 설정**
+
+      1. **웹 UI 접속**: 앱 아이콘을 클릭하고 서버 계정으로 로그인 (통합 인증)
+      2. **게이트웨이 잠금 해제**: 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구하면 앱을 열 때 표시되는 게이트웨이 토큰(타일 메뉴 → Credentials)을 붙여넣으세요
+      3. **API 키 구성**: Config 섹션에서 API 키 추가
+
+      **이전 버전에서 이미 설치했나요?**
+
+      기존 설정 파일은 덮어쓰지 않습니다. 웹 UI에 `Browser origin not allowed` 가 표시되면 `/DATA/AppData/openclaw/openclaw.json` 의 `gateway.controlUi` 안에 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` 를 추가하고 앱을 재시작하세요.
+
+      **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
   # The gateway token (see OPENCLAW_GATEWAY_TOKEN above). Seeded: an install that
   # predates this secret keeps the token it was running with — which the user may
   # have pasted into a Control UI — and a fresh install gets its own.

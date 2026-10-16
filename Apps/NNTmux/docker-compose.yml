@@ -476,6 +476,54 @@ x-casaos:
 # outright rather than starting it without its directories.
 x-compose-app:
   schema_version: 2
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: nntmux
+  title:
+    en_us: NNTmux
+  tagline:
+    en_us: Your own Usenet indexer — scan, collate and serve NZBs over the Newznab API
+    fr_fr: Votre propre indexeur Usenet — scan, collation et NZB via l'API Newznab
+  description:
+    en_us: |
+      **A self-hosted Usenet indexer.**
+
+      NNTmux scans the Usenet groups you choose with your own provider account,
+      collates the posted articles into releases and writes an NZB for each —
+      your own catalog, no third-party indexer, no indexer quota.
+
+      **Newznab API:** any Newznab client (Prowlarr, Sonarr, Radarr…) can search
+      it and download its NZBs — `http://nntmux` on the box, or
+      `https://nntmux-<your-domain>`. Each client gets its own API key.
+
+      **Set up from the app settings:** your provider and the groups to scan are
+      app settings (no file editing); the bundled scanner applies them and keeps
+      them applied.
+
+      **You need a Usenet provider account** (NNTP login) — this app scans
+      headers, it does not supply one. **The catalog is not instant:** a first
+      pass over a few busy binary groups pulls tens of GB and runs for hours.
+
+      **Includes:** MariaDB, Redis, Manticore and the scan loop. amd64 only.
+    fr_fr: |
+      **Un indexeur Usenet auto-hébergé.**
+
+      NNTmux scanne les groupes Usenet de votre choix avec votre propre compte
+      fournisseur, regroupe les articles en releases et écrit un NZB pour
+      chacune — votre propre catalogue, sans indexeur tiers ni quota.
+
+      **API Newznab :** tout client Newznab (Prowlarr, Sonarr, Radarr…) peut y
+      chercher et télécharger les NZB, chacun avec sa propre clé d'API.
+
+      **Configuration depuis les réglages de l'app** (fournisseur, groupes à
+      scanner), appliquée automatiquement par le scanner. Un compte fournisseur
+      Usenet (NNTP) est nécessaire ; le catalogue se remplit progressivement.
+  developer: NNTmux Project
+  category: Media
+  icon: icon.png
+  architectures:
+    - amd64
+  main: nntmux
   # Seeded: an installed NNTmux created its admin account and database with the
   # box-wide password and keeps it; a fresh install gets its own values.
   secrets:

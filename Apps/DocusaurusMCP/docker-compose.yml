@@ -217,6 +217,114 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.2"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: docusaurusmcp
+  title:
+    en_us: Docusaurus MCP
+  tagline:
+    en_us: MCP server for Docusaurus — read, write, search docs and rebuild
+    fr_fr: Serveur MCP pour Docusaurus — lire, ecrire, rechercher des docs et reconstruire
+  description:
+    en_us: |
+      **Docusaurus documentation control for AI assistants via MCP**
+
+      Docusaurus MCP exposes your self-hosted Docusaurus project as an MCP (Model Context Protocol) server, letting LLMs and AI assistants list documents, read pages, create and update content, search across all docs, and trigger site rebuilds — all against your Docusaurus instance running on this server.
+
+      **Think of it like:** A programmable remote control for your Docusaurus docs site, driven by natural language.
+
+      **Perfect if you:** Have a self-hosted Docusaurus and want AI assistants to read, write, search, and rebuild your documentation without manual file editing.
+    fr_fr: |
+      **Controle de documentation Docusaurus pour les assistants IA via MCP**
+
+      Docusaurus MCP expose votre projet Docusaurus auto-heberge en tant que serveur MCP (Model Context Protocol), permettant aux LLMs et assistants IA de lister les documents, lire les pages, creer et mettre a jour le contenu, rechercher dans tous les docs, et declencher des reconstructions du site.
+
+      **Parfait si vous:** Avez un Docusaurus auto-heberge et voulez que des assistants IA lisent, ecrivent, recherchent et reconstruisent votre documentation.
+  category: Developer
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: docusaurusmcp-proxy
+  tips:
+    en_us: |
+      **Prerequisites:**
+      1. A running **Docusaurus** instance installed from this App Store
+      2. The Docusaurus app must be installed first — this MCP reads and writes files in its data directory
+
+      **MCP Integration (for AI/LLMs):**
+
+      **Option 1: Public URL (OAuth)**
+
+      The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+      URL below — clients that support OAuth discovery (claude.ai, Claude
+      Desktop) register themselves and open a browser for you to approve with
+      your server account (single sign-on).
+      ```json
+      {
+        "mcpServers": {
+          "docusaurus-mcp": {
+            "type": "http",
+            "url": "https://docusaurusmcp-${APP_DOMAIN}/mcp"
+          }
+        }
+      }
+      ```
+      For clients that need a pre-created client_id/client_secret (n8n, custom
+      scripts), open **https://docusaurusmcp-${APP_DOMAIN}/AppShield/oauth** and
+      create one there.
+
+      **Option 2: Local Docker connection (no auth required)**
+
+      For AI assistants running on the same server, connect directly via the Docker network:
+      ```json
+      {
+        "mcpServers": {
+          "docusaurus-mcp": {
+            "type": "http",
+            "url": "http://docusaurusmcp-backend:9750/mcp"
+          }
+        }
+      }
+      ```
+      *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+      **Option 3: Via Beacon (aggregated)**
+
+      If you have **Beacon** installed, Docusaurus MCP auto-registers there via the bundled `beaconify` sidecar and its tools show up under the `docusaurus-mcp__*` namespace — no extra config.
+
+      **Available MCP Tools:**
+      | Tool | Description |
+      |------|-------------|
+      | `list_docs` | List all Markdown/MDX files in the docs directory |
+      | `read_doc` | Read the full content of a document |
+      | `write_doc` | Create or update a Markdown/MDX document |
+      | `search_docs` | Full-text search across all documents |
+      | `rebuild` | Run the Docusaurus build and update the live site |
+      | `list_files` | List files in the project root or subdirectory (CSS, config, etc.) |
+      | `read_file` | Read any project file (CSS, JS, JSON, etc.) |
+      | `write_file` | Create or overwrite any project file |
+    fr_fr: |
+      **Prerequis:**
+      1. Une instance **Docusaurus** en cours d'execution, installee depuis ce App Store
+      2. L'app Docusaurus doit etre installee en premier — ce MCP lit et ecrit des fichiers dans son repertoire de donnees
+
+      **Outils MCP disponibles:**
+      | Outil | Description |
+      |-------|-------------|
+      | `list_docs` | Lister tous les fichiers Markdown/MDX |
+      | `read_doc` | Lire le contenu complet d'un document |
+      | `write_doc` | Creer ou mettre a jour un document |
+      | `search_docs` | Recherche plein texte dans tous les documents |
+      | `rebuild` | Lancer le build Docusaurus et mettre a jour le site |
+      | `list_files` | Lister les fichiers du projet (CSS, config, etc.) |
+      | `read_file` | Lire un fichier du projet (CSS, JS, JSON, etc.) |
+      | `write_file` | Creer ou remplacer un fichier du projet |
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

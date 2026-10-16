@@ -135,6 +135,68 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "4.10.7"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: crafty
+  title:
+    en_us: Crafty - Minecraft Server Manager
+  tagline:
+    en_us: Web-based Minecraft server manager.
+    fr_fr: Gestionnaire de serveurs Minecraft en ligne.
+    ko_kr: 웹 기반 마인크래프트 서버 관리자.
+    es_es: Gestor de servidores de Minecraft basado en web.
+  description:
+    en_us: |
+      Crafty is a web GUI for creating, running and managing
+      Minecraft servers (Java and Bedrock) from your browser. It launches and
+      supervises your server processes, automates backups, builds servers from
+      common loaders, gives you live console access, and supports per-user
+      roles and permissions.
+    fr_fr: |
+      Crafty est une interface web pour creer, lancer et gerer des
+      serveurs Minecraft (Java et Bedrock) depuis votre navigateur. Il lance et
+      supervise les processus serveur, automatise les sauvegardes, cree des
+      serveurs a partir des loaders courants, donne acces a la console en direct
+      et gere les roles et permissions par utilisateur.
+    ko_kr: |
+      Crafty 는 브라우저에서 마인크래프트 서버(자바 및 베드락)를
+      생성, 실행, 관리할 수 있는 웹 GUI입니다. 서버 프로세스 실행 및 관리,
+      백업 자동화, 일반 로더 기반 서버 생성, 실시간 콘솔 접근, 사용자별 역할
+      및 권한을 지원합니다.
+  developer: Arcadia Technology
+  category: Games
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  main: crafty
+  tips:
+    en_us: |
+      **Getting started**
+
+      Login: `admin`
+      The password is shown when you open the app (tile menu → Credentials).
+
+      **Creating a server**
+
+      When you create a server, choose a port in the `25500-25600` range
+      (the ports this app publishes). Bedrock servers use UDP port `19132`.
+
+      **Sharing your server with players**
+
+      Give players the address below, plus the port of the server you
+      created:
+
+      - **Java (Java Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`:`25565`
+        (or whichever port you chose)
+      - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `19132`
+
+      Your server must be reachable from the internet on that port. If your
+      PCS is behind CGNAT or the port is not forwarded, players outside your
+      network may be unable to connect.
   secrets:
     CRAFTY_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:

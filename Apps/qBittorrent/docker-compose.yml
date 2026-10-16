@@ -203,6 +203,37 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "5.1.4"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: qbittorrent
+  title:
+    en_us: qBittorrent
+  tagline:
+    en_us: Powerful BitTorrent client with advanced features for managing your downloads efficiently and securely.
+    fr_fr: Client BitTorrent puissant avec des fonctionnalités avancées pour gérer vos téléchargements efficacement et en sécurité.
+    es_es: Potente cliente BitTorrent con características avanzadas para gestionar tus descargas de manera eficiente y segura.
+    zh_cn: 功能强大的BitTorrent客户端，具有高级功能，可高效安全地管理您的下载。
+    ko_kr: 다운로드를 효율적이고 안전하게 관리할 수 있는 고급 기능을 갖춘 강력한 BitTorrent 클라이언트입니다.
+  description:
+    en_us: qBittorrent is a cross-platform free and open-source BitTorrent client with a clean, simple interface and powerful features including sequential downloading, bandwidth scheduling, and RSS feed support. The web interface is fronted by the built-in single sign-on, so it opens with your server account and no second password.
+    fr_fr: qBittorrent est un client BitTorrent multiplateforme gratuit et open-source avec une interface propre et simple et des fonctionnalités puissantes incluant le téléchargement séquentiel, la planification de bande passante et le support des flux RSS. L'interface web est protégée par l'authentification unique intégrée, et s'ouvre avec votre compte serveur, sans second mot de passe.
+    es_es: qBittorrent es un cliente BitTorrent multiplataforma gratuito y de código abierto con una interfaz limpia y simple y características poderosas incluyendo descarga secuencial, programación de ancho de banda y soporte de feeds RSS. La interfaz web está protegida por el inicio de sesión único integrado, así que se abre con tu cuenta del servidor y sin una segunda contraseña.
+    zh_cn: qBittorrent是一个跨平台的免费开源BitTorrent客户端，具有简洁的界面和强大的功能，包括顺序下载、带宽调度和RSS源支持。网页界面由内置的单点登录保护，使用您的服务器账号即可打开，无需第二个密码。
+    ko_kr: qBittorrent는 깔끔하고 간단한 인터페이스와 순차 다운로드, 대역폭 스케줄링, RSS 피드 지원을 포함한 강력한 기능을 가진 크로스 플랫폼 무료 오픈소스 BitTorrent 클라이언트입니다. 웹 인터페이스는 내장 싱글 사인온으로 보호되어 서버 계정으로 바로 열리며 두 번째 비밀번호가 필요하지 않습니다.
+  developer: qBittorrent Project
+  category: Downloader
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: qbittorrent
+  tips:
+    en_us: "\U0001F510 **Protected by your server account (single sign-on).** qBittorrent sits\nbehind the SSO gate, so your existing server login is the only password you\nneed — open the tile and you are already signed in. The WebUI's own login is\nbypassed for clients on the server's internal network, which is the only\nplace it can be reached from.\n\n\U0001F4C2 Downloads land in `/DATA/Downloads`; settings live in\n`/DATA/AppData/qbittorrent/`.\n\n\U0001F517 **Wire it into the media stack.** Add it as a *Download Client* in\n**Radarr**, **Sonarr** or **Lidarr** with host `qbittorrent-backend` and\nport `80` — that is the app's own container, reached directly on the\nserver's internal network. The name `qbittorrent` is the SSO gate and will\nnot answer the API. Leave the username and password blank, or use\n`admin` and the password shown in the tile menu → Credentials; either works.\n\n\U0001F4E1 **Incoming peer connections are off by default.** qBittorrent dials out\nto peers on its own, so downloads work as installed. To also accept\nincoming peers — usually faster, and what seeding needs — uncomment the\n`ports:` block in the compose file. That publishes port `6881` (TCP and\nUDP) to the internet, reachable without authentication.\n"
   # The WebUI login seeded into qBittorrent.conf (see seed-config below). Seeded
   # from the box-wide password it replaces: the conf is only written once, so an
   # installed app's WebUI already holds the old value, and showing that is what

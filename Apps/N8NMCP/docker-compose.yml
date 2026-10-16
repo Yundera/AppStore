@@ -244,6 +244,132 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.1"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: n8n MCP
+  tagline:
+    en_us: Expose your n8n workflows to LLMs via MCP
+    fr_fr: Exposez vos workflows n8n aux LLMs via MCP
+  description:
+    en_us: |
+      **n8n workflow control for AI assistants via MCP**
+
+      n8n MCP exposes the [n8n](https://n8n.io) REST API as an MCP (Model Context Protocol) server, letting LLMs and AI assistants list, read, create, edit, activate, and execute n8n workflows — plus browse the full n8n node catalog. Wraps the upstream [`czlonkowski/n8n-mcp`](https://github.com/czlonkowski/n8n-mcp) server and adds a Web UI for API-key setup and Beacon auto-discovery.
+
+      **What you can do:**
+      - Manage workflows (create, update, delete, activate, execute) from any MCP-compatible AI assistant
+      - List and inspect executions including per-node output
+      - Search the n8n node catalog and fetch per-node schemas
+      - Validate workflows before deployment
+      - Configure the n8n connection via the built-in Web UI — no hand-editing files
+
+      **Think of it like:** A programmable remote control for your n8n instance, driven by natural language.
+
+      **Perfect if you:** Want Claude / Cursor / any MCP client to build and operate n8n automations for you, or to pair with other MCP apps (Beacon, Ntfy, Chronos) for end-to-end AI-driven workflows.
+    fr_fr: |
+      **Controle des workflows n8n pour les assistants IA via MCP**
+
+      n8n MCP expose l'API REST de [n8n](https://n8n.io) en tant que serveur MCP (Model Context Protocol), permettant aux LLMs et assistants IA de lister, lire, creer, modifier, activer et executer des workflows n8n — et de parcourir le catalogue complet des nodes n8n. Enveloppe le serveur amont [`czlonkowski/n8n-mcp`](https://github.com/czlonkowski/n8n-mcp) et ajoute une interface Web pour la configuration de la cle API et la decouverte automatique via Beacon.
+
+      **Ce que vous pouvez faire:**
+      - Gerer les workflows (creer, modifier, supprimer, activer, executer) depuis tout assistant IA compatible MCP
+      - Lister et inspecter les executions, y compris la sortie par node
+      - Rechercher dans le catalogue des nodes n8n et consulter le schema de chaque node
+      - Valider les workflows avant deploiement
+      - Configurer la connexion n8n via l'interface Web integree — sans editer de fichiers
+
+      **Parfait si vous:** Voulez que Claude / Cursor / tout client MCP construise et pilote vos automatisations n8n, ou combiner avec d'autres apps MCP (Beacon, Ntfy, Chronos) pour des workflows pilotes par IA de bout en bout.
+  category: Developer
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+    - screenshot-4.png
+    - screenshot-5.png
+  architectures:
+    - amd64
+    - arm64
+  main: n8nmcp-proxy
+  tips:
+    en_us: |
+      **Getting Started**
+
+      n8n MCP needs a running n8n instance and an API key.
+
+      **Prerequisites:**
+      1. Install the **n8n** app first (or have another reachable n8n instance)
+      2. In n8n: **Settings → n8n API → Create an API key**
+
+      **Setup (2 steps):**
+      1. Open this app's Web UI (you'll sign in with your server account — single sign-on, using the session you already have)
+      2. Paste the **n8n Base URL** (`http://n8n:80` is pre-filled for the companion app) and the **API key**, click **Test connection** → **Save**
+
+      **MCP Integration (for AI/LLMs):**
+
+      **Option 1: Public URL (OAuth)**
+
+      The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+      URL below — clients that support OAuth discovery (claude.ai, Claude
+      Desktop) register themselves and open a browser for you to approve with
+      your server account (single sign-on).
+      ```json
+      {
+        "mcpServers": {
+          "n8n-mcp": {
+            "type": "http",
+            "url": "https://n8nmcp-${APP_DOMAIN}/mcp"
+          }
+        }
+      }
+      ```
+      For clients that need a pre-created client_id/client_secret (n8n, custom
+      scripts), open **https://n8nmcp-${APP_DOMAIN}/AppShield/oauth** and
+      create one there.
+
+      **Option 2: Local Docker connection (no auth required)**
+
+      For AI assistants running on the same server, connect directly via the Docker network:
+      ```json
+      {
+        "mcpServers": {
+          "n8n-mcp": {
+            "type": "http",
+            "url": "http://n8nmcp-backend:9640/mcp"
+          }
+        }
+      }
+      ```
+      *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+      **Option 3: Via Beacon (aggregated)**
+
+      If you have **Beacon** installed, n8n MCP auto-registers there and its tools show up under the `n8n-mcp__*` namespace — no extra config.
+
+      **Available MCP Tools:**
+      | Tool | Description |
+      |------|-------------|
+      | `n8n_list_workflows` | List workflows (optionally filter by tag/active) |
+      | `n8n_get_workflow` | Fetch a workflow by ID including nodes and connections |
+      | `n8n_create_workflow` | Create a workflow from a JSON definition |
+      | `n8n_update_full_workflow` | Replace a workflow's nodes/connections/settings |
+      | `n8n_update_partial_workflow` | Apply diff operations (add/remove nodes, connections, activate, etc.) |
+      | `n8n_delete_workflow` | Remove a workflow |
+      | `n8n_test_workflow` | Trigger a webhook/form/chat workflow for testing |
+      | `n8n_executions` | List, get, or delete executions |
+      | `search_nodes` / `get_node` | Browse and inspect the n8n node catalog |
+      | `validate_node` / `validate_workflow` | Validate configs before deployment |
+      | `n8n_health_check` | Verify n8n API connectivity |
+
+      **Security:**
+      - The API key is stored only in `/DATA/AppData/n8nmcp/config.json` and is never logged or returned via the API
+      - The Web UI and `/api` endpoints sit behind the server's single sign-on — you reuse the session you already have
+      - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
+        public URL is reachable without a credential. Only the in-network address
+        `http://n8nmcp-backend:9640/mcp` (Option 2) is unauthenticated, and it is
+        not published outside the `pcs` Docker network.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

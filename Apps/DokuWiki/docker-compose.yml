@@ -231,6 +231,156 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2025-05-14b"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: dokuwiki
+  title:
+    en_us: DokuWiki
+  tagline:
+    en_us: Simple wiki that doesn't require a database
+    ko_kr: 데이터베이스가 필요 없는 간단한 위키
+    zh_cn: 不需要数据库的简单维基
+    fr_fr: Wiki simple qui ne necessite pas de base de donnees
+    es_es: Wiki simple que no requiere base de datos
+  description:
+    en_us: |
+      **A simple, versatile wiki that needs no database**
+
+      DokuWiki is a standards-compliant, easy to use wiki optimized for creating documentation. It stores all data in plain text files, so no database is required. Its clean and readable syntax makes it a favorite among administrators and developers.
+
+      **What you can do:**
+      - Create and organize documentation with simple wiki syntax
+      - Manage access with built-in ACL (Access Control Lists)
+      - Extend functionality with hundreds of community plugins
+      - Customize appearance with themes and templates
+      - Track all changes with full revision history
+      - Search across all your wiki pages instantly
+
+      **Perfect for:** Teams needing internal documentation, project wikis, knowledge bases, personal note-taking, and anyone who wants a lightweight wiki without database complexity.
+    ko_kr: |
+      **데이터베이스가 필요 없는 간단하고 다재다능한 위키**
+
+      DokuWiki는 문서 작성에 최적화된 표준 호환, 사용하기 쉬운 위키입니다. 모든 데이터를 일반 텍스트 파일로 저장하므로 데이터베이스가 필요 없습니다. 깔끔하고 읽기 쉬운 문법으로 관리자와 개발자들에게 인기가 많습니다.
+
+      **할 수 있는 것:**
+      - 간단한 위키 문법으로 문서 작성 및 정리
+      - 내장 ACL(접근 제어 목록)로 접근 관리
+      - 수백 개의 커뮤니티 플러그인으로 기능 확장
+      - 테마와 템플릿으로 외관 커스터마이즈
+      - 전체 수정 이력으로 모든 변경사항 추적
+      - 모든 위키 페이지를 즉시 검색
+
+      **이런 분께 완벽해요:** 내부 문서가 필요한 팀, 프로젝트 위키, 지식 베이스, 개인 메모, 데이터베이스 복잡성 없이 가벼운 위키를 원하는 모든 분.
+    zh_cn: |
+      **不需要数据库的简单多功能维基**
+
+      DokuWiki 是一个符合标准、易于使用的维基，专为创建文档而优化。它将所有数据存储在纯文本文件中，因此不需要数据库。其简洁可读的语法使其成为管理员和开发者的最爱。
+
+      **您可以做的事:**
+      - 使用简单的维基语法创建和组织文档
+      - 使用内置 ACL（访问控制列表）管理访问权限
+      - 使用数百个社区插件扩展功能
+      - 使用主题和模板自定义外观
+      - 通过完整修订历史跟踪所有更改
+      - 即时搜索所有维基页面
+
+      **完美适合:** 需要内部文档的团队、项目维基、知识库、个人笔记，以及任何想要轻量级维基而不需要数据库复杂性的人。
+    fr_fr: |
+      **Un wiki simple et polyvalent qui ne necessite pas de base de donnees**
+
+      DokuWiki est un wiki conforme aux standards, facile a utiliser, optimise pour la creation de documentation. Il stocke toutes les donnees dans des fichiers texte brut, donc aucune base de donnees n'est requise. Sa syntaxe propre et lisible en fait un favori parmi les administrateurs et developpeurs.
+
+      **Ce que vous pouvez faire:**
+      - Creer et organiser la documentation avec une syntaxe wiki simple
+      - Gerer l'acces avec les ACL integrees (listes de controle d'acces)
+      - Etendre les fonctionnalites avec des centaines de plugins communautaires
+      - Personnaliser l'apparence avec des themes et modeles
+      - Suivre tous les changements avec l'historique complet des revisions
+      - Rechercher instantanement dans toutes vos pages wiki
+
+      **Parfait pour:** Les equipes ayant besoin de documentation interne, wikis de projets, bases de connaissances, prise de notes personnelles et toute personne souhaitant un wiki leger sans la complexite d'une base de donnees.
+    es_es: |
+      **Un wiki simple y versatil que no necesita base de datos**
+
+      DokuWiki es un wiki compatible con estandares, facil de usar, optimizado para crear documentacion. Almacena todos los datos en archivos de texto plano, por lo que no se requiere base de datos. Su sintaxis limpia y legible lo convierte en favorito entre administradores y desarrolladores.
+
+      **Lo que puedes hacer:**
+      - Crear y organizar documentacion con sintaxis wiki simple
+      - Gestionar acceso con ACL integradas (listas de control de acceso)
+      - Extender funcionalidad con cientos de plugins de la comunidad
+      - Personalizar apariencia con temas y plantillas
+      - Rastrear todos los cambios con historial completo de revisiones
+      - Buscar instantaneamente en todas tus paginas wiki
+
+      **Perfecto para:** Equipos que necesitan documentacion interna, wikis de proyectos, bases de conocimiento, toma de notas personal y cualquiera que quiera un wiki ligero sin la complejidad de una base de datos.
+  developer: DokuWiki Community
+  category: Wiki
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  main: dokuwiki-proxy
+  tips:
+    en_us: |
+      # Go to /install.php to set up your wiki
+
+      The wiki sits behind your PCS sign-in, so nobody else can reach the installer. After opening the app, the main page will load directly. You **must** manually go to `/install.php` in the URL bar to run the setup wizard.
+
+      1. Go to [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — this link pre-selects the recommended ACL policy
+      2. Set your wiki name, superuser account, and password
+      3. **Check the ACL policy dropdown before saving.** Opened without the link above, the installer pre-selects *Open Wiki (read, write, upload for everyone)*, which is more permissive than we recommend. Pick **Public Wiki**, or **Closed Wiki** to keep the wiki private
+      4. Click Save — done!
+
+      No database needed. All data is stored as plain text files.
+    ko_kr: |
+      # /install.php 에 직접 접속하여 위키를 설정하세요
+
+      이 위키는 PCS 로그인 뒤에 있으므로 다른 사람은 설치 마법사에 접근할 수 없습니다. 앱을 열면 메인 페이지가 바로 표시됩니다. 설정 마법사를 실행하려면 URL 주소창에 **직접** `/install.php`를 입력해야 합니다.
+
+      1. [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) 로 이동 — 이 링크는 권장 ACL 정책을 미리 선택합니다
+      2. 위키 이름, 관리자 계정, 비밀번호 설정
+      3. **저장 전에 ACL 정책 드롭다운을 확인하세요.** 위 링크 없이 설치 마법사를 열면 *Open Wiki (모두에게 읽기, 쓰기, 업로드 허용)* 가 미리 선택되어 있으며, 이는 권장 설정보다 더 개방적입니다. **Public Wiki** 를 선택하거나, 비공개 위키를 원하면 **Closed Wiki** 를 선택하세요
+      4. 저장 클릭 — 완료!
+
+      데이터베이스 불필요. 모든 데이터는 텍스트 파일로 저장됩니다.
+    zh_cn: |
+      # 请手动访问 /install.php 来设置您的维基
+
+      本维基位于您的 PCS 登录之后，其他人无法访问安装向导。打开应用后，主页会直接加载。您**必须**在地址栏中手动输入 `/install.php` 来运行设置向导。
+
+      1. 访问 [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — 此链接会预先选中推荐的 ACL 策略
+      2. 设置维基名称、超级用户账户和密码
+      3. **保存前请检查 ACL 策略下拉框。** 若未通过上面的链接打开安装向导，它会预选 *Open Wiki（所有人可读、可写、可上传）*，这比我们的推荐设置更开放。请选择 **Public Wiki**，或选择 **Closed Wiki** 使维基保持私有
+      4. 点击保存 — 完成！
+
+      无需数据库。所有数据以纯文本文件存储。
+    fr_fr: |
+      # Allez sur /install.php pour configurer votre wiki
+
+      Le wiki est protege par la connexion de votre PCS: personne d'autre ne peut atteindre l'assistant d'installation. Apres l'ouverture de l'app, la page principale s'affiche directement. Vous **devez** saisir manuellement `/install.php` dans la barre d'adresse pour lancer l'assistant de configuration.
+
+      1. Allez sur [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — ce lien preselectionne la politique ACL recommandee
+      2. Definissez le nom du wiki, le compte super-utilisateur et le mot de passe
+      3. **Verifiez la liste deroulante ACL avant d'enregistrer.** Ouvert sans le lien ci-dessus, l'assistant preselectionne *Open Wiki (lecture, ecriture, envoi pour tout le monde)*, plus permissif que ce que nous recommandons. Choisissez **Public Wiki**, ou **Closed Wiki** pour un wiki prive
+      4. Cliquez sur Enregistrer — termine!
+
+      Aucune base de donnees necessaire. Toutes les donnees sont stockees en fichiers texte.
+    es_es: |
+      # Vaya a /install.php para configurar su wiki
+
+      El wiki esta detras del inicio de sesion de su PCS, asi que nadie mas puede llegar al instalador. Al abrir la app, la pagina principal se carga directamente. **Debe** escribir manualmente `/install.php` en la barra de direcciones para ejecutar el asistente de configuracion.
+
+      1. Vaya a [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — este enlace preselecciona la politica ACL recomendada
+      2. Configure el nombre del wiki, cuenta de superusuario y contrasena
+      3. **Revise la lista desplegable de ACL antes de guardar.** Si abre el instalador sin el enlace anterior, preselecciona *Open Wiki (lectura, escritura y subida para todos)*, mas permisivo de lo que recomendamos. Elija **Public Wiki**, o **Closed Wiki** para mantener el wiki privado
+      4. Haga clic en Guardar — listo!
+
+      No se necesita base de datos. Todos los datos se almacenan como archivos de texto.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.
