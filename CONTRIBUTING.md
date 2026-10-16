@@ -10,7 +10,7 @@ Before submitting your PR, ensure your app meets these requirements:
 
 ### Tech Checklist
 - [ ] Proper file permissions based on volume usage. See [Permission Strategy](#permission-strategy) for details
-- [ ] **First-run setup is declared, not scripted**: files the app needs ship in `seed/`, generated credentials go under `x-compose-app.secrets`, and one-shot containers under `x-compose-app.init`. A `pre-install-cmd` is a last resort for genuinely imperative work. See [First-run setup](#first-run-setup)
+- [ ] **First-run setup is declared, not scripted**: files the app needs ship in `seed/`, generated credentials go under `x-compose-app.secrets`, and one-shot containers under `x-compose-app.init`. A hook (`x-compose-app.hooks`) is a last resort for genuinely imperative work. See [First-run setup](#first-run-setup)
 - [ ] **Directories the app needs are declared** under `x-compose-app.folders` with `schema_version: 2`, not created by a hook. See [Maison and `x-compose-app`](#maison-and-x-compose-app)
 - [ ] **If an install hook survives**, it is idempotent (it reruns on every reinstall and upgrade), pins every image tag, and uses `--user $PUID:$PGID` when writing to user directories. A hook that exits non-zero leaves the app installed but **stopped**
 - [ ] **Deployment values are references, not literals**: the shared network is declared as `name: ${APP_NET:-pcs}` (never a bare `name: pcs`), and every bind source starts with `${DATA_ROOT:-/DATA}`. Maison copies the compose byte-for-byte and never rewrites it, so a literal freezes the app to one deployment. See [System Variables](#system-variables)
@@ -397,7 +397,7 @@ Each directory under [Apps](Apps) corresponds to a Compose App. The directory sh
         source: /DATA/AppData/$AppID/config # $AppID = app name, e.g. syncthing
     ```
 
-- **System Variables**: Yundera injects the following variables at container creation. Reference them in `environment:`, `volumes:`, `labels:`, and `pre-install-cmd`:
+- **System Variables**: Yundera injects the following variables at container creation. Reference them in `environment:`, `volumes:`, `labels:`, and `x-compose-app` hooks:
 
     ```yaml
     environment:
@@ -466,6 +466,26 @@ x-compose-app:
 ```
 `tips.before_install` is still the place for anything else the user should read
 before installing; it no longer needs to carry the password table.
+
+Add a `change` block when the password can be replaced after install, so the
+operator changes it from Maison's **Security** tab and the dialog stays truthful:
+
+- `apply: env` when the app re-reads the variable on **every** start (an env-based
+  basic auth, an entrypoint that re-applies it). Maison writes `.env` and recreates.
+  If the value reaches a container only through a rendered file, give that
+  container a label carrying the secret so the recreate actually happens
+  (`Apps/Outline`, `Apps/Filestash`).
+- `apply: hook` when the app keeps its own copy (a user table) but has a command or
+  API to change it — run it with `docker compose exec -T -e SECRET_NAME <service>` (the bare `-e NAME`
+  form takes the value from the hook's environment, so it never appears on a command line)
+  and make it exit non-zero when nothing was changed (`Apps/Nextcloud`,
+  `Apps/Guacamole`, `Apps/WireGuardEasy`).
+- no `change` when the value is read only at first boot and nothing can reset it.
+
+Hooks are not interpolated (variables reach them through the environment, so write
+`$VAR`), whereas `init` fields are (write `$$` for a literal `$`). Contract and
+policy keys: Maison's
+[`docs/x-compose-app.md`](https://github.com/Yundera/maison/blob/main/docs/x-compose-app.md#changing-a-credential).
 
 ### Features
 
@@ -607,10 +627,10 @@ x-compose-app:
 
 `pre_install` / `post_install` generalise the CasaOS `pre-install-cmd` /
 `post-install-cmd` and **win over them** when both are present. An app carrying only
-`x-casaos` keeps working with no change, which is why the few hooks left in this
-store are still written as `pre-install-cmd` — both run through the same machinery
-and the requirements in
-[Install hooks](#install-hooks-pre-install-cmd--the-last-resort) apply identically.
+`x-casaos` keeps working with no change — both run through the same machinery, with
+the same environment — but every hook in this store is written under
+`x-compose-app.hooks`, and new ones should be too. The requirements in
+[Install hooks](#install-hooks--the-last-resort) apply identically.
 
 **Failure semantics.** `pre_install` and `pre_up` are **fatal**: a pre-hook is the
 app's precondition, and if it doesn't hold the stack must not start. Note what that
@@ -937,7 +957,7 @@ Add `phase: post_up` (and `network:`) for a seeder that needs the app running.
 - [ ] **`--user`/`user:`** whenever files land under `/DATA/Documents`,
       `/DATA/Downloads`, `/DATA/Media` or `/DATA/Gallery`.
 
-#### Install hooks (`pre-install-cmd`) — the last resort
+#### Install hooks — the last resort
 
 Everything above exists because the work these hooks were doing was declarative
 all along. What is left for a hook is genuinely imperative: waiting on another
@@ -1387,7 +1407,7 @@ x-casaos:
 
 #### System Variables
 
-Yundera injects the following variables into every app at container creation. Reference them in `environment:`, `volumes:`, `labels:`, and `pre-install-cmd`.
+Yundera injects the following variables into every app at container creation. Reference them in `environment:`, `volumes:`, `labels:`, and `x-compose-app` hooks.
 
 These are written into the app's `.env` on install and refreshed on **every start**, so they track the deployment as it changes. Maison does not edit your compose file — a variable reaches your app only because your compose references it.
 

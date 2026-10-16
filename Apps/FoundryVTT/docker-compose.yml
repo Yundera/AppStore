@@ -213,7 +213,13 @@ x-compose-app:
   credentials:
     - label: Administrator (setup screen)
       password: ${FOUNDRYVTT_ADMIN_PASSWORD}
-      note: Unlocks Foundry's setup screen (worlds, systems, modules). Players log in as the world's own users instead.
+      note: Unlocks Foundry's setup screen (worlds, systems, modules). Players log in as the world's own users instead. A change made from Foundry's own setup screen is overwritten on the next restart.
+      # The felddy launcher rewrites admin.txt from FOUNDRY_ADMIN_KEY on every start,
+      # so a new value in .env plus a recreate is the whole change. This relies on
+      # CONTAINER_PRESERVE_CONFIG staying unset - with it set, the launcher keeps the
+      # old admin.txt and the change would not take.
+      change:
+        apply: env
   # Rendered into the app's .env on every up. The template resolves to whatever the
   # user already saved (or to empty on a fresh install), so this never overwrites an
   # entered value — it only makes sure the rows exist in the Env tab to be filled in.

@@ -39,9 +39,10 @@ identity rather than reuse of the server owner's own account: the operator can
 see it in `/etc/passwd`, audit its `authorized_keys`, and delete it.
 
 The sandboxed sibling app, **`ClaudeCode`**, is the answer for anyone who does
-not want this. It ships the same image with `MCP_ENABLED=true` and none of the
-four mounts above — no Docker socket, no host SSH, no `/DATA` — and is the app
-to install for programmatic automation (e.g. n8n driving Claude over MCP).
+not want this. It ships the same image with none of the four mounts above — no
+Docker socket, no host SSH, no `/DATA`. (It also ships `MCP_ENABLED=false`, for
+the discovery-leak reason in its own `rationale.md`, so neither app currently
+offers programmatic MCP automation.)
 Splitting the two apps *is* the mitigation: the privileged capability is opt-in
 by choosing this app rather than that one.
 
@@ -54,13 +55,15 @@ by choosing this app rather than that one.
 - **Authentication is on by default and never hardcoded.** Every route is behind
   the auth layer on port 9090: `/login` and `/logout` are served by it directly,
   and everything else goes through Caddy `forward_auth` to `/auth`, redirecting
-  to `/login` on 401. The password comes from `$APP_DEFAULT_PASSWORD`, which is
-  generated per server at install time.
+  to `/login` on 401. The password is this app's own secret,
+  `CLAUDECODEROOT_AUTH_PASSWORD`, generated at install time (seeded from the
+  former box-wide `$APP_DEFAULT_PASSWORD` on installs that predate it), shown in
+  Maison's Credentials dialog and changeable from its Security tab.
 - **MCP automation is turned off** (`MCP_ENABLED=false`). The programmatic
   endpoint that lets another service drive Claude Code is deliberately not
   available on the privileged app, so the only way to reach this shell is an
-  interactive, authenticated browser session. `MCP_ENABLED=true` belongs to the
-  sandboxed sibling, which has no host access.
+  interactive, authenticated browser session. The sandboxed sibling has it
+  off too.
 - **No `privileged: true` and no `cap_add`.** The escalation is exactly the four
   mounts listed above and nothing more; the container gains no kernel
   capabilities beyond the Docker default set.

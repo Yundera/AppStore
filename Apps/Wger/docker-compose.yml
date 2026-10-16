@@ -586,7 +586,7 @@ x-casaos:
         **Your account**
         The username and password are shown when you open the app (tile menu → Credentials).
 
-        **⚠️ Change the password after your first login** (avatar menu → Preferences).
+        To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
 
         **The first start takes a few minutes** while the app sets up its database and
         prepares its files. Later starts take about a minute.
@@ -616,8 +616,7 @@ x-casaos:
         **Votre compte**
         L'identifiant et le mot de passe s'affichent à l'ouverture de l'application (menu de la tuile → Identifiants).
 
-        **⚠️ Changez le mot de passe après la première connexion** (menu avatar →
-        Préférences).
+        Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
 
         **Le premier démarrage prend quelques minutes**, le temps que l'application
         prépare sa base et ses fichiers. Les démarrages suivants prennent environ une
@@ -649,8 +648,7 @@ x-casaos:
         **Dein Konto**
         Benutzername und Passwort werden beim Öffnen der App angezeigt (Kachelmenü → Zugangsdaten).
 
-        **⚠️ Ändere das Passwort nach der ersten Anmeldung** (Avatar-Menü →
-        Einstellungen).
+        Ändere es über die App-Einstellungen in Maison (Tab „Sicherheit“), damit der Zugangsdaten-Dialog stimmt.
 
         **Der erste Start dauert einige Minuten**, während die App ihre Datenbank und
         ihre Dateien vorbereitet. Spätere Starts dauern etwa eine Minute.
@@ -680,8 +678,7 @@ x-casaos:
         **Tu cuenta**
         El usuario y la contraseña se muestran al abrir la aplicación (menú del icono → Credenciales).
 
-        **⚠️ Cambia la contraseña tras el primer inicio de sesión** (menú de avatar →
-        Preferencias).
+        Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
 
         **El primer arranque tarda unos minutos** mientras la aplicación prepara su base
         de datos y sus archivos. Los arranques posteriores tardan alrededor de un minuto.
@@ -711,7 +708,7 @@ x-casaos:
         **你的账号**
         打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
 
-        **⚠️ 首次登录后请修改密码**（头像菜单 → 偏好设置）。
+        如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
 
         **首次启动需要几分钟**，应用会准备数据库和静态文件。之后的启动大约一分钟。
 
@@ -784,7 +781,28 @@ x-compose-app:
     - label: Administrator
       username: admin
       password: ${WGER_ADMIN_PASSWORD}
-      note: Change it after your first login (avatar menu → Preferences).
+      # A hook, not env: the password lives hashed in wger's user table, and
+      # rotate-admin-password below only ever moves it off the upstream default,
+      # once. The hook sets it through Django in the running app container, the
+      # same set_password call that step makes.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e WGER_ADMIN_PASSWORD wger-web python3 - <<'PY'
+          import os
+
+          import django
+
+          django.setup()
+
+          from django.contrib.auth.models import User
+
+          new = os.environ['WGER_ADMIN_PASSWORD']
+          assert new, 'empty password'
+          admin = User.objects.get(username='admin')
+          admin.set_password(new)
+          admin.save(update_fields=['password'])
+          PY
   files:
     # These three are declared rather than left to the seed tree, which is
     # create-if-absent: an app update that changes nginx's routing or the sync

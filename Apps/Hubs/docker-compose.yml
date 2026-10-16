@@ -45,7 +45,7 @@ services:
       caddy_2.reverse_proxy.transport.tls_insecure_skip_verify: ""
 
   db:
-    image: postgres:14-alpine
+    image: postgres:17.11-alpine
     container_name: hubs-db
     restart: unless-stopped
     user: "0:0"
@@ -414,6 +414,28 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "stable-855"
+  # postgres 14 reaches end-of-life in Nov 2026; the store moved to 17.11 on
+  # 2026-10-16. postgres:17 will not start on a 14 cluster, so every earlier install
+  # needs pg_upgrade once. Installs predate .data-version and arrive at data version
+  # 1 whatever cluster they hold: pgautoupgrade reads PG_VERSION and exits untouched
+  # on a cluster already at 17.
+  data_version: 2
+  migrations:
+    # POSTGRES_USER / POSTGRES_DB are hubs-seed's (merged into .env by bootstrap;
+    # the defaults are its own). The -alpine variant because postgres:14-alpine
+    # wrote the cluster (musl collation). As root, as the service runs: it chowns
+    # for the upgrade and restores the original (uid 70) ownership afterwards.
+    # PostgREST 8 was checked against 17.11: it connects, loads its schema cache and
+    # serves the ret0_admin views and RPCs.
+    - id: 2
+      name: postgres-14-to-17
+      image: pgautoupgrade/pgautoupgrade:17.11-alpine
+      environment:
+        PGAUTO_ONESHOT: "yes"
+        POSTGRES_USER: ${POSTGRES_USER:-postgres}
+        POSTGRES_DB: ${POSTGRES_DB:-ret_production}
+      volumes:
+        - /DATA/AppData/hubs/pgdata:/var/lib/postgresql/data
   # Both halves of the seeding are containers — hubs-seed's own image — so they
   # are declared rather than shelled out to. bootstrap is idempotent: it reuses an
   # existing keypair and preserves every secret already in secrets/.env, so a
@@ -482,7 +504,7 @@ x-compose-app:
       user: $PUID
       group: $PGID
       mode: "0700"
-    # postgres:14-alpine drops to uid 70 through gosu, so the cluster directory
+    # postgres:17.11-alpine drops to uid 70 through gosu, so the cluster directory
     # has to be its own. recursive because a chown of /DATA/AppData can re-lock
     # the tree to PUID between boots, which crash-loops the database.
     - path: /DATA/AppData/hubs/pgdata

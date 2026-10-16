@@ -51,18 +51,6 @@ services:
           # Transfers stream through the server (download from one storage, upload
           # to another); video previews are transcoded on demand.
           memory: 1G
-    x-casaos:
-      envs:
-        - container: TZ
-          description:
-            en_us: Timezone used for the file timestamps shown in the interface.
-      volumes:
-        - container: /app/data/state/
-          description:
-            en_us: The app's own state - config.json, the share database and the logs. Kept across uninstall and reinstall.
-        - container: /DATA/
-          description:
-            en_us: The whole of /DATA - Documents, Downloads, Media and AppData. This is what the "My Server" connection can browse, edit, delete, share and copy to remote storage.
 
 networks:
   pcs:
@@ -117,7 +105,9 @@ x-casaos:
 
         The login page lists the connections. **My Server** opens your server's
         files and asks for the admin password, shown when you open the app (tile
-        menu → Credentials). The same password opens the admin console at `/admin`.
+        menu → Credentials), and a **Path**: type `/DATA` (or a folder inside it,
+        such as `/DATA/Documents`). Left empty, the sign-in is refused with
+        "Not Allowed". The same password opens the admin console at `/admin`.
         Change it from the tile menu: a password changed inside the admin console
         is replaced by this one on the next restart.
 
@@ -147,8 +137,10 @@ x-casaos:
 
         La page de connexion liste les connexions. **My Server** ouvre les fichiers
         de votre serveur et demande le mot de passe administrateur, affiché à
-        l'ouverture de l'application (menu de la tuile → Identifiants). Le même mot de
-        passe ouvre la console d'administration sur `/admin`. Changez-le depuis le menu
+        l'ouverture de l'application (menu de la tuile → Identifiants), ainsi qu'un
+        **Path** : saisissez `/DATA` (ou un dossier à l'intérieur, comme
+        `/DATA/Documents`). Laissé vide, la connexion est refusée avec « Not Allowed ».
+        Le même mot de passe ouvre la console d'administration sur `/admin`. Changez-le depuis le menu
         de la tuile : un mot de passe modifié dans la console d'administration est
         remplacé par celui-ci au redémarrage suivant.
 
@@ -179,7 +171,9 @@ x-casaos:
         登录
 
         登录页面列出了所有连接。**My Server** 打开服务器上的文件，需要输入管理员密码，
-        该密码会在打开应用时显示（磁贴菜单 → 凭据）。同一密码也用于打开 `/admin`
+        该密码会在打开应用时显示（磁贴菜单 → 凭据），以及 **Path**：请填写 `/DATA`
+        （或其中的某个文件夹，例如 `/DATA/Documents`）。留空会被拒绝并提示
+        “Not Allowed”。同一密码也用于打开 `/admin`
         管理控制台。请通过磁贴菜单修改密码：在管理控制台中修改的密码会在下次重启时被
         此密码覆盖。
 
@@ -223,9 +217,9 @@ x-compose-app:
         zh_cn: My Server 与管理控制台
       password: ${FILESTASH_ADMIN_PASSWORD}
       note:
-        en_us: Pick "My Server" on the login page. The admin console is at /admin.
-        fr_fr: Choisissez « My Server » sur la page de connexion. La console d'administration est sur /admin.
-        zh_cn: 在登录页面选择「My Server」。管理控制台位于 /admin。
+        en_us: Pick "My Server" on the login page and type /DATA in Path - an empty Path is refused. The admin console is at /admin.
+        fr_fr: Choisissez « My Server » sur la page de connexion et saisissez /DATA dans Path - un Path vide est refusé. La console d'administration est sur /admin.
+        zh_cn: 在登录页面选择「My Server」，并在 Path 中填写 /DATA——留空会被拒绝。管理控制台位于 /admin。
       # ADMIN_PASSWORD is read on every start and takes precedence over a password
       # saved from the admin console, so re-rendering admin.bcrypt plus a recreate
       # (forced by the filestash.admin-password-rev label) is the whole change.

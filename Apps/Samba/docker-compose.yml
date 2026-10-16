@@ -140,6 +140,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "4.23.10"
   # The SMB login. Seeded from the box-wide password it replaces, so an installed
   # app keeps the password every client that mapped the share has saved; a fresh
   # install gets its own.

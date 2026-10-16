@@ -150,5 +150,6 @@ x-casaos:
     fr_fr: SegmentPlayer
 
 x-compose-app:
+  schema_version: 2
   version: "1.4.2"
   webui-host: segment-${domain}

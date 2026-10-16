@@ -271,3 +271,7 @@ x-compose-app:
       note:
         en_us: Shared with everyone you play with.
         fr_fr: Partagé avec tous vos joueurs.
+      # PASSWORD is read from the environment on every start, so a new value in .env
+      # plus a recreate is the whole change.
+      change:
+        apply: env

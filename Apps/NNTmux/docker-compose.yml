@@ -93,7 +93,7 @@ services:
   # (`nntmux-internal` only): clients use nntmux's Newznab API, never the DB.
   # ---------------------------------------------------------------------------
   nntmux-db:
-    image: mariadb:12.3
+    image: mariadb:12.3.3
     cpu_shares: 70
     container_name: nntmux-db
     hostname: nntmux-db
@@ -133,6 +133,10 @@ services:
       MARIADB_USER: nntmux
       MARIADB_PASSWORD: "${NNTMUX_DB_PASSWORD}"
       MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+      # Run mariadb-upgrade when the image is newer than the data directory, as
+      # every other MariaDB app in the store does; without it a minor bump can
+      # leave the system tables on the old layout.
+      MARIADB_AUTO_UPGRADE: "1"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/nntmux/db:/var/lib/mysql
     healthcheck:
@@ -393,8 +397,7 @@ x-casaos:
   author: Yundera Team
   category: Media
   developer: NNTmux Project
-  icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NNTmux/icon.png
-  thumbnail: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/NNTmux/icon.png
+  icon: icon.png
   title:
     en_us: NNTmux
   tagline:

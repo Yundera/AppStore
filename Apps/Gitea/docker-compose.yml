@@ -333,6 +333,18 @@ x-compose-app:
         zh_cn: 管理员
       username: gitea_admin
       password: ${GITEA_ADMIN_PASSWORD}
+      # A hook, not env: Gitea keeps the password hashed in its own database, and
+      # the variable only seeds the account (create-admin below leaves an
+      # existing one alone). The hook sets it with Gitea's own CLI in the running
+      # container; the value travels in the environment, never on a command line
+      # outside it.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e GITEA_ADMIN_PASSWORD gitea sh -c '
+            [ -n "$GITEA_ADMIN_PASSWORD" ] || exit 1
+            gitea admin user change-password --username gitea_admin \
+              --password "$GITEA_ADMIN_PASSWORD" --must-change-password=false'
   folders:
     - path: /DATA/AppData/$AppID/data
       user: $PUID

@@ -46,21 +46,6 @@ services:
           # index of the source tree, and /srv is the whole of /DATA. Lower this if
           # your server is small and you narrow the source in config.yaml.
           memory: 1G
-    x-casaos:
-      envs:
-        - container: TZ
-          description:
-            en_us: Timezone used for the file timestamps shown in the interface.
-        - container: FILEBROWSER_ADMIN_PASSWORD
-          description:
-            en_us: Password of the built-in admin account. Re-applied on every start, so clear it if you want to change the admin password from inside the app.
-      volumes:
-        - container: /home/filebrowser/data/
-          description:
-            en_us: The app's own state - config.yaml, its user/share database and the thumbnail cache. Kept across uninstall and reinstall.
-        - container: /srv/
-          description:
-            en_us: The whole of /DATA - Documents, Downloads, Media and AppData. This is everything the app can browse, edit, delete and share, so any account you create here can reach all of it.
 
 networks:
   pcs:
@@ -224,6 +209,13 @@ x-compose-app:
         en_us: Re-applied on every restart from FILEBROWSER_ADMIN_PASSWORD; a change made inside the app does not stick while that variable is set.
         fr_fr: Réappliqué à chaque redémarrage depuis FILEBROWSER_ADMIN_PASSWORD ; une modification faite dans l'application n'est pas conservée tant que cette variable est définie.
         zh_cn: 每次重启都会从 FILEBROWSER_ADMIN_PASSWORD 重新应用；只要该变量存在，在应用内的修改不会保留。
+      # FILEBROWSER_ADMIN_PASSWORD is re-applied to the admin user on every start
+      # (see the note), so a new value in .env plus a recreate is the whole change.
+      # Quantum refuses passwords shorter than its default minimum of 10.
+      change:
+        apply: env
+        policy:
+          min_length: 10
   # No init containers: Quantum creates its own database on first start, and the
   # admin account comes from FILEBROWSER_ADMIN_PASSWORD rather than a seeding CLI
   # call. config.yaml arrives via the seed tree (seed/data/config.yaml), which is

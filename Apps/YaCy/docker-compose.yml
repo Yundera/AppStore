@@ -305,6 +305,35 @@ x-compose-app:
     - label: Administrator
       username: admin
       password: ${YACY_ADMIN_PASSWORD}
+      # A hook, not env: YaCy keeps the hash in yacy.conf, which admin-hash only
+      # renders while the file is absent — and a running YaCy holds its config in
+      # memory and writes it back over any edit made underneath it. So the hook
+      # submits the admin-account form (ConfigAccounts_p, the API bin/passwd.sh
+      # uses on a running server) in the running container, then fetches the page
+      # again with the new password to prove it took.
+      #
+      # The image has wget but no curl. Credentials go through a temporary
+      # WGETRC and the form body through --post-file, so neither password is on
+      # a command line; the body is percent-encoded byte by byte with od, since
+      # wget has no --data-urlencode. Over loopback YaCy skips the
+      # transaction-token check (TransactionManager.checkPostTransaction), but
+      # adminAccountForLocalhost=false still requires the old password.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e OLD_YACY_ADMIN_PASSWORD -e YACY_ADMIN_PASSWORD yacy sh -c '
+            [ -n "$YACY_ADMIN_PASSWORD" ] || exit 1
+            d=$(mktemp -d) || exit 1
+            trap "rm -rf $d" EXIT
+            url=http://127.0.0.1:8090/ConfigAccounts_p.html
+            enc() { printf %s "$1" | od -An -v -tx1 | tr -d " \n" | sed "s/../%&/g"; }
+            rc() { printf "http_user = admin\nhttp_password = %s\n" "$1" > "$d/rc"; }
+            p=$(enc "$YACY_ADMIN_PASSWORD")
+            printf "setAdmin=&adminuser=admin&adminpw1=%s&adminpw2=%s" "$p" "$p" > "$d/body"
+            rc "$OLD_YACY_ADMIN_PASSWORD"
+            WGETRC="$d/rc" wget -q -O /dev/null --post-file="$d/body" "$url" || exit 1
+            rc "$YACY_ADMIN_PASSWORD"
+            WGETRC="$d/rc" wget -q -O /dev/null "$url"'
   folders:
     - /DATA/AppData/$AppID/data
     - /DATA/AppData/$AppID/data/SETTINGS

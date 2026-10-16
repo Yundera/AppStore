@@ -403,12 +403,17 @@ x-compose-app:
         ko_kr: 게이트웨이 토큰
       password: ${OPENCLAW_GATEWAY_TOKEN}
       note:
-        en_us: Sign-in is your server account (single sign-on). Paste this only if the Control UI asks for a gateway token or password.
-        fr_fr: La connexion se fait avec votre compte serveur (authentification unique). Collez ceci uniquement si l'interface demande un token ou un mot de passe de passerelle.
-        de_de: Die Anmeldung erfolgt mit Ihrem Server-Konto (Single Sign-on). Nur einfugen, wenn die Control UI nach einem Gateway-Token oder Passwort fragt.
-        es_es: El inicio de sesion usa tu cuenta del servidor (inicio de sesion unico). Pegalo solo si la interfaz pide un token o contrasena del gateway.
-        zh_cn: 登录使用您的服务器账户（单点登录）。仅当控制界面要求输入网关令牌或密码时才粘贴此值。
-        ko_kr: 로그인은 서버 계정(통합 인증)으로 합니다. 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구할 때만 붙여넣으세요.
+        en_us: Sign-in is your server account (single sign-on). Paste this only if the Control UI asks for a gateway token or password. After a change, a Control UI that had the token pasted must have the new one pasted again.
+        fr_fr: La connexion se fait avec votre compte serveur (authentification unique). Collez ceci uniquement si l'interface demande un token ou un mot de passe de passerelle. Après un changement, une interface où le token avait été collé doit recevoir le nouveau.
+        de_de: Die Anmeldung erfolgt mit Ihrem Server-Konto (Single Sign-on). Nur einfugen, wenn die Control UI nach einem Gateway-Token oder Passwort fragt. Nach einer Anderung muss in einer Control UI, in die das Token eingefugt wurde, das neue erneut eingefugt werden.
+        es_es: El inicio de sesion usa tu cuenta del servidor (inicio de sesion unico). Pegalo solo si la interfaz pide un token o contrasena del gateway. Tras un cambio, una interfaz en la que se pego el token debe recibir el nuevo.
+        zh_cn: 登录使用您的服务器账户（单点登录）。仅当控制界面要求输入网关令牌或密码时才粘贴此值。更改后，曾粘贴过令牌的控制界面需要重新粘贴新令牌。
+        ko_kr: 로그인은 서버 계정(통합 인증)으로 합니다. 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구할 때만 붙여넣으세요. 변경 후에는 토큰을 붙여넣었던 컨트롤 UI에 새 토큰을 다시 붙여넣어야 합니다.
+      # OPENCLAW_GATEWAY_TOKEN is read from the environment on every start (the seeded
+      # openclaw.json does not carry it), so a new value in .env plus a recreate is
+      # the whole change.
+      change:
+        apply: env
   # Directories Maison creates and chowns to $PUID:$PGID before any image is pulled
   # and before any hook runs. Declared here rather than mkdir'd in the hook: a hook
   # mkdir runs inside the Maison container and lands root-owned, which is exactly

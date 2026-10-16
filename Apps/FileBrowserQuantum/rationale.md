@@ -49,7 +49,9 @@ manager for the PCS: mounting a subset would mean the owner cannot move a downlo
 into Media, cannot reach files another app created, and cannot use it to inspect or
 repair an app's data directory, which is the recovery use case it is most often
 installed for. See `Apps/FileBrowser/rationale.md` for the alternatives considered
-and rejected; they apply unchanged here.
+and rejected; they apply unchanged here. The mount is the same for every account:
+any user the admin creates in the app can browse, edit, delete and share all of
+`/DATA`, `/DATA/AppData` included.
 
 `/DATA/AppData` is kept **browsable but out of the search index** (`rules` →
 `folderPath: /AppData`, `viewable: true` in `seed/data/config.yaml`). This is not a

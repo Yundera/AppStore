@@ -18,11 +18,18 @@ services:
       caddy_0: nextcloud-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 80}}"
+      # HSTS, set here rather than in .htaccess: the image replaces .htaccess with
+      # rsync --delete on every Nextcloud upgrade, so a line appended to it is lost.
+      # `>` defers the set until after the response comes back, so it replaces (not
+      # duplicates) the header older installs still send from their .htaccess.
+      caddy_0.header: '>Strict-Transport-Security "max-age=15552000; includeSubDomains"'
       caddy_1: nextcloud-${APP_PUBLIC_IP_DASH}.nip.io
       caddy_1.import: gateway_tls
       caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_1.header: '>Strict-Transport-Security "max-age=15552000; includeSubDomains"'
       caddy_2: nextcloud-${APP_PUBLIC_IP_DASH}.sslip.io
       caddy_2.reverse_proxy: "{{upstreams 80}}"
+      caddy_2.header: '>Strict-Transport-Security "max-age=15552000; includeSubDomains"'
     logging:
       driver: "json-file"
       options:
@@ -45,9 +52,9 @@ services:
       # $PUID:$PGID) cannot create it: the entrypoint dies and `restart:
       # unless-stopped` loops it forever. Without REDIS_HOST the entrypoint keeps
       # PHP's default session handler; Redis is wired up as the distributed cache
-      # and file-locking backend by post-install-cmd instead (memcache.local
+      # and file-locking backend by the post_install hook instead (memcache.local
       # stays APCu, from the image's own apcu.config.php). The password below is
-      # inert for the entrypoint and is what post-install-cmd reads.
+      # inert for the entrypoint and is what the post_install hook reads.
       - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
       - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN nextcloud-$APP_PUBLIC_IP_DASH.nip.io nextcloud-$APP_PUBLIC_IP_DASH.sslip.io
       - OVERWRITEPROTOCOL=https
@@ -490,44 +497,6 @@ x-casaos:
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
 
-  # IMPORTANT: Keep these commands idempotent - safe to run multiple times.
-  # Maison runs this hook verbatim through /bin/bash with the app's .env in the
-  # environment, so shell variables are plain $timeout / $((...)) - do not escape
-  # them as $$, bash would expand $$ to its own PID. Variables meant for the
-  # nextcloud container ($REDIS_HOST_PASSWORD) stay inside the single-quoted
-  # `docker exec bash -c` block and are expanded there, not here.
-  # Redis: memcache.local comes from the image's apcu.config.php; the distributed
-  # cache and the file-locking backend are set here because REDIS_HOST cannot be
-  # used (see the note in the nextcloud service environment).
-  # Security & setup warnings fixes "Some headers are not set correctly on your
-  # instance - The Strict-Transport-Security HTTP header is not set". Also
-  # switches background jobs to cron (the cron service handles the ticking).
-  post-install-cmd: |
-    timeout=300
-    while [ $timeout -gt 0 ]; do
-      if docker exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true'; then
-        echo "NextCloud installation complete"
-        break
-      fi
-      echo "Waiting for NextCloud auto-installation... $timeout s remaining"
-      sleep 5
-      timeout=$((timeout-5))
-    done &&
-    docker exec nextcloud bash -c '
-      php occ config:system:set redis host --value redis
-      php occ config:system:set redis port --value 6379 --type=integer
-      php occ config:system:set redis password --value "$REDIS_HOST_PASSWORD"
-      php occ config:system:set memcache.distributed --value "\OC\Memcache\Redis"
-      php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
-      a2enmod headers 2>/dev/null || true
-      if [ -f /var/www/html/.htaccess ] && ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then
-        echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess
-        echo "HSTS header added to .htaccess"
-      else
-        echo "HSTS header already present or .htaccess not found"
-      fi
-      php occ background:cron && echo "Background jobs set to cron mode"
-    '
   tips:
     before_install:
       en_us: |
@@ -537,7 +506,7 @@ x-casaos:
 
         First-time install takes 1–3 minutes. If the page shows "Gateway time-out" or appears stuck, **refresh** after a minute and the login screen will appear.
 
-        You can change the admin password from inside NextCloud after logging in (Settings → Personal → Security).
+        To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
       ko_kr: |
         **로그인**
 
@@ -545,7 +514,7 @@ x-casaos:
 
         최초 설치는 1~3분 소요됩니다. 페이지에 "Gateway time-out"이 표시되거나 멈춘 것처럼 보이면 1분 후 **새로고침**하면 로그인 화면이 나타납니다.
 
-        로그인 후 NextCloud 내부에서 관리자 비밀번호를 변경할 수 있습니다 (Settings → Personal → Security).
+        변경하려면 Maison의 앱 설정(보안 탭)을 사용하세요. 그래야 자격 증명 창이 정확하게 유지됩니다.
       zh_cn: |
         **登录**
 
@@ -553,7 +522,7 @@ x-casaos:
 
         首次安装需要 1~3 分钟。如果页面显示 "Gateway time-out" 或看起来卡住，请等待 1 分钟后**刷新页面**即可看到登录界面。
 
-        登录后可以在 NextCloud 内部更改管理员密码 (Settings → Personal → Security)。
+        如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
       fr_fr: |
         **Connexion**
 
@@ -561,7 +530,7 @@ x-casaos:
 
         La première installation prend 1 à 3 minutes. Si la page affiche "Gateway time-out" ou semble bloquée, **rafraîchissez** après une minute pour voir l'écran de connexion.
 
-        Vous pouvez changer le mot de passe administrateur depuis NextCloud après vous être connecté (Settings → Personal → Security).
+        Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
       es_es: |
         **Inicio de sesión**
 
@@ -569,7 +538,7 @@ x-casaos:
 
         La primera instalación tarda 1-3 minutos. Si la página muestra "Gateway time-out" o parece bloqueada, **actualiza** después de un minuto para ver la pantalla de inicio de sesión.
 
-        Puedes cambiar la contraseña de administrador desde dentro de NextCloud después de iniciar sesión (Settings → Personal → Security).
+        Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
 
 x-compose-app:
   schema_version: 2
@@ -586,7 +555,15 @@ x-compose-app:
     - label: Administrator
       username: admin
       password: ${NEXTCLOUD_ADMIN_PASSWORD}
-      note: Change it in Nextcloud under Settings → Personal → Security.
+      note: Change it from the app's settings in Maison (Security tab) so this stays correct; a change made inside Nextcloud is not reflected here.
+      # Nextcloud keeps its own hash; NEXTCLOUD_ADMIN_PASSWORD is read only by the
+      # first-run auto-install. occ resets it on the running app.
+      change:
+        apply: hook
+        hook: |
+          # No -u: the service already runs as $PUID:$PGID, the owner of config.php.
+          OC_PASS="$NEXTCLOUD_ADMIN_PASSWORD" docker compose exec -T -e OC_PASS nextcloud \
+            php occ user:resetpassword --password-from-env admin
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.
@@ -610,3 +587,41 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: nextcloud-${domain}
+  hooks:
+    # IMPORTANT: Keep these commands idempotent - safe to run multiple times.
+    # Maison runs this hook verbatim through /bin/bash with the app's .env in the
+    # environment, so shell variables are plain $timeout / $((...)) - do not escape
+    # them as $$, bash would expand $$ to its own PID. Variables meant for the
+    # nextcloud container ($REDIS_HOST_PASSWORD) stay inside the single-quoted
+    # `docker exec bash -c` block and are expanded there, not here.
+    # Redis: memcache.local comes from the image's apcu.config.php; the distributed
+    # cache and the file-locking backend are set here because REDIS_HOST cannot be
+    # used (see the note in the nextcloud service environment).
+    # Also switches background jobs to cron (the cron service handles the ticking).
+    # HSTS is no longer set here: see the caddy_N.header labels.
+    post_install: |
+      timeout=300
+      while [ $timeout -gt 0 ]; do
+        if docker exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true'; then
+          echo "NextCloud installation complete"
+          break
+        fi
+        echo "Waiting for NextCloud auto-installation... $timeout s remaining"
+        sleep 5
+        timeout=$((timeout-5))
+      done
+      # The loop above always ends with status 0, so check the outcome itself: on a
+      # timeout, fail loudly (Maison logs a failed post_install) instead of running
+      # occ against an uninstalled Nextcloud.
+      docker exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || {
+        echo "Nextcloud did not finish installing within 300 s; Redis cache and cron were not configured" >&2
+        exit 1
+      }
+      docker exec nextcloud bash -c '
+        php occ config:system:set redis host --value redis
+        php occ config:system:set redis port --value 6379 --type=integer
+        php occ config:system:set redis password --value "$REDIS_HOST_PASSWORD"
+        php occ config:system:set memcache.distributed --value "\OC\Memcache\Redis"
+        php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
+        php occ background:cron && echo "Background jobs set to cron mode"
+      '

@@ -23,13 +23,17 @@ No exception is requested on authentication: it is on by default (see below).
 when `AUTH_PASSWORD` is set the manifest it returns includes
 `auth: {type: "bearer", token: "<AUTH_PASSWORD>"}`.
 
-`AUTH_PASSWORD` here is `$APP_DEFAULT_PASSWORD`. It is simultaneously:
+`AUTH_PASSWORD` here is this app's own generated secret,
+`CLAUDECODE_AUTH_PASSWORD`. It is both:
 
 - the `/mcp` Bearer token, and `/mcp` exposes `query_claude`, i.e. arbitrary
-  command execution inside this container;
-- the web-terminal login password; and
-- the PCS-wide generated default that other store apps use for their own admin
-  and database credentials.
+  command execution inside this container; and
+- the web-terminal login password.
+
+(Until 2026-10 it was the box-wide `$APP_DEFAULT_PASSWORD`, which made the leak
+worse: the same value also unlocked other store apps. The secret is seeded from it,
+so an install made before then still carries that value until it is changed from
+Maison's Security tab.)
 
 The service sits on the shared `${APP_NET:-pcs}` network, and Docker network
 peers can reach any container port regardless of what `expose:` lists. So with
@@ -50,7 +54,8 @@ container is mounted, so root here is root of an empty sandbox.
   the auth layer on port 9090, which keeps running with MCP disabled: `/login`
   and `/logout` are served by it directly, everything else goes through Caddy
   `forward_auth` to `/auth` and is redirected to `/login` on 401. The password
-  is `$APP_DEFAULT_PASSWORD`, generated per server at install time.
+  is `CLAUDECODE_AUTH_PASSWORD`, generated for this app at install time, shown
+  in Maison's Credentials dialog and changeable from its Security tab.
 - **No credential is broadcast.** With `MCP_ENABLED=false` the discovery
   responder is never created (`server.js` returns before constructing it), so
   nothing announces the app or its token on the shared network. Verified against
@@ -76,10 +81,10 @@ container is mounted, so root here is root of an empty sandbox.
 - **Keep `MCP_ENABLED=true` and document the disclosure.** Rejected: a note in
   `tips.before_install` does not stop a co-tenant container reading the
   password, and the store requires authentication that actually holds.
-- **Give the app its own generated secret instead of `$APP_DEFAULT_PASSWORD`.**
-  Rejected: it narrows the blast radius to this container but the announced
-  token still grants `query_claude`, i.e. code execution. The disclosure channel
-  is unchanged.
+- **Re-enable MCP now that the app has its own generated secret.** Rejected:
+  the per-app secret narrows the blast radius to this container, but the
+  announced token still grants `query_claude`, i.e. code execution. The
+  disclosure channel is unchanged.
 - **Unset `AUTH_PASSWORD` so the manifest carries no `auth` block.** Rejected:
   with an empty password the image treats every request as authorised
   (`isAuthorized()` returns true, `/auth` returns 200) — that removes the

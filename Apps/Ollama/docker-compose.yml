@@ -63,8 +63,6 @@ x-casaos:
   main: ollama
   index: /
   store_app_id: ollama
-  post-install-cmd: |
-    docker exec ollama curl -fsS --retry 90 --retry-delay 2 --retry-connrefused http://ollama-api:11434/api/version && docker exec ollama-api ollama pull llama3.2:1b
   architectures:
     - amd64
     - arm64
@@ -228,3 +226,29 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: ollama-${domain}
+  # A small default model so the chat works out of the box. The ollama binary is
+  # also a client: with OLLAMA_HOST it asks the running ollama-api to pull, so the
+  # model lands in ollama-api's own volume. post_up, on the app's network, because
+  # it needs that server running; it waits for it (up to ~3 min) rather than racing
+  # its startup. `once`, not `absent:<manifest>`: a user who deletes the model on
+  # purpose must not get it pulled back on every start. A failed pull (no network)
+  # is logged, records nothing, and is retried on the next start.
+  init:
+    - name: pull-default-model
+      image: ollama/ollama:0.30.7
+      phase: post_up
+      network: ollama_default
+      environment:
+        OLLAMA_HOST: http://ollama-api:11434
+      entrypoint: ["/bin/sh", "-c"]
+      # `$$` because Maison interpolates init fields (as compose does): a bare
+      # `$i` would be an unresolved variable and fail the step.
+      command:
+        - |
+          i=0
+          until ollama list >/dev/null 2>&1; do
+            i=$$((i+1)); [ "$$i" -le 90 ] || { echo "ollama-api did not come up" >&2; exit 1; }
+            sleep 2
+          done
+          exec ollama pull llama3.2:1b
+      when: once

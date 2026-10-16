@@ -146,11 +146,11 @@ x-casaos:
         **Getting Started**
         Username `admin` - the password is shown when you open the app (tile menu → Credentials).
         
-        **⚠️ Change these after your first login!**
+        To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
         
         **How to use:**
         1. Visit the website and login with the details above
-        2. Go to Profile Settings → Change your email & password
+        2. Go to Profile Settings → Change your email (the password is changed from Maison)
         3. Click the "+" button, then paste any recipe URL
         4. Watch as it automatically saves the recipe with photos
         5. Use the meal planner to organize your week
@@ -164,11 +164,11 @@ x-casaos:
         **시작하기**
         사용자명 `admin` - 비밀번호는 앱을 열 때 표시됩니다(타일 메뉴 → 자격 증명).
         
-        **⚠️ 첫 로그인 후에 이것들을 변경하세요!**
+        변경하려면 Maison의 앱 설정(보안 탭)을 사용하세요. 그래야 자격 증명 창이 정확하게 유지됩니다.
         
         **사용 방법:**
         1. 웹사이트를 방문하고 위의 정보로 로그인
-        2. 프로필 설정 → 이메일과 비밀번호 변경
+        2. 프로필 설정 → 이메일 변경 (비밀번호는 Maison에서 변경)
         3. "+" 버튼을 클릭한 후 레시피 URL 붙여넣기
         4. 사진과 함께 자동으로 레시피가 저장되는 것을 확인
         5. 식사 플래너를 사용하여 일주일 계획
@@ -182,11 +182,11 @@ x-casaos:
         **开始使用**
         用户名 `admin` - 密码会在打开应用时显示（磁贴菜单 → 凭据）。
         
-        **⚠️ 首次登录后请更改这些！**
+        如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
         
         **使用方法:**
         1. 访问网站并使用上述信息登录
-        2. 个人资料设置 → 更改您的邮箱和密码
+        2. 个人资料设置 → 更改您的邮箱（密码请在 Maison 中修改）
         3. 点击"+"按钮，然后粘贴任何食谱URL
         4. 观看它自动保存带有照片的食谱
         5. 使用餐食规划器来组织您的一周
@@ -200,11 +200,11 @@ x-casaos:
         **Commencer**
         Nom d'utilisateur `admin` - le mot de passe s'affiche à l'ouverture de l'application (menu de la tuile → Identifiants).
         
-        **⚠️ Changez ceci après votre première connexion !**
+        Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
         
         **Comment utiliser:**
         1. Visitez le site web et connectez-vous avec les détails ci-dessus
-        2. Paramètres du profil → Changez votre email et mot de passe
+        2. Paramètres du profil → Changez votre email (le mot de passe se change depuis Maison)
         3. Cliquez sur le bouton "+", puis collez n'importe quelle URL de recette
         4. Regardez comme elle sauvegarde automatiquement la recette avec photos
         5. Utilisez le planificateur de repas pour organiser votre semaine
@@ -218,11 +218,11 @@ x-casaos:
         **Comenzar**
         Usuario `admin` - la contraseña se muestra al abrir la aplicación (menú del icono → Credenciales).
         
-        **⚠️ ¡Cambia estos después de tu primer inicio de sesión!**
+        Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
         
         **Cómo usar:**
         1. Visita el sitio web e inicia sesión con los detalles de arriba
-        2. Configuración de Perfil → Cambia tu email y contraseña
+        2. Configuración de Perfil → Cambia tu email (la contraseña se cambia desde Maison)
         3. Haz clic en el botón "+", luego pega cualquier URL de receta
         4. Observa cómo automáticamente guarda la receta con fotos
         5. Usa el planificador de comidas para organizar tu semana
@@ -249,12 +249,26 @@ x-compose-app:
         es_es: Administrador
       username: admin
       password: ${MEALIE_ADMIN_PASSWORD}
-      note:
-        en_us: Change it under Profile Settings after your first login.
-        ko_kr: 첫 로그인 후 프로필 설정에서 변경하세요.
-        zh_cn: 首次登录后请在个人资料设置中修改。
-        fr_fr: Changez-le dans les paramètres du profil après votre première connexion.
-        es_es: Cámbiala en Configuración de Perfil tras tu primer inicio de sesión.
+      # A hook, not env: Mealie keeps the password hashed in its own database,
+      # and seed-admin-password below rotates it off the upstream default only
+      # once. The hook makes the same API calls that step does, from inside the
+      # running container (which ships curl): sign in with the old password,
+      # then PUT /api/users/password. One sign-in attempt, so a wrong old value
+      # costs one of the 5 failures Mealie allows before locking the account.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e OLD_MEALIE_ADMIN_PASSWORD -e MEALIE_ADMIN_PASSWORD mealie sh -c '
+            [ -n "$MEALIE_ADMIN_PASSWORD" ] || exit 1
+            api=http://127.0.0.1:80/api
+            token=$(curl -fsS -m 15 -X POST "$api/auth/token" \
+              --data-urlencode username=admin \
+              --data-urlencode "password=$OLD_MEALIE_ADMIN_PASSWORD" |
+              sed -n "s/.*\"access_token\":\"\([^\"]*\)\".*/\1/p")
+            [ -n "$token" ] || exit 1
+            curl -fsS -m 15 -o /dev/null -X PUT "$api/users/password" \
+              -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+              --data-binary "{\"currentPassword\":\"$OLD_MEALIE_ADMIN_PASSWORD\",\"newPassword\":\"$MEALIE_ADMIN_PASSWORD\"}"'
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.

@@ -99,14 +99,6 @@ x-casaos:
     - screenshot-2.png
     - screenshot-3.png
   thumbnail: thumbnail.png
-  # Runs once the container is up. It asks the server's identity provider for
-  # an OIDC client of its own, writes the result into the agent's config, and
-  # restarts it so the dashboard picks the provider up. Re-registering returns
-  # the same credentials, so this is safe to repeat; `|| true` keeps a failed
-  # registration from failing the install, because the basic-auth fallback
-  # above still gets the user in.
-  post-install-cmd: |
-    docker exec hermes sh -c 'curl -fsS --retry 90 --retry-delay 2 --retry-connrefused -X POST http://auth-registrar:9092/register -H "content-type: application/json" -d "{\"callback_path\":\"/auth/callback\"}" -o /opt/data/.oidc.json' && docker exec hermes sh -c 'ISS=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"issuer_url\"])"); CID=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_id\"])"); SEC=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_secret\"])"); hermes config set --force dashboard.oauth.self_hosted.issuer "$ISS"; hermes config set --force dashboard.oauth.self_hosted.client_id "$CID"; hermes config set --force dashboard.oauth.self_hosted.client_secret "$SEC"; rm -f /opt/data/.oidc.json' && docker restart hermes || true
   title:
     en_us: Hermes Agent
   tagline:
@@ -300,6 +292,10 @@ x-compose-app:
         ko_kr: 대체 로그인
       username: admin
       password: ${HERMESAGENT_ADMIN_PASSWORD}
+      # Read from HERMES_DASHBOARD_BASIC_AUTH_PASSWORD at every start (the env value
+      # wins over a stored hash), so .env plus a recreate is the whole change.
+      change:
+        apply: env
       note:
         en_us: Sign in with your server account first; this account is a fallback for when single sign-on is unavailable.
         fr_fr: Connectez-vous d'abord avec votre compte serveur ; ce compte sert de secours si l'authentification unique est indisponible.
@@ -311,3 +307,13 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: hermes-${domain}
+  hooks:
+    # Runs once the container is up. It asks the server's identity provider for
+    # an OIDC client of its own, writes the result into the agent's config, and
+    # restarts it so the dashboard picks the provider up. Re-registering returns
+    # the same credentials, so this is safe to repeat. A failure does not fail the
+    # install — Maison logs and swallows post_install errors, and the basic-auth
+    # fallback still gets the user in — so there is no `|| true`: it would only
+    # hide the failure from that log.
+    post_install: |
+      docker exec hermes sh -c 'curl -fsS --retry 90 --retry-delay 2 --retry-connrefused -X POST http://auth-registrar:9092/register -H "content-type: application/json" -d "{\"callback_path\":\"/auth/callback\"}" -o /opt/data/.oidc.json' && docker exec hermes sh -c 'ISS=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"issuer_url\"])"); CID=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_id\"])"); SEC=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_secret\"])"); hermes config set --force dashboard.oauth.self_hosted.issuer "$ISS"; hermes config set --force dashboard.oauth.self_hosted.client_id "$CID"; hermes config set --force dashboard.oauth.self_hosted.client_secret "$SEC"; rm -f /opt/data/.oidc.json' && docker restart hermes

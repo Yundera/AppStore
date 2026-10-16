@@ -268,6 +268,24 @@ x-compose-app:
         ko_kr: 관리자
       username: admin
       password: ${PAPERLESS_ADMIN_PASSWORD}
+      # A hook, not env: PAPERLESS_ADMIN_PASSWORD only creates the superuser
+      # while no `admin` exists (manage_superuser, run on every start, skips an
+      # existing one), so a new value in .env would never reach the database.
+      # The hook sets it through Django in the running container, as the
+      # `paperless` user so nothing it touches under data/ ends up root-owned.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e PAPERLESS_ADMIN_PASSWORD -u paperless \
+            -w /usr/src/paperless/src paperless python3 manage.py shell -c "
+          import os
+          from django.contrib.auth.models import User
+          p = os.environ['PAPERLESS_ADMIN_PASSWORD']
+          assert p, 'empty password'
+          u = User.objects.get(username='admin')
+          u.set_password(p)
+          u.save(update_fields=['password'])
+          "
   # Directories Maison creates and chowns to $PUID:$PGID before images are
   # pulled and before any container starts - on the first boot and every one
   # after it. Declared here rather than mkdir'd in a hook: a hook runs inside

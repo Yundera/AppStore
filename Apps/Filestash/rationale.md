@@ -53,7 +53,14 @@ plugins to the PCS's Dex is left for a follow-up.
 - `ADMIN_PASSWORD` takes precedence over a hash saved from the admin console (tested:
   with env hash A and config hash B, only A logs in). Maison's credential stays
   authoritative and never shows a stale password. The tip says so.
-- The `local` connection's path is preset to `/DATA/` in the seeded `config.json`.
+- The `local` connection's path is pinned to `/DATA/` in the seeded `config.json`.
+  Filestash enforces a pin as a prefix of the submitted `path`, and the submitted path
+  becomes the session's root. The current login frontend does not prefill or hide
+  pinned fields, though: it shows an empty Path box and sends `"path": null`, which is
+  refused with "Not Allowed" before the password is checked. Hence the
+  `My Server (/DATA)` label, and the tip and credential note telling the user to type
+  `/DATA`. Dropping the pin instead would let an empty Path open the container's
+  whole filesystem.
   Tested: a session requested with `path: /etc/` is refused ("Not Allowed"), and a
   `../` traversal is refused ("Can't use filesystem").
 - The container runs as `$PUID:$PGID` (the image's own user is uid 1000). Files under

@@ -47,21 +47,6 @@ services:
         limits:
           memory: 128M
           cpus: '0.5'
-    x-casaos:
-      envs:
-        - container: PUID
-          description:
-            en_us: User ID owning the files Dufs creates. Defaults to your server user.
-        - container: PGID
-          description:
-            en_us: Group ID owning the files Dufs creates. Defaults to your server group.
-        - container: TZ
-          description:
-            en_us: Timezone used for the file timestamps shown in the interface.
-      volumes:
-        - container: /srv
-          description:
-            en_us: The whole of /DATA - Documents, Downloads, Media, Gallery and AppData, which holds every other app's database, configuration and secrets. Dufs serves all of it read-write over the web UI and WebDAV, so whoever has the admin password can browse, upload, overwrite, delete and download it as an archive.
 
 networks:
   pcs:
@@ -214,6 +199,13 @@ x-compose-app:
       note:
         en_us: "WebDAV URL: https://dufs-${APP_DOMAIN}/"
         zh_cn: "WebDAV 地址：https://dufs-${APP_DOMAIN}/"
+      # --auth is read from the command line on every start, so a new value in .env
+      # plus a recreate is the whole change. The rule `admin:pw@/:rw` is split at
+      # the first "@/", so a password containing "/" could end the rule early.
+      change:
+        apply: env
+        policy:
+          forbid: "/"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   #
   # Hand-authored, NOT derived from `volumes:` above: the single bind source is the

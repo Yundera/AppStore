@@ -238,6 +238,60 @@ x-compose-app:
     - label: Administrator
       username: admin
       password: ${DOLIBARR_ADMIN_PASSWORD}
+      # A hook, not env: DOLI_ADMIN_PASSWORD is written into llx_user only by
+      # docker-run.sh's initializeDatabase, which runs when the tables do not
+      # exist yet — removing install.lock on every start (this compose's
+      # entrypoint) does not re-run it. The hook loads Dolibarr itself in the
+      # running container, as www-data (owner of the mode-400 conf.php), hashes
+      # the value with dol_hash — the algorithm Dolibarr's own login checks
+      # against — and writes it, then asks Dolibarr's login code whether the new
+      # password is accepted.
+      #
+      # Not User::setPassword: with DATABASE_PWD_ENCRYPTED unset, which is how
+      # the image's auto-install leaves it, that also writes the password in
+      # clear into llx_user.pass. This update clears that column instead, and
+      # sets flagdelsessionsbefore as setPassword does, so open sessions end.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e DOLIBARR_ADMIN_PASSWORD -u www-data dolibarr php <<'PHP'
+          <?php
+          define('NOSESSION', '1');
+          define('NOREQUIREHTML', '1');
+          require '/var/www/html/master.inc.php';
+          require_once DOL_DOCUMENT_ROOT.'/core/lib/security.lib.php';
+          require_once DOL_DOCUMENT_ROOT.'/core/lib/security2.lib.php';
+          require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
+
+          function fail($why)
+          {
+              fwrite(STDERR, $why."\n");
+              exit(1);
+          }
+
+          $password = (string) getenv('DOLIBARR_ADMIN_PASSWORD');
+          if ($password === '') {
+              fail('no password given');
+          }
+          $admin = new User($db);
+          if ($admin->fetch(0, 'admin') <= 0) {
+              fail('user admin not found');
+          }
+          $now = dol_now();
+          $sql = "UPDATE ".$db->prefix()."user SET"
+              ." pass_crypted = '".$db->escape(dol_hash($password))."',"
+              ." pass = NULL, pass_temp = NULL,"
+              ." datelastpassvalidation = '".$db->idate($now)."',"
+              ." flagdelsessionsbefore = '".$db->idate($now - 5, 'gmt')."'"
+              ." WHERE rowid = ".((int) $admin->id);
+          $res = $db->query($sql);
+          if (!$res || $db->affected_rows($res) != 1) {
+              fail('update failed: '.$db->lasterror());
+          }
+          if (checkLoginPassEntity('admin', $password, $admin->entity, array('dolibarr')) !== 'admin') {
+              fail('Dolibarr does not accept the new password');
+          }
+          PHP
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   folders:
     - path: /DATA/AppData/$AppID/documents

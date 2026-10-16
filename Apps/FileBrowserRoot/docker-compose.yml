@@ -98,21 +98,6 @@ services:
       resources:
         limits:
           memory: 256M
-    x-casaos:
-      envs:
-        - container: TZ
-          description:
-            en_us: Timezone used for the file timestamps shown in the interface.
-        - container: FB_DATABASE
-          description:
-            en_us: Path to the FileBrowser database inside the container. Stored on the /db volume.
-      volumes:
-        - container: /db/
-          description:
-            en_us: FileBrowser's own database - permissions, shares and settings. Kept across uninstall and reinstall.
-        - container: /srv/
-          description:
-            en_us: The server's entire filesystem - /DATA and every system directory alongside it (/etc, /var, /home, /root). This is everything FileBrowser can browse, edit, delete and share, as root, so anyone who passes the server login can reach all of it.
 
 networks:
   pcs:

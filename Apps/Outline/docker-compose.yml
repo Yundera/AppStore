@@ -72,6 +72,15 @@ services:
     expose:
       - "5556"
     labels:
+      # Not read by anything. Dex reads config.yaml (re-rendered by `files: ensure:
+      # always`) only at start, and Maison applies a changed admin password with a
+      # plain `compose up` - without a label that changes with it, dex is not
+      # recreated and keeps the old password. The plaintext, not
+      # OUTLINE_DEX_PASSWORD_HASH: .env values reach compose raw, and compose
+      # interpolates the `$` in a bcrypt hash, so the label would collapse to the
+      # constant `$$2a$$10` and never change. Maison refuses `$` in a password, so
+      # the plaintext survives interpolation intact.
+      outline.dex-password-rev: ${OUTLINE_ADMIN_PASSWORD}
       caddy_0: outline-auth-${APP_DOMAIN}
       caddy_0.import: gateway_tls
       caddy_0.reverse_proxy: "{{upstreams 5556}}"
@@ -437,6 +446,12 @@ x-compose-app:
         ko_kr: 관리자
       username: ${APP_EMAIL}
       password: ${OUTLINE_ADMIN_PASSWORD}
+      # The password is dex's static admin entry. OUTLINE_DEX_PASSWORD_HASH derives
+      # from it, so Maison regenerates the hash on the same up, re-renders
+      # dex/config.yaml (ensure: always) and - through the outline.dex-password-rev
+      # label - recreates dex, which reads its config only at start.
+      change:
+        apply: env
   # Dex's config carries the deployment's domain in its issuer, and Outline's own
   # OIDC_AUTH_URI (in the environment above) is re-resolved on every up. The two
   # have to move together: the hook this replaces rendered the issuer once at

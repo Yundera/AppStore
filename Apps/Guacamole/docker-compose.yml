@@ -42,7 +42,7 @@ services:
 
   postgres:
     user: $PUID:$PGID
-    image: postgres:13-alpine
+    image: postgres:17.11-alpine
     restart: unless-stopped
     cpu_shares: 70
     environment:
@@ -121,7 +121,7 @@ x-casaos:
         menu -> Credentials).
 
         The administrator password is generated for your server at install time.
-        Change it from **Settings -> Preferences** after your first login.
+        To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
 
         For better performance, you can access Guacamole directly at
         https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io/guacamole/ instead of going
@@ -134,6 +134,30 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.6.0"
+  # postgres 13 is end-of-life (Nov 2025); the store moved to 17.11 on 2026-10-16.
+  # postgres:17 will not start on a 13 cluster, so every install made before then
+  # needs pg_upgrade once. Installs predate .data-version and arrive at data
+  # version 1 whatever cluster they hold: pgautoupgrade reads PG_VERSION and exits
+  # untouched on a cluster already at 17, so a fresh install loses nothing.
+  data_version: 2
+  migrations:
+    # POSTGRES_USER / POSTGRES_DB must match the postgres service: pgautoupgrade
+    # connects as `postgres` to a database named after the user unless told.
+    # The -alpine variant, because the cluster was written by postgres:13-alpine
+    # (musl collation; a Debian pg_upgrade would mismatch it).
+    # Runs as root on purpose: as $PUID it fails (its entrypoint must gosu to
+    # `postgres`). As root it chowns the cluster for the upgrade and restores the
+    # original $PUID:$PGID ownership when done — verified 13 -> 17.11 on a uid-1000
+    # cluster, which postgres:17.11-alpine running as that uid then served.
+    - id: 2
+      name: postgres-13-to-17
+      image: pgautoupgrade/pgautoupgrade:17.11-alpine
+      environment:
+        PGAUTO_ONESHOT: "yes"
+        POSTGRES_USER: guacamole_user
+        POSTGRES_DB: guacamole_db
+      volumes:
+        - /DATA/AppData/${AppID}/postgresql:/var/lib/postgresql/data
   # Seeded: an installed app keeps the shared password its database and
   # guacadmin account were initialised with; a fresh install gets its own.
   secrets:
@@ -146,8 +170,31 @@ x-compose-app:
       username: guacadmin
       password: ${GUACAMOLE_ADMIN_PASSWORD}
       note:
-        en_us: Change it from Settings -> Preferences after your first login.
-        zh_cn: 首次登录后请在 设置 -> 偏好设置 中修改。
+        en_us: Change it from the app's settings in Maison (Security tab) so this stays correct; a change made in Guacamole's Preferences is not reflected here.
+        zh_cn: 请在 Maison 的应用设置（安全选项卡）中修改，以便此处保持一致；在 Guacamole 偏好设置中所做的修改不会同步到这里。
+      # Guacamole keeps a salted hash in its own database; the env value only seeds
+      # first boot (002-create-admin-user.sh). Rewrite the hash the same way that
+      # script does — SHA-256(password || UPPERCASE_HEX(salt)) with a fresh salt.
+      # psql's :'pw' quotes the value, and an UPDATE that matched no row fails.
+      change:
+        apply: hook
+        hook: |
+          out=$(docker compose exec -T -e GUACAMOLE_ADMIN_PASSWORD postgres sh -c \
+            'psql -v ON_ERROR_STOP=1 -U guacamole_user -d guacamole_db --set=pw="$GUACAMOLE_ADMIN_PASSWORD"' <<'SQL'
+          WITH s AS (
+            SELECT decode(replace(gen_random_uuid()::text, '-', '') ||
+                          replace(gen_random_uuid()::text, '-', ''), 'hex') AS salt
+          )
+          UPDATE guacamole_user u
+          SET password_salt = s.salt,
+              password_hash = sha256(convert_to(:'pw' || upper(encode(s.salt, 'hex')), 'UTF8')),
+              password_date = CURRENT_TIMESTAMP
+          FROM s, guacamole_entity e
+          WHERE e.entity_id = u.entity_id AND e.name = 'guacadmin' AND e.type = 'USER';
+          SQL
+          ) || exit 1
+          echo "$out"
+          [ "$out" = "UPDATE 1" ]
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` -
   # the two bind-mount sources above. Declared here rather than mkdir'd in the
   # hook: a hook's mkdir runs inside the Maison container, so the directories

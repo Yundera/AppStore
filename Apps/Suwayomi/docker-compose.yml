@@ -213,3 +213,10 @@ x-compose-app:
     - label: Administrator
       username: admin
       password: ${SUWAYOMI_ADMIN_PASSWORD}
+      # The entrypoint writes AUTH_PASSWORD into server.conf on every start, so a new
+      # value in .env plus a recreate is the whole change. It substitutes the value
+      # with sed, unescaped: "/" ends the expression and "&" expands to the match.
+      change:
+        apply: env
+        policy:
+          forbid: "/&"

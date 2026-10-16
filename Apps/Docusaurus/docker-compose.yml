@@ -99,6 +99,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "3.10.1"
   # Generating the site needs Docusaurus's own build tooling, so it stays a
   # container — declared, not shelled out to. `when: absent:...` replaces the
   # `if [ -f /output/.initialized ]` the script used to open with.

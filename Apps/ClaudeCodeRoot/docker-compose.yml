@@ -62,7 +62,7 @@ services:
       caddy_2.3_handle.forward_auth.handle_response.redir: "* /login"
       caddy_2.3_handle.reverse_proxy: "{{upstreams 8080}}"
     environment:
-      - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
+      - AUTH_PASSWORD=${CLAUDECODEROOT_AUTH_PASSWORD}
       # MCP automation disabled on the privileged (root) app. The 9090 auth layer
       # (login/auth/logout) keeps running; only the /mcp endpoint is turned off.
       - MCP_ENABLED=false
@@ -117,7 +117,7 @@ x-casaos:
     en_us: |
       Claude Code Container (root) - Web-based terminal interface for Claude Code (Anthropic's CLI for Claude).
 
-      This is the PRIVILEGED variant, intended for PCS administration and debugging. It has full control of the host VM. For sandboxed automation (e.g. n8n via MCP) without host access, install "Claude Code" instead.
+      This is the PRIVILEGED variant, intended for PCS administration and debugging. It has full control of the host VM. For a sandboxed Claude Code without host access, install "Claude Code" instead.
 
       Features:
       - Web-based terminal access to Claude Code
@@ -128,11 +128,11 @@ x-casaos:
       - Mounts the whole of /DATA read-write, including every other app's data
       - Can perform any maintenance task on the VM
 
-      Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
+      The login password is generated per app and shown when you first open it.
     zh_cn: |
       Claude Code 容器（root）- Claude Code（Anthropic 的 Claude CLI）的 Web 终端界面。
 
-      这是**特权版本**，用于 PCS 管理和调试，拥有对宿主虚拟机的完全控制权。如果只需要不接触宿主机的沙盒化自动化（例如通过 MCP 驱动 n8n），请改为安装“Claude Code”应用。
+      这是**特权版本**，用于 PCS 管理和调试，拥有对宿主虚拟机的完全控制权。如果只需要不接触宿主机的沙盒化 Claude Code，请改为安装“Claude Code”应用。
 
       功能：
       - 基于 Web 的 Claude Code 终端访问
@@ -142,7 +142,7 @@ x-casaos:
       - 完整的管理权限：可访问 Docker socket，并通过专用的 `claude` 宿主机用户（免密 sudo）以 SSH 登录宿主虚拟机
       - 可挂载整个 /DATA（包括其他应用的数据），并可对虚拟机执行任何维护操作
 
-      默认密码为自动生成，请在应用设置中查看 AUTH_PASSWORD 的值。
+      登录密码按应用单独生成，首次打开应用时会显示。
   developer: Anthropic
   icon: icon.png
   screenshot_link:
@@ -165,11 +165,11 @@ x-casaos:
 
         Leave API key empty to use subscription auth.
 
-        Default login password: `$APP_DEFAULT_PASSWORD`
+        The login password is shown when you open the app (tile menu → Credentials).
 
-        **This is the privileged (root) app for PCS administration and debugging.** It has full control of the host VM (Docker socket + SSH admin/sudo) and mounts the whole of `/DATA` read-write, so it can read and modify every other app's data. Install it only on a PCS you administer yourself, and change the default password immediately.
+        **This is the privileged (root) app for PCS administration and debugging.** It has full control of the host VM (Docker socket + SSH admin/sudo) and mounts the whole of `/DATA` read-write, so it can read and modify every other app's data. Install it only on a PCS you administer yourself, and consider changing its generated password from Maison's Security tab.
 
-        **MCP automation is disabled on this app.** The programmatic MCP endpoint is intentionally not exposed here. If you want to drive Claude Code from n8n or other agents via MCP, install the standard "Claude Code" app instead.
+        **MCP automation is disabled on this app.** The programmatic MCP endpoint is intentionally not exposed here (the sandboxed "Claude Code" app has it off as well).
       zh_cn: |
         认证方式：
         - Anthropic API 密钥（https://console.anthropic.com/），或
@@ -177,47 +177,11 @@ x-casaos:
 
         使用订阅认证时请将 API 密钥留空。
 
-        默认登录密码：`$APP_DEFAULT_PASSWORD`
+        首次打开应用时会显示登录密码（也可在磁贴菜单 → 凭据中查看）。
 
-        **这是用于 PCS 管理和调试的特权（root）应用。** 它拥有对宿主虚拟机的完全控制权（Docker socket + SSH 管理员/sudo），并以读写方式挂载整个 /DATA，因此可以读取和修改其他所有应用的数据。请仅在您自己管理的 PCS 上安装，并立即修改默认密码。
+        **这是用于 PCS 管理和调试的特权（root）应用。** 它拥有对宿主虚拟机的完全控制权（Docker socket + SSH 管理员/sudo），并以读写方式挂载整个 /DATA，因此可以读取和修改其他所有应用的数据。请仅在您自己管理的 PCS 上安装，并可在 Maison 的安全选项卡中修改生成的密码。
 
-        **本应用已禁用 MCP 自动化。** 此处刻意不开放程序化 MCP 端点。如果需要通过 MCP 从 n8n 或其他智能体驱动 Claude Code，请改为安装标准的“Claude Code”应用。
-  # Runs as root INSIDE the casa-img container (only /DATA + docker.sock are in
-  # scope here), so host-user provisioning must break out to the host namespace
-  # via the docker socket: `docker run -v /:/host alpine:3.20 chroot /host ...`.
-  # This block ensures a dedicated `claude` host user + NOPASSWD sudo + a
-  # writable ~/.ssh exist (the /home/claude/.ssh mount above feeds the optional
-  # host-SSH feature). Idempotent: a no-op where they already do.
-  # ENSURE semantics: every step is idempotent and best-effort, and the whole
-  # script always exits 0 — provisioning the host `claude` user is only needed for
-  # the optional host-SSH feature, so it must NEVER block the app from installing.
-  pre-install-cmd: |
-    # Host provisioning, and the only reason this app still carries a hook: it
-    # creates the `claude` account on the HOST and grants it sudo, which is not
-    # something any declaration can express. Everything it used to do to the app's
-    # own files (CLAUDE.md, .claude.json) now lives in seed/ instead.
-    #
-    # Every step is best-effort and the hook ends with `exit 0`: a PCS where host
-    # SSH is unavailable should still get the app.
-    docker run --rm -v /:/host alpine:3.20 chroot /host /bin/sh -c '
-      id claude >/dev/null 2>&1 || useradd -m -s /bin/bash -p "*" claude || true
-      # OpenSSH refuses ALL auth (incl. pubkey) for an account whose shadow
-      # password field is "!" — the default useradd leaves. "*" means "no
-      # password set" without tripping the locked-account check, so key-based
-      # SSH works. Run unconditionally to also repair accounts already
-      # provisioned locked. (passwd -u would NOT fix this: it refuses to
-      # unlock an account with no real hash behind the "!".)
-      usermod -p "*" claude 2>/dev/null || true
-      if [ ! -f /etc/sudoers.d/claude ]; then
-        echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude && chmod 440 /etc/sudoers.d/claude
-      fi
-      install -d -m 700 -o claude -g claude /home/claude/.ssh 2>/dev/null || mkdir -p /home/claude/.ssh
-      touch /home/claude/.ssh/authorized_keys 2>/dev/null || true
-      chmod 600 /home/claude/.ssh/authorized_keys 2>/dev/null || true
-      chown claude:claude /home/claude/.ssh /home/claude/.ssh/authorized_keys 2>/dev/null || true
-      exit 0
-    ' || echo "[pre-install] host claude provisioning skipped (host-SSH may be unavailable); continuing"
-    exit 0
+        **本应用已禁用 MCP 自动化。** 此处刻意不开放程序化 MCP 端点（沙盒版“Claude Code”应用同样已关闭）。
 
 x-compose-app:
   schema_version: 2
@@ -233,3 +197,51 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: clauderoot-${domain}
+  secrets:
+    # Seeded from the box-wide password it replaces, so an installed app keeps the
+    # login it already had; a fresh install gets its own.
+    CLAUDECODEROOT_AUTH_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Terminal login
+      password: ${CLAUDECODEROOT_AUTH_PASSWORD}
+      # The auth layer reads AUTH_PASSWORD from the environment on every start and
+      # keeps sessions in memory only, so .env plus a recreate is the whole change.
+      # Open terminals are logged out by the recreate.
+      change:
+        apply: env
+  # Maison runs hooks with /bin/bash inside its own container, but the docker
+  # client talks to the HOST daemon — so `docker run -v /:/host … chroot /host`
+  # is how this reaches the host namespace. It ensures a dedicated `claude` host
+  # user + NOPASSWD sudo + a writable ~/.ssh exist (the /home/claude/.ssh mount
+  # above feeds the optional host-SSH feature).
+  # ENSURE semantics: every step is idempotent and best-effort, and the whole
+  # script always exits 0 — provisioning the host `claude` user is only needed for
+  # the optional host-SSH feature, so it must NEVER block the app from installing.
+  hooks:
+    pre_install: |
+      # Host provisioning, and the only reason this app still carries a hook: it
+      # creates the `claude` account on the HOST and grants it sudo, which is not
+      # something any declaration can express. Everything it used to do to the app's
+      # own files (CLAUDE.md, .claude.json) now lives in seed/ instead.
+      #
+      # Every step is best-effort and the hook ends with `exit 0`: a PCS where host
+      # SSH is unavailable should still get the app.
+      docker run --rm -v /:/host alpine:3.20 chroot /host /bin/sh -c '
+        id claude >/dev/null 2>&1 || useradd -m -s /bin/bash -p "*" claude || true
+        # OpenSSH refuses ALL auth (incl. pubkey) for an account whose shadow
+        # password field is "!" — the default useradd leaves. "*" means "no
+        # password set" without tripping the locked-account check, so key-based
+        # SSH works. Run unconditionally to also repair accounts already
+        # provisioned locked. (passwd -u would NOT fix this: it refuses to
+        # unlock an account with no real hash behind the "!".)
+        usermod -p "*" claude 2>/dev/null || true
+        if [ ! -f /etc/sudoers.d/claude ]; then
+          echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude && chmod 440 /etc/sudoers.d/claude
+        fi
+        install -d -m 700 -o claude -g claude /home/claude/.ssh 2>/dev/null || mkdir -p /home/claude/.ssh
+        touch /home/claude/.ssh/authorized_keys 2>/dev/null || true
+        chmod 600 /home/claude/.ssh/authorized_keys 2>/dev/null || true
+        chown claude:claude /home/claude/.ssh /home/claude/.ssh/authorized_keys 2>/dev/null || true
+        exit 0
+      ' || echo "[pre-install] host claude provisioning skipped (host-SSH may be unavailable); continuing"
+      exit 0

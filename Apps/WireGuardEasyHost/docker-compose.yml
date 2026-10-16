@@ -37,7 +37,7 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     # NOTE: host network mode forbids setting net.ipv4.* sysctls on the container
-    # (they would mutate the host). They are set on the HOST by pre-install-cmd below.
+    # (they would mutate the host). They are set on the HOST by x-compose-app.hooks.pre_install.
     cpu_shares: 50
     mem_limit: 256m
 
@@ -93,86 +93,6 @@ x-casaos:
   main: wgeasyhost
   store_app_id: wgeasyhost
   index: /
-  # Host kernel parameters, the only reason this app still carries a hook. A hook runs
-  # inside the Maison container, where /proc/sys is read-only — a bare `sysctl -w` there
-  # exits 1, and pre_install is fatal, so it would leave the app installed but stopped.
-  # The supported way to reach the host is through the Docker socket the hook already
-  # holds: --privileged for a writable /proc/sys, --network=host because net.* keys are
-  # per-namespace. Idempotent, and best-effort: clients reach host services at 10.9.0.1
-  # without forwarding (only peer-to-peer and full-tunnel routing need it), so a PCS
-  # that refuses the sysctls should still get the app — the hook always exits 0.
-  # The sysctl alone does not make forwarding work on a PCS — see post-install-cmd.
-  # nginx.conf is no longer fetched here; it ships in seed/ (see x-compose-app).
-  pre-install-cmd: |
-    docker run --rm --privileged --network=host alpine:3.20 sh -c '
-      sysctl -w net.ipv4.ip_forward=1
-      sysctl -w net.ipv4.conf.all.src_valid_mark=1
-    ' || echo "[pre-install] host sysctl setup skipped; peer-to-peer and full-tunnel routing may need net.ipv4.ip_forward=1"
-    exit 0
-  # Runs AFTER container startup, against wg-easy's SQLite DB (polls until it is built),
-  # using the image's own bundled @libsql driver (no sqlite3 CLI present). Three writes:
-  #
-  # 1. Default PersistentKeepalive -> 25s. New clients inherit it from the userConfig row
-  #    (factory 0 = off); v15 dropped the env/INIT var. Only while still at 0, so a manual
-  #    change in the UI is never clobbered.
-  #
-  # 2. Forwarding through Docker's firewall. wg-easy's own PostUp FORWARD accepts go
-  #    through the image's `iptables`, which is iptables-LEGACY. Docker on the host writes
-  #    nft, and its nft FORWARD chain has policy DROP. A forwarded packet has to pass both
-  #    hooks, so the nft drop wins and wg-easy's accepts do nothing: peer-to-peer (wg0->wg0)
-  #    and full-tunnel (wg0->uplink) traffic is silently dropped on any Docker host.
-  #    Fix: append rules to PostUp/PostDown that go into DOCKER-USER (Docker never flushes
-  #    that chain) via iptables-nft, which the image also ships. They live in the hooks, so
-  #    they are re-applied by every `wg-quick up` (reboots included) and removed on down.
-  #    Scoped to wg0->wg0 and wg0<->uplink only, NOT a blanket `-i wg0`: that would let
-  #    a peer route into Docker's container networks and bypass the gateway. Each command
-  #    ends in `|| true` because wg-quick aborts `up` on a failing hook — a host without
-  #    DOCKER-USER (e.g. Docker's native nftables backend) keeps a working VPN instead.
-  #    Appended once (guarded by the DOCKER-USER marker), keeping any user-edited hooks.
-  #
-  # 3. Uplink device. The hooks' {{device}} (MASQUERADE for full-tunnel, and rule 2) is
-  #    hard-coded to `eth0` by wg-easy's first migration, with no env var to change it.
-  #    Set it to the interface of the host's default route, only while still `eth0`.
-  #
-  # If 2 or 3 changed anything, the script leaves a marker in the container and the hook
-  # restarts it, so wg-quick re-reads the hooks. (A marker rather than a captured $var:
-  # Compose interpolates x- fields too, and warns on every shell variable in a hook.)
-  post-install-cmd: |
-    for i in $(seq 1 60); do
-      docker exec -w /app/server wgeasyhost node --input-type=module -e '
-        import {createClient} from "@libsql/client";
-        import {execSync} from "node:child_process";
-        const c = createClient({url: "file:/etc/wireguard/wg-easy.db"});
-        const n = await c.execute("SELECT count(*) AS n FROM user_configs_table");
-        if (Number(n.rows[0].n) < 1) process.exit(3);
-        await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0");
-        let changed = false;
-        // host netns, so this is the host default route
-        let up = "";
-        try { up = (execSync("ip -4 route show default").toString().match(/ dev (\S+)/) || [])[1] || ""; } catch {}
-        if (up && up !== "eth0") {
-          const r = await c.execute({sql: "UPDATE interfaces_table SET device=? WHERE name=? AND device=?", args: [up, "wg0", "eth0"]});
-          if (r.rowsAffected) { changed = true; console.log("wgeasyhost: uplink device set to " + up); }
-        }
-        const rules = [
-          "DOCKER-USER -i wg0 -o wg0 -j ACCEPT",
-          "DOCKER-USER -i wg0 -o {{device}} -j ACCEPT",
-          "DOCKER-USER -i {{device}} -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
-        ];
-        const addUp = rules.map(r => " iptables-nft -C " + r + " 2>/dev/null || iptables-nft -I " + r + " || true;").join("");
-        const addDown = rules.map(r => " iptables-nft -D " + r + " 2>/dev/null || true;").join("");
-        const h = (await c.execute({sql: "SELECT post_up FROM hooks_table WHERE id=?", args: ["wg0"]})).rows[0];
-        if (h && !String(h.post_up).includes("DOCKER-USER")) {
-          await c.execute({sql: "UPDATE hooks_table SET post_up=post_up||?, post_down=post_down||? WHERE id=?", args: [addUp, addDown, "wg0"]});
-          changed = true; console.log("wgeasyhost: DOCKER-USER forward rules added to PostUp/PostDown");
-        }
-        if (changed) (await import("node:fs")).writeFileSync("/tmp/wgeasyhost-restart", "");
-        else console.log("wgeasyhost: hooks already up to date");
-      ' && break
-      sleep 2
-    done
-    docker exec wgeasyhost rm /tmp/wgeasyhost-restart 2>/dev/null && docker restart wgeasyhost
-    exit 0
   developer: WeejeWel
   icon: icon.png
   thumbnail: thumbnail.png
@@ -289,3 +209,105 @@ x-compose-app:
     - label: Administrator
       username: admin
       password: ${WGEASYHOST_ADMIN_PASSWORD}
+      # wg-easy keeps its own argon2 hash in users_table; INIT_PASSWORD is read only by
+      # the first-boot setup, so .env alone would change nothing. Hash and write it the
+      # way the image's `cli db:admin:reset` does — that CLI cannot be used directly: in
+      # 15.3.0 it fails to load (its `citty` dependency is not shipped), and it exits 0
+      # on errors. Unlike it, this leaves the admin's 2FA alone. The 12-character floor
+      # is wg-easy's own password rule.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -w /app/server -e WGEASYHOST_ADMIN_PASSWORD wgeasyhost node --input-type=module -e "
+            import argon2 from 'argon2';
+            import {createClient} from '@libsql/client';
+            const c = createClient({url: 'file:/etc/wireguard/wg-easy.db'});
+            const r = await c.execute({sql: 'UPDATE users_table SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1', args: [await argon2.hash(process.env.WGEASYHOST_ADMIN_PASSWORD)]});
+            if (r.rowsAffected !== 1) { console.error('wgeasyhost: admin user not found'); process.exit(1); }
+          "
+        policy:
+          min_length: 12
+  hooks:
+    # Host kernel parameters, the only reason this app still carries a hook. A hook runs
+    # inside the Maison container, where /proc/sys is read-only — a bare `sysctl -w` there
+    # exits 1, and pre_install is fatal, so it would leave the app installed but stopped.
+    # The supported way to reach the host is through the Docker socket the hook already
+    # holds: --privileged for a writable /proc/sys, --network=host because net.* keys are
+    # per-namespace. Idempotent, and best-effort: clients reach host services at 10.9.0.1
+    # without forwarding (only peer-to-peer and full-tunnel routing need it), so a PCS
+    # that refuses the sysctls should still get the app — the hook always exits 0.
+    # The sysctl alone does not make forwarding work on a PCS — see hooks.post_up.
+    # nginx.conf is no longer fetched here; it ships in seed/ (see x-compose-app).
+    pre_install: |
+      docker run --rm --privileged --network=host alpine:3.20 sh -c '
+        sysctl -w net.ipv4.ip_forward=1
+        sysctl -w net.ipv4.conf.all.src_valid_mark=1
+      ' || echo "[pre-install] host sysctl setup skipped; peer-to-peer and full-tunnel routing may need net.ipv4.ip_forward=1"
+      exit 0
+    # post_up, so it runs after EVERY start, not only the first: it is idempotent (each
+    # write is guarded) and it then repairs itself — e.g. a host whose uplink device
+    # changed gets its hooks rewritten on the next start.
+    # Runs AFTER container startup, against wg-easy's SQLite DB (polls until it is built),
+    # using the image's own bundled @libsql driver (no sqlite3 CLI present). Three writes:
+    #
+    # 1. Default PersistentKeepalive -> 25s. New clients inherit it from the userConfig row
+    #    (factory 0 = off); v15 dropped the env/INIT var. Only while still at 0, so a manual
+    #    change in the UI is never clobbered.
+    #
+    # 2. Forwarding through Docker's firewall. wg-easy's own PostUp FORWARD accepts go
+    #    through the image's `iptables`, which is iptables-LEGACY. Docker on the host writes
+    #    nft, and its nft FORWARD chain has policy DROP. A forwarded packet has to pass both
+    #    hooks, so the nft drop wins and wg-easy's accepts do nothing: peer-to-peer (wg0->wg0)
+    #    and full-tunnel (wg0->uplink) traffic is silently dropped on any Docker host.
+    #    Fix: append rules to PostUp/PostDown that go into DOCKER-USER (Docker never flushes
+    #    that chain) via iptables-nft, which the image also ships. They live in the hooks, so
+    #    they are re-applied by every `wg-quick up` (reboots included) and removed on down.
+    #    Scoped to wg0->wg0 and wg0<->uplink only, NOT a blanket `-i wg0`: that would let
+    #    a peer route into Docker's container networks and bypass the gateway. Each command
+    #    ends in `|| true` because wg-quick aborts `up` on a failing hook — a host without
+    #    DOCKER-USER (e.g. Docker's native nftables backend) keeps a working VPN instead.
+    #    Appended once (guarded by the DOCKER-USER marker), keeping any user-edited hooks.
+    #
+    # 3. Uplink device. The hooks' {{device}} (MASQUERADE for full-tunnel, and rule 2) is
+    #    hard-coded to `eth0` by wg-easy's first migration, with no env var to change it.
+    #    Set it to the interface of the host's default route, only while still `eth0`.
+    #
+    # If 2 or 3 changed anything, the script leaves a marker in the container and the hook
+    # restarts it, so wg-quick re-reads the hooks. (A marker rather than a captured $var:
+    # Compose interpolates x- fields too, and warns on every shell variable in a hook.)
+    post_up: |
+      for i in $(seq 1 60); do
+        docker exec -w /app/server wgeasyhost node --input-type=module -e '
+          import {createClient} from "@libsql/client";
+          import {execSync} from "node:child_process";
+          const c = createClient({url: "file:/etc/wireguard/wg-easy.db"});
+          const n = await c.execute("SELECT count(*) AS n FROM user_configs_table");
+          if (Number(n.rows[0].n) < 1) process.exit(3);
+          await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0");
+          let changed = false;
+          // host netns, so this is the host default route
+          let up = "";
+          try { up = (execSync("ip -4 route show default").toString().match(/ dev (\S+)/) || [])[1] || ""; } catch {}
+          if (up && up !== "eth0") {
+            const r = await c.execute({sql: "UPDATE interfaces_table SET device=? WHERE name=? AND device=?", args: [up, "wg0", "eth0"]});
+            if (r.rowsAffected) { changed = true; console.log("wgeasyhost: uplink device set to " + up); }
+          }
+          const rules = [
+            "DOCKER-USER -i wg0 -o wg0 -j ACCEPT",
+            "DOCKER-USER -i wg0 -o {{device}} -j ACCEPT",
+            "DOCKER-USER -i {{device}} -o wg0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT",
+          ];
+          const addUp = rules.map(r => " iptables-nft -C " + r + " 2>/dev/null || iptables-nft -I " + r + " || true;").join("");
+          const addDown = rules.map(r => " iptables-nft -D " + r + " 2>/dev/null || true;").join("");
+          const h = (await c.execute({sql: "SELECT post_up FROM hooks_table WHERE id=?", args: ["wg0"]})).rows[0];
+          if (h && !String(h.post_up).includes("DOCKER-USER")) {
+            await c.execute({sql: "UPDATE hooks_table SET post_up=post_up||?, post_down=post_down||? WHERE id=?", args: [addUp, addDown, "wg0"]});
+            changed = true; console.log("wgeasyhost: DOCKER-USER forward rules added to PostUp/PostDown");
+          }
+          if (changed) (await import("node:fs")).writeFileSync("/tmp/wgeasyhost-restart", "");
+          else console.log("wgeasyhost: hooks already up to date");
+        ' && break
+        sleep 2
+      done
+      docker exec wgeasyhost rm /tmp/wgeasyhost-restart 2>/dev/null && docker restart wgeasyhost
+      exit 0

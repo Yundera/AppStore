@@ -62,13 +62,13 @@ services:
       caddy_2.3_handle.forward_auth.handle_response.redir: "* /login"
       caddy_2.3_handle.reverse_proxy: "{{upstreams 8080}}"
     environment:
-      - AUTH_PASSWORD=$APP_DEFAULT_PASSWORD
+      - AUTH_PASSWORD=${CLAUDECODE_AUTH_PASSWORD}
       # MCP automation disabled. With MCP_ENABLED=true the image also starts a UDP
       # discovery responder (mcp-announce.js: binds 0.0.0.0:9099, joins multicast
       # 239.255.99.1) that replies to ANY unauthenticated datagram with a manifest
-      # carrying auth:{type:bearer,token:$AUTH_PASSWORD} — i.e. it hands
-      # $APP_DEFAULT_PASSWORD, which is both the /mcp bearer token and the terminal
-      # login password, to every other container on the shared pcs network. The image
+      # carrying auth:{type:bearer,token:$AUTH_PASSWORD} — i.e. it hands this app's
+      # password, which is both the /mcp bearer token and the terminal login, to
+      # every other container on the shared pcs network. The image
       # offers no way to keep /mcp while suppressing that announcement, so MCP stays
       # off until that is fixed upstream. See rationale.md.
       # The 9090 auth layer (login/auth/logout) keeps running; only /mcp is turned off.
@@ -124,7 +124,7 @@ x-casaos:
       - Claude starts automatically on connection
       - No host access — runs fully sandboxed
 
-      Default password is auto-generated. Check the app settings for the AUTH_PASSWORD value.
+      The login password is generated per app and shown when you first open it.
     zh_cn: |
       Claude Code 容器 - Claude Code（Anthropic 的 Claude CLI）的 Web 终端界面。
 
@@ -153,11 +153,11 @@ x-casaos:
 
         Leave API key empty to use subscription auth.
 
-        Default login password: `$APP_DEFAULT_PASSWORD`
+        The login password is shown when you open the app (tile menu → Credentials).
 
         **Sandboxed variant:** This app has no Docker socket, no host SSH, and no sudo account. It cannot perform host maintenance — use "Claude Code (root)" for that.
 
-        **MCP automation is turned off in this listing** (`MCP_ENABLED=false`), so `/mcp` answers 404 and there is no endpoint for another AI assistant (n8n, an aggregator) to drive. The image's MCP mode also starts a UDP discovery responder that hands this app's login password — the same `$APP_DEFAULT_PASSWORD` other apps on the server use — to any container that asks for it on the shared Docker network, and the image gives no way to keep one without the other. See `rationale.md`.
+        **MCP automation is turned off in this listing** (`MCP_ENABLED=false`), so `/mcp` answers 404 and there is no endpoint for another AI assistant (n8n, an aggregator) to drive. The image's MCP mode also starts a UDP discovery responder that hands this app's login password to any container that asks for it on the shared Docker network, and the image gives no way to keep one without the other. See `rationale.md`.
 
 x-compose-app:
   schema_version: 2
@@ -173,3 +173,15 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: claude-${domain}
+  secrets:
+    # Seeded from the box-wide password it replaces, so an installed app keeps the
+    # login it already had; a fresh install gets its own.
+    CLAUDECODE_AUTH_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+  credentials:
+    - label: Terminal login
+      password: ${CLAUDECODE_AUTH_PASSWORD}
+      # The auth layer reads AUTH_PASSWORD from the environment on every start and
+      # keeps sessions in memory only, so .env plus a recreate is the whole change.
+      # Open terminals are logged out by the recreate.
+      change:
+        apply: env

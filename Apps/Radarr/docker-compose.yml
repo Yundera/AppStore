@@ -49,7 +49,8 @@ x-casaos:
         🔐 **Sign in as `admin`** — the password is shown when you open the app
         (tile menu → Credentials). Radarr ships with its login page already enabled
         and this account already created, so it is never reachable without signing
-        in. Change the password from *Settings → General → Security* once you are in.
+        in. To change the password, use the app's settings in Maison (Security tab),
+        so the Credentials dialog stays correct.
 
         🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent-backend:80` when they run on the same server.
 
@@ -93,7 +94,31 @@ x-compose-app:
     - label: Administrator
       username: admin
       password: ${RADARR_ADMIN_PASSWORD}
-      note: Change it under Settings → General → Security.
+      # A hook, not env: Radarr consumes <Username>/<Password> from config.xml on
+      # first boot, keeps the hash in its own database and strips them from the
+      # file, and seed/ never rewrites config.xml anyway. The hook goes through
+      # Radarr's API in the running container instead: read the API key Radarr
+      # wrote into config.xml, fetch the host settings, set the new password and
+      # put them back. A temp file rather than a pipe, so a failed fetch fails
+      # the hook instead of PUTting an empty body.
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e RADARR_ADMIN_PASSWORD radarr sh -c '
+            [ -n "$RADARR_ADMIN_PASSWORD" ] || exit 1
+            key=$(sed -n "s:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p" /config/config.xml)
+            [ -n "$key" ] || exit 1
+            f=$(mktemp) || exit 1
+            trap "rm -f $f $f.new" EXIT
+            url=http://127.0.0.1:7878/api/v3/config/host
+            curl -fsS -H "X-Api-Key: $key" -o "$f" "$url" &&
+            jq ".password = env.RADARR_ADMIN_PASSWORD | .passwordConfirmation = env.RADARR_ADMIN_PASSWORD" \
+              "$f" > "$f.new" &&
+            curl -fsS -X PUT -H "X-Api-Key: $key" -H "Content-Type: application/json" \
+              --data-binary "@$f.new" -o /dev/null "$url"'
+        policy:
+          # Same alphabet the secret is generated from.
+          charset: alnum
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Derived from the trailing-slash bind mounts in `volumes:` above.
   folders:
