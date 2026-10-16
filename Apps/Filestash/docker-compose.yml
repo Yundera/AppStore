@@ -1,0 +1,250 @@
+name: filestash
+
+services:
+  filestash:
+    # Upstream publishes no version tags - only a rolling `latest` (multi-arch) - so
+    # the image is pinned by the digest of the `latest` manifest list as of
+    # 2026-10-16. Bump the digest to update.
+    image: machines/filestash:latest@sha256:f595b7e8cffdad7105ad7a2fc5edad51b4de3f2b0ecf80d64d58bec3c246aab1
+    container_name: filestash
+    user: $PUID:$PGID
+    restart: unless-stopped
+    # Filestash takes its admin password as a bcrypt hash in ADMIN_PASSWORD. The hash
+    # cannot travel through .env: compose interpolates the `$` in `$2a$10$...` and
+    # hands the app a mangled value. Maison renders it into admin.bcrypt instead
+    # (x-compose-app.files, re-rendered on every up) and it is read here at start.
+    # The same password unlocks the admin console and the "My Server" connection.
+    command: ["sh", "-c", "ADMIN_PASSWORD=\"$$(cat /app/data/state/admin.bcrypt)\" exec /app/filestash"]
+    environment:
+      TZ: $TZ
+    volumes:
+      # config.json (seeded once), the share/metadata databases and the logs.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/AppData/$AppID/state/
+        target: /app/data/state/
+      # The tree the "My Server" connection opens: the whole of /DATA, read-write, so
+      # files can be sent to remote storage and pulled back into it.
+      - type: bind
+        source: ${DATA_ROOT:-/DATA}/
+        target: /DATA/
+    expose:
+      - 8334
+    labels:
+      # Not read by anything. Maison applies a changed password with a plain
+      # `compose up`, and the hash travels in a file compose cannot see, so without
+      # this the container is not recreated and keeps the old password.
+      filestash.admin-password-rev: ${FILESTASH_ADMIN_PASSWORD}
+      caddy_0: filestash-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 8334}}"
+      caddy_1: filestash-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 8334}}"
+      caddy_2: filestash-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 8334}}"
+    networks:
+      - pcs
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          # Transfers stream through the server (download from one storage, upload
+          # to another); video previews are transcoded on demand.
+          memory: 1G
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_us: Timezone used for the file timestamps shown in the interface.
+      volumes:
+        - container: /app/data/state/
+          description:
+            en_us: The app's own state - config.json, the share database and the logs. Kept across uninstall and reinstall.
+        - container: /DATA/
+          description:
+            en_us: The whole of /DATA - Documents, Downloads, Media and AppData. This is what the "My Server" connection can browse, edit, delete, share and copy to remote storage.
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: filestash
+  developer: Mickael Kerjean
+  category: Cloud
+  tags: ["files", "cloud", "s3"]
+  description:
+    en_us: |
+      Filestash - one file manager for every storage you use
+
+      Filestash is a web file manager that speaks to almost any storage: your own server's disk, Backblaze B2, Amazon S3 and every S3-compatible service (Wasabi, MinIO, Scaleway, Cloudflare R2...), SFTP, FTP, WebDAV, Samba, Google Drive, Dropbox, Storj and more. Sign in to one, and you browse it like a local folder - upload, download, rename, move, preview photos, play videos, read PDFs and edit text files.
+
+      Use it to push files from your server to cloud storage and to pull them back: open "My Server" in one tab and your Backblaze or S3 bucket in another, and move files between them from your browser. Share links with an expiry date or a password can be handed out for any folder.
+
+      This app comes with "My Server" pointing at the whole of /DATA, plus ready-to-fill connections for Backblaze B2, S3, SFTP and WebDAV. More connection types, branding and features are configured from the admin console at /admin.
+    fr_fr: |
+      Filestash - un seul gestionnaire de fichiers pour tous vos stockages
+
+      Filestash est un gestionnaire de fichiers web qui sait parler à presque tous les stockages : le disque de votre propre serveur, Backblaze B2, Amazon S3 et tous les services compatibles S3 (Wasabi, MinIO, Scaleway, Cloudflare R2...), SFTP, FTP, WebDAV, Samba, Google Drive, Dropbox, Storj et d'autres. Connectez-vous à l'un d'eux et parcourez-le comme un dossier local : téléverser, télécharger, renommer, déplacer, prévisualiser des photos, lire des vidéos et des PDF, éditer des fichiers texte.
+
+      Servez-vous-en pour envoyer des fichiers de votre serveur vers un stockage cloud et les récupérer : ouvrez « My Server » dans un onglet et votre bucket Backblaze ou S3 dans un autre, puis déplacez les fichiers de l'un à l'autre depuis votre navigateur. Des liens de partage, avec date d'expiration ou mot de passe, peuvent être créés pour n'importe quel dossier.
+
+      L'application est livrée avec « My Server » pointant sur l'ensemble de /DATA, et des connexions prêtes à remplir pour Backblaze B2, S3, SFTP et WebDAV. Les autres types de connexion, l'apparence et les fonctionnalités se règlent depuis la console d'administration, sur /admin.
+    zh_cn: |
+      Filestash - 一个文件管理器，管理你使用的所有存储
+
+      Filestash 是一个网页文件管理器，几乎可以连接任何存储：你自己服务器的磁盘、Backblaze B2、Amazon S3 以及所有兼容 S3 的服务（Wasabi、MinIO、Scaleway、Cloudflare R2……）、SFTP、FTP、WebDAV、Samba、Google Drive、Dropbox、Storj 等。登录其中之一，就能像浏览本地文件夹一样使用它——上传、下载、重命名、移动、预览照片、播放视频、阅读 PDF、编辑文本文件。
+
+      可以用它把服务器上的文件推送到云存储，或者再取回来：在一个标签页中打开「My Server」，在另一个标签页中打开你的 Backblaze 或 S3 存储桶，然后通过浏览器在两者之间移动文件。任何文件夹都可以生成带有效期或密码的分享链接。
+
+      本应用预置了指向整个 /DATA 的「My Server」，以及可直接填写的 Backblaze B2、S3、SFTP 和 WebDAV 连接。更多连接类型、外观和功能可在 /admin 管理控制台中配置。
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  tagline:
+    en_us: Browse your server and your cloud storage - Backblaze B2, S3, SFTP, WebDAV - from one web file manager.
+    fr_fr: Parcourez votre serveur et vos stockages cloud - Backblaze B2, S3, SFTP, WebDAV - depuis un seul gestionnaire de fichiers web.
+    zh_cn: 在一个网页文件管理器中浏览你的服务器和云存储——Backblaze B2、S3、SFTP、WebDAV。
+  tips:
+    before_install:
+      en_us: |
+        Signing in
+
+        The login page lists the connections. **My Server** opens your server's
+        files and asks for the admin password, shown when you open the app (tile
+        menu → Credentials). The same password opens the admin console at `/admin`.
+        Change it from the tile menu: a password changed inside the admin console
+        is replaced by this one on the next restart.
+
+        Backblaze B2, S3, SFTP and WebDAV ask for that service's own credentials,
+        typed at sign-in - for Backblaze, an application key ID and key created in
+        your Backblaze account.
+
+        This app has **its own** login page instead of your server's single sign-on,
+        and the admin password is the only thing protecting My Server.
+
+        What this app can reach
+
+        The whole of `/DATA` is mounted read-write: `/DATA/Documents`,
+        `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and `/DATA/AppData` - the
+        last one holding the databases, configuration and secrets of every other app
+        installed on this server. Anyone signed in to My Server can browse, edit,
+        delete, share and copy all of it to remote storage.
+
+        Moving files to the cloud
+
+        Files travel through your browser: Filestash downloads them from one storage
+        and uploads them to the other. That suits a handful of folders. For large or
+        recurring transfers - mirroring all of /DATA to Backblaze every night - use
+        RClone or Duplicati, which copy server to cloud directly and on a schedule.
+      fr_fr: |
+        Connexion
+
+        La page de connexion liste les connexions. **My Server** ouvre les fichiers
+        de votre serveur et demande le mot de passe administrateur, affiché à
+        l'ouverture de l'application (menu de la tuile → Identifiants). Le même mot de
+        passe ouvre la console d'administration sur `/admin`. Changez-le depuis le menu
+        de la tuile : un mot de passe modifié dans la console d'administration est
+        remplacé par celui-ci au redémarrage suivant.
+
+        Backblaze B2, S3, SFTP et WebDAV demandent les identifiants propres à chaque
+        service, saisis à la connexion - pour Backblaze, un identifiant et une clé
+        d'application créés dans votre compte Backblaze.
+
+        Cette application possède **sa propre** page de connexion au lieu de
+        l'authentification unique de votre serveur, et le mot de passe administrateur
+        est la seule chose qui protège My Server.
+
+        Ce à quoi cette application a accès
+
+        L'intégralité de `/DATA` est montée en lecture-écriture : `/DATA/Documents`,
+        `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et `/DATA/AppData`, qui
+        contient les bases de données, configurations et secrets de toutes les autres
+        applications du serveur. Toute personne connectée à My Server peut parcourir,
+        modifier, supprimer, partager l'ensemble et le copier vers un stockage distant.
+
+        Envoyer des fichiers vers le cloud
+
+        Les fichiers transitent par votre navigateur : Filestash les télécharge depuis
+        un stockage et les téléverse vers l'autre. C'est adapté à quelques dossiers.
+        Pour des transferts volumineux ou réguliers - copier tout /DATA vers Backblaze
+        chaque nuit - utilisez RClone ou Duplicati, qui copient directement du serveur
+        vers le cloud et selon un planning.
+      zh_cn: |
+        登录
+
+        登录页面列出了所有连接。**My Server** 打开服务器上的文件，需要输入管理员密码，
+        该密码会在打开应用时显示（磁贴菜单 → 凭据）。同一密码也用于打开 `/admin`
+        管理控制台。请通过磁贴菜单修改密码：在管理控制台中修改的密码会在下次重启时被
+        此密码覆盖。
+
+        Backblaze B2、S3、SFTP 和 WebDAV 需要在登录时输入各服务自己的凭据——
+        Backblaze 需要在你的 Backblaze 账户中创建的应用密钥 ID 和密钥。
+
+        本应用使用**自己的**登录页面，而不是服务器的单点登录，管理员密码是保护
+        My Server 的唯一防线。
+
+        此应用可以访问的范围
+
+        整个 `/DATA` 以读写方式挂载：`/DATA/Documents`、`/DATA/Downloads`、
+        `/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用数据库、配置和密钥的
+        `/DATA/AppData`。登录 My Server 的任何人都可以浏览、编辑、删除、分享这些内容，
+        并将其复制到远程存储。
+
+        把文件传到云端
+
+        文件会经过你的浏览器中转：Filestash 从一个存储下载，再上传到另一个存储。
+        这适合少量文件夹。对于大量或定期的传输——例如每晚把整个 /DATA 同步到
+        Backblaze——请使用 RClone 或 Duplicati，它们直接从服务器复制到云端，并可定时执行。
+  title:
+    en_us: Filestash
+  index: /
+  webui_port: 8334
+  store_app_id: filestash
+
+x-compose-app:
+  schema_version: 2
+  secrets:
+    # Signs sessions and share links (general.secret_key, exactly 16 alphanumerics).
+    # Only written into the seeded config.json, never rotated.
+    FILESTASH_SECRET_KEY: alnum:16
+    FILESTASH_ADMIN_PASSWORD: password:24
+    # Emptied and regenerated by Maison whenever the password above is changed.
+    FILESTASH_ADMIN_HASH: bcrypt:${FILESTASH_ADMIN_PASSWORD}
+  credentials:
+    - label:
+        en_us: My Server and admin console
+        fr_fr: My Server et console d'administration
+        zh_cn: My Server 与管理控制台
+      password: ${FILESTASH_ADMIN_PASSWORD}
+      note:
+        en_us: Pick "My Server" on the login page. The admin console is at /admin.
+        fr_fr: Choisissez « My Server » sur la page de connexion. La console d'administration est sur /admin.
+        zh_cn: 在登录页面选择「My Server」。管理控制台位于 /admin。
+      # ADMIN_PASSWORD is read on every start and takes precedence over a password
+      # saved from the admin console, so re-rendering admin.bcrypt plus a recreate
+      # (forced by the filestash.admin-password-rev label) is the whole change.
+      change:
+        apply: env
+        policy:
+          min_length: 12
+          max_length: 64
+  folders:
+    - path: /DATA/AppData/$AppID/state
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/state/config
+      user: $PUID
+      group: $PGID
+  files:
+    - path: /DATA/AppData/$AppID/state/admin.bcrypt
+      from: state/admin.bcrypt.tmpl
+      ensure: always
+      mode: "0600"
+  # Mirrors the caddy_0 label on the main service, so the tile renders an open action.
+  webui-host: filestash-${domain}
