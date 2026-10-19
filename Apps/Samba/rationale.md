@@ -49,17 +49,22 @@ most likely to want on a network drive.
   a hardcoded one. There is no guest or anonymous share; an
   unauthenticated SMB session is rejected by `smbd`.
 - **The mount is disclosed before install**, in the app `description` and in
-  `x-casaos.tips.before_install`, so the user sees the extent of the access on the
+  `x-casaos.tips.before_install` (mirrored in `x-compose-app.tips`), so the user sees the extent of the access on the
   install screen rather than after installing.
-- **Only the SMB port is published.** `445/tcp` is the sole `ports:` entry and is
-  not HTTP, so it cannot pass through Caddy; no web UI, admin panel or second
-  door is published. The app carries the reserved `needs-public-ip` tag so a user
-  on a CGNAT or mesh-routed PCS knows before installing that the port may not be
-  reachable from outside.
-- **The published port can be narrowed to one address.** The binding is written
-  `0.0.0.0:445:445` precisely so the user can change the host side to a single
-  interface — the before-install tip documents binding it to the Tailscale address
-  so the share is reachable over the VPN only.
+- **No port is published by default.** The store compose has no `ports:` entry,
+  so a fresh install is reachable by nobody. SMB is not HTTP and cannot pass
+  through Caddy, so the share needs a published `445/tcp` to be usable at all; the
+  owner adds it in the app's override (Settings → Override → Ports), on the
+  address they choose. The tips recommend a VPN address (`10.9.0.1` for WireGuard
+  Easy - Host, the Tailscale `100.x` address) or a LAN address, and allow
+  `0.0.0.0` as the owner's informed choice: SMB on the internet is not
+  recommended, but with authentication always on it is not by itself unsafe.
+  Shipping without the port is a deliberate exception to "ship the non-HTTP port
+  enabled when the app needs it": Samba is an advanced-user service, and which
+  network it belongs on is a decision only the owner can make. Because the
+  store publishes nothing, the owner's port is a plain addition in the override
+  (no `!override` needed). No web UI, admin panel or second door exists to
+  publish, and the app carries no `needs-public-ip` tag since it publishes no port.
 - **The container is not `privileged`.** It takes exactly one capability
   (`SYS_ADMIN`) and one device (`/dev/fuse`); no `--privileged`, no host PID or
   network namespace, no Docker socket.
@@ -101,5 +106,6 @@ Nothing in the container's startup erases or rewrites the mounted tree: the imag
 only exports the existing directory as a share. Files written over SMB are created
 as `UID:GID` = `$PUID:$PGID`, so they stay owned by the server user and remain
 readable and editable by every other app and by the user over SSH. Revoking
-access is a matter of changing `SAMBA_ADMIN_PASSWORD` in the app's `.env` and restarting, or
-uninstalling the app — neither costs any configuration.
+access is a matter of changing the password from the app settings (Security tab),
+removing the published port from the override, or uninstalling the app — none of
+them costs any configuration.

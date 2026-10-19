@@ -31,10 +31,10 @@ services:
         bind:
           # Needed for FUSE support
           propagation: rslave
-    ports:
-      # SMB/CIFS - not HTTP, so it cannot be carried by Caddy and must be
-      # published for clients to mount the share. See the needs-public-ip tag.
-      - "0.0.0.0:445:445"
+    # No ports: on purpose. SMB is not HTTP, so Caddy cannot carry it and the share
+    # is reachable only through a port the owner publishes in the app's override
+    # (Settings > Override > Ports), on the address they choose: a VPN address
+    # (10.9.0.1, Tailscale 100.x), a LAN address, or 0.0.0.0. See the tips.
     deploy:
       resources:
         limits:
@@ -55,7 +55,7 @@ x-casaos:
     - arm64
     - arm
   category: Cloud
-  tags: ["files", "personal", "business", "needs-public-ip"]
+  tags: ["files", "personal", "business"]
   description:
     en_us: |
       SMB File Server - Universal Network File Sharing
@@ -112,28 +112,30 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Default SMB Access
-        | Username   | Share Name    |
-        | --------   | ----------    |
-        | `admin`    | DATA          |
+        **Samba is installed without a network port, on purpose.** Nothing can reach the
+        share until you choose the address it listens on.
 
-        The password is shown from the app's tile menu → Credentials.
-        
-        Network Access Instructions:
-        • Windows: File Explorer → Network → \\ip_or_host\DATA
-        • macOS: Finder → Go → Connect to Server → smb://ip_or_host/DATA
-        • Linux: Files → Other Locations → smb://ip_or_host/DATA
-        
-        
-        Note: SMB runs on standard network ports (445) for native OS integration. No web interface is provided as SMB integrates directly with your operating system's file manager.
-        
-        In the settings page you can bind the port to a specific IP address if needed.
-        | Host       | Container   |
-        | --------   | ------------|
-        | <ip>:445   | 445         |
-        
-        VPN integration:
-        Using tailscale app : run `tailscale ip -4` to get the tailscale ip address and use that to bind samba server to tailscale only.
+        **1. Publish the port.** Open the app's settings → Override → Ports and add one line,
+        `<address>:445:445`:
+
+        | You connect from | Port line | Then open |
+        | --- | --- | --- |
+        | WireGuard Easy - Host | `10.9.0.1:445:445` | `\\10.9.0.1\DATA` |
+        | Tailscale | `<tailscale ip>:445:445` (`tailscale ip -4` gives it) | `\\<tailscale ip>\DATA` |
+        | Your home network (PCS at home) | `<LAN ip of the PCS>:445:445` | `\\<LAN ip>\DATA` |
+        | Anywhere | `0.0.0.0:445:445` | `\\<public ip>\DATA` |
+
+        A VPN or LAN address is recommended. `0.0.0.0` opens SMB to the whole internet with
+        only the password in front of it, and many internet providers block port 445 anyway.
+
+        **2. Log in** as `admin` on the share `DATA`. The password is in the tile menu →
+        Credentials, and can be changed in the settings' Security tab.
+
+        • Windows: File Explorer → `\\<address>\DATA`
+        • macOS: Finder → Go → Connect to Server → `smb://<address>/DATA`
+        • Linux: Files → Other Locations → `smb://<address>/DATA`
+
+        **Folders hang or never list over WireGuard:** set `MTU = 1280` in the client's tunnel configuration.
 
   title:
     en_us: Samba
@@ -205,28 +207,30 @@ x-compose-app:
     - arm
   tips:
     en_us: |
-      Default SMB Access
-      | Username   | Share Name    |
-      | --------   | ----------    |
-      | `admin`    | DATA          |
+      **Samba is installed without a network port, on purpose.** Nothing can reach the
+      share until you choose the address it listens on.
 
-      The password is shown from the app's tile menu → Credentials.
+      **1. Publish the port.** Open the app's settings → Override → Ports and add one line,
+      `<address>:445:445`:
 
-      Network Access Instructions:
-      • Windows: File Explorer → Network → \\ip_or_host\DATA
-      • macOS: Finder → Go → Connect to Server → smb://ip_or_host/DATA
-      • Linux: Files → Other Locations → smb://ip_or_host/DATA
+      | You connect from | Port line | Then open |
+      | --- | --- | --- |
+      | WireGuard Easy - Host | `10.9.0.1:445:445` | `\\10.9.0.1\DATA` |
+      | Tailscale | `<tailscale ip>:445:445` (`tailscale ip -4` gives it) | `\\<tailscale ip>\DATA` |
+      | Your home network (PCS at home) | `<LAN ip of the PCS>:445:445` | `\\<LAN ip>\DATA` |
+      | Anywhere | `0.0.0.0:445:445` | `\\<public ip>\DATA` |
 
+      A VPN or LAN address is recommended. `0.0.0.0` opens SMB to the whole internet with
+      only the password in front of it, and many internet providers block port 445 anyway.
 
-      Note: SMB runs on standard network ports (445) for native OS integration. No web interface is provided as SMB integrates directly with your operating system's file manager.
+      **2. Log in** as `admin` on the share `DATA`. The password is in the tile menu →
+      Credentials, and can be changed in the settings' Security tab.
 
-      In the settings page you can bind the port to a specific IP address if needed.
-      | Host       | Container   |
-      | --------   | ------------|
-      | <ip>:445   | 445         |
+      • Windows: File Explorer → `\\<address>\DATA`
+      • macOS: Finder → Go → Connect to Server → `smb://<address>/DATA`
+      • Linux: Files → Other Locations → `smb://<address>/DATA`
 
-      VPN integration:
-      Using tailscale app : run `tailscale ip -4` to get the tailscale ip address and use that to bind samba server to tailscale only.
+      **Folders hang or never list over WireGuard:** set `MTU = 1280` in the client's tunnel configuration.
   # The SMB login. Seeded from the box-wide password it replaces, so an installed
   # app keeps the password every client that mapped the share has saved; a fresh
   # install gets its own.
