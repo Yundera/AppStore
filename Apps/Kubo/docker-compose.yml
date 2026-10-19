@@ -9,7 +9,7 @@ services:
   # on its own. The public read side is a separate hostname on the node's gateway
   # port; see kubo-backend below and rationale.md.
   kubo:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: kubo
     # OIDC identity: AppShield builds its redirect URIs from os.hostname(), and the
     # auth-registrar attests this app's name via the container's PTR record -- both

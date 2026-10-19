@@ -6,6 +6,10 @@ services:
     restart: unless-stopped
     user: 0:0
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     environment:
       GUACD_HOSTNAME: guacd
       POSTGRESQL_HOSTNAME: postgres
@@ -37,6 +41,10 @@ services:
     restart: unless-stopped
     user: 0:0
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     networks:
       - guacamole-internal
 
@@ -45,6 +53,10 @@ services:
     image: postgres:17.11-alpine
     restart: unless-stopped
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
       POSTGRES_PASSWORD: '$GUACAMOLE_DB_PASSWORD'
       POSTGRES_USER: 'guacamole_user'

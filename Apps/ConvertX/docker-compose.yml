@@ -2,7 +2,7 @@ name: convertx
 
 services:
   convertx:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: convertx
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -30,6 +30,10 @@ services:
     depends_on:
       - convertx-backend
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own
       # network because that is where its backend lives.
@@ -217,5 +221,9 @@ x-compose-app:
     - path: /DATA/Documents
       user: $PUID
       group: $PGID
+  backup:
+    # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
+    exclude:
+      - cache/
   webui-host: convertx-${domain}
   webui-path: "/"

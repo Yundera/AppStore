@@ -8,7 +8,7 @@ services:
   # with the PCS auth-registrar on first login and send every request through the
   # built-in Authelia SSO before proxying to the backend.
   sabnzbd:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: sabnzbd
     # OIDC identity: AppShield builds its OIDC redirect URIs from os.hostname(),
     # and the auth-registrar attests this app's name via the container's PTR

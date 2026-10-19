@@ -476,6 +476,7 @@ x-casaos:
 # outright rather than starting it without its directories.
 x-compose-app:
   schema_version: 2
+  version: "1.3.6"
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: nntmux

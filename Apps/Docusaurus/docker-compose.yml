@@ -2,7 +2,7 @@ name: docusaurus
 
 services:
   docusaurus:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: docusaurus
     hostname: docusaurus
     restart: unless-stopped
@@ -26,6 +26,10 @@ services:
     depends_on:
       - docusaurus-backend
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own
       # network because that is where its backend lives.
@@ -42,6 +46,10 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/build/:/usr/share/nginx/html/:ro
     cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 64M
     networks:
       # App-private: reached only by this app's own services, so it
       # has no business on the shared network.

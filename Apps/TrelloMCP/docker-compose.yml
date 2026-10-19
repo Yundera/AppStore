@@ -35,6 +35,10 @@ services:
       - pcs
     # 80 — user-facing API backend + Web UI (CONTRIBUTING "CPU Share Allocation").
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # AppShield provides perimeter authentication: the SSO (OIDC) gate for the
   # Web UI, and the OAuth 2.1 broker for /mcp (machine clients). Nothing is
@@ -45,7 +49,7 @@ services:
     # configurable protected path; 2.0.9+ advertises offline_access and sends
     # prompt=consent, without which no refresh token is issued and every client has
     # to be re-authorized by hand once the 1h access token expires.
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: trellomcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -56,6 +60,10 @@ services:
     # 80 — reverse proxy in front of a user-facing app (CONTRIBUTING
     # "CPU Share Allocation").
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     expose:
       - 80
     user: "0:0"   # numeric: scratch image has no passwd; /data/oauth is chowned $PUID

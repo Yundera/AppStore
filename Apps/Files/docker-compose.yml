@@ -8,7 +8,7 @@ services:
   # the FileBrowser app this replaces, there is nothing to exempt — no anonymous
   # share links — so ALLOWED_PATHS carries only the health endpoint.
   files:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: files
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via

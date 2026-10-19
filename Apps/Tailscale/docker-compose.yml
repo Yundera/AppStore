@@ -8,6 +8,10 @@ services:
     user: 0:0
     network_mode: host
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     # The image's default entrypoint is `containerboot`, which runs `tailscale up`
     # and — with no auth key — falls back to an INTERACTIVE login that it then kills
     # after 60s. The container exits, `restart: unless-stopped` brings it back, and it

@@ -18,7 +18,7 @@ services:
   # gate on :80 instead of Prowlarr on :9696 at random. Renaming the gate instead
   # is not an option either, for the OIDC reason above.
   prowlarr-gate:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: prowlarr
     hostname: prowlarr
     restart: unless-stopped

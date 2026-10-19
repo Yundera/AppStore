@@ -3,7 +3,7 @@ name: tribler
 services:
   # OIDC SSO front-door (Authelia). Only this container is publicly reachable.
   tribler:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: tribler
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -67,6 +67,10 @@ services:
         max-size: "10m"
         max-file: "3"
     cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 64M
 
   # Tribler core, headless. No Caddy labels — reachable only via the pcs network.
   tribler-backend:

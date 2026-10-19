@@ -7,6 +7,10 @@ services:
     restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     depends_on:
       db:
         condition: service_healthy
@@ -85,6 +89,10 @@ services:
     container_name: nextcloud_db
     user: $PUID:$PGID
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     command: >
       --innodb-buffer-pool-size=256M
       --transaction-isolation=READ-COMMITTED
@@ -118,6 +126,10 @@ services:
     image: redis:8.6.2-alpine3.23
     container_name: nextcloud_redis
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     # Stated explicitly per the Permission Strategy, and it matches the ownership
     # `x-compose-app.folders` gives /DATA/AppData/nextcloud/redis.
     user: $PUID:$PGID
@@ -146,6 +158,10 @@ services:
     container_name: nextcloud_cron
     restart: unless-stopped
     cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     # Must match the `nextcloud` service exactly so cron.php sees the same file
     # ownership as the web container.
     user: $PUID:$PGID

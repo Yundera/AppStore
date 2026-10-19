@@ -25,7 +25,7 @@ services:
   # metawatch-app. This is the only service with Caddy labels and the only one
   # a browser can reach.
   metawatch:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: metawatch
     # OIDC identity: AppShield builds its redirect URIs from os.hostname(), and
     # the auth-registrar attests this app's name via the container's PTR record

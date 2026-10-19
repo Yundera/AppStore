@@ -8,7 +8,7 @@ services:
   # token be dropped without adding a second login in front of the vault.
   # See rationale.md.
   vaultwarden:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: vaultwarden
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

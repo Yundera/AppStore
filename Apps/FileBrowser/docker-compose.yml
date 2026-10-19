@@ -5,7 +5,7 @@ services:
   # with the OIDC request, filebrowser/filebrowser#1328, closed unimplemented), so
   # the gate is what puts this app behind SSO.
   filebrowser:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: filebrowser
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

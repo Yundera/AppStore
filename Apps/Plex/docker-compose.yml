@@ -255,6 +255,10 @@ x-compose-app:
     - path: /DATA/Downloads
       user: $PUID
       group: $PGID
+  backup:
+    # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
+    exclude:
+      - transcode/
   # Same string as the sidecar's caddy_0 label, so the tile's link and the route
   # Maison clones onto every extra domain stay the same host.
   webui-host: plex-${domain}

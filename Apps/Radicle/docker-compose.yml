@@ -414,6 +414,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  version: "20260712.1927"
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: radicle

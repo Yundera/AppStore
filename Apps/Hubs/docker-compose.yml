@@ -7,6 +7,10 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     environment:
       DOMAIN: "${APP_DOMAIN}"
       SUB_DOMAIN: "hubs"
@@ -50,6 +54,10 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
       POSTGRES_USER: $POSTGRES_USER
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
@@ -76,6 +84,10 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     environment:
       POD_IP: "127.0.0.1"
       POD_NAME: "reticulum-1"
@@ -142,6 +154,10 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     environment:
       PGRST_DB_URI: $PGRST_DB_URI
       PGRST_JWT_SECRET: $PGRST_JWT_SECRET
@@ -165,6 +181,10 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     environment:
       DOMAIN: "${APP_DOMAIN}"
       SUB_DOMAIN: "hubsspoke"
@@ -219,6 +239,10 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
       AUTH_KEY: /app/certs/perms.pub.pem
       HTTPS_CERT_FULLCHAIN: /app/certs/fullchain.pem
@@ -266,6 +290,10 @@ services:
     container_name: hubs-nearspark
     restart: unless-stopped
     cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     environment:
       PUID: $PUID
       PGID: $PGID
@@ -297,6 +325,10 @@ services:
     container_name: hubs-photomnemonic
     restart: unless-stopped
     cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
       PUID: $PUID
       PGID: $PGID

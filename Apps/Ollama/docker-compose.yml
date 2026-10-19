@@ -370,6 +370,14 @@ x-compose-app:
     - path: /DATA/AppData/ollama/webui
       user: $PUID
       group: $PGID
+    - path: /DATA/AppData/ollama/data/models
+      user: $PUID
+      group: $PGID
+  backup:
+    # Downloaded models, often several GB each: restored empty. The default-model pull
+    # below is `once`, so after a restore the user pulls models again from the web UI.
+    exclude:
+      - data/models/
   webui-host: ollama-${domain}
   # A small default model so the chat works out of the box. The ollama binary is
   # also a client: with OLLAMA_HOST it asks the running ollama-api to pull, so the

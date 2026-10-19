@@ -45,6 +45,10 @@ services:
       - pcs
       - terminal-internal
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   terminal-ttyd:
     image: tsl0922/ttyd:1.7.7

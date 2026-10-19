@@ -9,6 +9,10 @@ services:
     user: "0:0"
     restart: unless-stopped
     cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     expose:
       - 9750
     environment:
@@ -39,6 +43,10 @@ services:
     hostname: docusaurusmcp-beacon
     restart: unless-stopped
     cpu_shares: 20
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     expose:
       - 9099
     environment:
@@ -52,11 +60,15 @@ services:
 
   # AppShield gates the admin panel with SSO and /mcp with OAuth 2.1.
   docusaurusmcp-proxy:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: docusaurusmcp
     hostname: docusaurusmcp
     restart: unless-stopped
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     expose:
       - 80
     user: "0:0"   # numeric: scratch image has no passwd; /data/oauth is chowned $PUID

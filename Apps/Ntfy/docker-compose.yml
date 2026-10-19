@@ -10,6 +10,10 @@ services:
     hostname: ntfy
     user: "0:0"
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     restart: unless-stopped
     expose:
       - 80

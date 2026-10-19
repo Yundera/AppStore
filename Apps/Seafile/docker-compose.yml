@@ -7,6 +7,10 @@ services:
     container_name: seafile-mysql
     restart: unless-stopped
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     environment:
       - MYSQL_ROOT_PASSWORD=${SEAFILE_DB_ROOT_PASSWORD}
       - MYSQL_LOG_CONSOLE=true
@@ -36,6 +40,10 @@ services:
     container_name: seafile-redis
     restart: unless-stopped
     cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     command:
       - /bin/sh
       - -c
@@ -57,6 +65,10 @@ services:
     restart: unless-stopped
     user: 0:0
     cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 2G
     expose:
       - 80
       - 8080
@@ -166,6 +178,10 @@ services:
     restart: unless-stopped
     user: 0:0
     cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     expose:
       - 8083
     volumes:
@@ -207,6 +223,10 @@ services:
     restart: unless-stopped
     user: 0:0
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     expose:
       - 80
     volumes:
@@ -410,6 +430,10 @@ x-compose-app:
     - path: /DATA/AppData/seafile/seadoc-data
       user: $PUID
       group: $PGID
+  backup:
+    # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
+    exclude:
+      - shared/seafile/logs/
   webui-host: seafile-${domain}
   # The one hook the migration leaves behind, and it earns it: it waits up to 25
   # minutes for Seafile to write its OWN config, then patches it. Waiting on another

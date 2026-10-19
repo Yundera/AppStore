@@ -56,7 +56,7 @@ services:
       - odysseus-internal
 
   odysseus-proxy:
-    image: ghcr.io/yundera/appshield:3.0.2
+    image: ghcr.io/yundera/appshield:3.2.0
     container_name: odysseus
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -659,4 +659,8 @@ x-compose-app:
     - path: /DATA/AppData/odysseus/data/local
       user: $PUID
       group: $PGID
+  backup:
+    # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
+    exclude:
+      - logs/
   webui-host: odysseus-${domain}
