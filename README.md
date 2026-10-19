@@ -1,34 +1,36 @@
-# Yundera CasaOS 3rd-Party AppStore
+# Yundera AppStore
 
 ## About
-This AppStore provides a curated list of applications compatible with CasaOS running on Yundera servers. The apps are specifically configured to work with Caddy reverse proxy and nsl.sh free subdomains, accessible over HTTPS by default.
+The official curated app store for [Yundera](https://yundera.com) Personal Cloud Servers (PCS).
+Each app is a Docker Compose project that **Maison**, the PCS dashboard, installs and keeps up
+to date. Every app is reachable over HTTPS by default through Caddy, at addresses like
+`https://memos-alice.nsl.sh`, and can sit behind the PCS's single sign-on.
 
-### Key Differences from Official CasaOS AppStore
-Regular CasaOS app URL:
-```http://demo.casaos.io:5230/```
+The store uses the CasaOS store layout, and every app carries an `x-casaos` block, so it also
+loads in CasaOS. Maison reads each app's `x-compose-app` manifest.
 
-Yundera app URL:
-```https://memo-demo.nsl.sh```
+## Using the store
+Maison lists this store by default. To add it by hand, add a store in **Settings → App stores**
+with:
 
-All apps are designed to run on CasaIMG, a dockerized version of CasaOS.
-All apps are accessible over HTTPS by default via Caddy reverse proxy.
-All apps are tested on Yundera servers using nsl.sh routing domains.
+```
+https://github.com/Yundera/AppStore/archive/refs/heads/main.zip
+```
 
-## Related Projects
-- [CasaIMG](https://github.com/yundera/casa-img) - Docker-based CasaOS image manager with Caddy integration
+## Contributing
+New apps and fixes are welcome:
+
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md), the requirements every app must pass (the review
+   checklist), and [GUIDELINES.md](GUIDELINES.md), which explains how to meet them, how to test
+   on a PCS, and the conventions every app follows.
+2. Test your app on a PCS from your own fork of the store before opening a PR.
+3. Check issues labelled `help wanted` for open requests.
 
 ## Sponsors
 * **Yundera** - [yundera.com](https://yundera.com)
   Easy to use cloud server for open source container applications
 * **NSL.SH** - [nsl.sh](https://nsl.sh)
   Free subdomain provider for open source projects
-
-## Contributing
-We welcome contributions to help grow this AppStore:
-
-1. Read our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting apps in Docker Compose format
-2. **Important**: Test your submission thoroughly on a Yundera instance running CasaOS before creating a PR
-3. Check issues labeled `help wanted` for specific areas needing assistance
 
 ## Contributors
 <a href="https://github.com/yundera/AppStore/graphs/contributors">

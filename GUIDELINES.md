@@ -1,0 +1,962 @@
+# AppStore guidelines
+
+How to build a good listing for the Yundera AppStore: how Maison runs an app, the conventions
+the store follows, worked examples, and recommendations.
+
+**[CONTRIBUTING.md](CONTRIBUTING.md) is the checklist a listing must pass.** It is what a
+review, human or Touchstone, decides go / no-go on. This document explains how to meet it, and
+names the requirement each section serves as `` `requirement-id` ``. Anything here that is not a
+requirement is a recommendation: worth following, and never a reason on its own to refuse an app.
+
+Maison's own docs are the reference for how each `x-compose-app` key behaves:
+
+- [`docs/x-compose-app.md`](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md) — the app manifest
+- [`docs/migrations.md`](https://github.com/Yundera/Maison/blob/main/docs/migrations.md) — data migrations
+- [`docs/app-env.md`](https://github.com/Yundera/Maison/blob/main/docs/app-env.md) — the variables an app receives
+
+- [Testing and submitting](#testing-and-submitting)
+- [Repository layout](#repository-layout)
+- [The compose file](#the-compose-file)
+- [Data and permissions](#data-and-permissions)
+- [Resources](#resources)
+- [Routing: Caddy and the shared network](#routing-caddy-and-the-shared-network)
+- [Publishing host ports](#publishing-host-ports)
+- [Authentication](#authentication)
+- [Maison and `x-compose-app`](#maison-and-x-compose-app)
+- [Rationale (`rationale.md`)](#rationale-rationalemd)
+- [Images and languages](#images-and-languages)
+
+## Testing and submitting
+
+*Requirements:* `install` `app-url` `works-immediately` `auth-gate` `clean-boot` `zero-config` `data-persistence`
+
+1. **Get the compose working by hand.** Start from a plain `docker-compose.yml` and make it
+   run with `docker compose up -d` on any machine.
+2. **Run it on a PCS.** Copy the app folder to `/DATA/AppData/<app>/` on a PCS. Add the
+   metadata, write a `.env` with the [system variables](#system-variables), and run
+   `docker compose up -d` there over SSH. This is what Maison does at install time: it copies
+   your compose byte-for-byte and never edits it. The only files it adds are the app's `.env`
+   and a `docker-compose.override.yml` holding the extra domains the box answers on. If the
+   app works by hand with a real `.env`, it works as an installed app.
+3. **Test the listing.** Push the app to `Apps/<AppName>/` on your fork. Then add your fork as
+   a store in Maison (**Settings → App stores**) using its archive URL:
+   ```
+   https://github.com/<you>/AppStore/archive/refs/heads/<branch>.zip
+   ```
+   Install from that store. This tests what step 2 cannot: the metadata, the icon, the
+   `seed/` tree, `folders`, `secrets` and `init`. Then test uninstall + reinstall, and an
+   update over the previous version's data.
+4. **Open a PR** against `main`, with the [CONTRIBUTING.md](CONTRIBUTING.md) checklist filled in. Asset paths are
+   relative, so nothing needs rewriting when the PR is merged.
+
+Test on amd64 and arm64 when the image supports both.
+
+## Repository layout
+
+```
+AppStore
+├─ Apps/                 # one folder per app
+├─ category-list.json    # store categories
+├─ recommend-list.json   # apps recommended on the store front
+├─ store.json            # store name shown in Maison
+├─ psd-source/           # PSD templates for icons, thumbnails and screenshots
+└─ scripts/              # helpers (gen-thumbnail.sh)
+```
+
+An app folder:
+
+```
+Apps/MyApp
+├─ docker-compose.yml   # required
+├─ icon.png             # required
+├─ screenshot-1.png     # required; more are welcome
+├─ thumbnail.png        # optional, see Images and languages
+├─ seed/                # optional: the app's initial files, mirroring /DATA/AppData/<app>/
+├─ migrations/          # optional: data-migration scripts
+└─ rationale.md         # required when the app takes an exception
+```
+
+## The compose file
+
+*Requirements:* `name-regex` `pinned-image-tag`
+
+- The top-level `name` is the **store app ID**. It must be unique across the store and match
+  `^[a-z0-9][a-z0-9_-]*$`. Use the same value for `x-compose-app.id` and as the data folder
+  name under `/DATA/AppData/`.
+- Pin every image to a specific version.
+  [Why `:latest` is wrong](https://github.com/IceWhaleTech/CasaOS-AppStore/issues/167).
+- Locale keys are lowercase: `en_us`, `fr_fr`.
+
+### Store info
+
+*Requirements:* `app-metadata-coherence` `description` `architectures`
+
+The store card and the dashboard tile are described in `x-compose-app`:
+
+```yaml
+x-compose-app:
+  schema_version: 2
+  id: syncthing                   # = the compose `name`
+  title:                          # a plain string, or one entry per locale
+    en_us: Syncthing
+  tagline:
+    en_us: Continuous file synchronisation between your devices.
+  description:
+    en_us: Syncthing synchronizes files between two or more computers in real time.
+  developer: Syncthing
+  category: Backup
+  icon: icon.png                  # a path beside the compose
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+  architectures: [amd64, arm64]
+  main: syncthing                 # the service that is the app (see Routing)
+  tips:                           # Markdown, shown from the tile menu
+    en_us: |
+      Anything the user should know after installing.
+  webui-host: syncthing-${domain} # = the caddy_0 host
+  webui-path: /
+```
+
+**Mirror the same values in an `x-casaos` block.** Maison reads `x-compose-app` and ignores
+`x-casaos` when both are present. CasaOS, and Maison builds older than `x-compose-app`-only
+support, read only `x-casaos`, and an app without it disappears from their catalog. Keep the
+two blocks equal:
+
+| `x-compose-app` | `x-casaos` |
+|---|---|
+| `id` | `store_app_id` |
+| `title`, `tagline`, `description`, `developer`, `category`, `icon`, `thumbnail`, `architectures`, `main` | same names |
+| `screenshots` | `screenshot_link` |
+| `tips` | `tips.before_install` |
+| `webui-host` / `webui-scheme` / `webui-path` | `hostname` / `scheme` / `index` |
+| — | `webui_port` (the exposed web UI port) |
+| — | `tags` (no `x-compose-app` key yet) |
+
+Rules:
+
+- **Don't raise `schema_version` above 2.** A Maison build that predates the declared version
+  drops the whole `x-compose-app` block, including `folders` and `secrets`.
+- Don't write the per-service `x-casaos.envs` / `volumes` / `ports` / `devices` description
+  lists. Nothing reads them. Anything the user must know goes in `description`, `tips` or
+  `rationale.md`.
+- `min_memory` (MB) is an optional, advisory field that the store displays.
+
+Field reference: [Maison `x-compose-app.md` › Fields](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#fields).
+
+### System variables
+
+*Requirements:* `portable-references`
+
+Maison writes these into the app's `.env` at install and refreshes them on every start.
+Maison never edits your compose file, so a variable reaches your app only if your compose
+references it.
+
+| Variable | Value |
+|---|---|
+| `APP_NET` | The shared network apps join (`pcs` on a PCS). Always write `${APP_NET:-pcs}`. |
+| `DATA_ROOT` | The data folder as the **Docker host** sees it, normally `/DATA`. Always write `${DATA_ROOT:-/DATA}` as the prefix of every bind source. |
+| `APP_DOMAIN` | The domain root for app URLs, e.g. `alice.nsl.sh`. An app URL is `https://<app>-${APP_DOMAIN}`. |
+| `APP_PUBLIC_IP_DASH` | The public IPv4 with dashes, used in the `nip.io` / `sslip.io` labels. |
+| `APP_EMAIL` | The admin email, `admin@<domain>`. |
+| `AppID` | The app's compose `name`. |
+| `PUID` / `PGID` | The owner of user files, usually `1000:1000`. |
+| `TZ` | The system timezone. |
+| `APP_DEFAULT_PASSWORD` | **Legacy, do not use.** One password shared by every app on the box. Installed apps keep it; new apps declare their own [secrets](#3-credentials). |
+
+`APP_NET` and `DATA_ROOT` differ between deployments, so writing them as references keeps
+the app portable. The `:-default` keeps a hand-run `docker compose up` working before
+Maison has written a `.env`. In this document, `/DATA/...` is shorthand for the data folder.
+In a bind source, always write the variable.
+
+```yaml
+services:
+  myapp:
+    environment:
+      BASE_URL: https://myapp-${APP_DOMAIN}
+      TZ: $TZ
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/app/data
+```
+
+Full list and precedence: [Maison `app-env.md`](https://github.com/Yundera/Maison/blob/main/docs/app-env.md).
+
+## Data and permissions
+
+*Requirements:* `data-under-datadir` `permissions` `state-persistence` `broad-mount-disclosure`
+
+```
+/DATA/
+├── AppData/
+│   └── <app>/          # the app folder: docker-compose.yml, .env, and all app data
+├── Documents/          # user files, owned by PUID:PGID
+├── Downloads/
+├── Gallery/
+└── Media/
+```
+
+**The app folder** (`/DATA/AppData/<app>/`) holds the compose, its `.env` and every byte of
+app state: config, databases, caches. It is what Maison backs up, archives on uninstall and
+restores. Map all persistent data into it.
+
+**User folders** (`Documents`, `Downloads`, `Gallery`, `Media`) are browsed and edited by
+people. Anything an app writes there must be owned by `PUID:PGID` and have readable names.
+
+### `user:`
+
+Maison does not rewrite your compose, so a service with no `user:` runs as whatever its
+image says, often root. Say what you mean:
+
+| The service writes to | Use |
+|---|---|
+| A user folder (alone, or together with its app folder) | `user: $PUID:$PGID`. Mandatory. |
+| Only its own app folder | `user: $PUID:$PGID` preferred, so the owner can edit the config. Root is acceptable. |
+| Needs root and also writes to user folders | Split it into two services, or justify it in `rationale.md`. |
+
+A directory the app needs before its first start must be declared under
+[`folders`](#folders) so it exists with the right owner. Otherwise Docker creates a missing
+bind source as an empty root-owned directory, and an app running as `PUID:PGID` then gets
+"permission denied" on first start.
+
+```yaml
+services:
+  filemanager:
+    image: filebrowser/filebrowser:v2.63.2
+    user: $PUID:$PGID
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config:/config
+      - ${DATA_ROOT:-/DATA}/Documents:/srv/documents
+      - ${DATA_ROOT:-/DATA}/Media:/srv/media:ro      # read-only when the app only reads
+```
+
+### Persistence
+
+- **Reinstall must reuse existing data.** Every step that creates a default must first check
+  whether the data already exists. Use `seed/` (create-if-absent) or an `init` step with
+  `when: absent:…`. Don't use a hook with an existence check.
+- **Container startup must never erase or overwrite user data.**
+- **Upgrades must not corrupt or downgrade data.** The store serves only the latest version, so
+  a user can jump several releases in one update. If the image cannot convert the data on its
+  own, ship a [data migration](#version-data_version-and-migrations).
+
+## Resources
+
+*Requirements:* `cpu-shares`
+
+**`cpu_shares` is mandatory on every service.** It is a relative weight that only matters
+under load, and it is a top-level service field (not under `deploy:`):
+
+| Weight | Use for | Examples |
+|---|---|---|
+| 100 | Reserved for the system | — |
+| 90 | Admin tools that must stay responsive | dashboards, monitoring |
+| 80 | Interactive web front ends, proxies, AppShield sidecars | most web UIs |
+| 70 | Interactive apps with heavy background work | Nextcloud, databases behind an interactive app |
+| 50 | Default | most services |
+| 30 | Background services | backup jobs, schedulers |
+| 20 | Heavy batch work | ML inference, transcoding |
+| 10 | Reserved for system maintenance | — |
+
+**A memory limit is recommended on every service.** It stops one misbehaving app from
+pushing the whole box into swap. Size it from observed use with headroom, rather than from
+the image's documentation.
+
+```yaml
+services:
+  myapp:
+    image: myapp:1.2.3
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+```
+
+## Routing: Caddy and the shared network
+
+*Requirements:* `caddy-wiring` `container-name`
+
+Caddy watches container labels. Every web UI gets three routes, declared on the service that
+answers HTTP:
+
+| Label | Host | Certificate |
+|---|---|---|
+| `caddy_0` | `<app>-${APP_DOMAIN}` | `import: gateway_tls` (routed through the Yundera gateway) |
+| `caddy_1` | `<app>-${APP_PUBLIC_IP_DASH}.nip.io` | `import: gateway_tls` |
+| `caddy_2` | `<app>-${APP_PUBLIC_IP_DASH}.sslip.io` | Let's Encrypt (no `import`) |
+
+```yaml
+name: immich
+services:
+  immich:
+    image: ghcr.io/immich-app/immich-server:v1.135.3
+    container_name: immich
+    expose:
+      - 2283
+    labels:
+      caddy_0: immich-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 2283}}"
+      caddy_1: immich-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 2283}}"
+      caddy_2: immich-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 2283}}"
+    networks:
+      - pcs
+      - immich-internal
+  immich-db:
+    image: postgres:16.13-alpine
+    container_name: immich-db
+    networks:
+      - immich-internal       # never on pcs: only its siblings talk to it
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  immich-internal:
+    driver: bridge
+
+x-compose-app:
+  main: immich
+  webui-host: immich-${domain}
+
+x-casaos:
+  main: immich
+  webui_port: 2283
+```
+
+The rules that must hold together:
+
+- The web UI port is in `expose:`, and the same port is in all three `{{upstreams N}}`.
+- `main` (in `x-compose-app` and in `x-casaos`) names **the service with the labels**. Maison
+  takes the app's identity and health from it. If `main` points at a backend, the tile can
+  show green while the public route returns 502.
+- `x-compose-app.webui-host` is the `caddy_0` host with `${domain}` in place of
+  `${APP_DOMAIN}`, so the tile opens the route.
+- `x-casaos.webui_port` equals the exposed port.
+- Every service attached to `pcs` sets `container_name`: lowercase letters, digits and `-`,
+  not starting with a digit. Caddy resolves the upstream by container name.
+- Never claim `auth-${APP_DOMAIN}`. That host belongs to the PCS's login service.
+- Any port works behind Caddy. The URL stays clean whatever the backend port is.
+
+An app that serves more than one hostname (its own Dex, for example) gives each of those
+services its own `caddy_N` group.
+
+### Shared-network hygiene
+
+*Requirements:* `network-isolation`
+
+`pcs` is one flat network shared by every app on the box, and so is its DNS: service names and
+container names resolve across apps. Two apps that each attach a service called `db` can
+cross-resolve, and one app's web tier can end up talking to another app's database.
+
+- **Attach only what needs outside reachability**: services with Caddy labels, and anything
+  another app talks to. Databases, caches and workers go on an app-internal
+  `driver: bridge` network.
+- **Prefix what you attach**: use `outline-dex`, not `dex`, for both the service name and
+  `container_name`.
+
+## Publishing host ports
+
+*Requirements:* `no-published-web-port`
+
+`expose:` covers every HTTP port. **Never publish a web UI port.** Caddy already reaches the
+container over `pcs`, so a published UI port is a second way in that skips the certificates
+and the login gate. On an AppShield app, never publish the backend's HTTP port.
+
+**`ports:` is legitimate for traffic an HTTP proxy cannot carry**, when peers or clients must
+dial the box directly:
+
+| App | Published | Why |
+|---|---|---|
+| `Apps/Crafty` | `25500-25600/tcp`, `19132/udp` | Minecraft Java + Bedrock |
+| `Apps/Hubs` | `40000-40050/tcp+udp` | WebRTC media |
+| `Apps/Samba` | `445/tcp` | SMB |
+| `Apps/WireGuardEasy` | `51820/udp` | WireGuard |
+| `Apps/AnnasTorrents` | `6881/tcp+udp` | BitTorrent peers + DHT |
+| `Apps/qBittorrent` | `6881/tcp+udp` (commented out) | same, but the client works without it |
+
+- Publish **only** the non-HTTP ports, and add a comment beside each one saying what it is for.
+- Use fixed ports that stay clear of the host's own (`22`, `80`, `443`). Two apps that publish
+  the same port cannot run side by side.
+- A published port is open to the internet with no SSO in front. Make sure nothing else the
+  container listens on is reachable through it.
+- **Ship the port enabled if the app needs it to work.** Comment it out only when it is a pure
+  enhancement, and say in `tips` what to uncomment.
+
+### Reserved tag: `needs-public-ip`
+
+*Requirements:* `needs-public-ip-tag`
+
+Most `x-casaos.tags` are topical. `needs-public-ip` is functional: add it to any app that only
+works properly when inbound connections from the internet reach the host.
+
+```yaml
+x-casaos:
+  tags: ["files", "personal", "needs-public-ip"]
+```
+
+A PCS behind CGNAT, or one routed through the mesh-router WireGuard tunnel, gets its HTTPS
+routes from the gateway but has no directly reachable address for raw TCP/UDP. On such a box
+the app installs and starts, then quietly underperforms: a torrent client with no inbound
+peers, a game server nobody can join. The tag lets the user see that before installing. No
+extra `tips` text is required.
+
+## Authentication
+
+*Requirements:* `auth-default` `appshield-wiring`
+
+A login gate enabled by default is **mandatory**. Acceptable gates:
+
+- **AppShield** (recommended): an SSO sidecar that plugs into the PCS's built-in login.
+- The app's own login, protected by a [generated credential](#3-credentials).
+- An onboarding flow that creates the first account on first visit (e.g. Jellyfin). This
+  needs a `rationale.md` explaining why the window before the first account is created is
+  acceptable.
+
+A public website with no login also needs a `rationale.md`.
+
+### AppShield
+
+Put the `ghcr.io/yundera/appshield` container in front of the app. Point the Caddy labels at
+the sidecar and keep the backend off the public routes. The sidecar registers itself as an
+OIDC client with the PCS's `auth-registrar` on first login, so there are no client IDs,
+secrets or issuer URLs to configure.
+
+References: `Apps/Spliit` (plain web UI), `Apps/Beacon` and `Apps/BrowserMCP` (MCP servers
+with OAuth for machine clients).
+
+```yaml
+name: myapp
+services:
+  myapp-proxy:
+    image: ghcr.io/yundera/appshield:3.2.0
+    container_name: myapp        # = the compose name; the OIDC client id derives from it
+    hostname: myapp              # = container_name; redirect URIs are built from it
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: "myapp-backend"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+    expose:
+      - 80
+    labels:
+      caddy_0: myapp-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: myapp-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: myapp-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    depends_on:
+      - myapp-backend
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - pcs                      # Caddy reaches the sidecar
+      - myapp-internal           # the sidecar reaches the backend
+
+  myapp-backend:
+    image: myapp/myapp:1.2.3
+    container_name: myapp-backend
+    restart: unless-stopped
+    expose:
+      - 8080                     # no labels, no ports: reachable only through the sidecar
+    cpu_shares: 50
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - myapp-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  myapp-internal:
+    driver: bridge
+
+x-compose-app:
+  main: myapp-proxy              # the sidecar, never the backend
+  webui-host: myapp-${domain}
+
+x-casaos:
+  main: myapp-proxy
+  webui_port: 80
+```
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `BACKEND_HOST` / `BACKEND_PORT` | yes | The protected container's name and port. |
+| `LISTEN_PORT` | yes | The port AppShield listens on. Matches `expose` and `{{upstreams}}`. |
+| `OIDC_REGISTRAR_URL` | yes | `http://auth-registrar:9092`. Its presence enables SSO. |
+| `REDIRECT_HOST_SUFFIXES` | yes | The three route suffixes, as above. |
+| `OAUTH_RESOURCE` | optional | Enables AppShield's OAuth 2.1 broker on exactly the path in the URL (e.g. `https://myapp-${APP_DOMAIN}/mcp`). This is the machine/API path for MCP servers. |
+| `OAUTH_SCOPE` | optional | The scope the resource advertises (default `access`; MCP apps use `mcp`). |
+| `OAUTH_DATA_DIR` | optional | Set to `/data/oauth` and bind-mount `${DATA_ROOT:-/DATA}/AppData/<app>/oauth` there, so registered clients survive redeploys. |
+
+What a review checks for an AppShield app is `appshield-wiring` in
+[CONTRIBUTING.md](CONTRIBUTING.md#appshield-wiring--the-sso-sidecar-is-wired-so-it-cannot-be-bypassed).
+The two that catch people out are `hostname:` and `main`:
+
+- `auth-registrar` identifies the app by its container's PTR record and rejects redirect URIs
+  that don't match it. If `hostname:` is missing, Docker uses the random container ID and
+  registration fails at first login. The service name itself may differ from the container name.
+- If `main` names the backend, Maison takes the app's health from the backend: the tile can
+  show green while the public route returns 502.
+
+**Don't copy these from older apps:**
+
+- `AUTH_HASH` / `/?hash=…`: a CasaOS-era token. Maison never generates it, so it resolves to
+  an empty string.
+- `ALLOWED_PATHS` for machine clients: with no hash, this leaves the path open to anyone. Use
+  `OAUTH_RESOURCE`.
+- `CREDENTIAL_VALIDATE_URL`: pointed at a CasaOS bridge that no longer exists.
+- `USER` / `PASSWORD: $APP_DEFAULT_PASSWORD` as an extra basic-auth gate. If you need one, use
+  an app [secret](#3-credentials).
+
+On the PCS, `auth-registrar` and the login service run in the mesh template's `auth` stack.
+If they are missing, the sidecar logs `ENOTFOUND auth-registrar` at first login.
+
+## Maison and `x-compose-app`
+
+`x-compose-app` is Maison's definition of an app. Maison reads **one block or the other,
+never both**:
+
+```
+compose has x-compose-app  →  x-compose-app only (x-casaos beside it is ignored)
+otherwise                  →  x-casaos, translated whole (plain CasaOS apps)
+```
+
+So a field that exists only in this store's `x-casaos` block is invisible to Maison. That is
+why [store info](#store-info) lives in `x-compose-app` first.
+
+Declare `schema_version: 2`, which `folders` and `hooks` require. The other keys (`secrets`,
+`variables`, `credentials`, `files`, `init`, `lifecycle`, `backup`, `migrations`) are
+additive and don't raise it.
+
+### The stack-up sequence
+
+**Every** `docker compose up` Maison runs goes through this sequence: install, start, update,
+and saving the app's settings:
+
+```
+folders → secrets → variables → init(pre_up) → seed → files
+        → pre_up → docker compose up -d → init(post_up) → post_up
+```
+
+An update that raises `data_version` also runs each pending [migration](#version-data_version-and-migrations)
+once, between `variables` and `init`.
+
+`pre_install` / `post_install` wrap it, on the install only:
+
+```
+write compose + .env + seed tree → pull images → pre_install → [ up sequence ] → post_install
+```
+
+Everything before `docker compose up` is **fatal**: an app whose secret could not be
+generated, or whose config could not be rendered, does not start.
+
+Reference: [`x-compose-app.md` › The stack-up sequence](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#the-stack-up-sequence).
+
+### `folders`
+
+*Requirements:* `declared-folders`
+
+```yaml
+x-compose-app:
+  schema_version: 2
+  folders:
+    - /DATA/AppData/$AppID/config            # shorthand: owner PUID:PGID, mode 0755
+    - path: /DATA/AppData/$AppID/db
+      user: "999"
+      group: "999"
+      mode: "0700"                           # must be quoted
+    - path: /DATA/Media
+      recursive: true                        # also re-own what is already inside
+```
+
+Maison creates each folder with its owner before any image is pulled and before every up.
+It does **not** read `volumes:` to guess which bind sources are directories, so a directory
+your app needs is a directory your app declares. Paths are written with `/DATA`, which Maison
+maps itself. A relative path, a path outside `/DATA`, or a variable that resolves to nothing
+fails the up. Use `recursive: true` only to reclaim a tree the app did not create, and never
+on a large media folder that is already correct.
+
+Reference: [`x-compose-app.md` › Folders](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#folders).
+
+### First-run setup
+
+Prefer the first option that fits, in this order.
+
+#### 1. Files: `seed/`
+
+`Apps/<AppName>/seed/` mirrors the app folder. Maison copies it at install and writes each file
+**create-if-absent on every up**. A missing file comes back; a file the app or the user edited
+is left alone.
+
+```
+Apps/MyApp/seed/config/init.sql       → /DATA/AppData/myapp/config/init.sql
+Apps/MyApp/seed/config/app.yml.tmpl   → /DATA/AppData/myapp/config/app.yml   (rendered)
+```
+
+A `.tmpl` file is rendered with the app's variables, and an unresolved `${VAR}` fails the
+install. Other files are copied byte-for-byte, keeping the exec bit. `docker-compose.yml`, the
+override and `.env` may not appear in `seed/`. Seed files replace fetching assets from
+jsDelivr: the store is already on the box.
+
+#### 2. Values: `secrets` and `variables`
+
+*Requirements:* `no-hardcoded-credentials` `per-app-secrets`
+
+```yaml
+x-compose-app:
+  secrets:                                          # generated once, kept forever
+    MYAPP_SECRET_KEY: hex:32
+    MYAPP_DB_PASSWORD: alnum:32                     # internal, nobody types it
+    MYAPP_ADMIN_PASSWORD: password:24               # a person logs in with it
+    MYAPP_ADMIN_HASH: bcrypt:${MYAPP_ADMIN_PASSWORD}
+  variables:                                        # re-rendered on every up
+    MYAPP_URL: https://myapp-${APP_DOMAIN}
+```
+
+The generators are `hex:N`, `base64:N`, `alnum:N`, `password:N`, `uuid` and `bcrypt:TEXT`.
+A secret is written to the app's `.env` once and survives restarts, updates and restores.
+Use **one secret per purpose**: the database password is never the login password.
+
+Never generate a credential in a hook. `openssl` is not available there, and
+`"$(openssl rand -hex 32)"` silently becomes an empty string.
+
+**Converting an app that used `$APP_DEFAULT_PASSWORD`.** Installed boxes already initialised
+their database with that value, so a fresh secret would not match it. Seed the secret from the
+old value instead:
+
+```yaml
+  secrets:
+    MYAPP_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+```
+
+Installed apps keep their value; fresh installs get a generated one.
+
+Reference: [`x-compose-app.md` › Secrets and variables](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#secrets-and-variables).
+
+#### 3. Credentials
+
+*Requirements:* `credentials-shown`
+
+Show the login Maison generated. It appears, masked and with copy buttons, the first time the
+app is opened and from its tile menu:
+
+```yaml
+x-compose-app:
+  credentials:
+    - label: Administrator
+      username: admin
+      password: ${MYAPP_ADMIN_PASSWORD}
+      change:
+        apply: hook
+        hook: |
+          docker compose exec -T -e MYAPP_ADMIN_PASSWORD myapp \
+            myapp-cli user set-password admin
+```
+
+Add `change` when the password can be replaced after install. The owner then changes it from
+the app's **Security** tab in Maison:
+
+- `apply: env`: the app re-reads the variable on **every** start. Maison writes `.env` and
+  recreates the container. If the value only reaches a container through a rendered file, give
+  that container a label carrying the secret so the recreate happens (`Apps/Outline`,
+  `Apps/Filestash`).
+- `apply: hook`: the app keeps its own copy (a user table) but has a command to change it.
+  The hook runs against the running app and gets the **new** value in the secret's own
+  variable (`OLD_<NAME>` holds the previous one). Pass it with the bare `-e NAME` form so it
+  never appears on a command line, and exit non-zero when nothing changed (`Apps/Nextcloud`,
+  `Apps/Guacamole`, `Apps/WireGuardEasy`).
+- No `change`: the value is read only at first boot and nothing can reset it.
+
+`change.policy` (length, charset, required classes) is optional. Only a value declared under
+`secrets` can be changed.
+
+`tips` no longer needs a password table.
+
+Reference: [`x-compose-app.md` › Changing a credential](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#changing-a-credential).
+
+#### 4. A file that tracks the deployment: `files`
+
+`seed/` is create-if-absent. When a config embeds a value that can change, such as a domain,
+declare it so it is re-rendered on every up:
+
+```yaml
+x-compose-app:
+  files:
+    - path: /DATA/AppData/myapp/element/config.json
+      from: element/config.json.tmpl    # a path in seed/
+      ensure: always                    # `once` (default) = create-if-absent
+      mode: "0640"
+```
+
+#### 5. Work that needs a container: `init`
+
+```yaml
+x-compose-app:
+  init:
+    - name: init-db
+      image: filebrowser/filebrowser:v2.63.2
+      user: $PUID:$PGID
+      volumes:
+        - /DATA/AppData/$AppID/db:/db
+      command: config init --database /db/database.db
+      when: absent:/DATA/AppData/$AppID/db/database.db   # or `once` / `always`
+    - name: obscure-password
+      image: rclone/rclone:1.73.3
+      command: ["obscure", "${MYAPP_WEBDAV_PASSWORD}"]
+      capture: RCLONE_PASS      # stdout becomes a variable for .tmpl files and `files`
+```
+
+`when:` replaces hand-written `if [ ! -f … ]` checks. `when: once` is remembered inside the app
+folder, so it travels with the backup. A failing step fails the install. Add `phase: post_up`
+(and `network:`) for a seeder that needs the app running.
+
+`init` fields are interpolated (write `$$` for a literal `$`); hooks are not (write `$VAR`).
+
+Reference: [`x-compose-app.md` › Init](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#init).
+
+#### 6. Last resort: `hooks`
+
+*Requirements:* `hook-idempotency` `install-cmd-security` `hook-scope`
+
+| Hook | Runs | On failure |
+|---|---|---|
+| `pre_install` | Once, after images are pulled, before the first up | install fails |
+| `post_install` | Once, after the first up | logged |
+| `pre_up` | Before **every** up | the app does not start, every time |
+| `post_up` | After every up | logged |
+
+What still needs a hook is genuinely imperative work: waiting for another program to write its
+config and then patching it (`Apps/Seafile`), merging a key set nobody can name in advance
+(`Apps/Hubs`), or changing the host (`Apps/ClaudeCodeRoot`).
+
+- Hooks run `/bin/bash` **inside the Maison container**, in the app folder (`$APP_DIR`), with
+  `docker` talking to the **host** daemon. They see the app's variables and `.env`.
+- Only a fixed set of commands is allowed (`bash`, `docker`, coreutils, `sed`, `grep`, `find`,
+  `wget`, …). `openssl`, `curl`, `python`, `jq` and `git` are not available. Host-scoped
+  commands (`sysctl`, `ip`, `mount`, …) would only affect the container, so they are refused.
+- Don't `mkdir` or write files in a hook: use `folders`, `seed/` or `files`. Their paths are
+  correct on both sides of the socket; a hook's are not.
+- Append to `$APP_DIR/.env`, never truncate it. There is no `.env` under
+  `/DATA/AppData/casaos/apps/`.
+- `pre-install-cmd` (the CasaOS form) runs only for a compose with no `x-compose-app`. Write
+  hooks under `x-compose-app.hooks`.
+
+**Changing the host** goes through the Docker socket. Pin the image, and justify it in
+`rationale.md`:
+
+| To change | Recipe |
+|---|---|
+| Kernel parameters | `docker run --rm --privileged --network=host <image> sysctl -w <key>=<value>` |
+| Network state | `docker run --rm --privileged --network=host <image> ip ...` |
+| Files, users, `/etc` | `docker run --rm -v /:/host <image> chroot /host sh -c '...'` |
+| Kernel modules | `docker run --rm --privileged <image> modprobe ...` |
+
+A shipped hook is reviewed against `hook-idempotency`, `install-cmd-security` and `hook-scope`
+in [CONTRIBUTING.md](CONTRIBUTING.md#4-first-run-setup-and-hooks).
+
+Command set and execution environment: [`x-compose-app.md` › Hooks](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#hooks).
+
+### The tile: `webui-*`, `links`, `view`, `parent`
+
+```yaml
+x-compose-app:
+  webui-host: myapp-${domain}   # the click URL host, = the caddy_0 host; omit for headless apps
+  webui-path: /admin            # default /
+  links:                        # extra buttons on the detail view, absolute URLs
+    - name: Documentation
+      url: https://docs.example.org
+  view: service                 # apps (default) | service | system — the grid, nothing more
+  parent: jellyfin              # nest this app under another app's tile
+```
+
+- `webui-scheme` defaults to `https`. `webui-port` is the **URL** port and is empty in the
+  normal case. Neither is the container port.
+- An app with no web UI lands in `service` on its own. Leave `view` alone unless the app is a
+  platform piece.
+- `parent` is for apps that only make sense beside another one, such as a companion indexer or
+  a request front end. It is presentation only. If the parent is not installed, the app shows
+  as an ordinary tile.
+
+Reference: [`x-compose-app.md` › Views](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#views).
+
+### `lifecycle`
+
+*Requirements:* `lifecycle-rationale`
+
+```yaml
+x-compose-app:
+  lifecycle:
+    stoppable: false      # Stop refused; updated without stopping; left out of "Update all"
+    uninstallable: false  # Uninstall refused
+    updatable: false      # outside Maison's update system entirely
+```
+
+All three default to `true`. They exist for platform stacks: the dashboard, the gateway, an
+admin app that something other than Maison keeps up to date. **A store app needs a
+`rationale.md` entry to set any of them to `false`.** An app the user cannot stop, remove or
+update is a review question, not a default.
+
+Reference: [`x-compose-app.md` › Lifecycle](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#lifecycle-what-the-operator-may-do-to-the-app).
+
+### Backups
+
+Maison backs up the app folder whole. Declare regenerable data so it isn't copied off-box every
+night:
+
+```yaml
+x-compose-app:
+  backup:
+    exclude:
+      - cache/                  # <app folder>/cache
+      - data/transcodes/
+      - "**/thumbs/"            # any depth; must be quoted
+```
+
+An excluded directory comes back **empty** after a restore, so list only what the app rebuilds
+by itself, and declare it in `folders` if it must exist before start. Only directories are
+accepted: no file globs, no negations, nothing outside the app folder.
+
+`backup.skip: true` drops the app from backups entirely. Use it only when nothing in its folder
+is worth keeping.
+
+Reference: [`x-compose-app.md` › Backup exclusions](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#backup-exclusions).
+
+### `version`, `data_version` and migrations
+
+*Requirements:* `migrations-wellformed` `migration`
+
+```yaml
+x-compose-app:
+  version: "2.4.0"      # optional, display only
+  data_version: 2       # only once the app needs its first migration
+  migrations:
+    - id: 2
+      name: postgres-15-to-17
+      image: pgautoupgrade/pgautoupgrade:17.6-trixie
+      environment:
+        PGAUTO_ONESHOT: "yes"
+        POSTGRES_USER: myapp    # = the postgres service's user; the default `postgres` fails
+        POSTGRES_DB: myapp
+      volumes:
+        - /DATA/AppData/${AppID}/db:/var/lib/postgresql/data
+```
+
+**`version`** is optional and only displayed. Updates are detected from the compose file,
+not from this field. If you set it, use the main app's image tag without a leading `v` or
+variant suffix (`ghost:6.59.0-alpine` → `"6.59.0"`), quote it, and keep it in step with the tag.
+For an AppShield app, use the backend's version.
+
+**`data_version`** is the shape of the app's data: an integer that starts at 1 and rises by
+exactly one per migration. Leave it out until the first migration is needed (absent means 1).
+
+**Most updates need no migration**, because the image converts its own data on first start.
+Ship one when it can't: a PostgreSQL major version, Odoo 18 → 19, a config file that moved, an
+app that must boot every intermediate major version.
+
+A step is exactly one of:
+- a **container** (`image:` plus the `init` keys; preferred),
+- a **script** (`script: migrations/0002-….sh`, run like a hook, under the app's `migrations/` folder),
+- **`blocked:`** (a message; the update is refused before anything is pulled).
+
+Store rules:
+
+- **Every install today starts at data version 1**, whatever version it runs: no install had a
+  marker before migrations existed. So a step must **read the data and exit 0 when it is
+  already converted**, the way `pgautoupgrade` checks `PG_VERSION`. Exit 0 means "applied";
+  there is no "try next time".
+- Use `blocked` only when the step lands together with the image bump that needs it. It cannot
+  look at the data, so it would also refuse installs that are already converted. When old data
+  cannot be converted automatically, use a script that checks and fails: the update is rolled
+  back and the app keeps its old version. `Apps/Odoo` is the worked example (step 2 refuses
+  Odoo 18 databases; step 3 is the `pgautoupgrade` above).
+- **When to merge:** Maison runs steps from **v1.1.58**. Older builds ignore them and update
+  straight onto the new image. So if the step lands **with** the image bump that needs it,
+  wait until v1.1.58+ is on the fleet. If the store **already** ships the new image (a
+  conversion that was missed), merge at once: the migration only adds protection.
+- **The invariant to review against:** a fresh install at data version N must end up where an
+  older install plus every migration up to N ends up. A change to what `seed/`, `files`,
+  `folders` or `init` produce never reaches existing installs unless a migration carries it.
+
+An update with pending steps always takes a rollback point, and is rolled back as a whole if
+a step fails.
+
+Reference: [Maison `migrations.md`](https://github.com/Yundera/Maison/blob/main/docs/migrations.md).
+
+### Keys Maison writes itself
+
+`store-ref` and `generated-routes` appear in an installed app's override file (older
+installs may also carry `store` / `store-app-id`). Don't use those names for your own fields.
+
+## Rationale (`rationale.md`)
+
+An app that takes an exception ships `Apps/<AppName>/rationale.md`. Reviewers read it first.
+
+It is required when the app:
+- runs as root with access to user folders, or mounts anything outside `/DATA/AppData/<app>/`
+  and the user folders;
+- ships with no login enabled by default, or relies on first-visit onboarding;
+- changes the host from a hook;
+- sets any `lifecycle` key to `false`;
+- deviates from anything else in this document.
+
+```markdown
+# <AppName> — Rationale
+
+## What exception is requested
+<e.g. "runs as root", "no login", "mounts /DATA/Downloads read-write">
+
+## Why it is necessary
+<upstream constraint, runtime requirement, …>
+
+## Mitigations
+<resource limits, read-only mounts, disabled features, …>
+
+## Alternatives considered
+<each alternative and why it did not work>
+
+## Data protection
+<what protects user data given this exception>
+```
+
+Keep it short and factual. A reviewer should be able to decide in a minute.
+`Apps/Stirling-PDF/rationale.md` is a full example.
+
+## Images and languages
+
+*Requirements:* `assets` `description`
+
+Asset fields name files beside the compose (`icon: icon.png`, `screenshots: [screenshot-1.png]`).
+Maison serves them from the store copy already on the box. An absolute URL still works but
+is not the normal form.
+
+| Image | Spec |
+|---|---|
+| `icon.png` | Required. 192×192, transparent background. |
+| `screenshot-N.png` | At least one required. 1280×720, PNG or JPG, as small as possible. |
+| `thumbnail.png` | Optional. 784×442 with a rounded-corner mask. Supply it only as a purpose-made tile; otherwise omit it and the store uses `screenshot-1.png`. Featured apps should have one. |
+
+Use the [PSD templates](psd-source) to make these.
+
+**Languages:** English (`en_us`) is mandatory for `title`, `tagline` and `description`. French
+(`fr_fr`), Korean (`ko_kr`), Chinese (`zh_cn`) and Spanish (`es_es`) are recommended for
+`tagline` and `description`.
+
+## Feedback
+
+Suggestions about this process are welcome via GitHub issues.
