@@ -334,8 +334,8 @@ line, and a service app is reviewed on the rest.
 
 - **Pass:** `icon.png` and at least `screenshot-1.png` exist in the app folder and are referenced
   by relative path (`icon: icon.png`). An absolute URL must point to this repository.
-  `thumbnail.png`, if present, is a purpose-made tile, not a rescaled icon or a copy of a
-  screenshot.
+  `thumbnail.png` is optional (the store falls back to `screenshot-1.png`); if present, it is
+  not the icon rescaled and not copied from another app.
 
 ---
 
@@ -386,12 +386,14 @@ has nothing to open, so only `install` applies to it; its auth and data are judg
 
 ### `zero-config` — usable from the browser alone
 
-**Check:** functional · **Severity:** Major
+**Check:** functional · **Severity:** Major · `rationale.md` can cover a third-party sign-in
 **n-a:** a service app.
 
 - **Pass:** the app reaches a usable state through its UI with the defaults it shipped with.
   Following what the app documents (its `tips`, its description, its own first screen) counts;
-  reading logs, opening a shell or editing a file does not.
+  reading logs, opening a shell or editing a file does not. An app whose setup needs an account
+  on an identity provider the user doesn't control (Plex against plex.tv) passes when
+  `rationale.md` names that provider.
 
 ### `data-persistence` — data survives uninstall and reinstall
 
