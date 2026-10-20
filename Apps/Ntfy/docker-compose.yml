@@ -1,4 +1,11 @@
 name: ntfy
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ntfy server + nginx auth proxy + MCP sidecar
   # nginx on :80 (web UI with login page + API passthrough)
@@ -10,6 +17,7 @@ services:
     hostname: ntfy
     user: "0:0"
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

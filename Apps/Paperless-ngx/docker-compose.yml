@@ -1,5 +1,12 @@
 name: paperlessngx
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:3.0.5
@@ -52,6 +59,7 @@ services:
         limits:
           memory: 2G
     cpu_shares: 70
+    logging: *logging
 
   tika:
     image: docker.io/apache/tika:2.9.2.1
@@ -64,6 +72,7 @@ services:
         limits:
           memory: 512M
     cpu_shares: 10
+    logging: *logging
 
   gotenberg:
     image: docker.io/gotenberg/gotenberg:8.36.0
@@ -80,6 +89,7 @@ services:
         limits:
           memory: 512M
     cpu_shares: 10
+    logging: *logging
 
   broker:
     image: docker.io/valkey/valkey:9.1.1-alpine
@@ -96,6 +106,7 @@ services:
         limits:
           memory: 256M
     cpu_shares: 10
+    logging: *logging
 
   db:
     image: docker.io/library/postgres:17.11
@@ -120,6 +131,7 @@ services:
         limits:
           memory: 512M
     cpu_shares: 20
+    logging: *logging
 
 networks:
   paperless-network:

@@ -1,5 +1,12 @@
 name: odoo
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:18.3
@@ -14,6 +21,7 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/postgres-data/:/var/lib/postgresql/data/
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -61,6 +69,7 @@ services:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/config/:/etc/odoo/
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/addons/:/mnt/extra-addons/
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

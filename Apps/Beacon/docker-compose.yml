@@ -1,5 +1,12 @@
 name: beacon
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   beacon-backend:
     image: ghcr.io/worph/beacon:1.0.20
@@ -34,6 +41,7 @@ services:
       - pcs
     # 80 — user-facing API backend (CONTRIBUTING "CPU Share Allocation").
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -98,6 +106,7 @@ services:
     # 80 — reverse proxy in front of a user-facing app (CONTRIBUTING
     # "CPU Share Allocation").
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

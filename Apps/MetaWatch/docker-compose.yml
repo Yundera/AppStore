@@ -18,6 +18,13 @@ name: metawatch
 # all demux/transmux happens in the browser.
 # =============================================================================
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ── AppShield sidecar ──────────────────────────────────────────────
   # AppShield in OIDC mode: self-registers with the PCS auth-registrar and
@@ -70,6 +77,7 @@ services:
         limits:
           memory: 128M
     cpu_shares: 80
+    logging: *logging
     networks:
       # `pcs` so Caddy can reach it; the app network is where its backend lives.
       - pcs
@@ -114,6 +122,7 @@ services:
         limits:
           memory: 512M
     cpu_shares: 70
+    logging: *logging
     networks:
       - metawatch-internal
 
@@ -173,6 +182,7 @@ services:
         limits:
           memory: 1G
     cpu_shares: 30
+    logging: *logging
     networks:
       - metawatch-internal
       # `pcs` so this peer can reach a co-located MetaGateway over the shared
@@ -240,6 +250,7 @@ services:
         limits:
           memory: 3G
     cpu_shares: 30
+    logging: *logging
     networks:
       - metawatch-internal
       - pcs
@@ -277,6 +288,7 @@ services:
         limits:
           memory: 768M
     cpu_shares: 50
+    logging: *logging
     networks:
       - metawatch-internal
 

@@ -1,4 +1,11 @@
 name: browsermcp
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Main container — Chromium + Playwright + MCP server + noVNC viewer.
   # Reachable at browsermcp-backend:9746 on the pcs network. Beacon discovery on UDP 9099.
@@ -34,6 +41,7 @@ services:
     networks:
       - pcs
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -79,6 +87,7 @@ services:
     networks:
       - pcs
     cpu_shares: 80
+    logging: *logging
     labels:
       caddy_0: browsermcp-${APP_DOMAIN}
       caddy_0.import: gateway_tls

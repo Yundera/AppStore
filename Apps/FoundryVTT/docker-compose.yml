@@ -1,4 +1,11 @@
 name: foundryvtt
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   foundryvtt:
     # Community image (felddy/foundryvtt-docker). Foundry itself is not in the image:
@@ -14,6 +21,7 @@ services:
     restart: unless-stopped
     # 80 — user-facing interactive (live game sessions over websocket).
     cpu_shares: 80
+    logging: *logging
     expose:
       - 30000
     environment:

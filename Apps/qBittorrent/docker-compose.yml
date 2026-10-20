@@ -1,5 +1,12 @@
 name: qbittorrent
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ── AppShield SSO gate ─────────────────────────────────────────────
   # The only publicly reachable service: it carries the Caddy labels, and the
@@ -91,6 +98,7 @@ services:
     networks:
       - pcs
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -133,6 +141,7 @@ services:
       - ${DATA_ROOT:-/DATA}/AppData/qbittorrent/config/:/config
       - ${DATA_ROOT:-/DATA}/Downloads/:/downloads
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

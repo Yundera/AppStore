@@ -81,6 +81,16 @@ line, and a service app is reviewed on the rest.
 - **Pass:** every service sets `cpu_shares` as a top-level service field, with a value from the
   tiers in [GUIDELINES › Resources](GUIDELINES.md#resources).
 
+### `log-limits` — every service has a bounded log
+
+**Check:** static · **Severity:** Minor
+
+- **Pass:** every service sets `logging:` with the `json-file` driver and a `max-size` option
+  (and `max-file`), as in [GUIDELINES › Resources](GUIDELINES.md#resources). The shared
+  `x-logging` anchor counts.
+- **Fail:** a service with no `logging:`, or one with no `max-size`. Docker's default json-file
+  log never rotates, so it grows until the disk is full.
+
 ### `architectures` — supported platforms are declared
 
 **Check:** static · **Severity:** Minor

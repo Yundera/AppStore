@@ -1,4 +1,11 @@
 name: crafty
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   crafty:
     image: registry.gitlab.com/crafty-controller/crafty-4:4.10.7
@@ -6,6 +13,7 @@ services:
     hostname: crafty
     user: "0:0"                          # Crafty requires root; see rationale.md
     cpu_shares: 50
+    logging: *logging
     restart: unless-stopped
     expose:
       - 8443                             # self-signed HTTPS panel, reached by Caddy over the pcs network only

@@ -1,5 +1,12 @@
 name: docusaurusmcp
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # MCP server — exposes Docusaurus docs via MCP tools (list, read, write, search, rebuild)
   docusaurusmcp-backend:
@@ -9,6 +16,7 @@ services:
     user: "0:0"
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -43,6 +51,7 @@ services:
     hostname: docusaurusmcp-beacon
     restart: unless-stopped
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -65,6 +74,7 @@ services:
     hostname: docusaurusmcp
     restart: unless-stopped
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

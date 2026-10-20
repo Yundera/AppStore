@@ -1,5 +1,12 @@
 name: seafiledrive
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   seafiledrive:
     image: rclone/rclone:1.74.4
@@ -11,6 +18,7 @@ services:
     user: 0:0
     privileged: true
     cpu_shares: 30
+    logging: *logging
     deploy:
       resources:
         limits:

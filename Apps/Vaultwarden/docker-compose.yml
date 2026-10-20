@@ -1,5 +1,12 @@
 name: vaultwarden
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # AppShield gates ONLY the admin panel. Caddy splits the single public hostname by
   # path: /admin (plus AppShield's own /nhl-auth endpoints) goes through the SSO
@@ -61,6 +68,7 @@ services:
         limits:
           memory: 128M
     cpu_shares: 80
+    logging: *logging
     networks:
       - pcs
 
@@ -73,6 +81,7 @@ services:
         limits:
           memory: 1024M
     cpu_shares: 70
+    logging: *logging
     # /alive is a plain liveness route, checked from inside the container so the result
     # does not depend on the gateway or the sidecar.
     healthcheck:

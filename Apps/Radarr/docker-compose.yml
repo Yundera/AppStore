@@ -1,5 +1,12 @@
 name: radarr
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   radarr:
     image: lscr.io/linuxserver/radarr:6.2.1
@@ -26,6 +33,7 @@ services:
       - ${DATA_ROOT:-/DATA}/Media/Movies/:/movies            # shared movie library
       - ${DATA_ROOT:-/DATA}/Downloads/:/downloads            # shared downloads folder
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

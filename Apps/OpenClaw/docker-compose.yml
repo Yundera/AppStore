@@ -1,5 +1,12 @@
 name: openclaw
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # AppShield sidecar — the only publicly reachable service. It fronts the OpenClaw
   # gateway with the PCS's built-in Authelia SSO (OIDC) and self-registers with
@@ -15,6 +22,7 @@ services:
     hostname: openclaw
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     expose:
       - 80
     labels:
@@ -56,6 +64,7 @@ services:
         limits:
           memory: 2048M
     cpu_shares: 90
+    logging: *logging
     healthcheck:
       # curl, not wget: despite the `alpine/` namespace (a Docker Hub org name, not a
       # base image) this image is Debian bookworm and ships no wget, so the old

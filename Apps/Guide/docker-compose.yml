@@ -1,11 +1,19 @@
 name: guide
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   guide:
     image: ghcr.io/yundera/guideapp:1.0.3
     container_name: guide
     user: 0:0  # nginx needs root to bind port 80; no volumes (see rationale.md)
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

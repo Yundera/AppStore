@@ -1,5 +1,12 @@
 name: clauderoot
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   clauderoot:
     image: ghcr.io/worph/claude-code-container:1.0.26
@@ -94,6 +101,7 @@ services:
     networks:
       pcs: null
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

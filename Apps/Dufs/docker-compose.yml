@@ -1,4 +1,11 @@
 name: dufs
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   dufs:
     container_name: dufs
@@ -42,6 +49,7 @@ services:
     networks:
       - pcs
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

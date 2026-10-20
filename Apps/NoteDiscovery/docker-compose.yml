@@ -1,5 +1,12 @@
 name: notediscovery
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   notediscovery:
     image: ghcr.io/gamosoft/notediscovery:0.19.2
@@ -38,6 +45,7 @@ services:
         limits:
           memory: 512M
     cpu_shares: 50
+    logging: *logging
 
 networks:
   pcs:

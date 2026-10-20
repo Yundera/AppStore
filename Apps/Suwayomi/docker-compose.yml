@@ -1,5 +1,12 @@
 name: suwayomi
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   suwayomi:
     image: ghcr.io/suwayomi/tachidesk:v2.3.2333
@@ -43,6 +50,7 @@ services:
     depends_on:
       - flaresolverr
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -58,6 +66,7 @@ services:
     environment:
       TZ: $TZ
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:

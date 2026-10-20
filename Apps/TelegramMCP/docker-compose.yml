@@ -1,4 +1,11 @@
 name: telegrammcp
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Main MCP server — reachable at telegrammcp-backend:9634 on the pcs network.
   # Serves the web UI (/), the MCP endpoint (/mcp) and the Telegram webhook
@@ -31,6 +38,7 @@ services:
       - pcs
     # 80 — user-facing API backend + Web UI (CONTRIBUTING "CPU Share Allocation").
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -56,6 +64,7 @@ services:
     # 80 — reverse proxy in front of a user-facing app (CONTRIBUTING
     # "CPU Share Allocation").
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

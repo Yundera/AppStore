@@ -1,4 +1,11 @@
 name: docmostmcp
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Main MCP server — reachable at docmostmcp-backend:8000 on the pcs network
   docmostmcp-backend:
@@ -8,6 +15,7 @@ services:
     user: "0:0"
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -46,6 +54,7 @@ services:
     hostname: docmostmcp-beacon
     restart: unless-stopped
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -78,6 +87,7 @@ services:
     hostname: docmostmcp
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

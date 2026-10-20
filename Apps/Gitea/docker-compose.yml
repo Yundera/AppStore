@@ -1,5 +1,12 @@
 name: gitea
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Gitea itself — git hosting, the Actions controller, and the OCI package
   # registry, all in one process. SQLite: a personal forge never has the write
@@ -10,6 +17,7 @@ services:
     user: $PUID:$PGID
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -88,6 +96,7 @@ services:
     restart: unless-stopped
     privileged: true
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:

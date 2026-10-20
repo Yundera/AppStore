@@ -1,5 +1,12 @@
 name: prowlarr
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # The SSO gate. It carries the Caddy labels, so this is the only service the
   # internet can reach.
@@ -47,6 +54,7 @@ services:
     depends_on:
       - prowlarr-backend
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -74,6 +82,7 @@ services:
     depends_on:
       - prowlarr-flaresolverr
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -110,6 +119,7 @@ services:
       TZ: $TZ
       LOG_LEVEL: info
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:

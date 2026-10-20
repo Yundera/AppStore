@@ -1,5 +1,12 @@
 name: annas-torrents-webui
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ── AppShield sidecar ──────────────────────────────────────────────
   # AppShield (ghcr.io/yundera/appshield, formerly nginx-hash-lock) in OIDC
@@ -44,6 +51,7 @@ services:
         limits:
           memory: 128M
     cpu_shares: 80
+    logging: *logging
 
   # ── Backend (protected) ────────────────────────────────────────────
   # The FastAPI + embedded-libtorrent app. No Caddy labels: the web UI is
@@ -75,6 +83,7 @@ services:
     networks:
       - pcs
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

@@ -1,5 +1,12 @@
 name: ssa
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   ssa-proxy:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -41,6 +48,7 @@ services:
       - ssa-internal
       - pcs
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -62,6 +70,7 @@ services:
       - HASH_API_SEED=${SSA_HASH_API_SEED}
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     # Runs as root - see rationale.md. Both user-directory mounts are read-only and this
     # service is not reachable from the pcs network.
     user: 0:0

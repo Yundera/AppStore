@@ -87,6 +87,13 @@ name: nntmux
 #      `backfill=0` (pure forward tailing) the operator's own value stands.
 # =============================================================================
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ---------------------------------------------------------------------------
   # nntmux-db — MariaDB backing nntmux's release catalog. Private to this app
@@ -95,6 +102,7 @@ services:
   nntmux-db:
     image: mariadb:12.3.3
     cpu_shares: 70
+    logging: *logging
     container_name: nntmux-db
     hostname: nntmux-db
     restart: unless-stopped
@@ -155,6 +163,7 @@ services:
   nntmux-redis:
     image: redis:7-alpine
     cpu_shares: 70
+    logging: *logging
     container_name: nntmux-redis
     hostname: nntmux-redis
     restart: unless-stopped
@@ -173,6 +182,7 @@ services:
   nntmux-manticore:
     image: manticoresearch/manticore@sha256:032388dc77321e3ac898a14b9a0c3fc22ab8d08cd2582abd6c5b642d46b82181
     cpu_shares: 50
+    logging: *logging
     container_name: nntmux-manticore
     hostname: nntmux-manticore
     restart: unless-stopped
@@ -196,6 +206,7 @@ services:
     # depends on. Re-pin deliberately, re-verify the trap list above when you do.
     image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
     cpu_shares: 50
+    logging: *logging
     container_name: nntmux
     hostname: nntmux
     restart: unless-stopped
@@ -292,6 +303,7 @@ services:
     # below calls `misc/update/*.php` + `Blacklight\` classes by name.
     image: pyrowman/nntmux@sha256:7fc221f7a806fee3e4a2145159e1a147962edc095282bdc692806968f791fabe
     cpu_shares: 20
+    logging: *logging
     container_name: nntmux-scanner
     hostname: nntmux-scanner
     restart: unless-stopped

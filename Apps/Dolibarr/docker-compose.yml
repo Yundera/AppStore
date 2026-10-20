@@ -1,5 +1,12 @@
 name: dolibarr
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   dolibarr:
     image: dolibarr/dolibarr:22.0.5
@@ -48,6 +55,7 @@ services:
         limits:
           memory: 1G
     cpu_shares: 70
+    logging: *logging
 
   db:
     image: mariadb:11.8.8
@@ -79,6 +87,7 @@ services:
         limits:
           memory: 1G
     cpu_shares: 50
+    logging: *logging
 
 networks:
   dolibarr-network:

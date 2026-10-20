@@ -1,5 +1,12 @@
 name: docusaurus
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   docusaurus:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -26,6 +33,7 @@ services:
     depends_on:
       - docusaurus-backend
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -46,6 +54,7 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/build/:/usr/share/nginx/html/:ro
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

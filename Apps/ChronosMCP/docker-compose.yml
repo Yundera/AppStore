@@ -1,4 +1,11 @@
 name: chronosmcp
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Main server — reachable at chronosmcp-backend:9054 on this app's private
   # network only. It ships no authentication of its own, so it must never join
@@ -12,6 +19,7 @@ services:
     user: $PUID:$PGID
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -46,6 +54,7 @@ services:
     hostname: chronosmcp
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

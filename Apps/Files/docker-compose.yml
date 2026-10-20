@@ -1,5 +1,12 @@
 name: files
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # AppShield SSO gate — the only publicly reachable service.
   #
@@ -48,6 +55,7 @@ services:
       - pcs
       - files-internal
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -108,6 +116,7 @@ services:
     networks:
       - files-internal
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

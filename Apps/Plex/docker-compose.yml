@@ -1,5 +1,12 @@
 name: plex
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   plex-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.7
@@ -30,6 +37,7 @@ services:
         limits:
           memory: 128M
     cpu_shares: 80
+    logging: *logging
     networks:
       # Only `pcs`: Caddy reaches it here, and so is its backend.
       - pcs
@@ -57,6 +65,7 @@ services:
         limits:
           memory: 1G
     cpu_shares: 50
+    logging: *logging
     networks:
       # Kept on the shared network: a media server is something other apps on
       # this box legitimately address by name, not only through its public URL.

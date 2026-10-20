@@ -241,7 +241,7 @@ services:
 
 ## Resources
 
-*Requirements:* `cpu-shares`
+*Requirements:* `cpu-shares` `log-limits`
 
 **`cpu_shares` is mandatory on every service.** It is a relative weight that only matters
 under load, and it is a top-level service field (not under `deploy:`):
@@ -270,6 +270,26 @@ services:
       resources:
         limits:
           memory: 512M
+```
+
+**A log limit is mandatory on every service.** Docker's default `json-file` log never
+rotates, and the PCS sets no host-wide default: the limit has to be in the compose. Declare
+it once as an `x-logging` anchor before `services:` and reference it from each service. Keep
+`max-size` meaningful on its own: Podman honours it but may ignore `max-file`. Raise it only
+for an app whose logs you need to keep, and say why in a comment.
+
+```yaml
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  myapp:
+    image: myapp:1.2.3
+    cpu_shares: 80
+    logging: *logging
 ```
 
 ## Routing: Caddy and the shared network

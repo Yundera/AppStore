@@ -1,5 +1,12 @@
 name: wgeasyhost
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # WireGuard server, running in the HOST network namespace.
   # Because wg0 lives on the host, the VPN server address (10.9.0.1) IS the host,
@@ -39,6 +46,7 @@ services:
     # NOTE: host network mode forbids setting net.ipv4.* sysctls on the container
     # (they would mutate the host). They are set on the HOST by x-compose-app.hooks.pre_install.
     cpu_shares: 50
+    logging: *logging
     mem_limit: 256m
 
   # Bridged reverse-proxy on the pcs network. Carries the gateway labels and forwards
@@ -72,6 +80,7 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/nginx.conf:/etc/nginx/nginx.conf:ro
     cpu_shares: 80
+    logging: *logging
     mem_limit: 64m
 
 networks:

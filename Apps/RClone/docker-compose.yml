@@ -1,4 +1,11 @@
 name: rclone
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   rclone:
     user: $PUID:$PGID
@@ -7,6 +14,7 @@ services:
     hostname: rclone
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

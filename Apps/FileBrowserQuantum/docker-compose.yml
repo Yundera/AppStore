@@ -1,5 +1,12 @@
 name: filebrowserquantum
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   filebrowserquantum:
     image: gtstef/filebrowser:1.5.5-stable
@@ -39,6 +46,7 @@ services:
     networks:
       - pcs
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

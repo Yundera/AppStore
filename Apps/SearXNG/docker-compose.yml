@@ -1,5 +1,12 @@
 name: searxng
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   searxng-proxy:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -34,6 +41,7 @@ services:
         limits:
           memory: 128M
     cpu_shares: 80
+    logging: *logging
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own
       # network because that is where its backend lives.
@@ -48,6 +56,7 @@ services:
     container_name: searxng-backend
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
 
     expose:
       - "8080"

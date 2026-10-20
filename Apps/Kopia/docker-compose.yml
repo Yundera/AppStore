@@ -15,6 +15,13 @@ name: kopia
 # The engine connects the repository on its own once they are there, then Maison asks
 # the admin to enable it in Settings > Backups. See rationale.md.
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   kopia:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -52,6 +59,7 @@ services:
       - pcs
       - kopia-internal
     cpu_shares: 40
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -115,6 +123,7 @@ services:
     networks:
       - kopia-internal
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -166,6 +175,7 @@ services:
     networks:
       - kopia-internal
     cpu_shares: 30
+    logging: *logging
     deploy:
       resources:
         limits:

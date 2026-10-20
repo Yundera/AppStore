@@ -1,4 +1,11 @@
 name: samba
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   samba:
     container_name: samba
@@ -6,6 +13,7 @@ services:
     network_mode: bridge
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     user: 0:0  # Run as root for full permissions
 
     # Needed for FUSE support

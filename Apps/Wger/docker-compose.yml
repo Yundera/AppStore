@@ -1,5 +1,12 @@
 name: wger
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # The public face of the app. Django with DEBUG=False serves neither /static/
   # nor /media/, and wger ships no whitenoise, so a front-end that can serve
@@ -53,6 +60,7 @@ services:
       - pcs
       - wger-internal
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -184,6 +192,7 @@ services:
       # service above.
       - wger-internal
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -241,6 +250,7 @@ services:
       # answer every other app's `db` lookups, and theirs ours.
       - wger-internal
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -284,6 +294,7 @@ services:
     networks:
       - wger-internal
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -344,6 +355,7 @@ services:
       # is the same host and certificate as the app itself.
       - wger-internal
     cpu_shares: 30
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -400,6 +412,7 @@ services:
     networks:
       - wger-internal
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -443,6 +456,7 @@ services:
     networks:
       - wger-internal
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:

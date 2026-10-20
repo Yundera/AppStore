@@ -1,5 +1,12 @@
 name: odysseus
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   odysseus-chromadb:
     image: chromadb/chroma:1.5.0
@@ -7,6 +14,7 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 30
+    logging: *logging
     expose:
       - "8000"
     environment:
@@ -27,6 +35,7 @@ services:
     container_name: odysseus-searxng
     restart: unless-stopped
     cpu_shares: 30
+    logging: *logging
     expose:
       - "8080"
     environment:
@@ -89,6 +98,7 @@ services:
         limits:
           memory: 128M
     cpu_shares: 80
+    logging: *logging
     networks:
       # Only `pcs`: Caddy reaches it here, and so is its backend.
       - pcs
@@ -106,6 +116,7 @@ services:
     # everything on the box. Docker's init process reaps them.
     init: true
     cpu_shares: 70
+    logging: *logging
     depends_on:
       odysseus-chromadb:
         condition: service_started

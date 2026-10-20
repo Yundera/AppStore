@@ -1,5 +1,12 @@
 name: caddy
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
     image: caddy:2.9.1-alpine
@@ -44,6 +51,7 @@ services:
           memory: 128M
           cpus: '0.25'
     cpu_shares: 50
+    logging: *logging
 
 networks:
   pcs:

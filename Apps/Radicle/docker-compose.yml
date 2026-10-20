@@ -1,5 +1,12 @@
 name: radicle
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # The web UI: the Radicle Explorer bundle served as static files by Caddy.
   # It is a pure client-side app — every request it makes goes from the visitor's
@@ -10,6 +17,7 @@ services:
     user: $PUID:$PGID
     restart: unless-stopped
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -56,6 +64,7 @@ services:
     user: $PUID:$PGID
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -97,6 +106,7 @@ services:
     user: $PUID:$PGID
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -137,6 +147,7 @@ services:
     user: $PUID:$PGID
     restart: unless-stopped
     cpu_shares: 20
+    logging: *logging
     deploy:
       resources:
         limits:

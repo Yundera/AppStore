@@ -1,5 +1,12 @@
 name: lidarr
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   lidarr:
     image: lscr.io/linuxserver/lidarr:3.1.0
@@ -26,6 +33,7 @@ services:
       - ${DATA_ROOT:-/DATA}/Media/Music/:/music              # shared music library (same folder Jellyfin reads)
       - ${DATA_ROOT:-/DATA}/Downloads/:/downloads            # shared downloads folder
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

@@ -1,4 +1,11 @@
 name: duplicati
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   duplicati:
     container_name: duplicati
@@ -24,6 +31,7 @@ services:
     networks:
       - pcs
     cpu_shares: 30
+    logging: *logging
     deploy:
       resources:
         limits:

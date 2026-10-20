@@ -1,4 +1,11 @@
 name: n8nmcp
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Main MCP server — reachable at n8nmcp-backend:9640 on the pcs network
   n8nmcp-backend:
@@ -46,6 +53,7 @@ services:
       - pcs
     # 80 — user-facing API backend + Web UI (CONTRIBUTING "CPU Share Allocation").
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -69,6 +77,7 @@ services:
     restart: unless-stopped
     # 80 — reverse proxy / user-facing interactive (CONTRIBUTING "CPU Share Allocation").
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

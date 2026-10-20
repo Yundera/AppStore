@@ -1,4 +1,11 @@
 name: nextcloudmcp
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # Main MCP wrapper — exposes /mcp (Nextcloud + Talk tools, one MCP server)
   # and the Web UI on 9650. Reachable at nextcloudmcp-backend:9650 inside the pcs
@@ -14,6 +21,7 @@ services:
     user: "0:0"
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     expose:
       - 9650
     environment:
@@ -67,6 +75,7 @@ services:
     hostname: nextcloudmcp
     restart: unless-stopped
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

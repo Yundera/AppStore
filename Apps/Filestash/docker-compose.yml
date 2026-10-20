@@ -1,5 +1,12 @@
 name: filestash
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   filestash:
     # Upstream publishes no version tags - only a rolling `latest` (multi-arch) - so
@@ -45,6 +52,7 @@ services:
     networks:
       - pcs
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:

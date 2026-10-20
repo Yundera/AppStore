@@ -1,5 +1,12 @@
 name: terminal
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   terminal:
     # >= 3.1.0 keeps the OIDC back-channel on the box: auth-registrar hands the gate
@@ -45,6 +52,7 @@ services:
       - pcs
       - terminal-internal
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -158,6 +166,7 @@ services:
       # has no business on the shared network.
       - terminal-internal
     cpu_shares: 70
+    logging: *logging
     # Only ttyd and the ssh client count against this — the shell itself runs in the
     # host's sshd session, outside this container.
     mem_limit: 128m

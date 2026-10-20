@@ -1,5 +1,12 @@
 name: docmost
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   docmost-db:
     image: postgres:16.13-alpine
@@ -29,6 +36,7 @@ services:
     networks:
       - docmost-network
     cpu_shares: 50
+    logging: *logging
 
   docmost-redis:
     image: redis:7.2.13-alpine
@@ -47,6 +55,7 @@ services:
     networks:
       - docmost-network
     cpu_shares: 30
+    logging: *logging
 
   docmost:
     image: docmost/docmost:0.70.3
@@ -95,6 +104,7 @@ services:
       - docmost-network
       - pcs
     cpu_shares: 70
+    logging: *logging
 
 networks:
   docmost-network:

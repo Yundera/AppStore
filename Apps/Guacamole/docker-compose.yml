@@ -1,4 +1,11 @@
 name: guacamole
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   guacamole:
     image: guacamole/guacamole:1.6.0
@@ -6,6 +13,7 @@ services:
     restart: unless-stopped
     user: 0:0
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -41,6 +49,7 @@ services:
     restart: unless-stopped
     user: 0:0
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -53,6 +62,7 @@ services:
     image: postgres:17.11-alpine
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

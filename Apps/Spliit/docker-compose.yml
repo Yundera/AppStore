@@ -1,4 +1,11 @@
 name: spliit
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   spliit-proxy:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -36,6 +43,7 @@ services:
         limits:
           memory: 128M
     cpu_shares: 80
+    logging: *logging
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own network
       # because that is where its backend and database live.
@@ -47,6 +55,7 @@ services:
     container_name: spliit-db
     user: 0:0
     cpu_shares: 50
+    logging: *logging
     environment:
       POSTGRES_DB: spliit
       POSTGRES_USER: postgres
@@ -76,6 +85,7 @@ services:
     restart: unless-stopped
     user: "0:0"
     cpu_shares: 50
+    logging: *logging
     environment:
       TZ: $TZ
       POSTGRES_PRISMA_URL: postgresql://postgres:${SPLIIT_DB_PASSWORD}@spliit-db:5432/spliit

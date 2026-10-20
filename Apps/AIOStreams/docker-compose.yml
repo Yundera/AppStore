@@ -1,5 +1,12 @@
 name: aiostreams
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   aiostreams:
     image: ghcr.io/viren070/aiostreams:v2.31.1
@@ -51,6 +58,7 @@ services:
       timeout: 10s
       retries: 5
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

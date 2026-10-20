@@ -1,5 +1,12 @@
 name: jellyfin
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   jellyfin-proxy:
     image: ghcr.io/yundera/nginx-hash-lock:1.0.7
@@ -18,6 +25,7 @@ services:
       caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "0:0"
     cpu_shares: 80
+    logging: *logging
     environment:
       BACKEND_HOST: jellyfin
       BACKEND_PORT: "8096"
@@ -50,6 +58,7 @@ services:
       PUID: $PUID
       TZ: $TZ
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

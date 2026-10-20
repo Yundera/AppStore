@@ -1,5 +1,12 @@
 name: ghost
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   ghost:
     image: ghost:6.59.0-alpine
@@ -58,6 +65,7 @@ services:
         limits:
           memory: 512M
     cpu_shares: 50
+    logging: *logging
 
   db:
     image: mariadb:11.8.8
@@ -89,6 +97,7 @@ services:
         limits:
           memory: 512M
     cpu_shares: 50
+    logging: *logging
 
 networks:
   ghost-network:

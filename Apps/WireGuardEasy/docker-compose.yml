@@ -1,5 +1,12 @@
 name: wgeasy
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   wgeasy:
     image: ghcr.io/wg-easy/wg-easy:15.3.0
@@ -42,6 +49,7 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
     cpu_shares: 50
+    logging: *logging
     mem_limit: 256m
 
 networks:

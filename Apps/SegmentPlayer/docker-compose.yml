@@ -1,5 +1,12 @@
 name: segment
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
 
   segmentplayer-backend:
@@ -22,6 +29,7 @@ services:
     # service is not reachable from the pcs network.
     user: 0:0
     cpu_shares: 70
+    logging: *logging
     networks:
       - segment-internal
 
@@ -58,6 +66,7 @@ services:
       - segment-internal
       - pcs
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

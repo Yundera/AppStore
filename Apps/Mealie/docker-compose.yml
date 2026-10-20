@@ -1,6 +1,13 @@
 name: mealie
 
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   mealie:
     image: ghcr.io/mealie-recipes/mealie:v3.14.0
@@ -30,6 +37,7 @@ services:
     healthcheck:
       disable: true
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

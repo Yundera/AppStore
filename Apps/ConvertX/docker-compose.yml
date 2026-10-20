@@ -1,5 +1,12 @@
 name: convertx
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   convertx:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -30,6 +37,7 @@ services:
     depends_on:
       - convertx-backend
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -70,6 +78,7 @@ services:
       # has no business on the shared network.
       - convertx-internal
     cpu_shares: 70
+    logging: *logging
 
 networks:
   pcs:

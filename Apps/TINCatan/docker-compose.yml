@@ -1,4 +1,11 @@
 name: tincatan
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   tincatan:
     # AppShield sidecar — the only publicly reachable container. Basic-auth mode
@@ -11,6 +18,7 @@ services:
     hostname: tincatan
     restart: unless-stopped
     cpu_shares: 80
+    logging: *logging
     expose:
       - 80
     labels:
@@ -46,6 +54,7 @@ services:
     container_name: tincatan-backend
     user: $PUID:$PGID
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

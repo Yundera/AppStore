@@ -1,4 +1,11 @@
 name: filebrowserroot
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # AppShield SSO gate — the only publicly reachable service. FileBrowser has no
   # OIDC of its own and never will (upstream archived the project on 2026-09-01
@@ -51,6 +58,7 @@ services:
       - pcs
       - filebrowserroot-internal
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -94,6 +102,7 @@ services:
     networks:
       - filebrowserroot-internal
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:

@@ -1,5 +1,12 @@
 name: netdata
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   netdata-proxy:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -34,6 +41,7 @@ services:
         limits:
           memory: 256M
     cpu_shares: 80
+    logging: *logging
     networks:
       # On `pcs` because Caddy must reach it, and on the app's own
       # network because that is where its backend lives.
@@ -65,6 +73,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     cpu_shares: 90
+    logging: *logging
     deploy:
       resources:
         limits:

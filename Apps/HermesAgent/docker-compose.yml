@@ -1,5 +1,12 @@
 name: hermes
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # One container. The image runs an s6 supervision tree: the gateway (agent
   # runtime, cron scheduler, messaging bridges) and the web dashboard are two
@@ -13,6 +20,7 @@ services:
     # File ownership is handled by PUID/PGID below, which the image reads and
     # applies by remapping its own user before dropping privileges.
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

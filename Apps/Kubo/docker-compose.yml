@@ -1,5 +1,12 @@
 name: kubo
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ── SSO gate: the WebUI and the node's RPC API ──────────────────────────────
   # Kubo serves both on one port: the WebUI is a static bundle at /webui/ and it
@@ -62,6 +69,7 @@ services:
     networks:
       - pcs
     cpu_shares: 80
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -153,6 +161,7 @@ services:
     networks:
       - pcs
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

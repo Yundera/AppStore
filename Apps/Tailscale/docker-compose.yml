@@ -1,5 +1,12 @@
 name: tailscale
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   tailscale:
     image: ghcr.io/tailscale/tailscale:v1.94.2
@@ -8,6 +15,7 @@ services:
     user: 0:0
     network_mode: host
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:

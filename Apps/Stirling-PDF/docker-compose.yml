@@ -1,5 +1,12 @@
 name: stirlingpdf
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   stirlingpdf:
     image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.14.3
@@ -72,6 +79,7 @@ services:
         reservations:
           memory: 2G  # Reserve minimum memory
     cpu_shares: 50  # Standard application priority
+    logging: *logging
 
 networks:
   pcs:

@@ -1,11 +1,19 @@
 name: tuwunel
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   tuwunel:
     image: ghcr.io/matrix-construct/tuwunel:v1.8.2
     container_name: tuwunel
     restart: unless-stopped
     cpu_shares: 70
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -65,6 +73,7 @@ services:
     restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 30
+    logging: *logging
     deploy:
       resources:
         limits:

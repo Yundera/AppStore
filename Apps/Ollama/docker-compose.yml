@@ -1,5 +1,12 @@
 name: ollama
 
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   ollama:
     image: ghcr.io/open-webui/open-webui:0.9.6
@@ -29,6 +36,7 @@ services:
     depends_on:
       - ollama-api
     cpu_shares: 50
+    logging: *logging
     deploy:
       resources:
         limits:
@@ -50,6 +58,7 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/ollama/data:/root/.ollama
     cpu_shares: 20
+    logging: *logging
     # No memory limit: model size varies and inference needs all available RAM (see rationale.md)
 
 networks:
