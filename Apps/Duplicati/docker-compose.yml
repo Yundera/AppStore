@@ -174,7 +174,8 @@ x-compose-app:
     DUPLICATI_SETTINGS_KEY: hex:32
     DUPLICATI_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Web UI
+    - label:
+        en_us: Web UI
       password: ${DUPLICATI_ADMIN_PASSWORD}
       # DUPLICATI__WEBSERVICE_PASSWORD is applied to the web UI on every start, so a
       # new value in .env plus a recreate is the whole change.

@@ -511,6 +511,7 @@ x-compose-app:
     # Seeded: an installed app created its admin account with the former shared password.
     STIRLINGPDF_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${STIRLINGPDF_ADMIN_PASSWORD}

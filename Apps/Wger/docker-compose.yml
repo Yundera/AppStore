@@ -1061,7 +1061,8 @@ x-compose-app:
     # keeps; a fresh install gets its own.
     WGER_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${WGER_ADMIN_PASSWORD}
       # A hook, not env: the password lives hashed in wger's user table, and

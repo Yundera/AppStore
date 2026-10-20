@@ -250,10 +250,12 @@ x-compose-app:
   secrets:
     QBITTORRENT_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: WebUI / download-client login
+    - label:
+        en_us: WebUI / download-client login
       username: admin
       password: ${QBITTORRENT_ADMIN_PASSWORD}
-      note: Not needed in the browser (single sign-on). For Radarr, Sonarr or Lidarr, leave it blank or use this.
+      note:
+        en_us: Not needed in the browser (single sign-on). For Radarr, Sonarr or Lidarr, leave it blank or use this.
       # A hook, not env: the password is a PBKDF2 hash in qBittorrent.conf, which
       # seed-config writes only while the file is absent, and qBittorrent keeps
       # its preferences in memory and rewrites the file itself. The hook goes

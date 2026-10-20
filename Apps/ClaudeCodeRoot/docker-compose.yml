@@ -285,7 +285,8 @@ x-compose-app:
     # login it already had; a fresh install gets its own.
     CLAUDECODEROOT_AUTH_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Terminal login
+    - label:
+        en_us: Terminal login
       password: ${CLAUDECODEROOT_AUTH_PASSWORD}
       # The auth layer reads AUTH_PASSWORD from the environment on every start and
       # keeps sessions in memory only, so .env plus a recreate is the whole change.

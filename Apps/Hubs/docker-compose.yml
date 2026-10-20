@@ -513,7 +513,8 @@ x-compose-app:
     # PostgREST 8 was checked against 17.11: it connects, loads its schema cache and
     # serves the ret0_admin views and RPCs.
     - id: 2
-      name: postgres-14-to-17
+      name:
+        en_us: postgres-14-to-17
       image: pgautoupgrade/pgautoupgrade:17.11-alpine
       environment:
         PGAUTO_ONESHOT: "yes"

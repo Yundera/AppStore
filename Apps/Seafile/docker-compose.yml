@@ -405,7 +405,8 @@ x-compose-app:
         zh_cn: 管理员
       username: admin@${APP_DOMAIN}
       password: ${SEAFILE_ADMIN_PASSWORD}
-      note: Changing it signs out the desktop and mobile clients and the Seafile Virtual Folder app; restart that app afterwards so it picks the new password up.
+      note:
+        en_us: Changing it signs out the desktop and mobile clients and the Seafile Virtual Folder app; restart that app afterwards so it picks the new password up.
       # Seafile keeps the password in ccnet's own user table; INIT_SEAFILE_ADMIN_PASSWORD
       # only seeds the first boot. reset-admin.sh is interactive, so this goes through
       # seahub's own model, whose save() writes it back to ccnet. set_password also

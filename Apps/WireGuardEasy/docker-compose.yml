@@ -402,7 +402,8 @@ x-compose-app:
     # shared password, which it keeps; a fresh install gets its own.
     WGEASY_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${WGEASY_ADMIN_PASSWORD}
       # wg-easy keeps its own argon2 hash in users_table; INIT_PASSWORD is read only by

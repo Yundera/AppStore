@@ -245,7 +245,8 @@ x-compose-app:
   secrets:
     SAMBA_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: SMB share (DATA)
+    - label:
+        en_us: SMB share (DATA)
       username: admin
       password: ${SAMBA_ADMIN_PASSWORD}
       # The image re-applies PASS to the Samba user on every start (CLEAR=Y is its

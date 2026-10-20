@@ -338,7 +338,8 @@ x-compose-app:
     # Seeded: an installed app keeps the login it already had (the former shared password).
     SUWAYOMI_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${SUWAYOMI_ADMIN_PASSWORD}
       # The entrypoint writes AUTH_PASSWORD into server.conf on every start, so a new

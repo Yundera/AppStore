@@ -543,7 +543,8 @@ x-compose-app:
     NNTMUX_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
     NNTMUX_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${NNTMUX_ADMIN_PASSWORD}
       note:

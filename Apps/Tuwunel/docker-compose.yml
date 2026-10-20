@@ -244,9 +244,11 @@ x-compose-app:
     # former shared password); a fresh install gets its own.
     TUWUNEL_REGISTRATION_TOKEN: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Registration token
+    - label:
+        en_us: Registration token
       password: ${TUWUNEL_REGISTRATION_TOKEN}
-      note: Share it only with people you invite — anyone who has it can create an account on your server. Changing it only affects future sign-ups; existing accounts keep working.
+      note:
+        en_us: Share it only with people you invite — anyone who has it can create an account on your server. Changing it only affects future sign-ups; existing accounts keep working.
       # TUWUNEL_REGISTRATION_TOKEN is read from the environment on every start, so a
       # new value in .env plus a recreate is the whole change.
       change:

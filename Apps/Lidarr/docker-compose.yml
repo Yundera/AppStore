@@ -125,10 +125,12 @@ x-compose-app:
   secrets:
     LIDARR_ADMIN_PASSWORD: alnum:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${LIDARR_ADMIN_PASSWORD}
-      note: Change it under Settings → General → Security.
+      note:
+        en_us: Change it under Settings → General → Security.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Derived from the trailing-slash bind mounts in `volumes:` above — the
   # container runs as $PUID:$PGID and cannot create or chown them itself.

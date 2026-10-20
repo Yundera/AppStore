@@ -126,7 +126,8 @@ x-compose-app:
   secrets:
     RADARR_ADMIN_PASSWORD: alnum:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${RADARR_ADMIN_PASSWORD}
       # A hook, not env: Radarr consumes <Username>/<Password> from config.xml on

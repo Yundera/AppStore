@@ -208,7 +208,8 @@ x-compose-app:
   secrets:
     CRAFTY_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${CRAFTY_ADMIN_PASSWORD}!
   # Why this is an init container and not a seed/ file.

@@ -553,7 +553,8 @@ x-compose-app:
     # password, which it keeps; a fresh install gets its own.
     YACY_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${YACY_ADMIN_PASSWORD}
       # A hook, not env: YaCy keeps the hash in yacy.conf, which admin-hash only

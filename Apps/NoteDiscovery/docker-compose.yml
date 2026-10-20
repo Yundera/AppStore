@@ -420,7 +420,8 @@ x-compose-app:
     # was set up with; a fresh install gets its own.
     NOTEDISCOVERY_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Login
+    - label:
+        en_us: Login
       password: ${NOTEDISCOVERY_PASSWORD}
       # AUTHENTICATION_PASSWORD is read from the environment on every start, so a new
       # value in .env plus a recreate is the whole change.

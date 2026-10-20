@@ -379,7 +379,8 @@ x-compose-app:
     DOLIBARR_DB_ROOT_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
     DOLIBARR_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${DOLIBARR_ADMIN_PASSWORD}
       # A hook, not env: DOLI_ADMIN_PASSWORD is written into llx_user only by

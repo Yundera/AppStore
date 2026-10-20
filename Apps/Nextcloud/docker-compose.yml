@@ -642,10 +642,12 @@ x-compose-app:
     NEXTCLOUD_REDIS_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
     NEXTCLOUD_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${NEXTCLOUD_ADMIN_PASSWORD}
-      note: Change it from the app's settings in Maison (Security tab) so this stays correct; a change made inside Nextcloud is not reflected here.
+      note:
+        en_us: Change it from the app's settings in Maison (Security tab) so this stays correct; a change made inside Nextcloud is not reflected here.
       # Nextcloud keeps its own hash; NEXTCLOUD_ADMIN_PASSWORD is read only by the
       # first-run auto-install. occ resets it on the running app.
       change:

@@ -226,7 +226,8 @@ x-compose-app:
     # original $PUID:$PGID ownership when done — verified 13 -> 17.11 on a uid-1000
     # cluster, which postgres:17.11-alpine running as that uid then served.
     - id: 2
-      name: postgres-13-to-17
+      name:
+        en_us: postgres-13-to-17
       image: pgautoupgrade/pgautoupgrade:17.11-alpine
       environment:
         PGAUTO_ONESHOT: "yes"

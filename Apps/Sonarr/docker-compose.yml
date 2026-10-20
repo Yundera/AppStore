@@ -126,7 +126,8 @@ x-compose-app:
   secrets:
     SONARR_ADMIN_PASSWORD: alnum:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${SONARR_ADMIN_PASSWORD}
       # A hook, not env: Sonarr consumes <Username>/<Password> from config.xml on

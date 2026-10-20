@@ -289,7 +289,8 @@ x-compose-app:
     # the update and the backup puts Odoo 18 back. A `blocked` step cannot be used:
     # it would also refuse every install already on 19.
     - id: 2
-      name: require-odoo-19-database
+      name:
+        en_us: require-odoo-19-database
       script: migrations/0002-require-odoo-19-database.sh
       images: [postgres:15.15, postgres:18.3]
       timeout: 10m
@@ -298,7 +299,8 @@ x-compose-app:
     # POSTGRES_USER / POSTGRES_DB must match the postgres service: pgautoupgrade
     # connects as `postgres` to a database named after the user unless told.
     - id: 3
-      name: postgres-15-to-18
+      name:
+        en_us: postgres-15-to-18
       image: pgautoupgrade/pgautoupgrade:18.3-trixie
       environment:
         PGAUTO_ONESHOT: "yes"

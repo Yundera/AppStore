@@ -335,8 +335,11 @@ line, and a service app is reviewed on the rest.
 
 **Check:** static · **Severity:** Minor
 
-- **Pass:** `title`, `tagline` and `description` have an `en_us` entry, and the description says
-  what the app does.
+- **Pass:** every user-facing string — `title`, `tagline`, `description`, `tips`,
+  `credentials[].label` / `note`, `links[].name`, `migrations[].name` / `blocked` — is a
+  locale map with a non-empty `en_us` entry (Maison drops a plain string), and the description
+  says what the app does. `maison lint` checks the first half:
+  `docker run --rm -v "$PWD:/s" -w /s ghcr.io/yundera/maison:<tag> maison lint Apps/<App>/docker-compose.yml`.
 
 ### `assets` — icon and screenshots are present
 

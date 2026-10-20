@@ -351,9 +351,11 @@ x-compose-app:
     # install gets its own. The image re-applies it as the admin key on every start.
     FOUNDRYVTT_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator (setup screen)
+    - label:
+        en_us: Administrator (setup screen)
       password: ${FOUNDRYVTT_ADMIN_PASSWORD}
-      note: Unlocks Foundry's setup screen (worlds, systems, modules). Players log in as the world's own users instead. A change made from Foundry's own setup screen is overwritten on the next restart.
+      note:
+        en_us: Unlocks Foundry's setup screen (worlds, systems, modules). Players log in as the world's own users instead. A change made from Foundry's own setup screen is overwritten on the next restart.
       # The felddy launcher rewrites admin.txt from FOUNDRY_ADMIN_KEY on every start,
       # so a new value in .env plus a recreate is the whole change. This relies on
       # CONTAINER_PRESERVE_CONFIG staying unset - with it set, the launcher keeps the

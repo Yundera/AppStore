@@ -226,10 +226,12 @@ x-compose-app:
   secrets:
     RCLONE_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
   credentials:
-    - label: Administrator
+    - label:
+        en_us: Administrator
       username: admin
       password: ${RCLONE_ADMIN_PASSWORD}
-      note: After a change, sign in to the web GUI again with the new password - the browser keeps the old one until then.
+      note:
+        en_us: After a change, sign in to the web GUI again with the new password - the browser keeps the old one until then.
       # --rc-pass is read from the command line on every start, so a new value in
       # .env plus a recreate is the whole change.
       change:
