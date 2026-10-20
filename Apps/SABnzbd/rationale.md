@@ -13,7 +13,7 @@ with no labels of its own. Three things about it need justifying:
 SABnzbd judges "external". Stock is `0`, which allows nothing.
 
 **3. `host_whitelist` is seeded and then re-asserted on every up** by the
-`refresh-host-whitelist` init step, rather than being left to the user.
+`refresh-host-whitelist` step, rather than being left to the user.
 
 The app also mounts `/DATA/Downloads` read-write, which is a shared user
 directory rather than the app's own AppData. That is disclosed in the app
@@ -79,11 +79,11 @@ call answers `403 Access denied - Hostname verification failed` while a browser 
 the published domain works perfectly — a failure that would look like a broken
 download-client integration and point nowhere near the real cause.
 
-**Why an init step and not just the seed.** `seed/` is create-if-absent by design
+**Why a step and not just the seed.** `seed/` is create-if-absent by design
 (SABnzbd rewrites `sabnzbd.ini` from its first start onward, and a re-rendered file
 would fight that). So the names rendered at install go stale the moment the
 deployment's domain changes, and the app starts answering 403 to everyone with
-nothing in its log to explain why. The init step re-adds the current names before
+nothing in its log to explain why. The step re-adds the current names before
 every `docker compose up`.
 
 ## Security mitigations in place
@@ -95,11 +95,11 @@ every `docker compose up`.
   anything else is still refused — the DNS-rebinding guard keeps working for every
   name the app was not deployed under. The exception is that the list is
   maintained by the app rather than by the user.
-- **The init step only ever adds.** It greps the `host_whitelist` line for each
+- **The step only ever adds.** It greps the `host_whitelist` line for each
   name and prepends it only when absent, so it is idempotent across restarts, and
   a host the user added by hand (a custom domain, another proxy) is never removed.
   It also tolerates the file being absent, which is the state on a first install —
-  `init` runs at `pre_up`, one step *before* the seed is written. The grep is
+  setup steps run one stage *before* the seed is written. The grep is
   scoped to that one line rather than the whole file on purpose: configobj keeps
   this file's comments verbatim across every rewrite SABnzbd makes, and the seed's
   own comment block names `sabnzbd-backend`, so a whole-file grep matched its own
@@ -121,7 +121,7 @@ every `docker compose up`.
   secret, seeded the way `Apps/Sonarr` seeds `config.xml`). This
   is genuinely tempting, because `check_hostname()` returns `True` immediately when
   a username *and* password are configured — so it would make exception 3 and the
-  whole init step unnecessary, and would be immune to a domain change. Rejected
+  whole step unnecessary, and would be immune to a domain change. Rejected
   because it means a second password on top of the server login, the same double
   login that was rejected for Vaultwarden and qBittorrent. The whitelist is the
   price of a single sign-on here.

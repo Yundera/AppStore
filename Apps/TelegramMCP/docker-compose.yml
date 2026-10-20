@@ -302,7 +302,6 @@ x-compose-app:
     - screenshot-1.png
   architectures:
     - amd64
-  main: telegrammcp-proxy
   tips:
     en_us: |
       **Getting Started**

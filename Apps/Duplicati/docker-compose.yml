@@ -154,7 +154,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: duplicati
   tips:
     en_us: |
       The web UI password is shown when you open the app (tile menu → Credentials).

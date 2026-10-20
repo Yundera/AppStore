@@ -229,7 +229,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: jellyfin-proxy
   tips:
     en_us: "\U0001F4A1 **Tips**: Jellyfin gives you a Netflix-style interface for the TV shows and movies stored on your computer or server.\n\n\U0001F4D6 **Setup guide**: [Set up your own streaming service](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)\n\n\U0001F3AC **Enjoy!** ❓ Questions? Contact us at help@yundera.com\n\n**Getting Started:**\n1. Open Jellyfin after installation\n2. Follow the setup wizard to create your admin account\n3. Add your media libraries (Movies, TV Shows, Music)\n\n**Media Location:**\n- Movies: `/DATA/Media/Movies/`\n- TV Shows: `/DATA/Media/TV Shows/`\n- Music: `/DATA/Media/Music/`\n\n**Tip:** Jellyfin is completely free with no subscriptions or limitations.\n"
     ko_kr: "\U0001F4A1 **팁**: Jellyfin은 컴퓨터나 서버에 저장된 TV 프로그램과 영화를 위한 Netflix 스타일 인터페이스를 제공합니다.\n\n\U0001F4D6 **설정 가이드**: [나만의 스트리밍 서비스 설정하기](https://yundera.com/blog/tutorial-1/set-up-your-own-netflix-style-streaming-service-with-jellyfin-on-yundera-3)\n\n\U0001F3AC **즐기세요!** ❓ 궁금한 점이 있으신가요? help@yundera.com으로 연락주세요\n\n**시작하기:**\n1. 설치 후 Jellyfin 열기\n2. 설정 마법사를 따라 관리자 계정 생성\n3. 미디어 라이브러리 추가 (영화, TV 프로그램, 음악)\n\n**미디어 위치:**\n- 영화: `/DATA/Media/Movies/`\n- TV 프로그램: `/DATA/Media/TV Shows/`\n- 음악: `/DATA/Media/Music/`\n\n**팁:** Jellyfin은 구독이나 제한 없이 완전히 무료입니다.\n"

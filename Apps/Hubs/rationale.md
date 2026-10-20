@@ -78,7 +78,7 @@ Forcing these images to run unprivileged would require maintaining a downstream 
 
 ## Data protection
 
-- All persistent state lives under `/DATA/AppData/hubs/` and survives uninstall/reinstall. The `x-compose-app.init` step `bootstrap` (`when: once`) runs `hubs-seed bootstrap`, which is **idempotent** — on re-run it preserves existing secrets in `secrets/.env` (DB password, NODE_COOKIE, GUARDIAN_KEY, PHX_KEY, DASHBOARD_ACCESS_KEY, POSTGREST_PASSWORD, PERMS_KEY) and reuses the existing RSA keypair. Regenerating the keypair would invalidate every minted Guardian admin token.
+- All persistent state lives under `/DATA/AppData/hubs/` and survives uninstall/reinstall. The `bootstrap` step (`run: once`) runs `hubs-seed bootstrap`, which is **idempotent** — on re-run it preserves existing secrets in `secrets/.env` (DB password, NODE_COOKIE, GUARDIAN_KEY, PHX_KEY, DASHBOARD_ACCESS_KEY, POSTGREST_PASSWORD, PERMS_KEY) and reuses the existing RSA keypair. Regenerating the keypair would invalidate every minted Guardian admin token.
 - Framework-passthrough env vars (`APP_DOMAIN`, `APP_PUBLIC_IP_DASH`, `APP_PUBLIC_IPV4`, `APP_EMAIL`, `PUID`, `PGID`) **are** refreshed on every install — that is intentional, so a redeploy fixes drifted Caddy labels (the original outage's root cause).
 - The compose's `.env` file is mode `0600`. The RSA private key (`perms.key.pem`) is mode `0600`. Both are owned by `PUID:PGID`.
 - No user-owned content (Documents/Downloads/Media/Gallery) is touched by any Hubs container; the blast radius of a root container escape is bounded to `/DATA/AppData/hubs/`.

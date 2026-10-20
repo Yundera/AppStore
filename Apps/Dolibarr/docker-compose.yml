@@ -330,7 +330,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: dolibarr
   tips:
     en_us: |
       # Default Account
@@ -397,9 +396,9 @@ x-compose-app:
       # clear into llx_user.pass. This update clears that column instead, and
       # sets flagdelsessionsbefore as setPassword does, so open sessions end.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e DOLIBARR_ADMIN_PASSWORD -u www-data dolibarr php <<'PHP'
+        apply: script
+        script: |
+          compose exec -e DOLIBARR_ADMIN_PASSWORD -u www-data dolibarr php <<'PHP'
           <?php
           define('NOSESSION', '1');
           define('NOREQUIREHTML', '1');

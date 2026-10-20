@@ -115,7 +115,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: sonarr
   tips:
     en_us: "\U0001F4FA **Sonarr** is a TV series collection manager — it monitors, downloads and organises your shows automatically as new episodes air.\n\n\U0001F4C2 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.\n\n\U0001F510 **Sign in as `admin`** — the password is shown when you open the app (tile\nmenu → Credentials). Sonarr ships with its login page already enabled and this\naccount already created, so it is never reachable without signing in. To change\nthe password, use the app's settings in Maison (Security tab), so the\nCredentials dialog stays correct.\n\n\U0001F517 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent:80` when they run on the same server.\n\n❓ Questions? Contact us at help@yundera.com\n"
   # Admin password for the account seeded into config.xml on first boot.
@@ -138,9 +137,9 @@ x-compose-app:
       # put them back. A temp file rather than a pipe, so a failed fetch fails
       # the hook instead of PUTting an empty body.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e SONARR_ADMIN_PASSWORD sonarr sh -c '
+        apply: script
+        script: |
+          compose exec -e SONARR_ADMIN_PASSWORD sonarr sh -c '
             [ -n "$SONARR_ADMIN_PASSWORD" ] || exit 1
             key=$(sed -n "s:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p" /config/config.xml)
             [ -n "$key" ] || exit 1

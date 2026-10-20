@@ -303,7 +303,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: docmostmcp-proxy
   tips:
     en_us: |
       **Set your Docmost credentials in the config UI after install**

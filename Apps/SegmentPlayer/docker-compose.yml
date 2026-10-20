@@ -217,7 +217,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: segment
   tips:
     en_us: |
       This app reads your whole Downloads and Media folders (/DATA/Downloads and /DATA/Media)

@@ -313,7 +313,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: tincatan
   tips:
     en_us: |
       **Sign-in** — the game is protected by a shared login. Give it to the

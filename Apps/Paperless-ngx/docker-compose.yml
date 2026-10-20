@@ -357,7 +357,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: paperless
   tips:
     en_us: |
       **Quick Start:**
@@ -406,9 +405,9 @@ x-compose-app:
       # The hook sets it through Django in the running container, as the
       # `paperless` user so nothing it touches under data/ ends up root-owned.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e PAPERLESS_ADMIN_PASSWORD -u paperless \
+        apply: script
+        script: |
+          compose exec -e PAPERLESS_ADMIN_PASSWORD -u paperless \
             -w /usr/src/paperless/src paperless python3 manage.py shell -c "
           import os
           from django.contrib.auth.models import User

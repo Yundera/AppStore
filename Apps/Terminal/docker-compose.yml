@@ -252,7 +252,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: terminal
   tips:
     en_us: |
       **This app is a root shell on your server.**

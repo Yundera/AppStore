@@ -33,7 +33,7 @@ CasaOS automatically applies `PUID:PGID` (1000:1000) when no `user` field is spe
 - All persistent data is under `/DATA/AppData/odoo/` (postgres-data, odoo-data, config, addons).
 - No shared volumes with other applications.
 - PostgreSQL is not exposed outside the container network.
-- `seed/config/odoo.conf.tmpl` is create-if-absent, so a reinstall never overwrites a config the user has edited. The `x-compose-app.hooks.pre_up` hook only repairs installs made before `admin_passwd` was set: it appends the key (from `ODOO_MASTER_PASSWORD`) to an odoo.conf that already exists and never creates one. It is a `pre_up` rather than a `pre_install` because secrets are only generated after `pre_install` runs.
+- `seed/config/odoo.conf.tmpl` is create-if-absent, so a reinstall never overwrites a config the user has edited. The `repair-admin-passwd` step only repairs installs made before `admin_passwd` was set: it appends the key (from `ODOO_MASTER_PASSWORD`) to an odoo.conf that already exists and never creates one.
 
 ## Data migrations (`data_version: 3`)
 

@@ -259,7 +259,6 @@ x-compose-app:
     - amd64
     - arm64
     - arm
-  main: dufs
   tips:
     en_us: |
       What this app can reach

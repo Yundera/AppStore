@@ -260,7 +260,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: annas-torrents-webui
   tips:
     en_us: |
       **Access & login**

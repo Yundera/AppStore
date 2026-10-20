@@ -533,7 +533,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: openclaw
   tips:
     en_us: |
       **API Key Required**

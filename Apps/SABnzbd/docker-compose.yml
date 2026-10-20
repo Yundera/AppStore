@@ -203,7 +203,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: sabnzbd
   tips:
     en_us: "\U0001F510 **Protected by your server account (single sign-on).** SABnzbd sits\nbehind the SSO gate, so your existing server login is the only password you\nneed — open the tile and you are already signed in.\n\n\U0001F4F0 **Bring your Usenet provider.** SABnzbd downloads from Usenet, which\nneeds a news server account of your own. The first time you open the app it\nruns a short wizard that asks for your provider's host, port and\ncredentials; after that it is ready to use.\n\n\U0001F4C2 **Finished downloads land in `/DATA/Downloads`**, the shared folder the\nrest of your apps read and write — SABnzbd can see and change everything\nalready in it. Work in progress stays in\n`/DATA/AppData/sabnzbd/incomplete`, and settings in\n`/DATA/AppData/sabnzbd/config`.\n\n\U0001F517 **Wire it into the media stack.** Add it as a *Download Client* in\n**Radarr**, **Sonarr** or **Lidarr** with host `sabnzbd-backend` and port\n`8080` — that is the app's own container, reached directly on the server's\ninternal network. The name `sabnzbd` is the SSO gate and will not answer\nthe API. The API key is under *Settings → General* in SABnzbd. Pair it with\n**Prowlarr** for indexers.\n"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
@@ -223,7 +222,7 @@ x-compose-app:
     - path: /DATA/Downloads
       user: $PUID
       group: $PGID
-  init:
+  steps:
     # SABnzbd refuses any request whose Host header is not an IP, `localhost` or
     # a name in `host_whitelist` — a DNS-rebinding guard (interface.py
     # check_hostname, akin to CVE-2019-5702). The check is skipped entirely when
@@ -239,9 +238,7 @@ x-compose-app:
     #
     # Add-only, one host at a time: an entry the user added by hand (a custom
     # domain, another reverse proxy) survives, and a name that is already there is
-    # left alone rather than duplicated. No shell variables and no `$(...)` —
-    # Maison interpolates this string before /bin/sh sees it, so a `$name` of its
-    # own would be blanked first.
+    # left alone rather than duplicated.
     #
     # Each check greps the `host_whitelist` line, not the whole file. configobj
     # keeps this file's comments verbatim across every rewrite SABnzbd makes, and
@@ -251,28 +248,24 @@ x-compose-app:
     # domain change the three route hosts came back and `sabnzbd-backend` did not,
     # which shows up only as Radarr/Sonarr getting 403 from a UI that works.
     #
-    # Runs at pre_up, which is *before* the seed is written, so on a first install
-    # the file does not exist yet — hence the `if`. The seed then writes the same
-    # names one step later.
+    # A setup step runs *before* the seed is written, so on a first install the
+    # file does not exist yet and this does nothing; the seed then writes the same
+    # names one step later. It runs in a container as $PUID:$PGID because `sed -i`
+    # replaces the file, and from the Maison shell the new file would belong to
+    # Maison's user instead of the app's.
     - name: refresh-host-whitelist
-      image: busybox:1.37.0
-      user: $PUID:$PGID
-      volumes:
-        - /DATA/AppData/$AppID/config:/config
-      command:
-        - sh
-        - -c
-        - |
-          set -e
-          if [ -f /config/sabnzbd.ini ]; then
-            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-${APP_DOMAIN}" ||
-              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-${APP_DOMAIN}, |" /config/sabnzbd.ini
-            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-${APP_PUBLIC_IP_DASH}.nip.io" ||
-              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-${APP_PUBLIC_IP_DASH}.nip.io, |" /config/sabnzbd.ini
-            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io" ||
-              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io, |" /config/sabnzbd.ini
-            grep "^host_whitelist" /config/sabnzbd.ini | grep -qF "sabnzbd-backend" ||
-              sed -i "s|^host_whitelist = |host_whitelist = sabnzbd-backend, |" /config/sabnzbd.ini
-          fi
-      when: always
+      at: setup
+      run: always
+      script: |
+        [ -f "$APP_DIR/config/sabnzbd.ini" ] || exit 0
+        docker run --rm -i --user "$PUID:$PGID" -v "$APP_DIR/config:/config" \
+          -e APP_DOMAIN -e APP_PUBLIC_IP_DASH busybox:1.37.0 sh -s <<'SH'
+        set -e
+        ini=/config/sabnzbd.ini
+        for host in "sabnzbd-$APP_DOMAIN" "sabnzbd-$APP_PUBLIC_IP_DASH.nip.io" \
+                    "sabnzbd-$APP_PUBLIC_IP_DASH.sslip.io" sabnzbd-backend; do
+          grep "^host_whitelist" "$ini" | grep -qF "$host" ||
+            sed -i "s|^host_whitelist = |host_whitelist = $host, |" "$ini"
+        done
+        SH
   webui-host: sabnzbd-${domain}

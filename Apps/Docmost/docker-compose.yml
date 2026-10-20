@@ -421,7 +421,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: docmost
   tips:
     en_us: |
       **Getting Started:**

@@ -274,7 +274,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: spliit-proxy
   tips:
     en_us: |
       **Sign-in:** Spliit is protected by your server's single sign-on. Access is

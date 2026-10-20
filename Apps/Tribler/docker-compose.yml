@@ -186,7 +186,6 @@ x-compose-app:
     - screenshot-3.png
   architectures:
     - amd64
-  main: tribler
   tips:
     en_us: |
       Tribler is protected by your server's single sign-on (Authelia) — you sign in once with

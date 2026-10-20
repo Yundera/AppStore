@@ -323,7 +323,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: psitransfer
   tips:
     en_us: |
       ## Default Credentials

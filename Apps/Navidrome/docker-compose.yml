@@ -288,7 +288,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: navidrome
   tips:
     en_us: |
       **First-Time Setup:** Create your admin account on first visit to the web interface.

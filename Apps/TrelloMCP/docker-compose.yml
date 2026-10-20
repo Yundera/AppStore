@@ -293,7 +293,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: trellomcp-proxy
   tips:
     en_us: |
       **Getting Started**

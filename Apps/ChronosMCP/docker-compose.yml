@@ -351,7 +351,6 @@ x-compose-app:
     - screenshot-3.png
   architectures:
     - amd64
-  main: chronosmcp-proxy
   tips:
     en_us: |
       **Getting Started**

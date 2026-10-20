@@ -536,7 +536,6 @@ x-compose-app:
   icon: icon.png
   architectures:
     - amd64
-  main: nntmux
   # Seeded: an installed NNTmux created its admin account and database with the
   # box-wide password and keeps it; a fresh install gets its own values.
   secrets:
@@ -602,159 +601,34 @@ x-compose-app:
       `NNTP_USERNAME`, `NNTP_PASSWORD` (fournisseur), `NNTMUX_GROUPS` (groupes),
       `NNTMUX_SCAN=on`. Vérification :
       `docker exec nntmux-scanner nntmux-setup status`.
-  hooks:
-    # Once, at install (after the folders exist, before the first start).
-    pre_install: |
-      # 1. nntmux's .env (trap #1: a COMPLETE file). The provider lines stay
-      #    blank: they are filled from the app settings by `nntmux-setup apply`.
-      if [ ! -f $APP_DIR/nntmux-env/nntmux.env ]; then
-        cat > $APP_DIR/nntmux-env/nntmux.env <<NNTMUX_ENV
-      DB_CONNECTION=mariadb
-      DB_HOST=nntmux-db
-      DB_PORT=3306
-      DB_SOCKET=
-      DB_USERNAME=nntmux
-      DB_PASSWORD=$NNTMUX_DB_PASSWORD
-      DB_DATABASE=nntmux
-
-      MANTICORESEARCH_HOST=nntmux-manticore
-      MANTICORESEARCH_PORT=9308
-
-      ELASTICSEARCH_HOST=localhost
-      ELASTICSEARCH_PORT=9200
-      ELASTICSEARCH_SCHEME=http
-      ELASTICSEARCH_USER=
-      ELASTICSEARCH_PASS=
-      ELASTICSEARCH_LOGGING=false
-      ELASTICSEARCH_ENABLED=false
-
-      NNTP_COMPRESSED_HEADERS=false
-      USE_ALTERNATE_NNTP_SERVER=false
-
-      NNTP_USERNAME=
-      NNTP_PASSWORD=
-      NNTP_SERVER=
-      NNTP_PORT=563
-      NNTP_CONNECTIONS=1
-      NNTP_SSLENABLED=true
-      NNTP_SOCKET_TIMEOUT=120
-
-      NNTP_USERNAME_A=
-      NNTP_PASSWORD_A=
-      NNTP_SERVER_A=
-      NNTP_PORT_A=
-      NNTP_CONNECTIONS_A=
-      NNTP_SSLENABLED_A=false
-      NNTP_SOCKET_TIMEOUT_A=120
-
-      # NN_MULTIPROCESSING_MAX_CHILD_TIME is deliberately ABSENT (trap #5).
-      # Writing it here, even as its own default of 1800, hands
-      # Pool::timeout(float) a string via Laravel's env(), which returns STRINGS,
-      # and every Forking multiprocessing runner dies with a TypeError.
-      # RULE for this whole file: never set a key unless the value must DIFFER
-      # from the PHP default in config/nntmux.php. Restating a default is not
-      # documentation, it is a type change.
-
-      ADMIN_USER=admin
-      ADMIN_PASS=$NNTMUX_ADMIN_PASSWORD
-      ADMIN_EMAIL=admin@$APP_DOMAIN
-
-      APP_NAME=NNTmux
-      APP_ENV=production
-      APP_DEBUG=false
-      APP_TIMEZONE=UTC
-      APP_URL=https://nntmux-$APP_DOMAIN
-
-      APP_LOCALE=en
-      APP_FALLBACK_LOCALE=en
-      APP_FAKER_LOCALE=en_US
-
-      APP_MAINTENANCE_DRIVER=file
-      APP_MAINTENANCE_STORE=database
-
-      BCRYPT_ROUNDS=12
-      APP_KEY=
-      LOG_CHANNEL=stack
-      LOG_STACK=single
-      PASSWORD_HASH=argon2id
-
-      BROADCAST_CONNECTION=log
-      CACHE_STORE=file
-      QUEUE_CONNECTION=sync
-
-      REDIS_HOST=nntmux-redis
-      REDIS_PASSWORD=null
-      REDIS_PORT=6379
-      REDIS_CLIENT=phpredis
-
-      SESSION_DRIVER=file
-      SESSION_DOMAIN=null
-      SESSION_SECURE_COOKIE=false
-      SESSION_ENCRYPT=false
-      SESSION_COOKIE=nntmux
-      SESSION_PATH=/
-
-      SCOUT_DRIVER=database
-      SCOUT_QUEUE=true
-
-      ITEMS_PER_PAGE=50
-      ITEMS_PER_COVER_PAGE=25
-      MAX_PAGER_RESULTS=125000
-      ECHOCLI=true
-      RENAME_PAR2=false
-      ADD_PAR2=false
-      RENAME_MUSIC_MEDIAINFO=true
-      CACHE_EXPIRY_SHORT=5
-      CACHE_EXPIRY_MEDIUM=10
-      CACHE_EXPIRY_LONG=15
-
-      SSL_CAFILE=
-      SSL_CAPATH=
-      SSL_VERIFY_PEER=false
-      SSL_VERIFY_HOST=false
-      SSL_ALLOW_SELF_SIGNED=true
-
-      SMARTY_DEBUG=false
-      SMARTY_CACHING=false
-      SMARTY_CACHE_LIFE=120
-      SMARTY_COMPILE_CHECK=false
-      SMARTY_FORCE_COMPILE=false
-      SMARTY_CACHE_DRIVER=file
-
-      TMDB_APIKEY=9a4e16adddcd1e86da19bcaf5ff3c2a3
-      TMDB_CACHE=false
-      TMDB_LOG=false
-      TVDB_APIKEY=ef6fb572-bcee-4d99-9b52-90549ad7553a
-      TVDB_PIN=
-
-      TEMP_UNRAR_PATH=/app/storage/tmp/unrar/
-      TEMP_UNZIP_PATH=/app/storage/tmp/unzip/
-      VIEW_COMPILED_PATH=/app/storage/framework/views
-      PATH_TO_NZBS=/app/storage/nzb/
-      COVERS_PATH=/app/storage/covers
-
-      TELESCOPE_ENABLED=false
-      PURGE_INACTIVE_USERS=false
-      OTP_ENABLED=false
-      CHECK_PASSWORDED_RARS=false
-      DELETE_PASSWORDED_RELEASES=false
-      DELETE_POSSIBLE_PASSWORDED_RELEASES=false
-      EXTRACT_USING_RARINFO=false
-      PRIVATE_PROFILES=true
-      STORE_USER_IP=false
-      FORUM_FRONTEND_ENABLED=false
-      NNTMUX_ENV
-      fi
-      # 2. The app settings, as empty keys so they show up in App settings > Env
-      #    (blank = not managed). Registration defaults to closed.
-      for kv in NNTP_SERVER= NNTP_PORT= NNTP_USERNAME= NNTP_PASSWORD= NNTP_CONNECTIONS= NNTP_SSLENABLED= \
-                NNTMUX_GROUPS= NNTMUX_SCAN= NNTMUX_BACKFILL= NNTMUX_BACKFILL_DAYS= NNTMUX_BACKFILL_QTY= \
-                NNTMUX_MONITOR_DELAY= NNTMUX_REGISTRATION=closed NNTMUX_MIN_RELEASE_MB=20; do
-        k=$(echo "$kv" | cut -d= -f1)
-        grep -q "^$k=" "$APP_DIR/.env" 2>/dev/null || echo "$kv" >> "$APP_DIR/.env"
-      done
+  # nntmux's own .env (trap #1: a COMPLETE file) is seed/nntmux-env/nntmux.env.tmpl,
+  # create-if-absent. This step only adds the app settings to the app's .env, as empty
+  # keys so they show up in App settings > Env (blank = not managed); the provider
+  # lines are filled from them by `nntmux-setup apply`. Registration defaults to
+  # closed. $MAISON_ENV never overwrites a key the .env already has.
+  steps:
+    - name: settings-keys
+      at: setup
+      run: once
+      script: |
+        cat >> "$MAISON_ENV" <<'ENV'
+        NNTP_SERVER=
+        NNTP_PORT=
+        NNTP_USERNAME=
+        NNTP_PASSWORD=
+        NNTP_CONNECTIONS=
+        NNTP_SSLENABLED=
+        NNTMUX_GROUPS=
+        NNTMUX_SCAN=
+        NNTMUX_BACKFILL=
+        NNTMUX_BACKFILL_DAYS=
+        NNTMUX_BACKFILL_QTY=
+        NNTMUX_MONITOR_DELAY=
+        NNTMUX_REGISTRATION=closed
+        NNTMUX_MIN_RELEASE_MB=20
+        ENV
   # The scanner's scripts, re-written on every start so an app update reaches
-  # existing installs (pre_install runs only once).
+  # existing installs (the seed tree is create-if-absent).
   files:
     - path: /DATA/AppData/nntmux/scanner/scanner.sh
       from: scanner/scanner.sh

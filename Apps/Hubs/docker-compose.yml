@@ -492,7 +492,6 @@ x-compose-app:
     - screenshot-3.png
   architectures:
     - amd64
-  main: hubs
   tips:
     en_us: "**\U0001F511 Initial admin: `${APP_EMAIL}`** — the only account with admin rights. Sign in with this email at https://hubs-${APP_DOMAIN} to receive a magic-link.\n\n**Operator surfaces** (after admin sign-in):\n- [Admin panel](https://hubs-${APP_DOMAIN}/admin)\n- [Spoke scene editor](https://hubs-${APP_DOMAIN}/spoke/projects)\n\n**Voice / video** needs UDP ports 40000-40050 reachable on the server's public IP. HTTPS-only tunnels leave signaling working but audio silent.\n\n**Resources:** ~3 GB RAM, ~2 vCPU. Suitable for rooms up to ~10 concurrent users.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
     fr_fr: "**\U0001F511 Administrateur initial : `${APP_EMAIL}`** — seul compte avec les droits admin. Connectez-vous avec cet email sur https://hubs-${APP_DOMAIN} pour recevoir un lien magique.\n\n**Interfaces d'administration** (après connexion admin) :\n- [Panneau admin](https://hubs-${APP_DOMAIN}/admin)\n- [Éditeur de scène Spoke](https://hubs-${APP_DOMAIN}/spoke/projects)\n\n**Voix / vidéo** : les ports UDP 40000-40050 doivent être joignables sur l'IP publique du serveur. Un tunnel HTTPS uniquement laisse la signalisation fonctionnelle mais coupe le média.\n\n**Ressources :** ~3 Go de RAM, ~2 vCPU. Adapté aux salons jusqu'à ~10 utilisateurs simultanés.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
@@ -515,70 +514,52 @@ x-compose-app:
     - id: 2
       name:
         en_us: postgres-14-to-17
-      image: pgautoupgrade/pgautoupgrade:17.11-alpine
-      environment:
-        PGAUTO_ONESHOT: "yes"
-        POSTGRES_USER: ${POSTGRES_USER:-postgres}
-        POSTGRES_DB: ${POSTGRES_DB:-ret_production}
-      volumes:
-        - /DATA/AppData/hubs/pgdata:/var/lib/postgresql/data
-  # Both halves of the seeding are containers — hubs-seed's own image — so they
-  # are declared rather than shelled out to. bootstrap is idempotent: it reuses an
-  # existing keypair and preserves every secret already in secrets/.env, so a
-  # reinstall keeps the credentials the existing pgdata was initialised with.
-  init:
+      images: [pgautoupgrade/pgautoupgrade:17.11-alpine]
+      script: |
+        docker run --rm -e PGAUTO_ONESHOT=yes \
+          -e POSTGRES_USER="${POSTGRES_USER:-postgres}" -e POSTGRES_DB="${POSTGRES_DB:-ret_production}" \
+          -v "$APP_DIR/pgdata:/var/lib/postgresql/data" \
+          pgautoupgrade/pgautoupgrade:17.11-alpine
+  # Both halves of the seeding run hubs-seed's own image. bootstrap is idempotent:
+  # it reuses an existing keypair and preserves every secret already in
+  # secrets/.env, so a reinstall keeps the credentials the existing pgdata was
+  # initialised with.
+  steps:
     - name: bootstrap
-      image: ghcr.io/worph/hubs-seed:2.0.0
-      command: bootstrap
-      volumes:
-        - /DATA/AppData/hubs:/data/hubs
-        - /DATA/AppData/hubs/secrets:/data/compose
-      environment:
-        APP_DOMAIN: ${APP_DOMAIN}
-        APP_PUBLIC_IP_DASH: ${APP_PUBLIC_IP_DASH}
-        APP_PUBLIC_IPV4: ${APP_PUBLIC_IPV4}
-        APP_EMAIL: ${APP_EMAIL}
-        PUID: ${PUID}
-        PGID: ${PGID}
-      when: once
+      at: setup
+      run: once
+      script: |
+        docker run --rm -v "$APP_DIR:/data/hubs" -v "$APP_DIR/secrets:/data/compose" \
+          -e APP_DOMAIN -e APP_PUBLIC_IP_DASH -e APP_PUBLIC_IPV4 -e APP_EMAIL -e PUID -e PGID \
+          ghcr.io/worph/hubs-seed:2.0.0 bootstrap
+    # The merge: bootstrap writes hubs-seed's generated credentials to secrets/.env,
+    # and they have to reach the app's own .env — the only env file the platform
+    # passes to `docker compose`. The key set is whatever hubs-seed decided to
+    # generate, so nobody can name them in `variables:`.
+    #
+    # $MAISON_ENV only ever adds a key the app's .env does not have yet: Maison has
+    # already written APP_DOMAIN, APP_NET, PUID/PGID and the rest into that file, and
+    # the framework passthroughs hubs-seed re-emits must not shadow them. `always`,
+    # because that makes it free to repeat and lets a key a newer hubs-seed adds reach
+    # existing installs.
+    - name: merge-credentials
+      at: setup
+      run: always
+      script: |
+        grep -v -e '^#' -e '^$' "$APP_DIR/secrets/.env" >> "$MAISON_ENV"
     # Runs after the stack is up, on the app's own network, because it talks to
     # reticulum.
     - name: seed
-      image: ghcr.io/worph/hubs-seed:2.0.0
-      phase: post_up
-      network: hubs-net
-      volumes:
-        - /DATA/AppData/hubs/secrets/.env:/secrets.env:ro
-      environment:
-        SECRETS_ENV_FILE: /secrets.env
-        RET_INTERNAL_URL: https://hubs-reticulum:4000
-        RET_PUBLIC_URL: https://hubs-${APP_DOMAIN}
-        APP_EMAIL: ${APP_EMAIL}
-      when: once
-  # The merge, not the seeding: the `bootstrap` init step above writes hubs-seed's
-  # generated credentials to secrets/.env, and they have to reach the app's own
-  # .env — the only env file the platform passes to `docker compose`.
-  #
-  # It is `pre_up` and not `pre_install` because the stack-up sequence is
-  # `... -> init(pre_up) -> ... -> pre_up -> docker compose up -d`, while
-  # pre_install runs strictly *before* that whole sequence: a pre_install hook
-  # would read secrets/.env before bootstrap has written it. post_up is too late —
-  # the first `up` would already have started the stack without the credentials.
-  #
-  # It stays a hook because the key set is whatever hubs-seed decided to generate:
-  # `variables:` can ensure keys an author names, and nobody can name these. Each
-  # key is added only when absent and `>` is never used — Maison has already
-  # written APP_DOMAIN, APP_NET, PUID/PGID and the rest into that file, and the
-  # framework passthroughs hubs-seed re-emits must not shadow them. That also makes
-  # it idempotent, which is what a hook running before *every* up has to be.
-  hooks:
-    pre_up: |
-      while IFS='=' read -r key value; do
-        case "$key" in ''|\#*) continue ;; esac
-        grep -q "^$key=" $APP_DIR/.env 2>/dev/null ||
-          printf '%s=%s\n' "$key" "$value" >> $APP_DIR/.env
-      done < /DATA/AppData/hubs/secrets/.env
-  # Created and owned by Maison before images are pulled, before any hook runs and
+      at: started
+      run: once
+      script: |
+        docker run --rm --network hubs-net -v "$APP_DIR/secrets/.env:/secrets.env:ro" \
+          -e SECRETS_ENV_FILE=/secrets.env \
+          -e RET_INTERNAL_URL=https://hubs-reticulum:4000 \
+          -e RET_PUBLIC_URL="https://hubs-$APP_DOMAIN" \
+          -e APP_EMAIL \
+          ghcr.io/worph/hubs-seed:2.0.0
+  # Created and owned by Maison before images are pulled, before any step runs and
   # before any container starts - on the first boot and every one after it.
   folders:
     - path: /DATA/AppData/hubs

@@ -243,7 +243,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: clauderoot
   tips:
     en_us: |
       Authentication options:
@@ -293,39 +292,36 @@ x-compose-app:
       # Open terminals are logged out by the recreate.
       change:
         apply: env
-  # Maison runs hooks with /bin/bash inside its own container, but the docker
-  # client talks to the HOST daemon — so `docker run -v /:/host … chroot /host`
-  # is how this reaches the host namespace. It ensures a dedicated `claude` host
-  # user + NOPASSWD sudo + a writable ~/.ssh exist (the /home/claude/.ssh mount
-  # above feeds the optional host-SSH feature).
-  # ENSURE semantics: every step is idempotent and best-effort, and the whole
-  # script always exits 0 — provisioning the host `claude` user is only needed for
-  # the optional host-SSH feature, so it must NEVER block the app from installing.
-  hooks:
-    pre_install: |
-      # Host provisioning, and the only reason this app still carries a hook: it
-      # creates the `claude` account on the HOST and grants it sudo, which is not
-      # something any declaration can express. Everything it used to do to the app's
-      # own files (CLAUDE.md, .claude.json) now lives in seed/ instead.
-      #
-      # Every step is best-effort and the hook ends with `exit 0`: a PCS where host
-      # SSH is unavailable should still get the app.
-      docker run --rm -v /:/host alpine:3.20 chroot /host /bin/sh -c '
-        id claude >/dev/null 2>&1 || useradd -m -s /bin/bash -p "*" claude || true
-        # OpenSSH refuses ALL auth (incl. pubkey) for an account whose shadow
-        # password field is "!" — the default useradd leaves. "*" means "no
-        # password set" without tripping the locked-account check, so key-based
-        # SSH works. Run unconditionally to also repair accounts already
-        # provisioned locked. (passwd -u would NOT fix this: it refuses to
-        # unlock an account with no real hash behind the "!".)
-        usermod -p "*" claude 2>/dev/null || true
-        if [ ! -f /etc/sudoers.d/claude ]; then
-          echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude && chmod 440 /etc/sudoers.d/claude
-        fi
-        install -d -m 700 -o claude -g claude /home/claude/.ssh 2>/dev/null || mkdir -p /home/claude/.ssh
-        touch /home/claude/.ssh/authorized_keys 2>/dev/null || true
-        chmod 600 /home/claude/.ssh/authorized_keys 2>/dev/null || true
-        chown claude:claude /home/claude/.ssh /home/claude/.ssh/authorized_keys 2>/dev/null || true
-        exit 0
-      ' || echo "[pre-install] host claude provisioning skipped (host-SSH may be unavailable); continuing"
-      exit 0
+  # Host provisioning: a dedicated `claude` host user + NOPASSWD sudo + a writable
+  # ~/.ssh (the /home/claude/.ssh mount above feeds the optional host-SSH feature),
+  # which no declaration can express. Everything this used to do to the app's own
+  # files (CLAUDE.md, .claude.json) lives in seed/ instead.
+  # A step's shell runs inside the Maison container, but its docker client talks to
+  # the HOST daemon — so `docker run -v /:/host … chroot /host` is how this reaches
+  # the host namespace.
+  # ENSURE semantics: every command is idempotent and best-effort, and the step
+  # always succeeds — the host `claude` user is only needed for the optional
+  # host-SSH feature, so it must NEVER block the app from installing.
+  steps:
+    - name: host-claude-user
+      at: setup
+      run: once
+      script: |
+        docker run --rm -v /:/host alpine:3.20 chroot /host /bin/sh -c '
+          id claude >/dev/null 2>&1 || useradd -m -s /bin/bash -p "*" claude || true
+          # OpenSSH refuses ALL auth (incl. pubkey) for an account whose shadow
+          # password field is "!" — the default useradd leaves. "*" means "no
+          # password set" without tripping the locked-account check, so key-based
+          # SSH works. Run unconditionally to also repair accounts already
+          # provisioned locked. (passwd -u would NOT fix this: it refuses to
+          # unlock an account with no real hash behind the "!".)
+          usermod -p "*" claude 2>/dev/null || true
+          if [ ! -f /etc/sudoers.d/claude ]; then
+            echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude && chmod 440 /etc/sudoers.d/claude
+          fi
+          install -d -m 700 -o claude -g claude /home/claude/.ssh 2>/dev/null || mkdir -p /home/claude/.ssh
+          touch /home/claude/.ssh/authorized_keys 2>/dev/null || true
+          chmod 600 /home/claude/.ssh/authorized_keys 2>/dev/null || true
+          chown claude:claude /home/claude/.ssh /home/claude/.ssh/authorized_keys 2>/dev/null || true
+          exit 0
+        ' || echo "host claude provisioning skipped (host-SSH may be unavailable); continuing"

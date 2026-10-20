@@ -11,7 +11,7 @@
 # (postgres-15-to-18) runs pg_upgrade on the same directory.
 set -euo pipefail
 
-data="${DATA_ROOT}/AppData/${AppID}/postgres-data"
+data="$APP_DIR/postgres-data"
 probe="${AppID}-migration-${MIGRATION_ID}"
 
 pgv="$(docker run --rm --network none --entrypoint cat -v "$data:/d:ro" postgres:18.3 /d/pgdata/PG_VERSION 2>/dev/null || true)"

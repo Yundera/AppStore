@@ -312,7 +312,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: kopia
   tips:
     en_us: |
       Setup takes three steps

@@ -44,7 +44,7 @@ Maison's own docs are the reference for how each `x-compose-app` key behaves:
    https://github.com/<you>/AppStore/archive/refs/heads/<branch>.zip
    ```
    Install from that store. This tests what step 2 cannot: the metadata, the icon, the
-   `seed/` tree, `folders`, `secrets` and `init`. Then test uninstall + reinstall, and an
+   `seed/` tree, `folders`, `secrets` and `steps`. Then test uninstall + reinstall, and an
    update over the previous version's data.
 4. **Open a PR** against `main`, with the [CONTRIBUTING.md](CONTRIBUTING.md) checklist filled in. Asset paths are
    relative, so nothing needs rewriting when the PR is merged.
@@ -72,7 +72,7 @@ Apps/MyApp
 ├─ screenshot-1.png     # required; more are welcome
 ├─ thumbnail.png        # optional, see Images and languages
 ├─ seed/                # optional: the app's initial files, mirroring /DATA/AppData/<app>/
-├─ migrations/          # optional: data-migration scripts
+├─ scripts/             # optional: `.sh` files a script entry names with `file:`
 └─ rationale.md         # required when the app takes an exception
 ```
 
@@ -110,7 +110,6 @@ x-compose-app:
   screenshots:
     - screenshot-1.png
   architectures: [amd64, arm64]
-  main: syncthing                 # the service that is the app (see Routing)
   tips:                           # Markdown, shown from the tile menu
     en_us: |
       Anything the user should know after installing.
@@ -126,11 +125,12 @@ two blocks equal:
 | `x-compose-app` | `x-casaos` |
 |---|---|
 | `id` | `store_app_id` |
-| `title`, `tagline`, `description`, `developer`, `category`, `icon`, `thumbnail`, `architectures`, `main` | same names |
+| `title`, `tagline`, `description`, `developer`, `category`, `icon`, `thumbnail`, `architectures` | same names |
 | `screenshots` | `screenshot_link` |
 | `tips` | `tips.before_install` |
 | `webui-host` / `webui-scheme` / `webui-path` | `hostname` / `scheme` / `index` |
 | — | `webui_port` (the exposed web UI port) |
+| — | `main` (the service with the labels; CasaOS only, Maison does not read it) |
 | — | `tags` (no `x-compose-app` key yet) |
 
 Rules:
@@ -232,8 +232,8 @@ services:
 ### Persistence
 
 - **Reinstall must reuse existing data.** Every step that creates a default must first check
-  whether the data already exists. Use `seed/` (create-if-absent) or an `init` step with
-  `when: absent:…`. Don't use a hook with an existence check.
+  whether the data already exists. Use `seed/` (create-if-absent), or a [step](#5-imperative-work-steps)
+  guarded on the data itself (`[ -e "$APP_DIR/…" ] && exit 0`).
 - **Container startup must never erase or overwrite user data.**
 - **Upgrades must not corrupt or downgrade data.** The store serves only the latest version, so
   a user can jump several releases in one update. If the image cannot convert the data on its
@@ -339,7 +339,6 @@ networks:
     driver: bridge
 
 x-compose-app:
-  main: immich
   webui-host: immich-${domain}
 
 x-casaos:
@@ -350,9 +349,8 @@ x-casaos:
 The rules that must hold together:
 
 - The web UI port is in `expose:`, and the same port is in all three `{{upstreams N}}`.
-- `main` (in `x-compose-app` and in `x-casaos`) names **the service with the labels**. Maison
-  takes the app's identity and health from it. If `main` points at a backend, the tile can
-  show green while the public route returns 502.
+- `x-casaos.main` names **the service with the labels**. CasaOS takes the app's identity and
+  health from it; Maison does not read it, and `x-compose-app` has no such key.
 - `x-compose-app.webui-host` is the `caddy_0` host with `${domain}` in place of
   `${APP_DOMAIN}`, so the tile opens the route.
 - `x-casaos.webui_port` equals the exposed port.
@@ -506,11 +504,10 @@ networks:
     driver: bridge
 
 x-compose-app:
-  main: myapp-proxy              # the sidecar, never the backend
   webui-host: myapp-${domain}
 
 x-casaos:
-  main: myapp-proxy
+  main: myapp-proxy              # the sidecar, never the backend
   webui_port: 80
 ```
 
@@ -526,13 +523,13 @@ x-casaos:
 
 What a review checks for an AppShield app is `appshield-wiring` in
 [CONTRIBUTING.md](CONTRIBUTING.md#appshield-wiring--the-sso-sidecar-is-wired-so-it-cannot-be-bypassed).
-The two that catch people out are `hostname:` and `main`:
+The two that catch people out are `hostname:` and `x-casaos.main`:
 
 - `auth-registrar` identifies the app by its container's PTR record and rejects redirect URIs
   that don't match it. If `hostname:` is missing, Docker uses the random container ID and
   registration fails at first login. The service name itself may differ from the container name.
-- If `main` names the backend, Maison takes the app's health from the backend: the tile can
-  show green while the public route returns 502.
+- If `x-casaos.main` names the backend, CasaOS takes the app's health from the backend: the
+  tile can show green while the public route returns 502.
 
 **Don't copy these from older apps:**
 
@@ -560,8 +557,8 @@ otherwise                  →  x-casaos, translated whole (plain CasaOS apps)
 So a field that exists only in this store's `x-casaos` block is invisible to Maison. That is
 why [store info](#store-info) lives in `x-compose-app` first.
 
-Declare `schema_version: 2`, which `folders` and `hooks` require. The other keys (`secrets`,
-`variables`, `credentials`, `files`, `init`, `lifecycle`, `backup`, `migrations`) are
+Declare `schema_version: 2`, which `folders` and `steps` require. The other keys (`secrets`,
+`variables`, `credentials`, `files`, `lifecycle`, `backup`, `migrations`) are
 additive and don't raise it.
 
 ### The stack-up sequence
@@ -570,21 +567,19 @@ additive and don't raise it.
 and saving the app's settings:
 
 ```
-folders → secrets → variables → init(pre_up) → seed → files
-        → pre_up → docker compose up -d → init(post_up) → post_up
+folders → secrets → variables → setup steps → seed → files
+        → docker compose up -d → started steps
 ```
 
 An update that raises `data_version` also runs each pending [migration](#version-data_version-and-migrations)
-once, between `variables` and `init`.
+once, between `variables` and the setup steps.
 
-`pre_install` / `post_install` wrap it, on the install only:
-
-```
-write compose + .env + seed tree → pull images → pre_install → [ up sequence ] → post_install
-```
+An install is this same sequence: nothing runs only on install. Work for a fresh install is a
+`run: once` [step](#5-imperative-work-steps).
 
 Everything before `docker compose up` is **fatal**: an app whose secret could not be
-generated, or whose config could not be rendered, does not start.
+generated, whose config could not be rendered, or whose setup step failed, does not start.
+A failing started step is logged and retried on the next up.
 
 Reference: [`x-compose-app.md` › The stack-up sequence](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#the-stack-up-sequence).
 
@@ -653,8 +648,8 @@ The generators are `hex:N`, `base64:N`, `alnum:N`, `password:N`, `uuid` and `bcr
 A secret is written to the app's `.env` once and survives restarts, updates and restores.
 Use **one secret per purpose**: the database password is never the login password.
 
-Never generate a credential in a hook. `openssl` is not available there, and
-`"$(openssl rand -hex 32)"` silently becomes an empty string.
+Never generate a credential in a step: declare it under `secrets`. A key no generator can
+produce (an RSA keypair) is the exception; see `Apps/Wger`.
 
 **Converting an app that used `$APP_DEFAULT_PASSWORD`.** Installed boxes already initialised
 their database with that value, so a fresh secret would not match it. Seed the secret from the
@@ -683,9 +678,9 @@ x-compose-app:
       username: admin
       password: ${MYAPP_ADMIN_PASSWORD}
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e MYAPP_ADMIN_PASSWORD myapp \
+        apply: script
+        script: |
+          compose exec -e MYAPP_ADMIN_PASSWORD myapp \
             myapp-cli user set-password admin
 ```
 
@@ -696,9 +691,9 @@ the app's **Security** tab in Maison:
   recreates the container. If the value only reaches a container through a rendered file, give
   that container a label carrying the secret so the recreate happens (`Apps/Outline`,
   `Apps/Filestash`).
-- `apply: hook`: the app keeps its own copy (a user table) but has a command to change it.
-  The hook runs against the running app and gets the **new** value in the secret's own
-  variable (`OLD_<NAME>` holds the previous one). Pass it with the bare `-e NAME` form so it
+- `apply: script`: the app keeps its own copy (a user table) but has a command to change it.
+  The [script entry](#the-script-entry) runs against the running app and gets the **new**
+  value in the secret's own variable (`OLD_<NAME>` holds the previous one). Pass it with the bare `-e NAME` form so it
   never appears on a command line, and exit non-zero when nothing changed (`Apps/Nextcloud`,
   `Apps/Guacamole`, `Apps/WireGuardEasy`).
 - No `change`: the value is read only at first boot and nothing can reset it.
@@ -724,58 +719,118 @@ x-compose-app:
       mode: "0640"
 ```
 
-#### 5. Work that needs a container: `init`
+#### 5. Imperative work: `steps`
+
+*Requirements:* `step-idempotency` `step-security` `step-scope`
+
+What is left once the four declarations above are used: work that needs the app's own binary
+(seeding its database), a running service (an API call, `occ`), another program's output
+(waiting for it to write its config, then patching it), or the host.
 
 ```yaml
 x-compose-app:
-  init:
+  steps:
     - name: init-db
-      image: filebrowser/filebrowser:v2.63.2
-      user: $PUID:$PGID
-      volumes:
-        - /DATA/AppData/$AppID/db:/db
-      command: config init --database /db/database.db
-      when: absent:/DATA/AppData/$AppID/db/database.db   # or `once` / `always`
-    - name: obscure-password
-      image: rclone/rclone:1.73.3
-      command: ["obscure", "${MYAPP_WEBDAV_PASSWORD}"]
-      capture: RCLONE_PASS      # stdout becomes a variable for .tmpl files and `files`
+      at: setup            # setup | started
+      run: always          # once (default) | always
+      script: |
+        [ -e "$APP_DIR/db/database.db" ] && exit 0
+        docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/db:/db" \
+          filebrowser/filebrowser:v2.63.23 config init --database /db/database.db
+    - name: configure
+      at: started
+      run: once
+      script: |
+        compose exec nextcloud php occ background:cron
 ```
 
-`when:` replaces hand-written `if [ ! -f … ]` checks. `when: once` is remembered inside the app
-folder, so it travels with the backup. A failing step fails the install. Add `phase: post_up`
-(and `network:`) for a seeder that needs the app running.
-
-`init` fields are interpolated (write `$$` for a literal `$`); hooks are not (write `$VAR`).
-
-Reference: [`x-compose-app.md` › Init](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#init).
-
-#### 6. Last resort: `hooks`
-
-*Requirements:* `hook-idempotency` `install-cmd-security` `hook-scope`
-
-| Hook | Runs | On failure |
+| `at` | Runs | On failure |
 |---|---|---|
-| `pre_install` | Once, after images are pulled, before the first up | install fails |
-| `post_install` | Once, after the first up | logged |
-| `pre_up` | Before **every** up | the app does not start, every time |
-| `post_up` | After every up | logged |
+| `setup` | Before the stack starts: after `secrets` and `variables`, before `seed` and `files`. | **fatal**: the app does not start |
+| `started` | After `docker compose up` returns. The containers have started; the app may still be booting, so wait for it. | logged; retried on the next up |
 
-What still needs a hook is genuinely imperative work: waiting for another program to write its
-config and then patching it (`Apps/Seafile`), merging a key set nobody can name in advance
-(`Apps/Hubs`), or changing the host (`Apps/ClaudeCodeRoot`).
+| `run` | |
+|---|---|
+| `once` | Until it succeeds once. The marker is `.init/<name>` in the app folder, so it travels with the backup, but an uninstall-keep-data removes it. When the step must follow the *data*, use `always` and guard on the data. |
+| `always` | On every up: install, start, update, config save. It must be idempotent. |
 
-- Hooks run `/bin/bash` **inside the Maison container**, in the app folder (`$APP_DIR`), with
-  `docker` talking to the **host** daemon. They see the app's variables and `.env`.
-- Only a fixed set of commands is allowed (`bash`, `docker`, coreutils, `sed`, `grep`, `find`,
-  `wget`, …). `openssl`, `curl`, `python`, `jq` and `git` are not available. Host-scoped
-  commands (`sysctl`, `ip`, `mount`, …) would only affect the container, so they are refused.
-- Don't `mkdir` or write files in a hook: use `folders`, `seed/` or `files`. Their paths are
-  correct on both sides of the socket; a hook's are not.
-- Append to `$APP_DIR/.env`, never truncate it. There is no `.env` under
-  `/DATA/AppData/casaos/apps/`.
-- `pre-install-cmd` (the CasaOS form) runs only for a compose with no `x-compose-app`. Write
-  hooks under `x-compose-app.hooks`.
+Steps run in the order written, `setup` ones first.
+
+#### The script entry
+
+A step, a [migration](#version-data_version-and-migrations) step and a
+[credential change](#3-credentials) all run the same thing: a **script entry**, through the
+same runner. Only *when* it runs differs. What a script can do in one place, it can do in the
+other two.
+
+| Key | |
+|---|---|
+| `script` | Inline bash. |
+| `file` | Instead of `script`: a `.sh` under the app's `scripts/` folder (`file: scripts/patch.sh`), copied with the app on install and update. For anything long enough to want its own file and `shellcheck`. |
+| `images` | Images the script runs, pulled with the app's own images before anything is stopped. Optional; required in practice for a migration, which runs after the stop. |
+| `timeout` | Go duration. Defaults: step 10m, migration 2h, credential change 2m. |
+
+| In | Its own keys | Runs | On failure | Extra variables |
+|---|---|---|---|---|
+| `steps` | `name`, `at`, `run` | every up | `setup`: the app does not start. `started`: logged, retried | — |
+| `migrations` | `id`, `name` (or `blocked`) | once, in the update that crosses `id` | the update is rolled back | `MIGRATION_ID`, `DATA_VERSION_FROM`, `DATA_VERSION_TO` |
+| `credentials[].change` | `apply: script`, `policy` | when the owner changes the password | nothing changes | `<NAME>` (the new value), `OLD_<NAME>` |
+
+`MAISON_OUTPUT` and `MAISON_ENV` (below) exist in all three places. `$MAISON_ENV` always
+reaches the `.env`; `$MAISON_OUTPUT` reaches whatever runs or renders after the script in
+the same up, so it has no reader in a credential change.
+
+**Where a script runs.** `bash -euo pipefail` **inside the Maison container**, in the app folder,
+with `docker` talking to the **host** daemon. The environment holds the app's `.env`, the
+[system variables](#system-variables), `AppID`, `APP_DIR` (the app folder), `DATA_ROOT`,
+`COMPOSE_PROJECT_NAME` / `COMPOSE_FILE`, `MAISON_OUTPUT` / `MAISON_ENV`, and the extra
+variables above. The script is not interpolated: write `$VAR`, never `$$VAR`.
+Don't use `${VAR:?}`, which `docker compose` rejects when it reads the file.
+
+**Paths.** Maison mounts `DATA_ROOT` at the same path the host uses, so `$APP_DIR/db` is
+right both for the shell (`[ -e … ]`, `cat`) and for `docker run -v`. Write `$APP_DIR`, not
+`/DATA/AppData/<app>`.
+
+**Talking to the app.** `compose` is `docker compose` bound to the app's project:
+`compose exec <service> …`, `compose restart <service>`. `exec` never allocates a TTY and
+passes stdin, so `printf … | compose exec database psql …` works.
+
+**Running a tool in an image.** Pass values with `-e`, never by splicing them into the inner
+script, and quote the heredoc so nothing is expanded twice:
+
+```bash
+docker run --rm -i --entrypoint sh --user "$PUID:$PGID" \
+  -v "$APP_DIR/config:/out" -e CRAFTY_ADMIN_PASSWORD \
+  registry.gitlab.com/crafty-controller/crafty-4:4.10.7 -s <<'SH'
+set -e
+printf '{"password":"%s"}' "$CRAFTY_ADMIN_PASSWORD" > /out/default.json
+SH
+```
+
+**Ownership.** A file written from the script's own shell belongs to Maison's user. Appending
+(`>>`) keeps the owner; `sed -i`, `>` on a new file and `mv` don't. Edit a file the app owns
+from a container run as `--user "$PUID:$PGID"`, or inside the app with `compose exec`.
+
+**Handing values on.** Write `KEY=value` lines to one of two files:
+
+| File | Reaches | Lifetime |
+|---|---|---|
+| `$MAISON_OUTPUT` | later steps, `.tmpl` files and `files` | this up only; recomputed next time |
+| `$MAISON_ENV` | the app's `.env`, so the compose and every later up | kept. **Adds a key only when the `.env` lacks it**, so a user edit or a generated keypair is never overwritten. |
+
+```bash
+hash=$(printf 'admin:YaCy:%s' "$YACY_ADMIN_PASSWORD" | md5sum | cut -d' ' -f1)
+echo "YACY_ADMIN_HASH=$hash" >> "$MAISON_OUTPUT"   # used by seed/…/yacy.conf.tmpl
+echo "RADICLE_OWNER=" >> "$MAISON_ENV"             # an empty setting shown in App settings › Env
+```
+
+Assign a command substitution to a variable first, as above: `set -e` catches a failed
+`hash=$(…)`, not a failed `echo "$(…)"`.
+
+**Commands.** Only a fixed set is available (`bash`, `docker`, `compose`, coreutils, `sed`,
+`grep`, `find`, `md5sum`, `wget`, …). `openssl`, `curl`, `python`, `jq` and `git` are not: run
+them in a pinned image. Host-scoped commands (`sysctl`, `ip`, `mount`, …) would only affect the
+Maison container, so they are refused.
 
 **Changing the host** goes through the Docker socket. Pin the image, and justify it in
 `rationale.md`:
@@ -787,10 +842,18 @@ config and then patching it (`Apps/Seafile`), merging a key set nobody can name 
 | Files, users, `/etc` | `docker run --rm -v /:/host <image> chroot /host sh -c '...'` |
 | Kernel modules | `docker run --rm --privileged <image> modprobe ...` |
 
-A shipped hook is reviewed against `hook-idempotency`, `install-cmd-security` and `hook-scope`
-in [CONTRIBUTING.md](CONTRIBUTING.md#4-first-run-setup-and-hooks).
+**CasaOS.** `pre-install-cmd` / `post-install-cmd` run only for a compose with no
+`x-compose-app`, as a `setup` / `started` step with `run: once`.
 
-Command set and execution environment: [`x-compose-app.md` › Hooks](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#hooks).
+Worked examples: `Apps/FileBrowser` (a tool in an image), `Apps/Gitea` (`compose exec` and
+waiting for the app), `Apps/YaCy` and `Apps/SeafileDrive` (`$MAISON_OUTPUT`), `Apps/Wger` and
+`Apps/Hubs` (`$MAISON_ENV`), `Apps/Seafile` (patching what the app wrote),
+`Apps/WireGuardEasyHost` (the host, and a step in a `file:`).
+
+A shipped step is reviewed against `step-idempotency`, `step-security` and `step-scope`
+in [CONTRIBUTING.md](CONTRIBUTING.md#4-first-run-setup-and-steps).
+
+Reference: [`x-compose-app.md` › Steps](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#steps).
 
 ### The tile: `webui-*`, `links`, `view`, `parent`
 
@@ -890,8 +953,9 @@ Ship one when it can't: a PostgreSQL major version, Odoo 18 → 19, a config fil
 app that must boot every intermediate major version.
 
 A step is exactly one of:
-- a **container** (`image:` plus the `init` keys; preferred),
-- a **script** (`script: migrations/0002-….sh`, run like a hook, under the app's `migrations/` folder),
+- a [script entry](#the-script-entry): `script:` inline, or `file: scripts/0002-….sh`, with
+  every image it runs listed under `images:` so they are pulled while the old version still
+  serves (`Apps/Guacamole`: one `docker run` of pgautoupgrade; `Apps/Odoo`: a file);
 - **`blocked:`** (a message; the update is refused before anything is pulled).
 
 Store rules:
@@ -911,7 +975,7 @@ Store rules:
   conversion that was missed), merge at once: the migration only adds protection.
 - **The invariant to review against:** a fresh install at data version N must end up where an
   older install plus every migration up to N ends up. A change to what `seed/`, `files`,
-  `folders` or `init` produce never reaches existing installs unless a migration carries it.
+  `folders` or a `run: once` step produce never reaches existing installs unless a migration carries it.
 
 An update with pending steps always takes a rollback point, and is rolled back as a whole if
 a step fails.
@@ -931,7 +995,7 @@ It is required when the app:
 - runs as root with access to user folders, or mounts anything outside `/DATA/AppData/<app>/`
   and the user folders;
 - ships with no login enabled by default, or relies on first-visit onboarding;
-- changes the host from a hook;
+- changes the host from a step;
 - sets any `lifecycle` key to `false`;
 - deviates from anything else in this document.
 

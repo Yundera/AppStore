@@ -254,7 +254,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: filestash
   tips:
     en_us: |
       Signing in

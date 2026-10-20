@@ -389,7 +389,6 @@ x-compose-app:
     - screenshot-3.png
   architectures:
     - amd64
-  main: browsermcp-proxy
   tips:
     en_us: |
       **Getting Started**

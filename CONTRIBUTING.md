@@ -37,8 +37,8 @@ describe the actual deviation covers nothing.
 **functional** items need the app installed on a PCS.
 
 **Scope.** The app's files as they stand in the store: `docker-compose.yml`, its assets,
-`seed/`, `migrations/` and `rationale.md`. "Every service" includes every service in the
-compose. "Every image" includes `init` steps, migration steps, and `docker run` in hooks.
+`seed/`, `scripts/` and `rationale.md`. "Every service" includes every service in the
+compose. "Every image" includes migration steps and every `docker run` in a step.
 
 **Service apps.** An app whose compose declares no web UI (no `x-compose-app.webui-host` and no
 `routes` entry) is a **service app**: Maison puts its tile in the Services grid, and a click opens
@@ -58,7 +58,7 @@ line, and a service app is reviewed on the rest.
 
 ### `pinned-image-tag` — every image is pinned
 
-**Check:** static · **Severity:** Major for a service image; Minor for an `init`, migration or hook image
+**Check:** static · **Severity:** Major for a service image; Minor for a migration or step image
 
 - **Pass:** every image names a specific version tag or digest.
 - **Fail:** no tag, or a floating tag (`latest`, `main`, `master`, `stable`, `nightly`, a
@@ -71,8 +71,8 @@ line, and a service app is reviewed on the rest.
 - **Pass:** every bind source under the data folder is written `${DATA_ROOT:-/DATA}/…`, and the
   shared network is declared `name: ${APP_NET:-pcs}` with `external: true`.
 - **Fail:** a bare `/DATA/…` bind source, a bare `name: pcs`, or a shared network with no `name:`.
-- `folders`, `init`, `files` and `migrations` paths are written with `/DATA` and are not
-  covered by this item.
+- `folders`, `files` and `migrations` paths are written with `/DATA`, and steps use
+  `$APP_DIR` / `$DATA_ROOT`; none are covered by this item.
 
 ### `cpu-shares` — every service has a CPU weight
 
@@ -113,7 +113,7 @@ line, and a service app is reviewed on the rest.
     without it;
   - the port in `{{upstreams N}}` is in that service's `expose:`;
   - the service is on the shared network;
-  - `main` (in `x-compose-app` and `x-casaos`) names that service;
+  - `x-casaos.main` names that service, and `x-compose-app` has no `main`;
   - `x-casaos.webui_port` equals the exposed port;
   - `x-compose-app.webui-host` is the `caddy_0` host with `${domain}` in place of
     `${APP_DOMAIN}`, and `webui-port`, if set, is a URL port rather than the container port.
@@ -207,45 +207,49 @@ line, and a service app is reviewed on the rest.
 - **Pass:** all of the following hold:
   - `data_version` is an integer of 2 or more;
   - `migrations` has exactly one step for every id from 2 to `data_version`;
-  - each step is exactly one of a container (pinned `image:`), a `script:` under the app's
-    `migrations/` folder, or `blocked:`;
-  - each container or script step checks the data's actual state, so it is safe on data that
-    is already converted;
+  - each step is exactly one of a script entry (`script:`, or `file:` under the app's
+    `scripts/` folder, with every image it runs pinned and listed in `images:`) or `blocked:`;
+  - each script step checks the data's actual state, so it is safe on data that is already
+    converted;
   - a `blocked:` step lands together with the image change that needs it.
 
 ---
 
-## 4. First-run setup and hooks
+## 4. First-run setup and steps
 
-### `hook-idempotency` — hooks are safe to rerun
+### `step-idempotency` — steps are safe to rerun
 
 **Check:** static · **Severity:** Major
-**n-a:** no hooks (`x-compose-app.hooks`, `pre-install-cmd`, `post-install-cmd`).
+**n-a:** no steps (`x-compose-app.steps`, `pre-install-cmd`, `post-install-cmd`).
 
-- **Pass:** every hook can run again on a reinstall or update without failing or damaging data:
-  one-shot work is guarded by an existence check or a sentinel file.
+- **Pass:** every step can run again on a reinstall or update without failing or damaging
+  data. A `run: always` step is idempotent; work that must follow the data is guarded on the
+  data (`[ -e "$APP_DIR/…" ] && exit 0`), not on `run: once`, whose marker an
+  uninstall-keep-data removes.
 - **Fail:** for example, unguarded initialisers chained with `&&`. The first one that refuses
-  to overwrite existing data leaves the app installed but stopped. Flaky work in a `pre_up`
-  hook (which runs on every start) also fails here.
+  to overwrite existing data leaves the app installed but stopped. Flaky work in a `setup`
+  step (which runs before every start) also fails here.
 
-### `install-cmd-security` — hooks are pinned and non-interactive
+### `step-security` — scripts are pinned and non-interactive
 
 **Check:** static · **Severity:** Major · `rationale.md` can cover a host change
-**n-a:** no hooks.
+**n-a:** no script entry (no `steps`, no migration script, no `change.script`).
 
-- **Pass:** every image a hook runs is pinned; `docker run` writing to a user folder uses
-  `--user $PUID:$PGID`; the hook never prompts; any change to the host (`sysctl`, `/etc`,
-  mounts, kernel modules) is named in `rationale.md`.
+- **Pass:** in every script entry, every image it runs is pinned; `docker run` writing to a
+  user folder or to a file the app owns uses `--user $PUID:$PGID`; values reach an inner
+  script through `-e`, not by splicing them into its text; the script never prompts; any change to the host
+  (`sysctl`, `/etc`, mounts, kernel modules) is named in `rationale.md`.
 
-### `hook-scope` — hooks don't do declarative work
+### `step-scope` — steps don't do declarative work
 
 **Check:** static · **Severity:** Major
-**n-a:** no hooks.
+**n-a:** no steps.
 
-- **Pass:** no hook creates a directory the app bind-mounts (`folders` does), generates a
-  credential (`secrets` does), writes a config file that `seed/` or `files` could carry, or
-  writes to `/DATA/AppData/casaos/apps/`. A hook that only re-owns a path already under
-  `folders` is a Minor fail.
+- **Pass:** no step creates a directory the app bind-mounts (`folders` does), generates a
+  credential a `secrets` generator could produce, writes a config file that `seed/` or
+  `files` could carry, appends to `.env` other than through `$MAISON_ENV`, or writes to
+  `/DATA/AppData/casaos/apps/`. A step that only re-owns a path already under `folders` is a
+  Minor fail.
 
 ---
 
@@ -269,7 +273,7 @@ line, and a service app is reviewed on the rest.
 
 - **Pass:** all of the following hold:
   - Caddy labels are on the sidecar only;
-  - `main` names the sidecar;
+  - `x-casaos.main` names the sidecar;
   - the backend has no labels and no published HTTP port;
   - the sidecar's `container_name` equals the compose `name`, and `hostname:` equals `container_name`;
   - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL` and
@@ -283,7 +287,7 @@ line, and a service app is reviewed on the rest.
 **Check:** static · **Severity:** Critical if it guards a reachable service; Major otherwise
 
 - **Pass:** no password, token, key or hash appears as a literal in the compose, in `seed/`
-  or in hooks. Every one comes from `x-compose-app.secrets` or is entered by the user.
+  or in steps. Every one comes from `x-compose-app.secrets` or is entered by the user.
 
 ### `per-app-secrets` — credentials belong to the app
 
@@ -293,7 +297,7 @@ line, and a service app is reviewed on the rest.
 - **Pass:** every credential is its own entry under `x-compose-app.secrets`, one per purpose. A
   seeded form `${APP_DEFAULT_PASSWORD}|<generator>` passes; it is the sanctioned conversion of
   an installed app.
-- **Fail:** `$APP_DEFAULT_PASSWORD` used directly as a credential (environment, hook, `init`,
+- **Fail:** `$APP_DEFAULT_PASSWORD` used directly as a credential (environment, step,
   `bcrypt:${APP_DEFAULT_PASSWORD}`); or a JWT, session or encryption key set to the login
   password. A mention in tips text only is not a fail.
 
@@ -323,7 +327,7 @@ line, and a service app is reviewed on the rest.
 
 - **Pass:** all of the following hold:
   - `x-compose-app` carries `schema_version: 2` (never higher), `title`, `tagline`,
-    `description`, `developer`, `category`, `icon`, `screenshots`, `architectures`, `main` and,
+    `description`, `developer`, `category`, `icon`, `screenshots`, `architectures` and,
     for a web app, `webui-host`;
   - `x-casaos` repeats the same values under its own names (mapping in
     [GUIDELINES › Store info](GUIDELINES.md#store-info));
@@ -363,7 +367,7 @@ has nothing to open, so only `install` applies to it; its auth and data are judg
 **Check:** functional · **Severity:** Major
 
 - **Pass:** installing from the store on a clean PCS ends with every long-running service up,
-  and every one-shot service (an `init` step, a setup container) exited 0.
+  and every one-shot service (a step, a setup container) exited 0.
 
 ### `app-url` — the app opens from its tile
 

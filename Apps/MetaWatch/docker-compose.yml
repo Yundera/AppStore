@@ -501,7 +501,6 @@ x-compose-app:
     - screenshot-3.png
   architectures:
     - amd64
-  main: metawatch
   tips:
     en_us: |
       **Access & sign-in**

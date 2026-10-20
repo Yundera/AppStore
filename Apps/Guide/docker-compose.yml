@@ -216,5 +216,4 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: guide
   webui-host: guide-${domain}

@@ -38,30 +38,30 @@ knowingly rather than inheriting it.
 - **The sysctls cannot be set on the container.** `net.ipv4.ip_forward` and
   `net.ipv4.conf.all.src_valid_mark` are namespaced settings, and a host-mode container
   shares the host's namespace — Docker therefore refuses a `sysctls:` block here, since
-  it would be mutating the host. They are set on the host by the `pre_install` hook, using the
+  it would be mutating the host. They are set on the host by the `host-ip-forward` step, using the
   supported recipe: `docker run --rm --privileged --network=host alpine:3.20 sysctl -w …`.
-  A hook runs *inside* the Maison container, where `/proc/sys` is read-only, so a bare
-  `sysctl -w` changes nothing and (being `pre_install`, which is fatal) would leave the
+  A step runs *inside* the Maison container, where `/proc/sys` is read-only, so a bare
+  `sysctl -w` changes nothing and (being a setup step, which is fatal) would leave the
   app installed but stopped. The one-shot container is pinned to `alpine:3.20`, lives for
   the two writes and exits; nothing privileged stays running. The step is idempotent and
-  **best-effort** — the hook ends with `exit 0`, because reaching host services at
+  **best-effort** — the step always succeeds, because reaching host services at
   `10.9.0.1` does not need IP forwarding (only peer-to-peer and full-tunnel routing do),
   so a host that refuses the writes should still get a working app. `sysctl -w` is not
-  persisted, and `pre_install` runs only at install: after a host reboot the values are
+  persisted, and the step is `run: once`: after a host reboot the values are
   whatever the host boots with. In practice Docker turns `ip_forward` back on itself when
   its daemon starts; `src_valid_mark` is not restored until the app is reinstalled.
 - **Forwarding needs one rule in Docker's firewall.** wg-easy's own `FORWARD` accepts
   are written with the image's `iptables`, which is iptables-legacy, but Docker writes
   its rules with nft and sets the nft `FORWARD` policy to `DROP`. A forwarded packet has
   to pass both, so on any Docker host (every PCS) peer-to-peer and full-tunnel traffic
-  is silently dropped. A `post_up` hook therefore appends rules to wg-easy's own
+  is silently dropped. The `patch-wg-easy-db` step (after every start) therefore appends rules to wg-easy's own
   PostUp/PostDown hooks that insert, via `iptables-nft`, into Docker's `DOCKER-USER` chain:
   `wg0 → wg0`, `wg0 → uplink`, and `uplink → wg0` for established replies only. Because
   they live in the hooks, `wg-quick` re-applies them on every start (reboots included)
   and removes them when the interface goes down or the app is uninstalled. Nothing is
   written to the host's persistent firewall config. The rules are deliberately scoped:
   a blanket `-i wg0 ACCEPT` would also let a peer route into Docker's container networks
-  and skip the gateway. The same hook sets wg-easy's uplink device, which it hard-codes to
+  and skip the gateway. The same step sets wg-easy's uplink device, which it hard-codes to
   `eth0`, to the host's actual default-route interface.
 - **A host-mode container cannot be a Caddy upstream**, which is why the web UI is not
   served directly. `wgeasyhost` binds the UI on host port `51821`, and the bridged

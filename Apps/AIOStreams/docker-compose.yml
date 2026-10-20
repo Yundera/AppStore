@@ -273,7 +273,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: aiostreams
   tips:
     en_us: |
       **Dashboard login**

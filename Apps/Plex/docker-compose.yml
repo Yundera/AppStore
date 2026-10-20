@@ -234,7 +234,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: plex-proxy
   tips:
     en_us: "Plex tutorial : \nhttps://www.yundera.com/blog/tutorial-1/how-to-setup-plex-17\n \nTips :\n\U0001F3AC Plex lets you watch free movies and live TV with ads.\n⚠️ To stream your own videos, Plex now charges a fee.\n✅ For free personal streaming, try Jellyfin instead.\n\U0001F511 If you subscribe to Plex and want to stream your own files, follow our tutorial to set it up and get your key. : https://www.yundera.com/blog/tutorial-1/how-to-setup-plex-17\nℹ️ This app store is not affiliated with Plex and does not control their services.\n"
     zh_cn: "Plex 教程 : \nhttps://www.yundera.com/blog/tutorial-1/how-to-setup-plex-17\n \n提示 :\n\U0001F3AC Plex 让您可以观看免费电影和带广告的直播电视。\n⚠️ 要流式传输您自己的视频，Plex 现在收费。\n✅ 如需免费个人流媒体，请尝试 Jellyfin。\n\U0001F511 如果您订阅了 Plex 并想要流式传输您自己的文件，请按照我们的教程进行设置并获取您的密钥。: https://www.yundera.com/blog/tutorial-1/how-to-setup-plex-17\nℹ️ 本应用商店与 Plex 无关联，不控制其服务。\n"

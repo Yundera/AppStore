@@ -314,7 +314,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: wgeasy
   tips:
     en_us: |
       # Default Account
@@ -413,9 +412,9 @@ x-compose-app:
       # on errors. Unlike it, this leaves the admin's 2FA alone. The 12-character floor
       # is wg-easy's own password rule.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -w /app/server -e WGEASY_ADMIN_PASSWORD wgeasy node --input-type=module -e "
+        apply: script
+        script: |
+          compose exec -w /app/server -e WGEASY_ADMIN_PASSWORD wgeasy node --input-type=module -e "
             import argon2 from 'argon2';
             import {createClient} from '@libsql/client';
             const c = createClient({url: 'file:/etc/wireguard/wg-easy.db'});
@@ -424,7 +423,7 @@ x-compose-app:
           "
         policy:
           min_length: 12
-  hooks:
+  steps:
     # New clients inherit the server-wide default PersistentKeepalive from wg-easy's
     # userConfig row (factory-seeded to 0 = off). With 0, a client behind NAT (a home PC)
     # cannot be reached by other clients until it has sent traffic itself. v15 dropped the
@@ -433,9 +432,12 @@ x-compose-app:
     # set 25s (standard NAT-traversal value) — only while still at the factory default, so
     # a later change in the UI is never clobbered. Uses the image's own bundled @libsql
     # driver (no sqlite3 CLI present). Same step as WireGuardEasyHost.
-    post_install: |
-      for i in $(seq 1 60); do
-        docker exec -w /app/server wgeasy node --input-type=module -e 'import {createClient} from "@libsql/client"; const c=createClient({url:"file:/etc/wireguard/wg-easy.db"}); const r=await c.execute("SELECT count(*) AS n FROM user_configs_table"); if(Number(r.rows[0].n)<1) process.exit(3); await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0"); console.log("wgeasy: default PersistentKeepalive set to 25s");' && break
-        sleep 2
-      done
-      exit 0
+    - name: default-keepalive
+      at: started
+      run: once
+      script: |
+        for i in $(seq 1 60); do
+          compose exec -w /app/server wgeasy node --input-type=module -e 'import {createClient} from "@libsql/client"; const c=createClient({url:"file:/etc/wireguard/wg-easy.db"}); const r=await c.execute("SELECT count(*) AS n FROM user_configs_table"); if(Number(r.rows[0].n)<1) process.exit(3); await c.execute("UPDATE user_configs_table SET default_persistent_keepalive=25 WHERE default_persistent_keepalive=0"); console.log("wgeasy: default PersistentKeepalive set to 25s");' && break
+          sleep 2
+        done
+        exit 0

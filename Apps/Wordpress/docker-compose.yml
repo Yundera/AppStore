@@ -347,7 +347,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: wordpress
   tips:
     en_us: |
       **Quick Setup (5 minutes):**

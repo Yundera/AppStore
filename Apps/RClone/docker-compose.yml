@@ -180,7 +180,6 @@ x-compose-app:
     - amd64
     - arm
     - arm64
-  main: rclone
   tips:
     en_us: |
       **Setup Steps**:

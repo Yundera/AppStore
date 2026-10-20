@@ -58,7 +58,7 @@ The cost is one more container (118 MB image, a 512M limit) and a second databas
 Most of what made it look expensive is now done by the app itself: the replication
 publication is created by wger's own core migration 0027, and the storage role and
 schema by its `setup-powersync-storage` management command, which the
-`setup-powersync-storage` init step runs.
+`setup-powersync-storage` step runs.
 
 The one genuinely new operational risk is the replication slot: an inactive slot pins
 WAL, and on a personal server where a container can sit stopped for a week that fills
@@ -85,7 +85,7 @@ slot resumes from where it stopped; deleting the slot is both lossier and needs
 - No host port is published by any service.
 - Every credential is generated per deployment: `WGER_SECRET_KEY` and
   `WGER_DB_PASSWORD` and `WGER_PS_STORAGE_PASSWORD` through `x-compose-app.secrets`, the
-  JWT signing keypair through the `pre_install` hook, and the admin password from the
+  JWT signing keypair through the `jwt-keys` step, and the admin password from the
   per-app `WGER_ADMIN_PASSWORD` secret (shown by Maison as the app's credentials).
 - `PS_STORAGE_PG_URI` is set explicitly rather than left to the app's default, which is
   the literal `postgres://powersync_storage:powersync_password@db:5432/wger` — inheriting
@@ -94,7 +94,7 @@ slot resumes from where it stopped; deleting the slot is both lossier and needs
   user.
 - wger seeds its first admin from a fixture as `admin` / `adminadmin` — a published
   upstream default — with no environment variable to change it. The
-  `rotate-admin-password` init step replaces it once the app is up, and only when the
+  `rotate-admin-password` step replaces it once the app is up, and only when the
   password is still that default, so it cannot overwrite a password the owner has
   since chosen. It compares the stored hash directly rather than attempting a login,
   so it never contributes to a `django-axes` lockout.
@@ -147,11 +147,11 @@ slot resumes from where it stopped; deleting the slot is both lossier and needs
   ahead of gunicorn, and re-walks every exercise on *every* start -- 5 minutes of
   downtime per restart, not a one-off first-boot cost. With it off, a restart is about
   80 seconds. The same work is queued onto celery once, at install, by the
-  `seed-exercise-database` init step, which leaves the app answering while it runs.
+  `seed-exercise-database` step, which leaves the app answering while it runs.
 - **Letting the exercise refresh arrive only via the weekly celery job.** Rejected as
   the sole mechanism: `add_periodic_task` picks a random day-of-week and time when beat
   starts (`wger/exercises/tasks.py`), so the pictures would be up to a week away on a
-  fresh install. The init step queues both jobs immediately; the weekly schedule then
+  fresh install. The step queues both jobs immediately; the weekly schedule then
   keeps them current. Measured on a fresh install: the metadata sync finished in ~3.5
   minutes and the images in ~2 more (about 900 exercises, ~210 MB), with the app
   answering throughout. The image download is queued with an explicit

@@ -71,16 +71,16 @@ by choosing this app rather than that one.
   8080 and 9090 are reachable solely through the gateway-terminated Caddy
   routes.
 - **Pinned image**, `ghcr.io/worph/claude-code-container:1.0.26`, and a pinned
-  `alpine:3.20` in the pre-install hook — no `:latest` anywhere.
+  `alpine:3.20` in the `host-claude-user` step — no `:latest` anywhere.
 - **Resource limits**: `cpu_shares: 70`, `memory: 2048M`.
-- **The host provisioning hook is idempotent and non-fatal.** Each step is
+- **The host provisioning step is idempotent and non-fatal.** Each command is
   guarded (`id claude`, `[ ! -f /etc/sudoers.d/claude ]`) and the script always
   exits 0, so a host where the break-out is unavailable still installs the app —
   it simply has no host-SSH feature. The `claude` account is created with `*` as
   its password field, i.e. no password: it is reachable by key only, never by
   password login.
 - **Nothing is copied into the SSH mount.** `/home/claude/.ssh/` is mounted so
-  the user can place their *own* key there; the hook only ensures the directory
+  the user can place their *own* key there; the step only ensures the directory
   and an empty `authorized_keys` exist with `0700`/`0600`. The app ships no key
   material.
 
@@ -129,7 +129,7 @@ decision to install it. Practically that means:
   same tool, no host access.
 - To revoke host access after uninstalling: delete the host account and its sudo
   rule (`userdel -r claude`, `rm /etc/sudoers.d/claude`). Uninstalling the app
-  removes the container, not the account the pre-install hook created.
+  removes the container, not the account the `host-claude-user` step created.
 
 ## Source repository
 

@@ -534,7 +534,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: odysseus-proxy
   tips:
     en_us: |
       **No separate login.** Odysseus is protected by AppShield, so opening it from

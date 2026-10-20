@@ -175,7 +175,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: stremio
   tips:
     en_us: |
       Access is protected by the server's single sign-on: opening the app

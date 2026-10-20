@@ -18,7 +18,7 @@ which defeats the point of running a search portal.
 
 - Admin login enabled by default: `adminAccountForLocalhost=false`, so requests from
   inside the box get no automatic admin access either.
-- The password hash is computed at install (`x-compose-app.init`, `admin-hash`), so the
+- The password hash is computed at install (the `admin-hash` step), so the
   compose file holds no credential. YaCy's built-in default password (`yacy`) never applies.
 - Runs as `$PUID:$PGID`, mounts only `/DATA/AppData/yacy/data`, 2 GB memory cap.
 - Port 8090 is not published on the host. Only Caddy reaches the app, over `pcs`.

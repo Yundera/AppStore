@@ -337,7 +337,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: mealie
   tips:
     en_us: |
       **Getting Started**
@@ -449,9 +448,9 @@ x-compose-app:
       # then PUT /api/users/password. One sign-in attempt, so a wrong old value
       # costs one of the 5 failures Mealie allows before locking the account.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e OLD_MEALIE_ADMIN_PASSWORD -e MEALIE_ADMIN_PASSWORD mealie sh -c '
+        apply: script
+        script: |
+          compose exec -e OLD_MEALIE_ADMIN_PASSWORD -e MEALIE_ADMIN_PASSWORD mealie sh -c '
             [ -n "$MEALIE_ADMIN_PASSWORD" ] || exit 1
             api=http://127.0.0.1:80/api
             token=$(curl -fsS -m 15 -X POST "$api/auth/token" \
@@ -475,13 +474,13 @@ x-compose-app:
   # `DEFAULT_EMAIL` / `DEFAULT_PASSWORD` env pair this app used to carry was inert,
   # and every install came up on the published upstream default instead. There is
   # no env var left that seeds the credential, so the rotation goes through the
-  # API once the app is answering -- post_up, on the app's own network.
+  # API once the app is answering -- a `started` step, on the app's own network.
   #
   # It presents $MEALIE_ADMIN_PASSWORD first and the upstream default only if that
   # fails, so a re-run over an already-rotated install never submits a wrong
   # password: Mealie locks an account out after SECURITY_MAX_LOGIN_ATTEMPTS=5
   # failures. A run that cannot reach the API exits non-zero, which leaves the
-  # `once` marker unwritten so the next up retries; a failing post_up step is
+  # `once` marker unwritten so the next up retries; a failing `started` step is
   # logged and swallowed, so it cannot take a healthy stack back down.
   #
   # Rotating the password is not enough: Mealie's /login page decides whether to
@@ -496,97 +495,91 @@ x-compose-app:
   # seeded default user has username=admin, email=changeme@example.com
   # (mealie/repos/seed/init_users.py) -- so the `credentials` entry, which shows
   # `admin` / `$MEALIE_ADMIN_PASSWORD` rather than an email, needs no change.
-  init:
+  steps:
     - name: seed-admin-password
-      image: curlimages/curl:8.14.1
-      phase: post_up
-      network: ${APP_NET:-pcs}
-      when: once
-      environment:
-        MEALIE_API: http://mealie:80
-        MEALIE_ADMIN: admin
-        MEALIE_ADMIN_EMAIL: ${APP_EMAIL}
-        MEALIE_NEW_PASSWORD: ${MEALIE_ADMIN_PASSWORD}
-        MEALIE_SEED_PASSWORD: MyPassword
-      entrypoint:
-        - /bin/sh
-      command:
-        - -c
-        # `$$` is an escaped dollar: Maison expands $NAME/${NAME} in this string
-        # before the container runs, so the shell's own variables are written $$NAME.
-        - |
-          set -u
+      at: started
+      run: once
+      script: |
+        docker run --rm -i --entrypoint sh --network "$APP_NET" \
+          -e MEALIE_API=http://mealie:80 \
+          -e MEALIE_ADMIN=admin \
+          -e MEALIE_ADMIN_EMAIL="$APP_EMAIL" \
+          -e MEALIE_NEW_PASSWORD="$MEALIE_ADMIN_PASSWORD" \
+          -e MEALIE_SEED_PASSWORD=MyPassword \
+          curlimages/curl:8.14.1 -s <<'SH'
+        set -u
 
-          # The first start runs alembic and seeds the default user, which takes
-          # appreciably longer than the container takes to appear.
-          n=0
-          until curl -fs -m 5 -o /dev/null "$$MEALIE_API/api/app/about"; do
-            n=$$((n + 1))
-            if [ "$$n" -ge 150 ]; then
-              echo "mealie: the API did not answer within 5 minutes" >&2
-              exit 1
-            fi
-            sleep 2
-          done
-
-          login() {
-            curl -fsS -m 15 -X POST "$$MEALIE_API/api/auth/token" \
-              --data-urlencode "username=$$MEALIE_ADMIN" \
-              --data-urlencode "password=$$1" |
-              sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
-          }
-
-          # Read-modify-write the whole self object rather than hand-building a
-          # UserBase body: PUT /api/users/{id} replaces every field it is sent
-          # (mealie/routes/users/crud.py), and UserBase.admin defaults to false --
-          # a body carrying only "email" would silently demote the account.
-          update_email() {
-            self_json=$$(curl -fsS -m 15 -H "Authorization: Bearer $$1" "$$MEALIE_API/api/users/self") || return 1
-            case "$$self_json" in
-              *'"email":"'"$$MEALIE_ADMIN_EMAIL"'"'*)
-                return 0
-                ;;
-            esac
-            item_id=$$(printf '%s' "$$self_json" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
-            if [ -z "$$item_id" ]; then
-              echo "mealie: could not read the admin's user id - leaving email alone" >&2
-              return 1
-            fi
-            new_json=$$(printf '%s' "$$self_json" | sed 's/"email":"[^"]*"/"email":"'"$$MEALIE_ADMIN_EMAIL"'"/')
-            if curl -fsS -m 15 -o /dev/null -X PUT "$$MEALIE_API/api/users/$$item_id" \
-              -H "Authorization: Bearer $$1" \
-              -H "Content-Type: application/json" \
-              --data-binary "$$new_json"; then
-              echo "mealie: set the admin email to $$MEALIE_ADMIN_EMAIL"
-              return 0
-            fi
-            echo "mealie: could not update the admin email" >&2
-            return 1
-          }
-
-          token=$$(login "$$MEALIE_NEW_PASSWORD")
-          if [ -n "$$token" ]; then
-            echo "mealie: the admin password is already the generated one"
-            update_email "$$token"
-            exit $$?
-          fi
-
-          token=$$(login "$$MEALIE_SEED_PASSWORD")
-          if [ -z "$$token" ]; then
-            echo "mealie: the admin password is neither the upstream default nor the generated one - leaving it alone" >&2
-            exit 0
-          fi
-
-          if curl -fsS -m 15 -o /dev/null -X PUT "$$MEALIE_API/api/users/password" \
-            -H "Authorization: Bearer $$token" \
-            -H "Content-Type: application/json" \
-            --data-binary "{\"currentPassword\":\"$$MEALIE_SEED_PASSWORD\",\"newPassword\":\"$$MEALIE_NEW_PASSWORD\"}"; then
-            echo "mealie: rotated the admin password to the generated one"
-          else
-            echo "mealie: could not rotate the admin password" >&2
+        # The first start runs alembic and seeds the default user, which takes
+        # appreciably longer than the container takes to appear.
+        n=0
+        until curl -fs -m 5 -o /dev/null "$MEALIE_API/api/app/about"; do
+          n=$((n + 1))
+          if [ "$n" -ge 150 ]; then
+            echo "mealie: the API did not answer within 5 minutes" >&2
             exit 1
           fi
+          sleep 2
+        done
 
-          update_email "$$token"
-          exit $$?
+        login() {
+          curl -fsS -m 15 -X POST "$MEALIE_API/api/auth/token" \
+            --data-urlencode "username=$MEALIE_ADMIN" \
+            --data-urlencode "password=$1" |
+            sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
+        }
+
+        # Read-modify-write the whole self object rather than hand-building a
+        # UserBase body: PUT /api/users/{id} replaces every field it is sent
+        # (mealie/routes/users/crud.py), and UserBase.admin defaults to false --
+        # a body carrying only "email" would silently demote the account.
+        update_email() {
+          self_json=$(curl -fsS -m 15 -H "Authorization: Bearer $1" "$MEALIE_API/api/users/self") || return 1
+          case "$self_json" in
+            *'"email":"'"$MEALIE_ADMIN_EMAIL"'"'*)
+              return 0
+              ;;
+          esac
+          item_id=$(printf '%s' "$self_json" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+          if [ -z "$item_id" ]; then
+            echo "mealie: could not read the admin's user id - leaving email alone" >&2
+            return 1
+          fi
+          new_json=$(printf '%s' "$self_json" | sed 's/"email":"[^"]*"/"email":"'"$MEALIE_ADMIN_EMAIL"'"/')
+          if curl -fsS -m 15 -o /dev/null -X PUT "$MEALIE_API/api/users/$item_id" \
+            -H "Authorization: Bearer $1" \
+            -H "Content-Type: application/json" \
+            --data-binary "$new_json"; then
+            echo "mealie: set the admin email to $MEALIE_ADMIN_EMAIL"
+            return 0
+          fi
+          echo "mealie: could not update the admin email" >&2
+          return 1
+        }
+
+        token=$(login "$MEALIE_NEW_PASSWORD")
+        if [ -n "$token" ]; then
+          echo "mealie: the admin password is already the generated one"
+          update_email "$token"
+          exit $?
+        fi
+
+        token=$(login "$MEALIE_SEED_PASSWORD")
+        if [ -z "$token" ]; then
+          echo "mealie: the admin password is neither the upstream default nor the generated one - leaving it alone" >&2
+          exit 0
+        fi
+
+        if curl -fsS -m 15 -o /dev/null -X PUT "$MEALIE_API/api/users/password" \
+          -H "Authorization: Bearer $token" \
+          -H "Content-Type: application/json" \
+          --data-binary "{\"currentPassword\":\"$MEALIE_SEED_PASSWORD\",\"newPassword\":\"$MEALIE_NEW_PASSWORD\"}"; then
+          echo "mealie: rotated the admin password to the generated one"
+        else
+          echo "mealie: could not rotate the admin password" >&2
+          exit 1
+        fi
+
+        update_email "$token"
+        exit $?
+        SH
   webui-host: mealie-${domain}

@@ -314,7 +314,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: foundryvtt
   tips:
     en_us: |
       **You need a Foundry VTT license** — buy one at

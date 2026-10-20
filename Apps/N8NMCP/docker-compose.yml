@@ -309,7 +309,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: n8nmcp-proxy
   tips:
     en_us: |
       **Getting Started**

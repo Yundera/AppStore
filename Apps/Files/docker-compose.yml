@@ -327,7 +327,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: files
   tips:
     en_us: |
       What this app can reach

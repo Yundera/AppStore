@@ -491,7 +491,6 @@ x-compose-app:
     - screenshot-3.png
   architectures:
     - amd64
-  main: radicle
   tips:
     en_us: |
       This app is public on purpose
@@ -670,7 +669,7 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/autoseed
       user: $PUID
       group: $PGID
-  init:
+  steps:
     # Creates the node's Ed25519 identity. Radicle has no first-run wizard: without
     # a key pair in the Radicle home, radicle-node exits immediately. `rad auth`
     # prompts for an optional passphrase, hence the empty line on stdin — a seed
@@ -678,12 +677,22 @@ x-compose-app:
     # own guidance is to leave it unencrypted (a passphrase would have to be typed
     # in at every start).
     - name: init-identity
-      image: dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2
-      user: $PUID:$PGID
-      volumes:
-        - /DATA/AppData/$AppID/home:/radicle-home
-      command: ["sh", "-c", "yes '' | rad auth --alias radicle-${APP_PUBLIC_IP_DASH} --stdin"]
-      when: absent:/DATA/AppData/$AppID/home/keys/radicle
+      at: setup
+      run: always
+      script: |
+        [ -e "$APP_DIR/home/keys/radicle" ] && exit 0
+        docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/home:/radicle-home" \
+          dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2 \
+          sh -c "yes '' | rad auth --alias radicle-$APP_PUBLIC_IP_DASH --stdin"
+    # Puts an empty RADICLE_OWNER line in the app's .env so the setting shows up in
+    # the .env editor, where the user fills it in. Not a `variables:` entry: those are
+    # re-rendered on every up and would wipe what the user typed. $MAISON_ENV only adds
+    # a key the .env does not have yet, so a reinstall keeps the user's value.
+    - name: owner-setting
+      at: setup
+      run: once
+      script: |
+        echo "RADICLE_OWNER=" >> "$MAISON_ENV"
   files:
     # The node's config carries the deployment's own addresses, so it is re-rendered
     # on every up rather than frozen at install. `rad auth` above writes a default
@@ -715,15 +724,6 @@ x-compose-app:
       from: autoseed/autoseed.sh
       ensure: always
       mode: "0755"
-  hooks:
-    # Puts an empty RADICLE_OWNER line in the app's .env so the setting shows up in
-    # the .env editor, where the user fills it in. Not a `variables:` entry: those are
-    # re-rendered on every up and would wipe what the user typed. Append-only and only
-    # when absent, so a reinstall keeps the user's value. A failed post_install is
-    # logged, not fatal — the app still runs, the key just has to be added by hand.
-    post_install: |
-      grep -q '^RADICLE_OWNER=' $APP_DIR/.env 2>/dev/null ||
-        printf 'RADICLE_OWNER=\n' >> $APP_DIR/.env
   # The landing path is handled by the Caddy redirect above, not here: neither
   # `webui-path` nor `x-casaos.index` is interpolated, so a ${...} written in
   # either reaches the browser as a literal.

@@ -333,7 +333,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: dokuwiki-proxy
   tips:
     en_us: |
       # Go to /install.php to set up your wiki

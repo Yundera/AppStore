@@ -277,7 +277,6 @@ x-compose-app:
     - screenshot-2.png
   architectures:
     - amd64
-  main: discordmcp-proxy
   tips:
     en_us: |
       **Getting Started**

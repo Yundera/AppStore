@@ -43,7 +43,7 @@ services:
       # reconstructing it from proxy headers. Pinning it to the canonical
       # hostname means a login started on the nip.io or sslip.io alias
       # finishes on this one; all three are registered with the identity
-      # provider by the install hook below, so any entry point works.
+      # provider by the register-oidc-client step below, so any entry point works.
       HERMES_DASHBOARD_PUBLIC_URL: https://hermes-${APP_DOMAIN}
       # Fallback sign-in, second to the server account. The dashboard's auth
       # gate is mandatory on a non-loopback bind and fails closed with no
@@ -385,7 +385,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: hermes
   tips:
     en_us: |
       **Signing in**
@@ -505,13 +504,16 @@ x-compose-app:
       user: $PUID
       group: $PGID
   webui-host: hermes-${domain}
-  hooks:
+  steps:
     # Runs once the container is up. It asks the server's identity provider for
     # an OIDC client of its own, writes the result into the agent's config, and
     # restarts it so the dashboard picks the provider up. Re-registering returns
     # the same credentials, so this is safe to repeat. A failure does not fail the
-    # install — Maison logs and swallows post_install errors, and the basic-auth
-    # fallback still gets the user in — so there is no `|| true`: it would only
-    # hide the failure from that log.
-    post_install: |
-      docker exec hermes sh -c 'curl -fsS --retry 90 --retry-delay 2 --retry-connrefused -X POST http://auth-registrar:9092/register -H "content-type: application/json" -d "{\"callback_path\":\"/auth/callback\"}" -o /opt/data/.oidc.json' && docker exec hermes sh -c 'ISS=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"issuer_url\"])"); CID=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_id\"])"); SEC=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_secret\"])"); hermes config set --force dashboard.oauth.self_hosted.issuer "$ISS"; hermes config set --force dashboard.oauth.self_hosted.client_id "$CID"; hermes config set --force dashboard.oauth.self_hosted.client_secret "$SEC"; rm -f /opt/data/.oidc.json' && docker restart hermes
+    # install — Maison logs and swallows a failing `started` step, retries it on the
+    # next up, and the basic-auth fallback still gets the user in — so there is no
+    # `|| true`: it would only hide the failure from that log.
+    - name: register-oidc-client
+      at: started
+      run: once
+      script: |
+        compose exec hermes sh -c 'curl -fsS --retry 90 --retry-delay 2 --retry-connrefused -X POST http://auth-registrar:9092/register -H "content-type: application/json" -d "{\"callback_path\":\"/auth/callback\"}" -o /opt/data/.oidc.json' && compose exec hermes sh -c 'ISS=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"issuer_url\"])"); CID=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_id\"])"); SEC=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_secret\"])"); hermes config set --force dashboard.oauth.self_hosted.issuer "$ISS"; hermes config set --force dashboard.oauth.self_hosted.client_id "$CID"; hermes config set --force dashboard.oauth.self_hosted.client_secret "$SEC"; rm -f /opt/data/.oidc.json' && compose restart hermes

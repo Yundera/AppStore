@@ -284,7 +284,6 @@ x-compose-app:
     - amd64
     - arm64
     - arm
-  main: caddy
   tips:
     en_us: |
       **Warning:** This is a public website server with no login or authentication.

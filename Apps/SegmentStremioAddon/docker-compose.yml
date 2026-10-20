@@ -228,7 +228,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: ssa-proxy
   tips:
     en_us: |
       After installation:

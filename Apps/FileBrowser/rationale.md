@@ -35,7 +35,7 @@ second prompt for the same person, and it collides with the shield: AppShield re
 the `/login` location, so a backend that 302s to its own `/login` gets the shield's
 "Login Required" page instead of its form and becomes unusable. `noauth` resolves
 every request to user ID 1 (`auth/none.go`), which is the `admin` account the
-`add-admin` init step seeds, so the owner lands in the UI with full administrator
+`add-admin` step seeds, so the owner lands in the UI with full administrator
 rights and no second password. This is the same trade `Apps/ConvertX`
 (`ALLOW_UNAUTHENTICATED=true`) already makes.
 

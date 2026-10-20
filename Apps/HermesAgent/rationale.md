@@ -46,7 +46,7 @@ be delegated to an AppShield sidecar: `HERMES_DASHBOARD_INSECURE` was neutered i
 2026 hardening (the run script accepts it, warns, and ignores it), so fronting the app
 with SSO would leave the user with two consecutive sign-ins for one app.
 
-Instead the app becomes an OIDC client of the server's own identity provider. The hook
+Instead the app becomes an OIDC client of the server's own identity provider. A step
 asks `auth-registrar` for a client, writes the answer into the agent's config, and
 restarts it so the dashboard registers the provider:
 
@@ -56,14 +56,14 @@ POST http://auth-registrar:9092/register {"callback_path":"/auth/callback"}
    "redirect_uris":["https://hermes-<user>.<server>/auth/callback", …nip.io, …sslip.io]}
 ```
 
-Three properties make this safe to run from a hook:
+Three properties make this safe to run from a step:
 
 - **The client id is attested, not claimed.** The registrar resolves the caller's PTR
   record and uses the first label as the client id, so the call has to come from a
-  container named `hermes` — which is why the hook is `docker exec hermes …` rather than
-  a standalone init step, whose container would attest under its own name.
+  container named `hermes` — which is why the step is `compose exec hermes …` rather than
+  a standalone `docker run`, whose container would attest under its own name.
 - **It is idempotent.** Re-registering the same client returns the *identical* secret
-  (verified), so the hook is safe on reinstall and on update.
+  (verified), so the step is safe on reinstall and on update.
 - **It cannot brick the app.** The chain ends in `|| true`, and the basic-auth fallback
   below is configured regardless, so a registrar that is slow or absent costs the user
   the single-sign-on convenience and nothing else.

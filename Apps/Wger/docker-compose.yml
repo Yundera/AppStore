@@ -93,7 +93,7 @@ services:
       # Generated once by x-compose-app.secrets. Left unset the app generates a
       # fresh key on every start and logs everyone out on every restart.
       SECRET_KEY: ${WGER_SECRET_KEY}
-      # Written into the app's .env on install by the pre_install hook below --
+      # Written into the app's .env on install by the jwt-keys step below --
       # an RSA keypair no `secrets:` generator can produce.
       JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
@@ -308,7 +308,7 @@ services:
   # It reads the wger database through the `powersync` publication that wger's
   # own core migration 0027 declares, and keeps its sync buckets in a schema of
   # that same database under a separate role, created by the
-  # setup-powersync-storage init step below. Its config is two files in
+  # setup-powersync-storage step below. Its config is two files in
   # config-powersync/, re-rendered on every up so an app update ships new sync
   # rules rather than leaving stale ones in place.
   wger-powersync:
@@ -328,7 +328,7 @@ services:
       # this -- user powersync_storage, password powersync_password -- and a
       # deployment that inherits it has a published database credential.
       PS_STORAGE_PG_URI: postgres://powersync_storage:${WGER_PS_STORAGE_PASSWORD}@wger-db:5432/wger
-      # The public half of the RSA keypair the pre_install hook generated. The
+      # The public half of the RSA keypair the jwt-keys step generated. The
       # app asks wger for a token and PowerSync verifies it against this.
       PS_JWKS_URL: http://wger-web:8000/api/v2/powersync-keys
     volumes:
@@ -345,8 +345,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      # On a first install the storage role does not exist until the post_up
-      # step has run, and that waits on the app's own first boot, so this
+      # On a first install the storage role does not exist until the
+      # setup-powersync-storage step has run, and that waits on the app's own first boot, so this
       # container restarts a few times before it settles. Restarting is the
       # intended behaviour there, not a failure to report on the tile.
       start_period: 600s
@@ -467,7 +467,7 @@ networks:
     name: ${APP_NET:-pcs}
     external: true
   # App-private link between nginx, the app, its database, its cache and the two
-  # celery processes. Named explicitly so the init step below can join it.
+  # celery processes. Named explicitly so the steps below can join it.
   wger-internal:
     name: wger-internal
 
@@ -867,7 +867,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: wger
   tips:
     en_us: |
       **Your account**
@@ -1056,7 +1055,7 @@ x-compose-app:
     # Alphanumeric for the same reason as the one above -- it is substituted
     # into a postgres:// URL.
     WGER_PS_STORAGE_PASSWORD: alnum:32
-    # The admin login, set by the rotate-admin-password init step below. Seeded:
+    # The admin login, set by the rotate-admin-password step below. Seeded:
     # an installed app's admin was rotated to the former shared password, which it
     # keeps; a fresh install gets its own.
     WGER_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
@@ -1070,9 +1069,9 @@ x-compose-app:
       # once. The hook sets it through Django in the running app container, the
       # same set_password call that step makes.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e WGER_ADMIN_PASSWORD wger-web python3 - <<'PY'
+        apply: script
+        script: |
+          compose exec -e WGER_ADMIN_PASSWORD wger-web python3 - <<'PY'
           import os
 
           import django
@@ -1106,7 +1105,30 @@ x-compose-app:
       from: config-powersync/sync_rules.yaml
       ensure: always
       mode: "0644"
-  init:
+  steps:
+    # wger signs the JWTs its phone app authenticates with using an RS256
+    # keypair, supplied as two base64-wrapped JWKs. No `secrets:` generator
+    # produces an RSA key, and the two halves have to come from the *same*
+    # keypair, so they are generated together by the app's own management
+    # command and handed to the app's .env through $MAISON_ENV.
+    #
+    # $MAISON_ENV never overwrites a key the .env already has, so a reinstall
+    # over existing data keeps its keypair -- regenerating it would invalidate
+    # every phone still logged in.
+    #
+    # `--network none` because the command only generates a key; PS_DATABASE_URI
+    # is passed because the app's settings module refuses to import without a
+    # database URL, and this throwaway value is never connected to.
+    - name: jwt-keys
+      at: setup
+      run: once
+      script: |
+        docker run --rm --network none \
+          -e PS_DATABASE_URI=postgres://wger:wger@127.0.0.1:5432/wger \
+          docker.io/wger/server:2.7.0 \
+          python3 manage.py generate-jwt-keys --kid wger \
+          | grep -E '^JWT_(PRIVATE|PUBLIC)_KEY=' >> "$MAISON_ENV"
+
     # PowerSync keeps its sync buckets in a schema of the wger database, owned
     # by a role of its own. wger ships the command that creates both; it reads
     # PS_STORAGE_PG_URI, creates or updates the role and schema to match, and
@@ -1118,45 +1140,38 @@ x-compose-app:
     # PowerSync unable to start with nothing left to re-run. The retry loop
     # covers the gap between `up` returning and postgres accepting connections.
     - name: setup-powersync-storage
-      image: docker.io/wger/server:2.7.0
-      phase: post_up
-      network: wger-internal
-      when: always
-      user: $PUID:$PGID
-      environment:
-        PS_DATABASE_URI: postgres://wger:${WGER_DB_PASSWORD}@wger-db:5432/wger
-        PS_STORAGE_PG_URI: postgres://powersync_storage:${WGER_PS_STORAGE_PASSWORD}@wger-db:5432/wger
-        SECRET_KEY: ${WGER_SECRET_KEY}
-        DJANGO_DEBUG: "False"
-      entrypoint:
-        - /bin/sh
-      command:
-        - -c
-        - |
-          exec python3 - <<'PY'
-          import sys
-          import time
+      at: started
+      run: always
+      script: |
+        docker run --rm -i --entrypoint python3 --network wger-internal --user "$PUID:$PGID" \
+          -e PS_DATABASE_URI="postgres://wger:$WGER_DB_PASSWORD@wger-db:5432/wger" \
+          -e PS_STORAGE_PG_URI="postgres://powersync_storage:$WGER_PS_STORAGE_PASSWORD@wger-db:5432/wger" \
+          -e SECRET_KEY="$WGER_SECRET_KEY" \
+          -e DJANGO_DEBUG=False \
+          docker.io/wger/server:2.7.0 - <<'PY'
+        import sys
+        import time
 
-          import django
+        import django
 
-          django.setup()
+        django.setup()
 
-          from django.core.management import call_command
-          from django.db import connections
+        from django.core.management import call_command
+        from django.db import connections
 
-          last = None
-          for _ in range(30):
-              try:
-                  call_command('setup-powersync-storage')
-                  sys.exit(0)
-              except Exception as exc:
-                  # Almost always postgres not accepting connections yet.
-                  last = exc
-                  connections.close_all()
-                  time.sleep(5)
+        last = None
+        for _ in range(30):
+            try:
+                call_command('setup-powersync-storage')
+                sys.exit(0)
+            except Exception as exc:
+                # Almost always postgres not accepting connections yet.
+                last = exc
+                connections.close_all()
+                time.sleep(5)
 
-          sys.exit('wger: could not set up the PowerSync storage role: {}'.format(last))
-          PY
+        sys.exit('wger: could not set up the PowerSync storage role: {}'.format(last))
+        PY
 
     # Three jobs the app needs done once, at the start, rather than whenever its
     # weekly schedule happens to fire: refresh the exercise database from
@@ -1184,44 +1199,37 @@ x-compose-app:
     # would hold the only worker process indefinitely and every later job with
     # it.
     - name: seed-exercise-database
-      image: docker.io/wger/server:2.7.0
-      phase: post_up
-      network: wger-internal
-      when: once
-      user: $PUID:$PGID
-      environment:
-        PS_DATABASE_URI: postgres://wger:${WGER_DB_PASSWORD}@wger-db:5432/wger
-        SECRET_KEY: ${WGER_SECRET_KEY}
-        DJANGO_DEBUG: "False"
-        USE_CELERY: "True"
-        CELERY_BROKER: redis://wger-cache:6379/2
-        CELERY_BACKEND: redis://wger-cache:6379/2
-      entrypoint:
-        - /bin/sh
-      command:
-        - -c
-        - |
-          exec python3 - <<'PY'
-          import django
+      at: started
+      run: once
+      script: |
+        docker run --rm -i --entrypoint python3 --network wger-internal --user "$PUID:$PGID" \
+          -e PS_DATABASE_URI="postgres://wger:$WGER_DB_PASSWORD@wger-db:5432/wger" \
+          -e SECRET_KEY="$WGER_SECRET_KEY" \
+          -e DJANGO_DEBUG=False \
+          -e USE_CELERY=True \
+          -e CELERY_BROKER=redis://wger-cache:6379/2 \
+          -e CELERY_BACKEND=redis://wger-cache:6379/2 \
+          docker.io/wger/server:2.7.0 - <<'PY'
+        import django
 
-          django.setup()
+        django.setup()
 
-          from wger.exercises.tasks import (
-              cache_api_exercises_task,
-              sync_exercises_task,
-              sync_images_task,
-          )
+        from wger.exercises.tasks import (
+            cache_api_exercises_task,
+            sync_exercises_task,
+            sync_images_task,
+        )
 
-          sync_exercises_task.delay()
-          print('wger: queued the exercise database sync')
+        sync_exercises_task.delay()
+        print('wger: queued the exercise database sync')
 
-          sync_images_task.apply_async(soft_time_limit=3600, time_limit=3900)
-          print('wger: queued the exercise image download')
+        sync_images_task.apply_async(soft_time_limit=3600, time_limit=3900)
+        print('wger: queued the exercise image download')
 
-          # Queued last so it caches the exercises the two syncs just wrote.
-          cache_api_exercises_task.delay()
-          print('wger: queued the exercise API cache warm-up')
-          PY
+        # Queued last so it caches the exercises the two syncs just wrote.
+        cache_api_exercises_task.delay()
+        print('wger: queued the exercise API cache warm-up')
+        PY
 
     # wger seeds its first admin from a fixture during `wger bootstrap`, with the
     # username `admin` and the published upstream password `adminadmin`
@@ -1235,97 +1243,68 @@ x-compose-app:
     # wrong password from this step because it checks the hash directly rather
     # than logging in.
     #
-    # A run that never finds the user exits non-zero. post_up failures are logged
-    # and swallowed rather than taking a healthy stack down, and the `once`
+    # A run that never finds the user exits non-zero. A failing `started` step is
+    # logged and swallowed rather than taking a healthy stack down, and the `once`
     # marker stays unwritten, so the next start tries again.
     - name: rotate-admin-password
-      image: docker.io/wger/server:2.7.0
-      phase: post_up
-      network: wger-internal
-      when: once
-      user: $PUID:$PGID
-      environment:
-        PS_DATABASE_URI: postgres://wger:${WGER_DB_PASSWORD}@wger-db:5432/wger
-        SECRET_KEY: ${WGER_SECRET_KEY}
-        DJANGO_DEBUG: "False"
-        DJANGO_CACHE_BACKEND: django_redis.cache.RedisCache
-        DJANGO_CACHE_LOCATION: redis://wger-cache:6379/1
-        DJANGO_CACHE_CLIENT_CLASS: django_redis.client.DefaultClient
-        WGER_ADMIN_PASSWORD: ${WGER_ADMIN_PASSWORD}
-        WGER_ADMIN_EMAIL: ${APP_EMAIL}
-        WGER_SEED_PASSWORD: adminadmin
-      entrypoint:
-        - /bin/sh
-      command:
-        - -c
-        - |
-          exec python3 - <<'PY'
-          import os
-          import sys
-          import time
+      at: started
+      run: once
+      script: |
+        docker run --rm -i --entrypoint python3 --network wger-internal --user "$PUID:$PGID" \
+          -e PS_DATABASE_URI="postgres://wger:$WGER_DB_PASSWORD@wger-db:5432/wger" \
+          -e SECRET_KEY="$WGER_SECRET_KEY" \
+          -e DJANGO_DEBUG=False \
+          -e DJANGO_CACHE_BACKEND=django_redis.cache.RedisCache \
+          -e DJANGO_CACHE_LOCATION=redis://wger-cache:6379/1 \
+          -e DJANGO_CACHE_CLIENT_CLASS=django_redis.client.DefaultClient \
+          -e WGER_ADMIN_PASSWORD \
+          -e WGER_ADMIN_EMAIL="$APP_EMAIL" \
+          -e WGER_SEED_PASSWORD=adminadmin \
+          docker.io/wger/server:2.7.0 - <<'PY'
+        import os
+        import sys
+        import time
 
-          import django
+        import django
 
-          django.setup()
+        django.setup()
 
-          from django.contrib.auth.models import User
-          from django.db import connections
+        from django.contrib.auth.models import User
+        from django.db import connections
 
-          seed = os.environ['WGER_SEED_PASSWORD']
-          new = os.environ['WGER_ADMIN_PASSWORD']
-          email = os.environ['WGER_ADMIN_EMAIL']
+        seed = os.environ['WGER_SEED_PASSWORD']
+        new = os.environ['WGER_ADMIN_PASSWORD']
+        email = os.environ['WGER_ADMIN_EMAIL']
 
-          if not new:
-              sys.exit('wger: no generated password to set, leaving the admin alone')
+        if not new:
+            sys.exit('wger: no generated password to set, leaving the admin alone')
 
-          # The first boot runs migrations, collectstatic and the exercise sync
-          # before the fixture user is there to find, which is appreciably longer
-          # than the container takes to appear.
-          admin = None
-          for _ in range(150):
-              try:
-                  admin = User.objects.filter(username='admin').first()
-              except Exception:
-                  connections.close_all()
-                  admin = None
-              if admin is not None:
-                  break
-              time.sleep(4)
+        # The first boot runs migrations, collectstatic and the exercise sync
+        # before the fixture user is there to find, which is appreciably longer
+        # than the container takes to appear.
+        admin = None
+        for _ in range(150):
+            try:
+                admin = User.objects.filter(username='admin').first()
+            except Exception:
+                connections.close_all()
+                admin = None
+            if admin is not None:
+                break
+            time.sleep(4)
 
-          if admin is None:
-              sys.exit('wger: the admin user did not appear within 10 minutes')
+        if admin is None:
+            sys.exit('wger: the admin user did not appear within 10 minutes')
 
-          if not admin.check_password(seed):
-              print('wger: the admin password is not the shipped default, leaving it alone')
-              sys.exit(0)
+        if not admin.check_password(seed):
+            print('wger: the admin password is not the shipped default, leaving it alone')
+            sys.exit(0)
 
-          admin.set_password(new)
-          if not admin.email and email:
-              admin.email = email
-          admin.save(update_fields=['password', 'email'])
-          print('wger: rotated the default admin password to the generated one')
-          PY
-  hooks:
-    # wger signs the JWTs its phone app authenticates with using an RS256
-    # keypair, supplied as two base64-wrapped JWKs. No `secrets:` generator
-    # produces an RSA key, and the two halves have to come from the *same*
-    # keypair, so they are generated together by the app's own management
-    # command and appended to the app's .env.
-    #
-    # Append, never `>`: Maison has already written APP_DOMAIN, PUID, PGID,
-    # APP_NET and the secrets above into this file. The guard makes the hook a
-    # no-op on a reinstall over existing data, which matters -- regenerating the
-    # keypair would invalidate every phone still logged in.
-    #
-    # `--network none` because the command only generates a key; PS_DATABASE_URI
-    # is passed because the app's settings module refuses to import without a
-    # database URL, and this throwaway value is never connected to.
-    pre_install: |
-      grep -q '^JWT_PRIVATE_KEY=' $APP_DIR/.env || \
-        docker run --rm --network none \
-          -e PS_DATABASE_URI=postgres://wger:wger@127.0.0.1:5432/wger \
-          docker.io/wger/server:2.7.0 \
-          python3 manage.py generate-jwt-keys --kid wger \
-          | grep -E '^JWT_(PRIVATE|PUBLIC)_KEY=' >> $APP_DIR/.env
+        admin.set_password(new)
+        if not admin.email and email:
+            admin.email = email
+        admin.save(update_fields=['password', 'email'])
+        print('wger: rotated the default admin password to the generated one')
+        PY
   webui-host: wger-${domain}
   webui-path: /

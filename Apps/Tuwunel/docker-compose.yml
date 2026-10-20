@@ -214,7 +214,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: tuwunel-element
   tips:
     en_us: "**⚠️ Your Matrix identity is permanent**\n\nYour server name will be `matrix-<your-domain>` and your user ID `@name:matrix-<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.\n\n**\U0001F511 Registration**\n\nAccount creation requires a **registration token**. The **first account registered becomes the admin**. The token is shown when you open the app (tile menu → Credentials).\n\n| Setting | Value |\n|---------|-------|\n| Web Client (Element) | [\U0001F517 Open Element](https://tuwunel-$APP_DOMAIN/) |\n| Homeserver (for mobile apps) | `matrix-$APP_DOMAIN` |\n\nKeep the token private — anyone who has it can create accounts on your server.\n\n**\U0001F4F1 Connecting a client**\n\nThe app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix-<your-domain>`.\n"
   # Element's config carries the deployment's domain, so it is re-rendered on

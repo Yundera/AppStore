@@ -35,7 +35,7 @@ services:
     # CSRF protection is on and the Referer/Origin host differs from the served
     # host. The check runs *before* authentication and is not skipped for
     # whitelisted clients, so it bites even with the WebUI's own login bypassed
-    # (see the subnet whitelist in the init step below). Chrome replays the
+    # (see the subnet whitelist in the bypass-webui-login step below). Chrome replays the
     # referrer on reload, so the tile would be a dead end until the URL is retyped.
     #
     # Fix: drop Referer and Origin for exactly the request the tile issues — GET,
@@ -240,7 +240,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: qbittorrent
   tips:
     en_us: "\U0001F510 **Protected by your server account (single sign-on).** qBittorrent sits\nbehind the SSO gate, so your existing server login is the only password you\nneed — open the tile and you are already signed in. The WebUI's own login is\nbypassed for clients on the server's internal network, which is the only\nplace it can be reached from.\n\n\U0001F4C2 Downloads land in `/DATA/Downloads`; settings live in\n`/DATA/AppData/qbittorrent/`.\n\n\U0001F517 **Wire it into the media stack.** Add it as a *Download Client* in\n**Radarr**, **Sonarr** or **Lidarr** with host `qbittorrent-backend` and\nport `80` — that is the app's own container, reached directly on the\nserver's internal network. The name `qbittorrent` is the SSO gate and will\nnot answer the API. Leave the username and password blank, or use\n`admin` and the password shown in the tile menu → Credentials; either works.\n\n\U0001F4E1 **Incoming peer connections are off by default.** qBittorrent dials out\nto peers on its own, so downloads work as installed. To also accept\nincoming peers — usually faster, and what seeding needs — uncomment the\n`ports:` block in the compose file. That publishes port `6881` (TCP and\nUDP) to the internet, reachable without authentication.\n"
   # The WebUI login seeded into qBittorrent.conf (see seed-config below). Seeded
@@ -263,9 +262,9 @@ x-compose-app:
       # the old password (the subnet whitelist does not cover 127.0.0.1), set the
       # new one, then sign in with it to prove it took.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e OLD_QBITTORRENT_ADMIN_PASSWORD -e QBITTORRENT_ADMIN_PASSWORD \
+        apply: script
+        script: |
+          compose exec -e OLD_QBITTORRENT_ADMIN_PASSWORD -e QBITTORRENT_ADMIN_PASSWORD \
             qbittorrent-backend sh -c '
             [ -n "$QBITTORRENT_ADMIN_PASSWORD" ] || exit 1
             jar=$(mktemp) || exit 1
@@ -295,26 +294,25 @@ x-compose-app:
     - path: /DATA/Downloads
       user: $PUID
       group: $PGID
-  # Seeding the config needs the seeder image, so it stays a container — declared,
-  # not shelled out to. The directory it writes into is declared under folders
-  # above, which is what the hook's `mkdir -p` was doing.
-  init:
+  # Seeding the config needs the seeder image, so it runs as a one-shot container.
+  # The directory it writes into is declared under folders above.
+  steps:
+    # Writes qBittorrent.conf as $PUID:$PGID, matching the user: the service runs
+    # as — a root-owned conf/lock file is what stopped qBittorrent from ever opening
+    # its WebUI.
+    #
+    # Guarded on the config file itself, not on `run: once`: the `once` marker lives
+    # with the compose, which is removed by an uninstall-keep-data, so a reinstall
+    # would re-run the seeder and reset the WebUI password and every preference the
+    # user had changed.
     - name: seed-config
-      image: ghcr.io/worph/qbittorrent-config:1.0.2
-      # Writes qBittorrent.conf as $PUID:$PGID, matching the user: the service
-      # runs as — a root-owned conf/lock file is what stopped qBittorrent from
-      # ever opening its WebUI.
-      user: $PUID:$PGID
-      volumes:
-        - /DATA/AppData/qbittorrent/config/qBittorrent:/output
-      environment:
-        QB_USERNAME: admin
-        QB_PASSWORD: ${QBITTORRENT_ADMIN_PASSWORD}
-      # Keyed on the config file itself, not on `once`: the `once` marker lives
-      # with the compose, which is removed by an uninstall-keep-data, so a
-      # reinstall would re-run the seeder and reset the WebUI password and every
-      # preference the user had changed.
-      when: absent:/DATA/AppData/qbittorrent/config/qBittorrent/qBittorrent.conf
+      at: setup
+      run: always
+      script: |
+        [ -e "$APP_DIR/config/qBittorrent/qBittorrent.conf" ] && exit 0
+        docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/config/qBittorrent:/output" \
+          -e QB_USERNAME=admin -e QB_PASSWORD="$QBITTORRENT_ADMIN_PASSWORD" \
+          ghcr.io/worph/qbittorrent-config:1.0.2
     # The seeder image writes `WebUI\CSRFProtection=false` unconditionally and
     # offers no switch for it. Off, it leaves a cross-site POST to
     # /api/v2/app/setPreferences (which can set autorun_program, i.e. arbitrary
@@ -337,12 +335,12 @@ x-compose-app:
     # the Caddy labels above; cross-site mutating requests still carry their Origin
     # and are still rejected here.
     - name: enable-csrf-protection
-      image: busybox:1.37.0
-      user: $PUID:$PGID
-      volumes:
-        - /DATA/AppData/qbittorrent/config/qBittorrent:/output
-      command: ["sh", "-c", "sed -i 's/CSRFProtection=false/CSRFProtection=true/' /output/qBittorrent.conf; touch /output/.csrf-protection-enabled"]
-      when: absent:/DATA/AppData/qbittorrent/config/qBittorrent/.csrf-protection-enabled
+      at: setup
+      run: always
+      script: |
+        [ -e "$APP_DIR/config/qBittorrent/.csrf-protection-enabled" ] && exit 0
+        docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/config/qBittorrent:/output" \
+          busybox:1.37.0 sh -c "sed -i 's/CSRFProtection=false/CSRFProtection=true/' /output/qBittorrent.conf; touch /output/.csrf-protection-enabled"
     # Bypass the WebUI's own login for clients on the Docker private ranges — which
     # is the only place the backend can be reached from, since it has no Caddy
     # labels and publishes no HTTP port. The SSO gate becomes the single gate, so
@@ -358,24 +356,22 @@ x-compose-app:
     # [Preferences] header rather than appended, because once qBittorrent has run
     # it rewrites the file with [Preferences] in the middle of several sections.
     - name: bypass-webui-login
-      image: busybox:1.37.0
-      user: $PUID:$PGID
-      volumes:
-        - /DATA/AppData/qbittorrent/config/qBittorrent:/output
-      command:
-        - sh
-        - -c
-        - |
-          set -e
-          awk '
-            /^WebUI\\AuthSubnetWhitelist/ { next }
-            { print }
-            /^\[Preferences\]/ {
-              print "WebUI\\AuthSubnetWhitelistEnabled=true"
-              print "WebUI\\AuthSubnetWhitelist=172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16"
-            }
-          ' /output/qBittorrent.conf > /output/qBittorrent.conf.new
-          mv /output/qBittorrent.conf.new /output/qBittorrent.conf
-          touch /output/.sso-login-bypass
-      when: absent:/DATA/AppData/qbittorrent/config/qBittorrent/.sso-login-bypass
+      at: setup
+      run: always
+      script: |
+        [ -e "$APP_DIR/config/qBittorrent/.sso-login-bypass" ] && exit 0
+        docker run --rm -i --user "$PUID:$PGID" -v "$APP_DIR/config/qBittorrent:/output" \
+          busybox:1.37.0 sh -s <<'SH'
+        set -e
+        awk '
+          /^WebUI\\AuthSubnetWhitelist/ { next }
+          { print }
+          /^\[Preferences\]/ {
+            print "WebUI\\AuthSubnetWhitelistEnabled=true"
+            print "WebUI\\AuthSubnetWhitelist=172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16"
+          }
+        ' /output/qBittorrent.conf > /output/qBittorrent.conf.new
+        mv /output/qBittorrent.conf.new /output/qBittorrent.conf
+        touch /output/.sso-login-bypass
+        SH
   webui-host: qbittorrent-${domain}

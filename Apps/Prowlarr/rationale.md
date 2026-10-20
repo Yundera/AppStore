@@ -50,18 +50,18 @@ surface, which is worse than not having a gate at all.
 ## Bundled FlareSolverr
 
 **What.** A third service, `prowlarr-flaresolverr`, solves Cloudflare challenges for the indexers
-that sit behind one. A `post_up` init step registers it in Prowlarr as an indexer proxy tied to a
+that sit behind one. A `started` step registers it in Prowlarr as an indexer proxy tied to a
 `flaresolverr` tag.
 
 **Why bundled, not a separate store app.** FlareSolverr has no authentication: it is a headless
 Chrome that fetches any URL it is sent. A standalone app would have to sit on the shared `pcs`
 network, where every container of the PCS could use it as a browser proxy, including against
 internal addresses. As a sidecar it sits only on the app-private `prowlarr-internal` network, which
-nothing but the backend and the init step joins. Bundling is also what makes it work without
+nothing but the backend and the step joins. Bundling is also what makes it work without
 manual steps (below), and it keeps the solver's version moving with the app that depends on it.
 The Suwayomi app follows the same pattern.
 
-**Why the init step talks to Prowlarr's API.** Running the solver is not enough: Prowlarr only uses
+**Why the step talks to Prowlarr's API.** Running the solver is not enough: Prowlarr only uses
 one it has an indexer-proxy entry for, and only for indexers sharing that entry's tag. That entry
 lives in `prowlarr.db`, which the store does not write directly (see the alternatives below), so
 the step uses the documented `/api/v1/tag` and `/api/v1/indexerProxy` endpoints, with the API key

@@ -178,7 +178,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: convertx
   tips:
     en_us: |
       **Important Setup Instructions**

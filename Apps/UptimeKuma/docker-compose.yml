@@ -351,7 +351,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: uptimekuma
   tips:
     en_us: "**Getting Started:**\n\n1. After installation, visit your Uptime Kuma instance\n2. Create your admin account on first visit\n3. Add your first monitor (HTTP, Ping, TCP, etc.)\n4. Set up notification channels (Email, Telegram, Discord, etc.)\n\n\U0001F512 **HTTPS & Let's Encrypt**: Your connection is automatically secured with a Let's Encrypt certificate. After first setup, you may need to wait a few minutes for the certificate to be provisioned. Once issued, HTTPS works automatically.\n\n**Features:**\n- 20+ monitor types supported\n- 90+ notification services\n- Public status pages\n- Certificate expiry monitoring\n\n**Note:** The first user to register becomes the admin.\n"
     ko_kr: "**시작하기:**\n\n1. 설치 후 Uptime Kuma 인스턴스를 방문하세요\n2. 첫 방문 시 관리자 계정을 생성하세요\n3. 첫 번째 모니터를 추가하세요 (HTTP, Ping, TCP 등)\n4. 알림 채널을 설정하세요 (이메일, Telegram, Discord 등)\n\n\U0001F512 **HTTPS & Let's Encrypt**: Let's Encrypt 인증서로 자동 보안됩니다. 첫 설정 후 인증서가 발급될 때까지 몇 분 정도 기다려야 할 수 있습니다. 발급 완료 후 HTTPS가 자동으로 작동합니다.\n\n**기능:**\n- 20가지 이상의 모니터 유형 지원\n- 90개 이상의 알림 서비스\n- 공개 상태 페이지\n- 인증서 만료 모니터링\n\n**참고:** 첫 번째 등록 사용자가 관리자가 됩니다.\n"

@@ -209,7 +209,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: claude
   tips:
     en_us: |
       Authentication options:

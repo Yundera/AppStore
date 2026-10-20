@@ -237,7 +237,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: seafiledrive
   tips:
     en_us: |
       **Install Seafile first.** This app mounts a running Seafile; on its own it has
@@ -279,37 +278,36 @@ x-compose-app:
       **If the folder ever looks empty or an `ls` hangs**, the mount went stale —
       restart the app. To clear it by hand: `sudo fusermount -uz /DATA/Seafile`.
   # rclone's config carries the WebDAV password in rclone's own obscured form, which
-  # only rclone can produce — so a one-shot container produces it and the value is
-  # substituted into seed/config/rclone.conf.tmpl. It runs only while there is no
-  # config yet, which is what makes an edited rclone.conf permanent (and is why an
-  # install that already has its rclone.conf never runs this again).
+  # only rclone can produce — so the step runs `rclone obscure` in a one-shot
+  # container and hands the value to seed/config/rclone.conf.tmpl through
+  # $MAISON_OUTPUT. It runs only while there is no config yet, which is what makes
+  # an edited rclone.conf permanent (and is why an install that already has its
+  # rclone.conf never runs this again).
   #
   # The password is Seafile's admin password, which is the Seafile app's own secret
   # (SEAFILE_ADMIN_PASSWORD) and lives only in that app's .env — this app cannot
-  # declare a matching one. So the step reads it from there. AppData is mounted
-  # read-only as a whole rather than AppData/seafile, because binding a missing
-  # source would make the daemon create an empty `seafile` folder, i.e. a phantom
-  # app. Seafile missing, or still on a listing that predates the secret, fails
-  # the step with a message; it is retried on the next start.
-  init:
+  # declare a matching one. So the step reads it from there; a Seafile installed
+  # before it had a per-app secret still logs in with its APP_DEFAULT_PASSWORD.
+  # Seafile missing, or still on a listing that predates the secret, fails the step
+  # with a message; it is retried on the next start.
+  steps:
     - name: obscure-webdav-password
-      image: rclone/rclone:1.74.4
-      volumes:
-        - /DATA/AppData:/appdata:ro
-      entrypoint: ["sh", "-c"]
-      command:
-        - |
-          # Seafile's own admin password. A Seafile installed before it had a
-          # per-app secret still logs in with the value pinned in ITS .env.
-          p=$$(sed -n 's/^SEAFILE_ADMIN_PASSWORD=//p' /appdata/seafile/.env 2>/dev/null | tail -n 1)
-          [ -n "$$p" ] || p=$$(sed -n 's/^APP_DEFAULT_PASSWORD=//p' /appdata/seafile/.env 2>/dev/null | tail -n 1)
-          if [ -z "$$p" ]; then
-            echo "Seafile's admin password not found in AppData/seafile/.env: install Seafile, then start this app again" >&2
-            exit 1
-          fi
-          exec rclone obscure "$$p"
-      capture: RCLONE_OBSCURED_PASS
-      when: absent:/DATA/AppData/seafiledrive/config/rclone.conf
+      at: setup
+      run: always
+      script: |
+        [ -e "$APP_DIR/config/rclone.conf" ] && exit 0
+        seafile_env=$DATA_ROOT/AppData/seafile/.env
+        p=
+        if [ -f "$seafile_env" ]; then
+          p=$(sed -n 's/^SEAFILE_ADMIN_PASSWORD=//p' "$seafile_env" | tail -n 1)
+          [ -n "$p" ] || p=$(sed -n 's/^APP_DEFAULT_PASSWORD=//p' "$seafile_env" | tail -n 1)
+        fi
+        if [ -z "$p" ]; then
+          echo "Seafile's admin password not found in AppData/seafile/.env: install Seafile, then start this app again" >&2
+          exit 1
+        fi
+        obscured=$(docker run --rm rclone/rclone:1.74.4 obscure "$p")
+        echo "RCLONE_OBSCURED_PASS=$obscured" >> "$MAISON_OUTPUT"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` — one
   # per trailing-slash bind mount in `volumes:` above.
   folders:

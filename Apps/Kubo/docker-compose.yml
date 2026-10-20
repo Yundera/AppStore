@@ -369,7 +369,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: kubo
   tips:
     en_us: "\U0001F510 **Protected by your server account (single sign-on).** The node's web\ninterface and its control API open with your existing server login.\n\n\U0001F517 **Sharing is a second address.** Anything you pin is readable at\n`https://kubo-gateway-${APP_DOMAIN}/ipfs/<cid>`, open to whoever you send the\nlink to — they sign into nothing and install nothing. That address serves\n**only what you have pinned**: every other CID answers 404, so it stays your\nshare link rather than a gateway to the rest of the network.\n\n⚙️ **Two settings to make *Share link* use that address.** The web interface\nstores them in your browser, so set them once, per browser, under *Settings*:\nput `https://kubo-gateway-${APP_DOMAIN}` in **Local HTTP Gateway**, and choose\n**Local gateway, path link** under **Sharing IPFS links**. File previews and the\n*Share link* button then both point at your own server. Left alone, they assume\na gateway on the machine the browser is running on.\n\n\U0001F4CC **Pins are what you keep.** Files you add are pinned and kept forever. Blocks\nyou merely visited are cached up to `IPFS_STORAGE_MAX` (20 GB by default) and\nswept hourly. Everything lives in `/DATA/AppData/kubo/`.\n\n\U0001F4E1 **Port 4001 is published** (TCP and UDP) so other peers can dial this node —\nthat is what lets them fetch what you pin, and what earns the node its\n`libp2p.direct` certificate. On a PCS with no directly reachable public address\nthe node still works, it just reaches fewer peers.\n"
   folders:
@@ -394,7 +393,7 @@ x-compose-app:
       from: init.d/01-configure-node.sh
       ensure: always
       mode: "0755"
-  init:
+  steps:
     # Kubo does not embed its WebUI -- it serves it *from IPFS*, redirecting /webui/ to
     # the bundle's CID and fetching it through the gateway on first use. Gateway.NoFetch
     # (see rationale.md) stops exactly that fetch, so out of the box the tile would open
@@ -410,43 +409,39 @@ x-compose-app:
     # served as 503 until the pin exists, and busybox wget discards the body of an error
     # response.
     #
-    # `$$` is an escaped dollar -- Maison expands $NAME/${NAME} in this string before the
-    # container runs, so the shell's and awk's own variables are written $$NAME.
+    # Idempotent and cheap once satisfied (an already-pinned CID returns at once), and
+    # re-running is what makes an image bump pick up its own WebUI. It never fails the
+    # install: a node that could not reach the network yet still serves its gateway and
+    # its API, and Kubo's own 503 page explains the missing WebUI.
+    #
+    # No volumes: every call goes to the running daemon over --api, so this container
+    # needs no repo of its own.
     - name: pin-webui
-      image: ipfs/kubo:v0.43.1
-      phase: post_up
-      network: $APP_NET
-      # No volumes: every call goes to the running daemon over --api, so this container
-      # needs no repo of its own.
-      command:
-        - sh
-        - -c
-        - |
-          API=/dns/kubo-backend/tcp/5001
-          # post_up fires when `compose up` returns -- the container has started, the
-          # daemon has not necessarily finished opening its repo.
-          if ! timeout 180 sh -c "until ipfs --api=$$API id >/dev/null 2>&1; do sleep 3; done"; then
-            echo "node did not answer in time; the WebUI will be pinned on the next start"
-            exit 0
-          fi
-          cid=$$(printf 'GET /webui/ HTTP/1.0\r\nHost: kubo\r\n\r\n' | nc kubo-backend 5001 | grep -oE 'baf[a-z2-7]{50,}' | head -1)
-          if [ -z "$$cid" ]; then
-            echo "could not read the WebUI CID from the node; leaving it to the next start"
-            exit 0
-          fi
-          # Drop a previous bundle first, so an image bump does not leave 29 MB of last
-          # version's WebUI pinned forever. Unpinned, it is collected by --enable-gc.
-          ipfs --api=$$API pin ls --type=recursive --names 2>/dev/null |
-            awk -v keep="$$cid" '$$3 == "ipfs-webui" && $$1 != keep { print $$1 }' |
-            while read -r old; do ipfs --api=$$API pin rm "$$old" >/dev/null 2>&1 || true; done
-          if ! ipfs --api=$$API pin add --name ipfs-webui "/ipfs/$$cid"; then
-            echo "could not fetch the WebUI bundle; retrying on the next start"
-            exit 0
-          fi
-      # Idempotent and cheap once satisfied (an already-pinned CID returns at once), and
-      # re-running is what makes an image bump pick up its own WebUI. It never fails the
-      # install: a node that could not reach the network yet still serves its gateway and
-      # its API, and Kubo's own 503 page explains the missing WebUI.
-      when: always
+      at: started
+      run: always
+      script: |
+        docker run --rm -i --entrypoint sh --network "$APP_NET" ipfs/kubo:v0.43.1 -s <<'SH'
+        API=/dns/kubo-backend/tcp/5001
+        # A started step runs when `compose up` returns -- the container has started, the
+        # daemon has not necessarily finished opening its repo.
+        if ! timeout 180 sh -c "until ipfs --api=$API id >/dev/null 2>&1; do sleep 3; done"; then
+          echo "node did not answer in time; the WebUI will be pinned on the next start"
+          exit 0
+        fi
+        cid=$(printf 'GET /webui/ HTTP/1.0\r\nHost: kubo\r\n\r\n' | nc kubo-backend 5001 | grep -oE 'baf[a-z2-7]{50,}' | head -1)
+        if [ -z "$cid" ]; then
+          echo "could not read the WebUI CID from the node; leaving it to the next start"
+          exit 0
+        fi
+        # Drop a previous bundle first, so an image bump does not leave 29 MB of last
+        # version's WebUI pinned forever. Unpinned, it is collected by --enable-gc.
+        ipfs --api=$API pin ls --type=recursive --names 2>/dev/null |
+          awk -v keep="$cid" '$3 == "ipfs-webui" && $1 != keep { print $1 }' |
+          while read -r old; do ipfs --api=$API pin rm "$old" >/dev/null 2>&1 || true; done
+        if ! ipfs --api=$API pin add --name ipfs-webui "/ipfs/$cid"; then
+          echo "could not fetch the WebUI bundle; retrying on the next start"
+          exit 0
+        fi
+        SH
   webui-host: kubo-${domain}
   webui-path: /webui/

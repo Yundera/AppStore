@@ -251,7 +251,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: ntfy
   tips:
     en_us: |
       **Getting Started**
@@ -358,9 +357,9 @@ x-compose-app:
       # the entrypoint wrote. The sidecar's access token is not a password and
       # keeps working.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e NTFY_ADMIN_PASSWORD ntfy sh -c '
+        apply: script
+        script: |
+          compose exec -e NTFY_ADMIN_PASSWORD ntfy sh -c '
             [ -n "$NTFY_ADMIN_PASSWORD" ] || exit 1
             NTFY_PASSWORD="$NTFY_ADMIN_PASSWORD" ntfy user change-pass admin'
       note:

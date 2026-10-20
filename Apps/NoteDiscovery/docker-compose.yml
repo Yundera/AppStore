@@ -337,7 +337,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: notediscovery
   tips:
     en_us: |
       **Getting Started:**

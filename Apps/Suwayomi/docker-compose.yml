@@ -274,7 +274,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: suwayomi
   tips:
     en_us: |
       **Getting Started**

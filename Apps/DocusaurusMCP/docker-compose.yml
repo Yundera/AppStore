@@ -272,7 +272,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: docusaurusmcp-proxy
   tips:
     en_us: |
       **Prerequisites:**

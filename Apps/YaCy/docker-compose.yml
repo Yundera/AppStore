@@ -436,7 +436,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: yacy
   tips:
     en_us: |
       **Default Admin Access**
@@ -571,9 +570,9 @@ x-compose-app:
       # transaction-token check (TransactionManager.checkPostTransaction), but
       # adminAccountForLocalhost=false still requires the old password.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e OLD_YACY_ADMIN_PASSWORD -e YACY_ADMIN_PASSWORD yacy sh -c '
+        apply: script
+        script: |
+          compose exec -e OLD_YACY_ADMIN_PASSWORD -e YACY_ADMIN_PASSWORD yacy sh -c '
             [ -n "$YACY_ADMIN_PASSWORD" ] || exit 1
             d=$(mktemp -d) || exit 1
             trap "rm -rf $d" EXIT
@@ -589,19 +588,15 @@ x-compose-app:
   folders:
     - /DATA/AppData/$AppID/data
     - /DATA/AppData/$AppID/data/SETTINGS
-  init:
+  steps:
     # YaCy stores the admin password as MD5("admin:<adminRealm>:<password>").
     # The seeded yacy.conf pins adminRealm=YaCy; this computes the matching hash
     # for that template. Only needed while the file does not exist yet — seed/
     # never overwrites it, so a password changed in the admin UI survives.
     - name: admin-hash
-      image: busybox:1.37.0
-      when: absent:/DATA/AppData/$AppID/data/SETTINGS/yacy.conf
-      environment:
-        YACY_PW: ${YACY_ADMIN_PASSWORD}
-      entrypoint:
-        - /bin/sh
-      command:
-        - -c
-        - printf 'admin:YaCy:%s' "$$YACY_PW" | md5sum | cut -d' ' -f1
-      capture: YACY_ADMIN_HASH
+      at: setup
+      run: always
+      script: |
+        [ -e "$APP_DIR/data/SETTINGS/yacy.conf" ] && exit 0
+        hash=$(printf 'admin:YaCy:%s' "$YACY_ADMIN_PASSWORD" | md5sum | cut -d' ' -f1)
+        echo "YACY_ADMIN_HASH=$hash" >> "$MAISON_OUTPUT"

@@ -114,7 +114,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: lidarr
   tips:
     en_us: "\U0001F3B5 **Lidarr** is a music collection manager — it monitors, downloads and organises your music automatically.\n\n\U0001F4C2 Config lives in `/DATA/AppData/lidarr/`, music in `/DATA/Media/Music` (the same folder Jellyfin/Navidrome read), downloads in `/DATA/Downloads`.\n\n\U0001F510 **Sign in as `admin`** — the password is shown when you open the app\n(tile menu → Credentials). Lidarr ships with its login page already enabled\nand this account already created, so it is never reachable without signing\nin. Change the password from *Settings → General → Security* once you are in.\n\n\U0001F517 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent:80` when they run on the same server.\n\n❓ Questions? Contact us at help@yundera.com\n"
   # Admin password for the account seeded into config.xml on first boot.

@@ -366,7 +366,6 @@ x-compose-app:
     - screenshot-1.png
   architectures:
     - amd64
-  main: beacon-proxy
   tips:
     en_us: |
       **Getting Started**

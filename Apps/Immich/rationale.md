@@ -25,7 +25,7 @@ The `database` healthcheck uses inline command substitution — `[ "$$(psql … 
 
 Immich's upstream healthcheck stores the count in a `$$Chksum` variable. On Yundera, CasaOS re-serializes the compose file when it imports the app and collapses `$$Chksum` down to `$Chksum`. Docker Compose then treats `$Chksum` as an (unset) interpolation variable and substitutes an empty string, so the test becomes `[ "" = '0' ]`, which always fails — the Postgres container is reported **unhealthy** even though the database is fine (and CasaOS surfaces the whole app as unhealthy). Command substitution `$$(...)` contains no bare `$VAR`, so it survives the collapse and the check evaluates correctly. Functionally identical to upstream: healthy when `checksum_failures = 0`, unhealthy otherwise.
 
-## Database password (`$IMMICH_DB_PASSWORD` + a `post_up` re-assert)
+## Database password (`$IMMICH_DB_PASSWORD` + a re-assert after every start)
 
 The Postgres credential is `$IMMICH_DB_PASSWORD`, this app's own secret, generated once by Maison into
 its `.env` rather than a literal baked into the compose file. It is seeded from the box-wide password the
@@ -35,7 +35,7 @@ is not a secret, and renaming it would not match the role that already owns an e
 Postgres reads `POSTGRES_PASSWORD` only during `initdb`. An install whose `/DATA/AppData/immich/pgdata`
 was created by an earlier revision of this app therefore keeps the password it was initialised with,
 while the `immich` service now presents `$IMMICH_DB_PASSWORD` — the server would fail to authenticate
-after the update. The `post_up` hook closes that gap by re-asserting the role password over the Postgres
+after the update. The `reassert-db-password` step (`at: started`, `run: always`) closes that gap by re-asserting the role password over the Postgres
 unix socket, which the image's `pg_hba.conf` grants as `local all all trust`, so no knowledge of the old
 password is required. It is idempotent, a no-op on a fresh install where `initdb` already set the same
-value, and `post_up` failures are logged and swallowed, so a slow or missing database cannot block the app.
+value, and a failing `started` step is logged and swallowed, so a slow or missing database cannot block the app.

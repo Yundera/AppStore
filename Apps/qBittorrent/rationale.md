@@ -31,7 +31,7 @@ top-level browser navigation to `/`. Every other request reaches the gate, and
 through it qBittorrent, with its headers untouched.
 
 **2. The WebUI's own login is bypassed** for the Docker private ranges, by the
-`bypass-webui-login` init step writing
+`bypass-webui-login` step writing
 `WebUI\AuthSubnetWhitelistEnabled=true` and
 `WebUI\AuthSubnetWhitelist=172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16`.
 
@@ -92,7 +92,7 @@ credentials or not.
 
 ## Security mitigations in place — why CSRF protection is still intact
 
-The attack the `enable-csrf-protection` init step exists to stop is a cross-site
+The attack the `enable-csrf-protection` step exists to stop is a cross-site
 `POST /api/v2/app/setPreferences` setting `autorun_program`, i.e. arbitrary
 command execution. Neither exception affects it:
 
@@ -170,7 +170,7 @@ Unchanged by these exceptions. All state stays in
 `/DATA/AppData/qbittorrent/config/` (declared under `x-compose-app.folders`),
 downloads in `/DATA/Downloads/` (disclosed in `tips.before_install`), the backend
 runs as `$PUID:$PGID`, memory is capped at 512M (128M for the gate) and
-`cpu_shares` are set on both. All three init steps are guarded on marker files
+`cpu_shares` are set on both. All three steps are guarded on marker files
 inside the config volume, not on `once`, so a reinstall never resets the WebUI
 password or the user's preferences. `bypass-webui-login` deletes any existing
 `WebUI\AuthSubnetWhitelist*` lines before inserting its own and anchors the insert

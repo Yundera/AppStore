@@ -43,7 +43,7 @@ services:
       GITEA__server__DISABLE_SSH: "true"
       GITEA__server__START_SSH_SERVER: "false"
       # Skips the first-run install wizard: every value it would ask for is set
-      # here, and the admin account is created by an init step below.
+      # here, and the admin account is created by a step below.
       GITEA__security__INSTALL_LOCK: "true"
       GITEA__database__DB_TYPE: sqlite3
       GITEA__database__PATH: /var/lib/gitea/data/gitea.db
@@ -119,7 +119,7 @@ services:
       # that can reach this container.
     volumes:
       # .runner (the registration this runner is identified by) and the
-      # registration token the init step leaves for it.
+      # registration token the runner-token step leaves for it.
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner:/data
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/runner-config:/config:ro
       # Replaces the image's own start-up wait — see the comments in the
@@ -396,7 +396,6 @@ x-compose-app:
     - screenshot-3.png
   architectures:
     - amd64
-  main: gitea
   tips:
     en_us: |
       Signing in
@@ -531,9 +530,9 @@ x-compose-app:
       # container; the value travels in the environment, never on a command line
       # outside it.
       change:
-        apply: hook
-        hook: |
-          docker compose exec -T -e GITEA_ADMIN_PASSWORD gitea sh -c '
+        apply: script
+        script: |
+          compose exec -e GITEA_ADMIN_PASSWORD gitea sh -c '
             [ -n "$GITEA_ADMIN_PASSWORD" ] || exit 1
             gitea admin user change-password --username gitea_admin \
               --password "$GITEA_ADMIN_PASSWORD" --must-change-password=false'
@@ -545,7 +544,7 @@ x-compose-app:
       user: $PUID
       group: $PGID
     # Holds .runner (the runner's registration) and the token file the
-    # init step writes for it.
+    # runner-token step writes for it.
     - path: /DATA/AppData/$AppID/runner
       user: $PUID
       group: $PGID
@@ -569,56 +568,46 @@ x-compose-app:
       from: runner-config/act_runner-run
       ensure: always
       mode: "0755"
-  init:
-    # Both steps are the gitea binary acting on its own installation, and both
-    # have to wait for the server: post_up fires as soon as `compose up`
-    # returns, which is when the container has *started*, not when Gitea has
-    # migrated its schema. Run them any sooner and `user create` dies on
-    # "no such table: user".
+  steps:
+    # Both steps are the gitea binary acting on its own installation, run inside the
+    # live `gitea` service, and both have to wait for the server: a `started` step runs
+    # as soon as `compose up` returns, which is when the container has *started*, not
+    # when Gitea has migrated its schema. Run them any sooner and `user create` dies on
+    # "no such table: user". The wait is bounded: a step that blocks forever would hold
+    # the install open forever.
     #
-    # The wait is bounded by `timeout` rather than left open: a step that
-    # blocks forever would hold the install open forever.
+    # Re-run rather than remembered: the command is idempotent, and an account that
+    # was deleted by accident comes back on the next start.
     - name: create-admin
-      image: gitea/gitea:1.27.3-rootless
-      user: $PUID:$PGID
-      phase: post_up
-      volumes:
-        - /DATA/AppData/$AppID/data:/var/lib/gitea
-        - /DATA/AppData/$AppID/config:/etc/gitea
-      command:
-        - sh
-        - -c
-        - |
-          timeout 240 sh -c 'until gitea admin user list >/dev/null 2>&1; do sleep 3; done'
-          gitea admin user create --admin --username gitea_admin \
-            --password "$GITEA_ADMIN_PASSWORD" --email "$APP_EMAIL" \
-            --must-change-password=false \
-            || echo "admin account already present, leaving it alone"
-      # Re-run rather than remembered: the command is idempotent, and an account
-      # that was deleted by accident comes back on the next start.
-      when: always
+      at: started
+      run: always
+      script: |
+        for i in $(seq 80); do
+          compose exec gitea gitea admin user list >/dev/null 2>&1 && break
+          sleep 3
+        done
+        compose exec gitea gitea admin user create --admin --username gitea_admin \
+          --password "$GITEA_ADMIN_PASSWORD" --email "$APP_EMAIL" \
+          --must-change-password=false \
+          || echo "admin account already present, leaving it alone"
+    # Only while the runner has no registration of its own. Once it has one the token
+    # is dead weight, and re-minting it on every start would leave a live credential
+    # lying in the app folder for no reason. The file is created 0600 and owned by
+    # $PUID:$PGID before the token is written into it, so the runner can read it and
+    # nobody else ever could.
     - name: runner-token
-      image: gitea/gitea:1.27.3-rootless
-      user: $PUID:$PGID
-      phase: post_up
-      # Unlike the account, a runner token is not a database write — it is a
-      # call to the running server's internal API, so this one needs to be able
-      # to reach it.
-      network: $APP_NET
-      volumes:
-        - /DATA/AppData/$AppID/data:/var/lib/gitea
-        - /DATA/AppData/$AppID/config:/etc/gitea
-        - /DATA/AppData/$AppID/runner:/runner
-      command:
-        - sh
-        - -c
-        - |
-          timeout 240 sh -c 'until gitea actions generate-runner-token > /runner/token.new 2>/dev/null; do sleep 3; done'
-          mv /runner/token.new /runner/token
-          chmod 600 /runner/token
-      # Only while the runner has no registration of its own. Once it has one
-      # the token is dead weight, and re-minting it on every start would leave
-      # a live credential lying in the app folder for no reason.
-      when: absent:/DATA/AppData/$AppID/runner/.runner
+      at: started
+      run: always
+      script: |
+        [ -e "$APP_DIR/runner/.runner" ] && exit 0
+        token=
+        for i in $(seq 80); do
+          token=$(compose exec gitea gitea actions generate-runner-token 2>/dev/null) && break
+          sleep 3
+        done
+        [ -n "$token" ] || { echo "gitea did not hand out a runner token" >&2; exit 1; }
+        install -m 600 -o "$PUID" -g "$PGID" /dev/null "$APP_DIR/runner/token.new"
+        printf '%s\n' "$token" > "$APP_DIR/runner/token.new"
+        mv "$APP_DIR/runner/token.new" "$APP_DIR/runner/token"
   webui-host: gitea-${domain}
   webui-path: /

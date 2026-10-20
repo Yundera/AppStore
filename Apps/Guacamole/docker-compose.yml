@@ -192,7 +192,6 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  main: guacamole
   tips:
     en_us: |
       Default Account
@@ -228,13 +227,12 @@ x-compose-app:
     - id: 2
       name:
         en_us: postgres-13-to-17
-      image: pgautoupgrade/pgautoupgrade:17.11-alpine
-      environment:
-        PGAUTO_ONESHOT: "yes"
-        POSTGRES_USER: guacamole_user
-        POSTGRES_DB: guacamole_db
-      volumes:
-        - /DATA/AppData/${AppID}/postgresql:/var/lib/postgresql/data
+      images: [pgautoupgrade/pgautoupgrade:17.11-alpine]
+      script: |
+        docker run --rm -e PGAUTO_ONESHOT=yes \
+          -e POSTGRES_USER=guacamole_user -e POSTGRES_DB=guacamole_db \
+          -v "$APP_DIR/postgresql:/var/lib/postgresql/data" \
+          pgautoupgrade/pgautoupgrade:17.11-alpine
   # Seeded: an installed app keeps the shared password its database and
   # guacadmin account were initialised with; a fresh install gets its own.
   secrets:
@@ -254,9 +252,9 @@ x-compose-app:
       # script does — SHA-256(password || UPPERCASE_HEX(salt)) with a fresh salt.
       # psql's :'pw' quotes the value, and an UPDATE that matched no row fails.
       change:
-        apply: hook
-        hook: |
-          out=$(docker compose exec -T -e GUACAMOLE_ADMIN_PASSWORD postgres sh -c \
+        apply: script
+        script: |
+          out=$(compose exec -e GUACAMOLE_ADMIN_PASSWORD postgres sh -c \
             'psql -v ON_ERROR_STOP=1 -U guacamole_user -d guacamole_db --set=pw="$GUACAMOLE_ADMIN_PASSWORD"' <<'SQL'
           WITH s AS (
             SELECT decode(replace(gen_random_uuid()::text, '-', '') ||
