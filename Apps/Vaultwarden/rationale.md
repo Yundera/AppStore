@@ -81,7 +81,7 @@ and from `.env.template`:
 > `## Enable this to bypass the admin panel security. This option is only`
 > `## meant to be used with the use of a separate auth layer in front`
 
-AppShield is that layer, and the Caddy split below is what confines it to `/admin`.
+AppShield is that layer, and the router's path split below is what confines it to `/admin`.
 
 ### Alternatives considered and rejected
 
@@ -93,7 +93,7 @@ AppShield is that layer, and the Caddy split below is what confines it to `/admi
 
 ---
 
-## 3. Path-split Caddy labels
+## 3. Path split in the app's own router
 
 ### Why it is necessary
 
@@ -104,13 +104,20 @@ therefore costs a second login on the vault itself: the PCS SSO first, then the 
 master password. That is a real cost paid by every user on every visit, to protect a page
 the owner opens twice a year.
 
-So the split is done one layer up, in Caddy, which does have path matchers:
+So the split is done in front of the gate, in the app's own router — `vaultwarden-router`,
+an nginx service whose config ships inline in this listing (`configs: vaultwarden-router`).
+It is the only service with Caddy labels; the platform routes `vaultwarden-<domain>` to its
+port 80 and knows nothing of the paths behind it:
 
 ```
-@sso path /admin /admin/* /nhl-auth/*
-handle @sso   { reverse_proxy vaultwarden:80 }          # the SSO sidecar
-handle        { reverse_proxy vaultwarden-backend:80 }  # everything else, direct
+location = /admin   { proxy_pass http://vaultwarden:80; }          # the SSO sidecar
+location /admin/    { proxy_pass http://vaultwarden:80; }
+location /nhl-auth/ { proxy_pass http://vaultwarden:80; }
+location /          { proxy_pass http://vaultwarden-backend:80; }  # everything else, direct
 ```
+
+(Until 2026-10-21 this split was a Caddy `handle` tree in the labels, which tied the listing
+to the platform's proxy. The behaviour is the same.)
 
 `/nhl-auth/*` is AppShield 3.x's own reserved endpoint prefix (login, OIDC callback,
 logout) and must reach the sidecar for the login round trip to complete. Everything else —
@@ -119,17 +126,32 @@ the web vault and the entire Bitwarden client protocol (`/api`, `/identity`,
 is proxied straight to Vaultwarden exactly as before this change, so no client, app or
 extension sees any difference.
 
-This is the same shape the Vaultwarden community uses with Authelia and Caddy
-(`forward_auth` scoped to an `/admin` matcher), and the same label mechanism already
-shipped in `Apps/qBittorrent`.
+This is the same shape the Vaultwarden community uses with Authelia (`forward_auth`
+scoped to an `/admin` matcher).
+
+The router also carries what the backend needs and nginx does not do by default: no
+request-body cap and no buffering (attachments and Sends), long timeouts, and the websocket
+upgrade for `/notifications/hub`. It sets `X-Real-IP` — the header Vaultwarden reads the
+client address from for its login rate limiting and logs — to the last `X-Forwarded-For`
+entry, the one the proxy in front appended, which a client cannot forge. Before the router
+Vaultwarden saw every client as the platform proxy's container address, so all clients
+shared one rate-limit bucket; now it sees the real client on a direct route (sslip.io) and
+the Cloudflare edge on the gateway route.
+
+Checked on a test PCS on 2026-10-21 against the previous, label-routed listing, on all
+three published hosts: web vault, `/alive`, `/api/config`, prelogin, a rejected login, a
+3 MiB request body, both notification websockets, `/admin` and `/admin/users` redirected to
+the SSO login, `/nhl-auth/oidc/login` handing off to the PCS login, and `/adminx` still
+reaching Vaultwarden — identical results; the SSO login to `/admin` and the web vault were
+then checked in a browser.
 
 ### Security mitigations in place
 
 - **The vault's own auth is untouched.** Master password, 2FA and Vaultwarden's brute-force
   protection still guard every account; the sidecar only adds a second, independent gate in
   front of the admin page.
-- The backend carries no Caddy labels of its own — the routing decision exists in exactly
-  one place, on the sidecar service.
+- Neither the backend nor the sidecar carries Caddy labels — the routing decision exists in
+  exactly one place, the router.
 - Resource limits on both services; AppShield runs with Docker's default capability set.
 - **`DOMAIN` is pinned** to `https://vaultwarden-$APP_DOMAIN`, so Vaultwarden issues its
   own links and WebAuthn origins against the gateway hostname rather than an

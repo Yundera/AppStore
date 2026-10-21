@@ -128,18 +128,30 @@ The labels say only *which host goes to which port*. When one address is served 
 services (dispatch by path), or a request must be checked before it is proxied (an auth hook),
 or a path must be rewritten, the app ships its own router: an nginx service that carries the
 three standard labels and does the rest itself. The platform then routes the app like any
-other, and the listing stays independent of the platform's proxy. `Apps/Seafile` (path
-dispatch over three services) and `Apps/ClaudeCode` (`auth_request` gate) are the reference.
+other, and the listing stays independent of the platform's proxy. The references:
+`Apps/Seafile` (path dispatch over three services), `Apps/ClaudeCode` (`auth_request` gate),
+`Apps/Vaultwarden` (only `/admin` through the AppShield gate) and `Apps/qBittorrent` (a header
+fix, behind the gate).
+
+With an AppShield gate, the router goes where its job is:
+
+- **in front of the gate** when the gate must see only some paths (Vaultwarden): the router
+  carries the labels and sends those paths to the gate — see `appshield-wiring`;
+- **behind the gate** when every request is gated anyway (qBittorrent): the gate keeps the
+  labels, its `BACKEND_HOST` is the router, and the router is on the app's own network only.
+  The gate forwards the client's headers verbatim, so the router sees what the browser sent.
 
 - **Pass:** all of the following hold:
   - no label goes beyond the three groups of `caddy-wiring` — no `handle`, `handle_path`,
     `forward_auth`, `rewrite`, `redir`, matcher or `header_up` sub-key;
-  - the router is a pinned nginx image named `<app>-router`, carries the labels, and is the
-    service `x-casaos.main` names;
+  - the router is a pinned nginx image named `<app>-router`; it carries the labels and is the
+    service `x-casaos.main` names, unless it sits behind an AppShield gate, which then keeps
+    both;
   - its config ships inline: top-level `configs: <app>-router: content: |`, with every nginx
     `$` written `$$`;
-  - only the router (and anything another app must reach) is on the shared network; the
-    services behind it are on the app's own network;
+  - only the router is on the shared network, plus whatever needs it for another reason (a
+    service other apps call, a gate that reaches the auth-registrar, a backend that sends mail
+    through `smtp`); the services behind it are on the app's own network;
   - the config handles what nginx does differently from Caddy, as far as the app needs it:
     `client_max_body_size 0` and `proxy_request_buffering off` / `proxy_buffering off` for
     uploads and downloads, raised `proxy_read_timeout`, websocket `Upgrade`/`Connection`,
@@ -147,7 +159,11 @@ dispatch over three services) and `Apps/ClaudeCode` (`auth_request` gate) are th
     $http_host`, upstreams as variables with `resolver 127.0.0.11` so nginx starts before
     they exist, and `absolute_redirect off`;
   - a `location` that sets any `proxy_set_header` restates `Host` and `X-Forwarded-*` — nginx
-    drops every inherited header in that case.
+    drops every inherited header in that case;
+  - when the app reads the client address (rate limiting, logs), the router in front sets it
+    from the **last** `X-Forwarded-For` entry — the one the platform proxy appended — never the
+    first, which the client controls. A router behind a gate passes on the gate's `X-Real-IP` /
+    `X-Forwarded-For` unchanged.
 - **Fail:** a proxy-specific label tree, or a router that breaks uploads, websockets or the
   forwarded scheme.
 
@@ -304,8 +320,10 @@ dispatch over three services) and `Apps/ClaudeCode` (`auth_request` gate) are th
 **n-a:** the app does not use AppShield.
 
 - **Pass:** all of the following hold:
-  - Caddy labels are on the sidecar only;
-  - `x-casaos.main` names the sidecar;
+  - Caddy labels are on the sidecar only, and `x-casaos.main` names it — except when the gate
+    covers only some paths: then the labels and `x-casaos.main` are on the app's router
+    (`in-app-router`), which sends exactly those paths plus `/nhl-auth/` to the sidecar
+    (`Apps/Vaultwarden`);
   - the backend has no labels and no published HTTP port;
   - the sidecar's `container_name` equals the compose `name`, and `hostname:` equals `container_name`;
   - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL` and

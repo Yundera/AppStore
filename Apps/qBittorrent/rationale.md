@@ -6,29 +6,27 @@ The app is the standard AppShield split — an `appshield:3.0.2` gate in OIDC mo
 holding the Caddy labels, and `qbittorrent-backend` (the WebUI + engine) with no
 labels of its own. Two things about it are not standard:
 
-**1. The three Caddy site blocks do not proxy with a single `reverse_proxy`.**
-Each one defines a named matcher and two `handle` branches:
+**1. The gate does not proxy straight to the WebUI.** Its `BACKEND_HOST` is the
+app's own router, `qbittorrent-router` — an nginx service on the app-private
+`qbittorrent-net`, with its config inline in this listing
+(`configs: qbittorrent-router`) — which removes two request headers on exactly one
+kind of request before passing everything to `qbittorrent-backend:80`:
 
 ```
-@tilenav {
-  method GET
-  path /
-  header Sec-Fetch-Mode navigate
-}
-handle @tilenav {
-  reverse_proxy qbittorrent:80 {
-    header_up -Referer
-    header_up -Origin
-  }
-}
-handle {
-  reverse_proxy qbittorrent:80
-}
+map "$request_method $uri $http_sec_fetch_mode" $tilenav { "GET / navigate" 1; default 0; }
+map $tilenav $fwd_referer { 1 ""; default $http_referer; }   # "" = header dropped
+map $tilenav $fwd_origin  { 1 ""; default $http_origin; }
 ```
 
 So the `Referer` and `Origin` request headers are removed — **only** on a
-top-level browser navigation to `/`. Every other request reaches the gate, and
-through it qBittorrent, with its headers untouched.
+top-level browser navigation to `/`. Every other request reaches qBittorrent with
+its headers untouched. The gate (a Go reverse proxy) forwards these headers
+verbatim, so the router sees exactly what the browser sent. The Caddy labels are
+the plain three-route shape, on the gate.
+
+(Until 2026-10-21 this was a `@tilenav` matcher and two `handle` branches in the
+Caddy labels, in front of the gate, which tied the listing to the platform's
+proxy. The rule is the same.)
 
 **2. The WebUI's own login is bypassed** for the Docker private ranges, by the
 `bypass-webui-login` step writing
@@ -96,15 +94,15 @@ The attack the `enable-csrf-protection` step exists to stop is a cross-site
 `POST /api/v2/app/setPreferences` setting `autorun_program`, i.e. arbitrary
 command execution. Neither exception affects it:
 
-- **The matcher requires `method GET`.** No mutating request can match it. Every
-  qBittorrent API call that changes state is a `POST` and falls to the second
-  `handle`, which forwards `Origin`/`Referer` verbatim; qBittorrent's own check
+- **The rule requires `method GET`.** No mutating request can match it. Every
+  qBittorrent API call that changes state is a `POST` and is passed on with
+  `Origin`/`Referer` verbatim; qBittorrent's own check
   sees them and rejects the cross-site ones. Verified through the deployed chain:
   a cross-site `POST /api/v2/app/setPreferences` with `Origin: https://evil.example`
   is answered `401 Unauthorized` by the backend, with the whitelist active.
-- **The matcher requires `path /`** — an exact match, not a prefix. Nothing under
+- **The rule requires `path /`** — an exact match, not a prefix. Nothing under
   `/api/v2/` can reach the stripping branch even as a `GET`.
-- **The matcher requires `Sec-Fetch-Mode: navigate`.** The WebUI drives the API
+- **The rule requires `Sec-Fetch-Mode: navigate`.** The WebUI drives the API
   over `fetch`/XHR, which browsers label `cors` or `same-origin`; only a
   top-level document navigation is labelled `navigate`, and a browser sets this
   header itself — page JavaScript cannot forge it (it is a forbidden header
@@ -129,6 +127,23 @@ Caddy → AppShield → backend) on wisera by substituting an echoing backend:
 | `GET /`, `Sec-Fetch-Mode: navigate` | **absent** (both stripped) |
 | `GET /api/v2/app/version`, `Sec-Fetch-Mode: cors` | both present, verbatim |
 | `POST /`, `Sec-Fetch-Mode: navigate` | both present, verbatim |
+
+The router version was checked on a test PCS on 2026-10-21, against qBittorrent itself
+(whitelist active, CSRF protection on):
+
+| request reaching qBittorrent | without the router | through the router |
+|---|---|---|
+| `GET /` navigate, foreign `Referer` (the tile) | 401 | **200** |
+| `GET /` navigate, foreign `Referer` + `Origin` (back from SSO) | 401 | **200** |
+| `GET /api/v2/app/version`, cors, foreign `Origin` | 401 | 401 |
+| `POST /api/v2/app/setPreferences`, cors, foreign `Origin` | 401 | 401 |
+| `GET /`, cors, foreign `Referer` | 401 | 401 |
+| `POST /`, navigate, foreign `Origin` | 401 | 401 |
+| `GET /api/v2/app/version`, same origin | 200 | 200 |
+
+The published hosts answered exactly as before (every unauthenticated request
+redirected to the SSO login), and opening the tile — including a reload — was
+checked in a browser.
 
 ## Alternatives considered and rejected
 
