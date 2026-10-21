@@ -54,8 +54,9 @@ by choosing this app rather than that one.
   VM, and both name the sandboxed `ClaudeCode` app as the alternative.
 - **Authentication is on by default and never hardcoded.** Every route is behind
   the auth layer on port 9090: `/login` and `/logout` are served by it directly,
-  and everything else goes through Caddy `forward_auth` to `/auth`, redirecting
-  to `/login` on 401. The password is this app's own secret,
+  and everything else goes through the app's own router (`clauderoot-router`,
+  nginx `auth_request` to `/auth`), redirecting to `/login` on 401 — the same
+  router as the sandboxed `ClaudeCode`, whose rationale describes it. The password is this app's own secret,
   `CLAUDECODEROOT_AUTH_PASSWORD`, generated at install time (seeded from the
   former box-wide `$APP_DEFAULT_PASSWORD` on installs that predate it), shown in
   Maison's Credentials dialog and changeable from its Security tab.
@@ -67,9 +68,14 @@ by choosing this app rather than that one.
 - **No `privileged: true` and no `cap_add`.** The escalation is exactly the four
   mounts listed above and nothing more; the container gains no kernel
   capabilities beyond the Docker default set.
-- **No published host ports.** `expose:` only, on the external `pcs` network, so
-  8080 and 9090 are reachable solely through the gateway-terminated Caddy
-  routes.
+- **The gate cannot be walked around.** Only `clauderoot-router` is on the shared
+  `pcs` network; `clauderoot` is on the app-private `clauderoot-net`. ttyd (8080)
+  has no login of its own, and on this app it is a root-capable shell: no other
+  container on the box can reach it or the auth server (9090) directly. (Before
+  the router, `clauderoot` sat on `pcs` and any co-tenant container could open
+  `http://clauderoot:8080/` past the gate.)
+- **No published host ports.** `expose:` only, so the router's port 80 is
+  reachable solely through the gateway-terminated Caddy routes.
 - **Pinned image**, `ghcr.io/worph/claude-code-container:1.0.26`, and a pinned
   `alpine:3.20` in the `host-claude-user` step — no `:latest` anywhere.
 - **Resource limits**: `cpu_shares: 70`, `memory: 2048M`.

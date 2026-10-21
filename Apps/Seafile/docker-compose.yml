@@ -125,48 +125,6 @@ services:
       - SEAFILE_AI_SERVER_URL=http://seafile-ai:8888
       # Repeated 4x for the same reason as JWT_PRIVATE_KEY above.
       - SEAFILE_AI_SECRET_KEY=${SEAFILE_AI_SECRET_KEY}${SEAFILE_AI_SECRET_KEY}${SEAFILE_AI_SECRET_KEY}${SEAFILE_AI_SECRET_KEY}
-    labels:
-      # --- caddy_0: gateway via APP_DOMAIN ---
-      caddy_0: seafile-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      # Notification server
-      caddy_0.0_handle_path: "/notification/*"
-      caddy_0.0_handle_path.reverse_proxy: "seafile-notification-server:8083"
-      # SeaDoc WebSocket
-      caddy_0.1_handle_path: "/socket.io/*"
-      caddy_0.1_handle_path.0_rewrite: "* /socket.io{uri}"
-      caddy_0.1_handle_path.1_reverse_proxy: "seafile-seadoc:80"
-      # SeaDoc server
-      caddy_0.2_handle_path: "/sdoc-server/*"
-      caddy_0.2_handle_path.0_rewrite: "* {uri}"
-      caddy_0.2_handle_path.1_reverse_proxy: "seafile-seadoc:80"
-      # Default: main seafile app
-      caddy_0.4_reverse_proxy: "{{upstreams 80}}"
-
-      # --- caddy_1: nip.io fallback ---
-      caddy_1: seafile-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.0_handle_path: "/notification/*"
-      caddy_1.0_handle_path.reverse_proxy: "seafile-notification-server:8083"
-      caddy_1.1_handle_path: "/socket.io/*"
-      caddy_1.1_handle_path.0_rewrite: "* /socket.io{uri}"
-      caddy_1.1_handle_path.1_reverse_proxy: "seafile-seadoc:80"
-      caddy_1.2_handle_path: "/sdoc-server/*"
-      caddy_1.2_handle_path.0_rewrite: "* {uri}"
-      caddy_1.2_handle_path.1_reverse_proxy: "seafile-seadoc:80"
-      caddy_1.4_reverse_proxy: "{{upstreams 80}}"
-
-      # --- caddy_2: sslip.io fallback (no gateway_tls) ---
-      caddy_2: seafile-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.0_handle_path: "/notification/*"
-      caddy_2.0_handle_path.reverse_proxy: "seafile-notification-server:8083"
-      caddy_2.1_handle_path: "/socket.io/*"
-      caddy_2.1_handle_path.0_rewrite: "* /socket.io{uri}"
-      caddy_2.1_handle_path.1_reverse_proxy: "seafile-seadoc:80"
-      caddy_2.2_handle_path: "/sdoc-server/*"
-      caddy_2.2_handle_path.0_rewrite: "* {uri}"
-      caddy_2.2_handle_path.1_reverse_proxy: "seafile-seadoc:80"
-      caddy_2.4_reverse_proxy: "{{upstreams 80}}"
     depends_on:
       db:
         condition: service_healthy
@@ -216,10 +174,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      # Also on the shared network: the caddy_N label groups proxy
-      # /notification/* straight to this hostname, and Caddy runs on pcs.
       - seafile-net
-      - pcs
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8083'"]
       interval: 20s
@@ -263,10 +218,43 @@ services:
       seafile:
         condition: service_healthy
     networks:
-      # Also on the shared network: the caddy_N label groups proxy /sdoc-server/*
-      # and /socket.io/* straight to this hostname, and Caddy runs on pcs.
+      - seafile-net
+
+  # The app's own router: one entry port, and the path dispatch that used to be a
+  # Caddy handle_path tree lives here instead. The platform only ever routes a
+  # host to this container's port 80.
+  seafile-router:
+    image: nginx:1.28.0-alpine
+    container_name: seafile-router
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    expose:
+      - 80
+    configs:
+      - source: seafile-router
+        target: /etc/nginx/conf.d/default.conf
+    labels:
+      caddy_0: seafile-${APP_DOMAIN}
+      caddy_0.import: gateway_tls
+      caddy_0.reverse_proxy: "{{upstreams 80}}"
+      caddy_1: seafile-${APP_PUBLIC_IP_DASH}.nip.io
+      caddy_1.import: gateway_tls
+      caddy_1.reverse_proxy: "{{upstreams 80}}"
+      caddy_2: seafile-${APP_PUBLIC_IP_DASH}.sslip.io
+      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    networks:
       - seafile-net
       - pcs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 networks:
   seafile-net:
@@ -275,10 +263,66 @@ networks:
     name: ${APP_NET:-pcs}
     external: true
 
+configs:
+  seafile-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      # Upstreams are variables so nginx starts before they exist and re-resolves
+      # them through Docker's DNS when a container is recreated with a new IP.
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      map $$http_upgrade $$connection_upgrade { default upgrade; "" close; }
+      # The proxy in front terminated TLS: keep its scheme, not ours (http).
+      map $$http_x_forwarded_proto $$fwd_proto { default $$http_x_forwarded_proto; "" $$scheme; }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # Seafile uploads and downloads whole files through here: no size cap, no
+        # buffering to disk, and long transfers must not time out.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$remote_addr;
+        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$fwd_proto;
+        proxy_set_header X-Forwarded-Host $$http_host;
+        proxy_set_header Upgrade $$http_upgrade;
+        proxy_set_header Connection $$connection_upgrade;
+
+        set $$seafile seafile:80;
+        set $$notification seafile-notification-server:8083;
+        set $$seadoc seafile-seadoc:80;
+
+        location = /_router/health { access_log off; return 204; }
+
+        location /notification/ {
+          rewrite ^/notification/(.*)$$ /$$1 break;
+          proxy_pass http://$$notification;
+        }
+        # SeaDoc's websocket keeps its /socket.io prefix.
+        location /socket.io/ {
+          proxy_pass http://$$seadoc;
+        }
+        location /sdoc-server/ {
+          rewrite ^/sdoc-server/(.*)$$ /$$1 break;
+          proxy_pass http://$$seadoc;
+        }
+        location / {
+          proxy_pass http://$$seafile;
+        }
+      }
+
 x-casaos:
   store_app_id: seafile
   webui_port: 80
-  main: seafile
+  main: seafile-router
 
   icon: icon.png
   thumbnail: thumbnail.png

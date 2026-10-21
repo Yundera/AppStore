@@ -119,6 +119,38 @@ line, and a service app is reviewed on the rest.
     `${APP_DOMAIN}`, and `webui-port`, if set, is a URL port rather than the container port.
 - **Fail:** any one of these is broken, or a label claims `auth-${APP_DOMAIN}`.
 
+### `in-app-router` — routing beyond one port lives in the app
+
+**Check:** static · **Severity:** Major
+**n-a:** every route is host → one service's port, with no path rules.
+
+The labels say only *which host goes to which port*. When one address is served by several
+services (dispatch by path), or a request must be checked before it is proxied (an auth hook),
+or a path must be rewritten, the app ships its own router: an nginx service that carries the
+three standard labels and does the rest itself. The platform then routes the app like any
+other, and the listing stays independent of the platform's proxy. `Apps/Seafile` (path
+dispatch over three services) and `Apps/ClaudeCode` (`auth_request` gate) are the reference.
+
+- **Pass:** all of the following hold:
+  - no label goes beyond the three groups of `caddy-wiring` — no `handle`, `handle_path`,
+    `forward_auth`, `rewrite`, `redir`, matcher or `header_up` sub-key;
+  - the router is a pinned nginx image named `<app>-router`, carries the labels, and is the
+    service `x-casaos.main` names;
+  - its config ships inline: top-level `configs: <app>-router: content: |`, with every nginx
+    `$` written `$$`;
+  - only the router (and anything another app must reach) is on the shared network; the
+    services behind it are on the app's own network;
+  - the config handles what nginx does differently from Caddy, as far as the app needs it:
+    `client_max_body_size 0` and `proxy_request_buffering off` / `proxy_buffering off` for
+    uploads and downloads, raised `proxy_read_timeout`, websocket `Upgrade`/`Connection`,
+    `X-Forwarded-Proto` passed through from the proxy in front (not `$scheme`), `Host
+    $http_host`, upstreams as variables with `resolver 127.0.0.11` so nginx starts before
+    they exist, and `absolute_redirect off`;
+  - a `location` that sets any `proxy_set_header` restates `Host` and `X-Forwarded-*` — nginx
+    drops every inherited header in that case.
+- **Fail:** a proxy-specific label tree, or a router that breaks uploads, websockets or the
+  forwarded scheme.
+
 ### `container-name` — services on the shared network have stable names
 
 **Check:** static · **Severity:** Major
