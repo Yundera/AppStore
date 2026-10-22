@@ -14,15 +14,6 @@ services:
     restart: unless-stopped
     expose:
       - 80
-    labels:
-      caddy_0: jellyfin-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: jellyfin-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: jellyfin-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "0:0"
     cpu_shares: 80
     logging: *logging
@@ -38,7 +29,7 @@ services:
     depends_on:
       - jellyfin
     networks:
-      # Only `pcs`: Caddy reaches it here, and so is its backend.
+      # Only `pcs`: the router reaches it here, and so is its backend.
       - pcs
 
   jellyfin:
@@ -201,6 +192,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "10.11.11"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: jellyfin-proxy, name: jellyfin, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: jellyfin
@@ -261,4 +257,3 @@ x-compose-app:
     # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
     exclude:
       - cache/
-  webui-host: jellyfin-${domain}

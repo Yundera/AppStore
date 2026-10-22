@@ -238,15 +238,6 @@ services:
     configs:
       - source: seafile-router
         target: /etc/nginx/conf.d/default.conf
-    labels:
-      caddy_0: seafile-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: seafile-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: seafile-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - seafile-net
       - pcs
@@ -377,6 +368,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "13.0.19"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: seafile-router, name: seafile, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: seafile
@@ -469,9 +465,9 @@ x-compose-app:
     - path: /DATA/AppData/seafile
       user: $PUID
       group: $PGID
-    - path: /DATA/AppData/seafile/mysql
-      user: $PUID
-      group: $PGID
+    # Not /DATA/AppData/seafile/mysql: db starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
     - path: /DATA/AppData/seafile/shared
       user: $PUID
       group: $PGID
@@ -490,7 +486,6 @@ x-compose-app:
     # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
     exclude:
       - shared/seafile/logs/
-  webui-host: seafile-${domain}
   # It waits up to 25 minutes for Seafile to write its OWN config, then patches it.
   # Waiting on another program's runtime behaviour and editing what it produced is
   # genuinely imperative — it is not a declaration wearing a script costume.
@@ -540,11 +535,11 @@ x-compose-app:
         EOF
           echo "SMTP configuration added"; echo CHANGED
         fi
-        # Ensure reverse-proxy HTTPS settings are present (mandatory for Caddy TLS termination)
+        # Ensure reverse-proxy HTTPS settings are present (mandatory behind a TLS-terminating router)
         if ! grep -q "SECURE_PROXY_SSL_HEADER" $S; then
           cat >> $S <<EOF
 
-        # Reverse proxy HTTPS settings (Caddy terminates TLS, forwards X-Forwarded-Proto)
+        # Reverse proxy HTTPS settings (the router terminates TLS, forwards X-Forwarded-Proto)
         USE_X_FORWARDED_HOST = True
         SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
         SERVICE_URL = '${APP_URL:-https://seafile-${APP_DOMAIN}}'

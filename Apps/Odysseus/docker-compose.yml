@@ -78,19 +78,11 @@ services:
       BACKEND_PORT: "7000"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
     expose:
       - 80
     labels:
       icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/icon.png
-      caddy_0: odysseus-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: odysseus-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: odysseus-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
       - odysseus-backend
     deploy:
@@ -100,7 +92,7 @@ services:
     cpu_shares: 80
     logging: *logging
     networks:
-      # Only `pcs`: Caddy reaches it here, and so is its backend.
+      # Only `pcs`: the router reaches it here, and so is its backend.
       - pcs
 
   odysseus-backend:
@@ -148,7 +140,7 @@ services:
       ODYSSEUS_ADMIN_USER: admin
       ODYSSEUS_ADMIN_PASSWORD: ${ODYSSEUS_ADMIN_PASSWORD}
       # comma-separated exact origins - all three published hostnames must be listed
-      ALLOWED_ORIGINS: ${APP_URL:-https://odysseus-${APP_DOMAIN}},https://odysseus-${APP_PUBLIC_IP_DASH}.nip.io,https://odysseus-${APP_PUBLIC_IP_DASH}.sslip.io
+      ALLOWED_ORIGINS: ${APP_URLS:-https://odysseus-${APP_DOMAIN},https://odysseus-${APP_PUBLIC_IP_DASH}.nip.io,https://odysseus-${APP_PUBLIC_IP_DASH}.sslip.io}
       # --- model backend ---
       # no model ships with the app; set a provider key or a reachable model
       # server URL in Settings on first use (see tips.before_install)
@@ -417,6 +409,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.2-dev.7c8070f"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: odysseus-proxy, name: odysseus, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: odysseus
@@ -673,4 +670,3 @@ x-compose-app:
     # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
     exclude:
       - logs/
-  webui-host: odysseus-${domain}

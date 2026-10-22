@@ -66,7 +66,7 @@ services:
     restart: unless-stopped
 
 x-casaos:
-  # Headless app: no Caddy labels and no port of its own. `main` still has to name a
+  # Headless app: no route and no port of its own. `main` still has to name a
   # service — Maison keys the tile's health off it — so it names the only one.
   main: tailscale
   #this is the link for the webui port

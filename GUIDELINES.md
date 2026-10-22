@@ -19,7 +19,7 @@ Maison's own docs are the reference for how each `x-compose-app` key behaves:
 - [The compose file](#the-compose-file)
 - [Data and permissions](#data-and-permissions)
 - [Resources](#resources)
-- [Routing: Caddy and the shared network](#routing-caddy-and-the-shared-network)
+- [Routing: `routes` and the shared network](#routing-routes-and-the-shared-network)
 - [Publishing host ports](#publishing-host-ports)
 - [Authentication](#authentication)
 - [Maison and `x-compose-app`](#maison-and-x-compose-app)
@@ -113,8 +113,8 @@ x-compose-app:
   tips:                           # Markdown, shown from the tile menu
     en_us: |
       Anything the user should know after installing.
-  webui-host: syncthing-${domain} # = the caddy_0 host
-  webui-path: /
+  routes:                         # how the app is reached; see Routing
+    - { service: syncthing, name: syncthing, upstream-port: 8384 }
 ```
 
 **Mirror the same values in an `x-casaos` block.** Maison reads `x-compose-app` and ignores
@@ -128,9 +128,9 @@ two blocks equal:
 | `title`, `tagline`, `description`, `developer`, `category`, `icon`, `thumbnail`, `architectures` | same names |
 | `screenshots` | `screenshot_link` |
 | `tips` | `tips.before_install` |
-| `webui-host` / `webui-scheme` / `webui-path` | `hostname` / `scheme` / `index` |
+| `routes` (the first one) | `hostname` (`<name>-${domain}`) / `index` (its `path`) |
 | — | `webui_port` (the exposed web UI port) |
-| — | `main` (the service with the labels; CasaOS only, Maison does not read it) |
+| — | `main` (the first route's service; CasaOS only, Maison does not read it) |
 | — | `tags` (no `x-compose-app` key yet) |
 
 Rules:
@@ -159,7 +159,7 @@ references it.
 | `APP_DOMAIN` | The domain root, e.g. `alice.nsl.sh`. Use it for what is really the domain (`admin@${APP_DOMAIN}`), not to spell the app's own address. |
 | `APP_URL` / `APP_HOST` | The app's own address: an origin (`https://myapp-alice.nsl.sh`, no trailing slash) and its host. Set by a Maison that knows the app's routes, so always write it with today's spelling as the fallback: `${APP_URL:-https://myapp-${APP_DOMAIN}}`. See `own-address` in CONTRIBUTING. |
 | `ROUTE_<NAME>_URL` / `ROUTE_<NAME>_HOST` | The same for each further host the app routes (`hubsassets` → `ROUTE_HUBSASSETS_HOST`). |
-| `APP_PUBLIC_IP_DASH` | The public IPv4 with dashes, used in the `nip.io` / `sslip.io` labels. |
+| `APP_PUBLIC_IP_DASH` | The public IPv4 with dashes, as the box's IP-based domains spell it. |
 | `APP_EMAIL` | The admin email, `admin@<domain>`. |
 | `AppID` | The app's compose `name`. |
 | `PUID` / `PGID` | The owner of user files, usually `1000:1000`. |
@@ -294,18 +294,15 @@ services:
     logging: *logging
 ```
 
-## Routing: Caddy and the shared network
+## Routing: `routes` and the shared network
 
-*Requirements:* `caddy-wiring` `container-name`
+*Requirements:* `routes-wiring` `container-name`
 
-Caddy watches container labels. Every web UI gets three routes, declared on the service that
-answers HTTP:
-
-| Label | Host | Certificate |
-|---|---|---|
-| `caddy_0` | `<app>-${APP_DOMAIN}` | `import: gateway_tls` (routed through the Yundera gateway) |
-| `caddy_1` | `<app>-${APP_PUBLIC_IP_DASH}.nip.io` | `import: gateway_tls` |
-| `caddy_2` | `<app>-${APP_PUBLIC_IP_DASH}.sslip.io` | Let's Encrypt (no `import`) |
+A listing says **what** is reachable, never **how**. Each host the app answers on is one entry of
+`x-compose-app.routes`; the box's routing setting decides the rest, and Maison writes it — on a
+Yundera PCS, Caddy labels on every domain the box has (its own, nip.io, sslip.io, the ip zone);
+at home, a published port; behind someone else's proxy, nothing but a route table. So a listing
+carries no proxy label, no domain and no TLS setting.
 
 ```yaml
 name: immich
@@ -315,15 +312,6 @@ services:
     container_name: immich
     expose:
       - 2283
-    labels:
-      caddy_0: immich-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 2283}}"
-      caddy_1: immich-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 2283}}"
-      caddy_2: immich-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 2283}}"
     networks:
       - pcs
       - immich-internal
@@ -341,28 +329,39 @@ networks:
     driver: bridge
 
 x-compose-app:
-  webui-host: immich-${domain}
+  routes:
+    - { service: immich, name: immich, upstream-port: 2283 }
 
 x-casaos:
   main: immich
   webui_port: 2283
 ```
 
+| Field | Meaning |
+|---|---|
+| `service` | The service that answers. Default: the only service. |
+| `name` | The host's leading label (`immich` → `immich-alice.nsl.sh` on a PCS). Default: the app id. |
+| `upstream-port` | The port **inside** the container. Must be in its `expose:`. |
+| `path` | Where the web UI opens (`/webui/`), for the first route. Default `/`. |
+| `upstream-scheme`, `insecure-upstream` | `https` and `true` for a backend that only speaks self-signed HTTPS. |
+
 The rules that must hold together:
 
-- The web UI port is in `expose:`, and the same port is in all three `{{upstreams N}}`.
-- `x-casaos.main` names **the service with the labels**. CasaOS takes the app's identity and
-  health from it; Maison does not read it, and `x-compose-app` has no such key.
-- `x-compose-app.webui-host` is the `caddy_0` host with `${domain}` in place of
-  `${APP_DOMAIN}`, so the tile opens the route.
-- `x-casaos.webui_port` equals the exposed port.
+- The **first route is the web UI**: the tile opens it, and its address is `APP_URL`. There is
+  no `webui-host` / `webui-path` beside `routes`.
+- `x-casaos.main` names the first route's service, and `x-casaos.webui_port` its port. CasaOS
+  takes the app's identity and health from it; Maison does not read it.
 - Every service attached to `pcs` sets `container_name`: lowercase letters, digits and `-`,
-  not starting with a digit. Caddy resolves the upstream by container name.
-- Never claim `auth-${APP_DOMAIN}`. That host belongs to the PCS's login service.
-- Any port works behind Caddy. The URL stays clean whatever the backend port is.
+  not starting with a digit. The proxy resolves the upstream by container name.
+- A route's name starts with the app id. Never take a name the platform uses itself: `auth`,
+  `local-auth`, `auth-console`, `mesh-console`, `maison`, `admin`.
+- Any port works. The URL stays clean whatever the backend port is.
 
-An app that serves more than one hostname (its own Dex, for example) gives each of those
-services its own `caddy_N` group.
+An app that serves more than one hostname (its own Dex, for example) gives each its own route
+(`Apps/Outline`); a route other than the first reads its address back as `ROUTE_<NAME>_URL`.
+Anything beyond host → one port — dispatch by path, an auth hook, a redirect, a header fix —
+is the app's own nginx router (`in-app-router` in CONTRIBUTING; `Apps/Seafile`,
+`Apps/Vaultwarden`).
 
 ### Shared-network hygiene
 
@@ -372,7 +371,7 @@ services its own `caddy_N` group.
 container names resolve across apps. Two apps that each attach a service called `db` can
 cross-resolve, and one app's web tier can end up talking to another app's database.
 
-- **Attach only what needs outside reachability**: services with Caddy labels, and anything
+- **Attach only what needs outside reachability**: route services, and anything
   another app talks to. Databases, caches and workers go on an app-internal
   `driver: bridge` network.
 - **Prefix what you attach**: use `outline-dex`, not `dex`, for both the service name and
@@ -382,8 +381,8 @@ cross-resolve, and one app's web tier can end up talking to another app's databa
 
 *Requirements:* `no-published-web-port`
 
-`expose:` covers every HTTP port. **Never publish a web UI port.** Caddy already reaches the
-container over `pcs`, so a published UI port is a second way in that skips the certificates
+`expose:` covers every HTTP port. **Never publish a web UI port.** The platform's proxy already
+reaches the container over `pcs`, so a published UI port is a second way in that skips the certificates
 and the login gate. On an AppShield app, never publish the backend's HTTP port.
 
 **`ports:` is legitimate for traffic an HTTP proxy cannot carry**, when peers or clients must
@@ -440,8 +439,8 @@ A public website with no login also needs a `rationale.md`.
 
 ### AppShield
 
-Put the `ghcr.io/yundera/appshield` container in front of the app. Point the Caddy labels at
-the sidecar and keep the backend off the public routes. The sidecar registers itself as an
+Put the `ghcr.io/yundera/appshield` container in front of the app. Make the sidecar the route's
+service and keep the backend off the routes. The sidecar registers itself as an
 OIDC client with the PCS's `auth-registrar` on first login, so there are no client IDs,
 secrets or issuer URLs to configure.
 
@@ -461,18 +460,9 @@ services:
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
     expose:
       - 80
-    labels:
-      caddy_0: myapp-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: myapp-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: myapp-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
       - myapp-backend
     cpu_shares: 80
@@ -481,7 +471,7 @@ services:
         limits:
           memory: 128M
     networks:
-      - pcs                      # Caddy reaches the sidecar
+      - pcs                      # the proxy reaches the sidecar
       - myapp-internal           # the sidecar reaches the backend
 
   myapp-backend:
@@ -489,7 +479,7 @@ services:
     container_name: myapp-backend
     restart: unless-stopped
     expose:
-      - 8080                     # no labels, no ports: reachable only through the sidecar
+      - 8080                     # no route, no ports: reachable only through the sidecar
     cpu_shares: 50
     deploy:
       resources:
@@ -506,7 +496,8 @@ networks:
     driver: bridge
 
 x-compose-app:
-  webui-host: myapp-${domain}
+  routes:
+    - { service: myapp-proxy, name: myapp, upstream-port: 80 }
 
 x-casaos:
   main: myapp-proxy              # the sidecar, never the backend
@@ -516,9 +507,9 @@ x-casaos:
 | Variable | Required | Purpose |
 |---|---|---|
 | `BACKEND_HOST` / `BACKEND_PORT` | yes | The protected container's name and port. |
-| `LISTEN_PORT` | yes | The port AppShield listens on. Matches `expose` and `{{upstreams}}`. |
+| `LISTEN_PORT` | yes | The port AppShield listens on. Matches `expose` and the route's `upstream-port`. |
 | `OIDC_REGISTRAR_URL` | yes | `http://auth-registrar:9092`. Its presence enables SSO. |
-| `REDIRECT_HOST_SUFFIXES` | yes | The three route suffixes, as above. |
+| `REDIRECT_HOST_SUFFIXES` | yes | Every domain the app is reached on, after `<name>-`: `${APP_HOST_SUFFIXES:-…}` as above, the primary domain first (the gate derives its OAuth issuer from it). |
 | `OAUTH_RESOURCE` | optional | Enables AppShield's OAuth 2.1 broker on exactly the path in the URL (e.g. `${APP_URL:-https://myapp-${APP_DOMAIN}}/mcp`). This is the machine/API path for MCP servers. |
 | `OAUTH_SCOPE` | optional | The scope the resource advertises (default `access`; MCP apps use `mcp`). |
 | `OAUTH_DATA_DIR` | optional | Set to `/data/oauth` and bind-mount `${DATA_ROOT:-/DATA}/AppData/<app>/oauth` there, so registered clients survive redeploys. |
@@ -857,12 +848,10 @@ in [CONTRIBUTING.md](CONTRIBUTING.md#4-first-run-setup-and-steps).
 
 Reference: [`x-compose-app.md` › Steps](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#steps).
 
-### The tile: `webui-*`, `links`, `view`, `parent`
+### The tile: `links`, `view`, `parent`
 
 ```yaml
 x-compose-app:
-  webui-host: myapp-${domain}   # the click URL host, = the caddy_0 host; omit for headless apps
-  webui-path: /admin            # default /
   links:                        # extra buttons on the detail view, absolute URLs
     - name: Documentation
       url: https://docs.example.org
@@ -870,8 +859,8 @@ x-compose-app:
   parent: jellyfin              # nest this app under another app's tile
 ```
 
-- `webui-scheme` defaults to `https`. `webui-port` is the **URL** port and is empty in the
-  normal case. Neither is the container port.
+- The tile opens the first route (`routes`, under Routing) at its `path`. An app with no web
+  UI declares no route.
 - An app with no web UI lands in `service` on its own. Leave `view` alone unless the app is a
   platform piece.
 - `parent` is for apps that only make sense beside another one, such as a companion indexer or

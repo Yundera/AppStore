@@ -27,23 +27,9 @@ services:
       start_period: 60s
     expose:
       - 8008
-    labels:
-      # matrix-* = CANONICAL Matrix identity domain. This is the server_name.
-      # It is engine-neutral on purpose: a future homeserver app (e.g. Synapse)
-      # must bind this same domain and the same server_name to preserve user
-      # identities (@user:matrix-<domain>). NEVER change or drop this binding.
-      # (The tuwunel-* WebUI domain is bound to the Element Web container below.)
-      caddy_0: matrix-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8008}}"
-      caddy_1: matrix-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8008}}"
-      caddy_2: matrix-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8008}}"
     environment:
       TZ: $TZ
-      # --- Identity (permanent — see caddy_1 note above) ---
+      # --- Identity (permanent — see the `matrix` route note in x-compose-app) ---
       TUWUNEL_SERVER_NAME: ${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}
       # Federation runs over 443 (the gateway); no port 8448 needed.
       # Tuwunel serves /.well-known/matrix/{client,server} itself with these values.
@@ -97,16 +83,6 @@ services:
       start_period: 15s
     expose:
       - 8080
-    labels:
-      # tuwunel-* = app/WebUI domain (store {name}-{domain} convention)
-      caddy_0: tuwunel-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8080}}"
-      caddy_1: tuwunel-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8080}}"
-      caddy_2: tuwunel-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8080}}"
     volumes:
       # Rendered from seed/element/config.json.tmpl on every up, so it follows the
       # PCS domain instead of freezing at install (x-compose-app.files)
@@ -194,6 +170,15 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.8.2"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: tuwunel-element, name: tuwunel, upstream-port: 8080 }
+    # matrix-* is the CANONICAL Matrix identity domain: the server_name, in every user
+    # id (@user:matrix-<domain>). Engine-neutral on purpose: a future homeserver app
+    # must keep this name to preserve identities. NEVER rename or drop this route.
+    - { service: tuwunel, name: matrix, upstream-port: 8008 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: Tuwunel
@@ -219,7 +204,7 @@ x-compose-app:
   # Element's config carries the deployment's domain, so it is re-rendered on
   # every up rather than written once at install. The hook this replaces ran
   # exactly once: change the PCS domain afterwards and Element kept pointing at
-  # the old homeserver, silently, while the app's .env and Caddy labels moved on.
+  # the old homeserver, silently, while the app's .env and routes moved on.
   files:
     - path: /DATA/AppData/tuwunel/element/config.json
       from: element/config.json.tmpl
@@ -236,8 +221,6 @@ x-compose-app:
     - path: /DATA/AppData/tuwunel/element
       user: $PUID
       group: $PGID
-  # Mirrors the caddy_0 label on the main service, so the tile renders an open action.
-  webui-host: tuwunel-${domain}
   secrets:
     # Seeded: an installed server keeps the token its owner already handed out (the
     # former shared password); a fresh install gets its own.

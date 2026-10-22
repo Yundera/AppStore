@@ -86,7 +86,7 @@ services:
       BACKEND_PORT: "9634"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
       # authorization server fronting Dex and gates exactly the path named by the
       # resource URL (/mcp) on Bearer tokens; everything else stays behind the
@@ -103,15 +103,6 @@ services:
       - telegrammcp-backend
     networks:
       - pcs
-    labels:
-      caddy_0: telegrammcp-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: telegrammcp-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: telegrammcp-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
 
 networks:
   pcs:
@@ -121,7 +112,7 @@ networks:
 x-casaos:
   architectures:
     - amd64
-  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # The AppShield sidecar, not the backend: it is the container the routes
   # point at and the one users actually reach, and it is the service Maison
   # attaches ${APP_NET} to. The tile's health follows main, so pointing it at the
   # backend tracked a container nobody reaches from outside.
@@ -256,6 +247,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.1.21"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: telegrammcp-proxy, name: telegrammcp, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -386,5 +382,3 @@ x-compose-app:
     - path: /DATA/AppData/telegrammcp/oauth
       user: $PUID
       group: $PGID
-  webui-host: telegrammcp-${domain}
-  webui-path: "/"

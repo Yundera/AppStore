@@ -39,7 +39,7 @@ services:
         bind:
           # Needed for FUSE support
           propagation: rslave
-    # No ports: on purpose. SMB is not HTTP, so Caddy cannot carry it and the share
+    # No ports: on purpose. SMB is not HTTP, so the router cannot carry it and the share
     # is reachable only through a port the owner publishes in the app's override
     # (Settings > Override > Ports), on the address they choose: a VPN address
     # (10.9.0.1, Tailscale 100.x), a LAN address, or 0.0.0.0. See the tips.

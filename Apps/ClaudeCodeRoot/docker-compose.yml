@@ -73,15 +73,6 @@ services:
     configs:
       - source: clauderoot-router
         target: /etc/nginx/conf.d/default.conf
-    labels:
-      caddy_0: clauderoot-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: clauderoot-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: clauderoot-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       clauderoot-net: null
       pcs: null
@@ -246,6 +237,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.26"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: clauderoot-router, name: clauderoot, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -330,7 +326,6 @@ x-compose-app:
     - path: /DATA/AppData/clauderoot/config
       user: $PUID
       group: $PGID
-  webui-host: clauderoot-${domain}
   secrets:
     # Seeded from the box-wide password it replaces, so an installed app keeps the
     # login it already had; a fresh install gets its own.

@@ -16,15 +16,6 @@ services:
     user: "0:0"
     expose:
       - 80                    # Default port for Mealie v3
-    labels:
-      caddy_0: mealie-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: mealie-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: mealie-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       PUID: $PUID              # Process user ID
       PGID: $PGID              # Process group ID
@@ -244,6 +235,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "3.14.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: mealie, name: mealie, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: mealie
@@ -582,4 +578,3 @@ x-compose-app:
         update_email "$token"
         exit $?
         SH
-  webui-host: mealie-${domain}

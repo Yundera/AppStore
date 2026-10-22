@@ -17,15 +17,6 @@ services:
       - pcs
     expose:
       - "8000"
-    labels:
-      caddy_0: paperlessngx-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8000}}"
-      caddy_1: paperlessngx-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8000}}"
-      caddy_2: paperlessngx-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8000}}"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/usr/src/paperless/data
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/media:/usr/src/paperless/media
@@ -266,6 +257,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "3.0.5"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: paperless, name: paperlessngx, upstream-port: 8000 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: paperless-ngx
@@ -437,10 +433,9 @@ x-compose-app:
       group: $PGID
     # postgres and valkey both re-chown their own data dir to their internal
     # uid on start, so $PUID:$PGID here is only the pre-creation owner.
-    - path: /DATA/AppData/$AppID/pgdata
-      user: $PUID
-      group: $PGID
-    - path: /DATA/AppData/$AppID/redisdata
-      user: $PUID
-      group: $PGID
-  webui-host: paperlessngx-${domain}
+    # Not /DATA/AppData/$AppID/pgdata: db starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
+    # Not /DATA/AppData/$AppID/redisdata: broker starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.

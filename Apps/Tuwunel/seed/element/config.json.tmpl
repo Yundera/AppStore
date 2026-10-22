@@ -1,8 +1,8 @@
 {
   "default_server_config": {
     "m.homeserver": {
-      "base_url": "https://matrix-${APP_DOMAIN}",
-      "server_name": "matrix-${APP_DOMAIN}"
+      "base_url": "${ROUTE_MATRIX_URL:-https://matrix-${APP_DOMAIN}}",
+      "server_name": "${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}"
     }
   },
   "brand": "Element",

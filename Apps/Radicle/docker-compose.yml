@@ -40,15 +40,6 @@ services:
       start_period: 15s
     expose:
       - 8080
-    labels:
-      caddy_0: radicle-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8080}}"
-      caddy_1: radicle-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8080}}"
-      caddy_2: radicle-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8080}}"
     networks:
       - pcs
 
@@ -85,20 +76,11 @@ services:
       start_period: 15s
     expose:
       - 8080
-    labels:
-      caddy_0: radicle-api-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8080}}"
-      caddy_1: radicle-api-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8080}}"
-      caddy_2: radicle-api-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8080}}"
     networks:
       - pcs
 
   # The node itself: speaks the Radicle peer-to-peer protocol (gossip, fetch,
-  # announce) on TCP 8776. No HTTP, so no Caddy route and no place on the shared
+  # announce) on TCP 8776. No HTTP, so no route and no place on the shared
   # network — it only needs egress, which the app-internal bridge provides.
   radicle-node:
     image: dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2
@@ -426,6 +408,12 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "20260712.1927"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: radicle, name: radicle, upstream-port: 8080 }
+    - { service: radicle-api, name: radicle-api, upstream-port: 8080 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: radicle
@@ -724,8 +712,3 @@ x-compose-app:
       from: autoseed/autoseed.sh
       ensure: always
       mode: "0755"
-  # The landing path is handled by the Caddy redirect above, not here: neither
-  # `webui-path` nor `x-casaos.index` is interpolated, so a ${...} written in
-  # either reaches the browser as a literal.
-  webui-host: radicle-${domain}
-  webui-path: /

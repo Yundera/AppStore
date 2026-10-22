@@ -444,7 +444,7 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/custom
       user: $PUID
       group: $PGID
-    - path: /DATA/AppData/$AppID/db
-      user: $PUID
-      group: $PGID
+    # Not /DATA/AppData/$AppID/db: db starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
   webui-host: dolibarr-${domain}

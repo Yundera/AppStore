@@ -15,15 +15,6 @@ services:
     restart: unless-stopped
     expose:
       - 80
-    labels:
-      caddy_0: nginx-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: nginx-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: nginx-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
     volumes:
@@ -82,7 +73,7 @@ x-casaos:
       • **Zero Configuration** — Drop your files in and start serving immediately
       • **Lightning Fast** — nginx delivers static content faster than any alternative
       • **Minimal Resources** — Runs efficiently with just 64MB RAM
-      • **Clean URLs** — Automatic HTTPS access via Caddy reverse proxy
+      • **Clean URLs** — Automatic HTTPS access via the server's reverse proxy
       • **Modern Web Support** — Full support for SPAs, PWAs, and modern JavaScript
       • **Production Ready** — Battle-tested nginx powers 30% of the internet
 
@@ -129,7 +120,7 @@ x-casaos:
       • **零配置** — 放入文件即可立即开始服务
       • **闪电般快速** — nginx 比任何替代方案都更快地传递静态内容
       • **最小资源** — 仅需 64MB RAM 即可高效运行
-      • **清洁 URL** — 通过 Caddy 反向代理自动 HTTPS 访问
+      • **清洁 URL** — 通过服务器的反向代理自动 HTTPS 访问
       • **现代 Web 支持** — 完全支持 SPA、PWA 和现代 JavaScript
       • **生产就绪** — 经过实战检验的 nginx 为 30% 的互联网提供动力
 
@@ -154,7 +145,7 @@ x-casaos:
         2. Upload your website files to the www directory
         3. Access your site at:
            - Via domain: `${APP_URL:-https://nginx-${APP_DOMAIN}}/`
-           - Direct IP: `https://nginx-$APP_PUBLIC_IP_DASH.sslip.io/`
+           - Every address: `${APP_URLS:-https://nginx-${APP_DOMAIN},https://nginx-${APP_PUBLIC_IP_DASH}.nip.io,https://nginx-${APP_PUBLIC_IP_DASH}.sslip.io}`
 
         **File Structure:**
         ```
@@ -170,6 +161,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.29.3"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: nginx, name: nginx, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -178,8 +174,8 @@ x-compose-app:
     en_us: Lightning-fast static website hosting powered by nginx
     zh_cn: 由 nginx 提供支持的闪电般快速静态网站托管
   description:
-    en_us: "**\U0001F310 What is nginx?**\n\n**nginx** is a lightweight, high-performance web server for hosting static websites, HTML pages, JavaScript applications, and documentation sites. The world's most popular web server, it delivers your content blazingly fast with minimal resource usage.\n\nPerfect for:\n• Personal websites and portfolios\n• Single-page applications (React, Vue, Angular)\n• Documentation sites\n• Landing pages and marketing sites\n• Static site generators (Hugo, Jekyll, Gatsby)\n• HTML/CSS/JavaScript projects\n\n**Key Features:**\n\n• **Zero Configuration** — Drop your files in and start serving immediately\n• **Lightning Fast** — nginx delivers static content faster than any alternative\n• **Minimal Resources** — Runs efficiently with just 64MB RAM\n• **Clean URLs** — Automatic HTTPS access via Caddy reverse proxy\n• **Modern Web Support** — Full support for SPAs, PWAs, and modern JavaScript\n• **Production Ready** — Battle-tested nginx powers 30% of the internet\n\nSimply upload your HTML, CSS, JavaScript, and assets to `/DATA/AppData/nginx/www/` and your site is instantly live. No databases, no complex configuration, just pure static file hosting done right.\n\n**\U0001F680 Why Choose nginx?**\n\n**nginx** gives you complete control over your web hosting without the complexity of managed services or the overhead of full-featured CMSs. It's the fastest way to get static content online.\n\nWhy choose nginx?\n• **Your content, your server** — no external hosting dependencies\n• **Industry standard** — nginx is trusted by millions of production websites\n• **Zero overhead** — no backend processing, no database queries\n• **Instant updates** — edit files and changes appear immediately\n• **Developer friendly** — works with any static site workflow\n\nWith nginx on **your server**, you can:\n• Host unlimited static sites\n• Deploy modern JavaScript applications\n• Serve API documentation\n• Create internal company websites\n• Test frontend projects before production\n\n**\U0001F6E0️ Perfect For:**\n• Frontend developers testing static builds\n• Teams needing internal documentation sites\n• Anyone wanting simple, fast web hosting\n• Projects that don't need server-side processing\n"
-    zh_cn: "**\U0001F310 什么是 nginx？**\n\n**nginx** 是一个轻量级、高性能的 Web 服务器，用于托管静态网站、HTML 页面、JavaScript 应用程序和文档站点。作为世界上最流行的 Web 服务器，它以最小的资源使用快速传递您的内容。\n\n适用于：\n• 个人网站和作品集\n• 单页应用程序（React、Vue、Angular）\n• 文档站点\n• 登陆页面和营销站点\n• 静态站点生成器（Hugo、Jekyll、Gatsby）\n• HTML/CSS/JavaScript 项目\n\n**主要功能：**\n\n• **零配置** — 放入文件即可立即开始服务\n• **闪电般快速** — nginx 比任何替代方案都更快地传递静态内容\n• **最小资源** — 仅需 64MB RAM 即可高效运行\n• **清洁 URL** — 通过 Caddy 反向代理自动 HTTPS 访问\n• **现代 Web 支持** — 完全支持 SPA、PWA 和现代 JavaScript\n• **生产就绪** — 经过实战检验的 nginx 为 30% 的互联网提供动力\n\n只需将您的 HTML、CSS、JavaScript 和资源上传到 `/DATA/AppData/nginx/www/`，您的网站就会立即上线。无需数据库，无需复杂配置，只需纯静态文件托管。\n"
+    en_us: "**\U0001F310 What is nginx?**\n\n**nginx** is a lightweight, high-performance web server for hosting static websites, HTML pages, JavaScript applications, and documentation sites. The world's most popular web server, it delivers your content blazingly fast with minimal resource usage.\n\nPerfect for:\n• Personal websites and portfolios\n• Single-page applications (React, Vue, Angular)\n• Documentation sites\n• Landing pages and marketing sites\n• Static site generators (Hugo, Jekyll, Gatsby)\n• HTML/CSS/JavaScript projects\n\n**Key Features:**\n\n• **Zero Configuration** — Drop your files in and start serving immediately\n• **Lightning Fast** — nginx delivers static content faster than any alternative\n• **Minimal Resources** — Runs efficiently with just 64MB RAM\n• **Clean URLs** — Automatic HTTPS access via the server's reverse proxy\n• **Modern Web Support** — Full support for SPAs, PWAs, and modern JavaScript\n• **Production Ready** — Battle-tested nginx powers 30% of the internet\n\nSimply upload your HTML, CSS, JavaScript, and assets to `/DATA/AppData/nginx/www/` and your site is instantly live. No databases, no complex configuration, just pure static file hosting done right.\n\n**\U0001F680 Why Choose nginx?**\n\n**nginx** gives you complete control over your web hosting without the complexity of managed services or the overhead of full-featured CMSs. It's the fastest way to get static content online.\n\nWhy choose nginx?\n• **Your content, your server** — no external hosting dependencies\n• **Industry standard** — nginx is trusted by millions of production websites\n• **Zero overhead** — no backend processing, no database queries\n• **Instant updates** — edit files and changes appear immediately\n• **Developer friendly** — works with any static site workflow\n\nWith nginx on **your server**, you can:\n• Host unlimited static sites\n• Deploy modern JavaScript applications\n• Serve API documentation\n• Create internal company websites\n• Test frontend projects before production\n\n**\U0001F6E0️ Perfect For:**\n• Frontend developers testing static builds\n• Teams needing internal documentation sites\n• Anyone wanting simple, fast web hosting\n• Projects that don't need server-side processing\n"
+    zh_cn: "**\U0001F310 什么是 nginx？**\n\n**nginx** 是一个轻量级、高性能的 Web 服务器，用于托管静态网站、HTML 页面、JavaScript 应用程序和文档站点。作为世界上最流行的 Web 服务器，它以最小的资源使用快速传递您的内容。\n\n适用于：\n• 个人网站和作品集\n• 单页应用程序（React、Vue、Angular）\n• 文档站点\n• 登陆页面和营销站点\n• 静态站点生成器（Hugo、Jekyll、Gatsby）\n• HTML/CSS/JavaScript 项目\n\n**主要功能：**\n\n• **零配置** — 放入文件即可立即开始服务\n• **闪电般快速** — nginx 比任何替代方案都更快地传递静态内容\n• **最小资源** — 仅需 64MB RAM 即可高效运行\n• **清洁 URL** — 通过服务器的反向代理自动 HTTPS 访问\n• **现代 Web 支持** — 完全支持 SPA、PWA 和现代 JavaScript\n• **生产就绪** — 经过实战检验的 nginx 为 30% 的互联网提供动力\n\n只需将您的 HTML、CSS、JavaScript 和资源上传到 `/DATA/AppData/nginx/www/`，您的网站就会立即上线。无需数据库，无需复杂配置，只需纯静态文件托管。\n"
   developer: nginx
   category: WEB
   icon: icon.png
@@ -191,7 +187,7 @@ x-compose-app:
     - arm64
     - arm
   tips:
-    en_us: "**\U0001F4C1 Setup Instructions**\nAfter installation, add your website files to:\n`/DATA/AppData/nginx/www/`\n\n**Quick Start:**\n1. Install the app\n2. Upload your website files to the www directory\n3. Access your site at:\n   - Via domain: `${APP_URL:-https://nginx-${APP_DOMAIN}}/`\n   - Direct IP: `https://nginx-$APP_PUBLIC_IP_DASH.sslip.io/`\n\n**File Structure:**\n```\n/DATA/AppData/nginx/\n├── www/              # Your website files go here\n│   └── index.html   # Main page\n└── nginx.conf       # nginx configuration\n```\n"
+    en_us: "**\U0001F4C1 Setup Instructions**\nAfter installation, add your website files to:\n`/DATA/AppData/nginx/www/`\n\n**Quick Start:**\n1. Install the app\n2. Upload your website files to the www directory\n3. Access your site at:\n   - Via domain: `${APP_URL:-https://nginx-${APP_DOMAIN}}/`\n   - Every address: `${APP_URLS:-https://nginx-${APP_DOMAIN},https://nginx-${APP_PUBLIC_IP_DASH}.nip.io,https://nginx-${APP_PUBLIC_IP_DASH}.sslip.io}`\n\n**File Structure:**\n```\n/DATA/AppData/nginx/\n├── www/              # Your website files go here\n│   └── index.html   # Main page\n└── nginx.conf       # nginx configuration\n```\n"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
   # before images are pulled, before the seed/ tree is applied, and before any
   # container starts, on the first boot and every one after it.
@@ -205,4 +201,3 @@ x-compose-app:
     - path: /DATA/AppData/nginx/www
       user: $PUID
       group: $PGID
-  webui-host: nginx-${domain}

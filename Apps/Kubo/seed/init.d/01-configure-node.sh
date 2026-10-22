@@ -16,8 +16,14 @@ set -e
 # makes. Out of the box only localhost origins are allowed, so the bundled WebUI is dead
 # on a real hostname until the app's own domains are listed here. Verified on 0.43.1:
 # with the list set, the app origin gets 200 and every other origin still gets 403.
+# The list arrives comma-separated (the app's addresses, from the platform); a JSON
+# array, what this variable held before, is still taken as it is.
 if [ -n "$IPFS_ALLOWED_ORIGINS" ]; then
-  ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "$IPFS_ALLOWED_ORIGINS"
+  case "$IPFS_ALLOWED_ORIGINS" in
+    \[*) origins="$IPFS_ALLOWED_ORIGINS" ;;
+    *) origins="[\"$(printf '%s' "$IPFS_ALLOWED_ORIGINS" | sed 's/,/","/g')\"]" ;;
+  esac
+  ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "$origins"
   ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["POST","GET"]'
 fi
 

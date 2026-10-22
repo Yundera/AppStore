@@ -15,15 +15,6 @@ services:
     restart: unless-stopped
     expose:
       - 8080
-    labels:
-      caddy_0: ollama-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8080}}"
-      caddy_1: ollama-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8080}}"
-      caddy_2: ollama-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8080}}"
     networks:
       - default
       - pcs
@@ -219,6 +210,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "0.30.7"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: ollama, name: ollama, upstream-port: 8080 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: ollama
@@ -386,7 +382,6 @@ x-compose-app:
     # below is `once`, so after a restore the user pulls models again from the web UI.
     exclude:
       - data/models/
-  webui-host: ollama-${domain}
   # A small default model so the chat works out of the box, pulled by the running
   # ollama-api itself, so the model lands in its own volume. A `started` step,
   # because it needs that server running; it waits for it (up to ~3 min) rather than

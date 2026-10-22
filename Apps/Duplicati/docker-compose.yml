@@ -19,15 +19,6 @@ services:
       DUPLICATI__WEBSERVICE_PASSWORD: '${DUPLICATI_ADMIN_PASSWORD}'
     expose:
       - 8200
-    labels:
-      caddy_0: duplicati-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8200}}"
-      caddy_1: duplicati-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8200}}"
-      caddy_2: duplicati-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8200}}"
     networks:
       - pcs
     cpu_shares: 30
@@ -110,6 +101,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.4.0.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: duplicati, name: duplicati, upstream-port: 8200 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -190,4 +186,3 @@ x-compose-app:
       # Reclaim a tree an earlier root-running install left behind: the backend
       # now drops to $PUID:$PGID and dies on an unwritable /config otherwise.
       recursive: true
-  webui-host: duplicati-${domain}

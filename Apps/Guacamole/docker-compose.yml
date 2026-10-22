@@ -31,15 +31,6 @@ services:
         condition: service_healthy
     expose:
       - 8080
-    labels:
-      caddy_0: guacamole-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8080}}"
-      caddy_1: guacamole-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8080}}"
-      caddy_2: guacamole-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8080}}"
     networks:
       - guacamole-internal
       - pcs
@@ -145,9 +136,8 @@ x-casaos:
         The administrator password is generated for your server at install time.
         To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
 
-        For better performance, you can access Guacamole directly at
-        https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io/guacamole/ instead of going
-        through the nsl.sh gateway.
+        For better performance, open Guacamole on one of its direct addresses (not
+        through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.nip.io,https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
       zh_cn: |
         默认账号
 
@@ -156,6 +146,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.6.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: guacamole, name: guacamole, upstream-port: 8080, path: /guacamole }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -202,9 +197,8 @@ x-compose-app:
       The administrator password is generated for your server at install time.
       To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
 
-      For better performance, you can access Guacamole directly at
-      https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io/guacamole/ instead of going
-      through the nsl.sh gateway.
+      For better performance, open Guacamole on one of its direct addresses (not
+      through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.nip.io,https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
     zh_cn: |
       默认账号
 
@@ -283,5 +277,3 @@ x-compose-app:
     - path: /DATA/AppData/guacamole/init
       user: $PUID
       group: $PGID
-  webui-host: guacamole-${domain}
-  webui-path: "/guacamole"

@@ -61,7 +61,7 @@ services:
 
   # AppShield provides perimeter authentication: the SSO (OIDC) gate for the
   # Web UI, and the OAuth 2.1 broker for /mcp (machine clients). The backend trusts
-  # the network, so it is never exposed directly — only this proxy gets caddy labels.
+  # the network, so it is never exposed directly — only this proxy is routed.
   n8nmcp-proxy:
     # 2.0.7+ is required for the generic OAUTH_RESOURCE / OAUTH_SCOPE names and a
     # configurable protected path; 2.0.9+ advertises offline_access and sends
@@ -90,7 +90,7 @@ services:
       BACKEND_PORT: "9640"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
       # authorization server fronting Dex and gates exactly the path named by the
       # resource URL (/mcp) on Bearer tokens; everything else stays behind the
@@ -106,15 +106,6 @@ services:
       - n8nmcp-backend
     networks:
       - pcs
-    labels:
-      caddy_0: n8nmcp-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: n8nmcp-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: n8nmcp-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
 
 networks:
   pcs:
@@ -125,7 +116,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # The AppShield sidecar, not the backend: it is the container the routes
   # point at and the one users actually reach, and it is the service Maison
   # attaches ${APP_NET} to. The tile's health follows main, so pointing it at the
   # backend reported "unhealthy" while the app was serving correctly.
@@ -261,6 +252,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.1"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: n8nmcp-proxy, name: n8nmcp, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -396,5 +392,3 @@ x-compose-app:
     - path: /DATA/AppData/n8nmcp/oauth
       user: $PUID
       group: $PGID
-  webui-host: n8nmcp-${domain}
-  webui-path: "/"

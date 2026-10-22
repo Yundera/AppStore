@@ -51,7 +51,7 @@ services:
   # AppShield provides perimeter authentication: the SSO (OIDC) gate for the
   # web UI and noVNC viewer, and the OAuth 2.1 broker for /mcp (machine clients).
   # The app itself trusts the network (auth is delegated to this sidecar), so the
-  # browsermcp-backend container is never exposed directly — only this proxy gets caddy labels.
+  # browsermcp-backend container is never exposed directly — only this proxy is routed.
   browsermcp-proxy:
     # 2.0.7+ is required: first image with the generic OAUTH_RESOURCE /
     # OAUTH_SCOPE names and a configurable protected path.
@@ -71,7 +71,7 @@ services:
       BACKEND_PORT: "9746"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       # Machine/API auth for the MCP endpoint. AppShield runs an OAuth/OIDC
       # authorization server fronting Dex and gates exactly the path named by the
       # resource URL (/mcp) on Bearer tokens; everything else stays behind the
@@ -88,15 +88,6 @@ services:
       - pcs
     cpu_shares: 80
     logging: *logging
-    labels:
-      caddy_0: browsermcp-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: browsermcp-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: browsermcp-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     deploy:
       resources:
         limits:
@@ -115,7 +106,7 @@ networks:
 x-casaos:
   architectures:
     - amd64
-  # The AppShield sidecar, not the backend: it is the container the Caddy labels
+  # The AppShield sidecar, not the backend: it is the container the routes
   # point at and the one users actually reach, so the dashboard tile's health now
   # tracks what is served instead of staying green while the served container is
   # unreachable. It is also the service Maison attaches ${APP_NET} to.
@@ -330,6 +321,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.1.4"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: browsermcp-proxy, name: browsermcp, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -543,5 +539,3 @@ x-compose-app:
     - path: /DATA/AppData/browsermcp/oauth
       user: $PUID
       group: $PGID
-  webui-host: browsermcp-${domain}
-  webui-path: "/"

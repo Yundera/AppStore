@@ -10,7 +10,7 @@
 	# "/" would open on the public network rather than on this server's node. This
 	# sends the entry point to the node page of the API served alongside it. Every
 	# other path is left alone, so the wider network stays browsable.
-	redir / /nodes/radicle-api-${APP_DOMAIN}
+	redir / /nodes/${ROUTE_RADICLE_API_HOST:-radicle-api-${APP_DOMAIN}}
 
 	# The explorer is a client-side router: /nodes/..., /repos/... and friends must
 	# resolve to the app shell rather than to a 404.

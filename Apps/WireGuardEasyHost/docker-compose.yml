@@ -11,8 +11,8 @@ services:
   # WireGuard server, running in the HOST network namespace.
   # Because wg0 lives on the host, the VPN server address (10.9.0.1) IS the host,
   # so VPN clients can reach host-bound services (Samba :445, Guacamole, ...) at 10.9.0.1.
-  # A host-networked container cannot be a Caddy upstream, so the web UI is exposed
-  # through the wgeasyhost-proxy sidecar below instead of Caddy labels here.
+  # A host-networked container cannot be a router upstream, so the web UI is exposed
+  # through the wgeasyhost-proxy sidecar below instead of a route here.
   wgeasyhost:
     image: ghcr.io/wg-easy/wg-easy:15.3.0
     container_name: wgeasyhost
@@ -62,15 +62,6 @@ services:
     user: "0:0"
     depends_on:
       - wgeasyhost
-    labels:
-      caddy_0: wgeasyhost-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: wgeasyhost-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: wgeasyhost-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
     expose:
@@ -95,7 +86,7 @@ x-casaos:
     - amd64
     - arm64
   # Backend+proxy pattern (cf. lystik): main = the backend service name = subdomain prefix;
-  # the -proxy sidecar carries the caddy labels advertising <main>-user.nsl.sh and forwards
+  # the -proxy sidecar is the routed service and forwards
   # to the host-mode wg-easy. The store installer injects `hostname` (user-specific) at install;
   # scheme/port_map are static. Health probe follows redirects: / -> /login -> 200. (webui_port
   # is deprecated.)
@@ -197,6 +188,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "15.3.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: wgeasyhost-proxy, name: wgeasyhost, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: wgeasyhost
@@ -302,7 +298,6 @@ x-compose-app:
     - path: /DATA/AppData/wgeasyhost/wireguard
       user: $PUID
       group: $PGID
-  webui-host: wgeasyhost-${domain}
   secrets:
     # Seeded: an installed app provisioned its admin at first boot with the former
     # shared password, which it keeps; a fresh install gets its own.

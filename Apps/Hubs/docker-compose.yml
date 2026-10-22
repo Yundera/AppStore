@@ -37,24 +37,6 @@ services:
     networks:
       - hubs-net
       - pcs
-    labels:
-      caddy_0: hubsassets-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "https://{{upstreams 8080}}"
-      caddy_0.reverse_proxy.transport: http
-      caddy_0.reverse_proxy.transport.tls: ""
-      caddy_0.reverse_proxy.transport.tls_insecure_skip_verify: ""
-      caddy_1: hubsassets-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "https://{{upstreams 8080}}"
-      caddy_1.reverse_proxy.transport: http
-      caddy_1.reverse_proxy.transport.tls: ""
-      caddy_1.reverse_proxy.transport.tls_insecure_skip_verify: ""
-      caddy_2: hubsassets-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "https://{{upstreams 8080}}"
-      caddy_2.reverse_proxy.transport: http
-      caddy_2.reverse_proxy.transport.tls: ""
-      caddy_2.reverse_proxy.transport.tls_insecure_skip_verify: ""
 
   db:
     image: postgres:17.11-alpine
@@ -140,23 +122,6 @@ services:
     networks:
       - hubs-net
       - pcs
-    labels:
-      caddy_0: hubs-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 4001}}"
-      caddy_1: hubs-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 4001}}"
-      caddy_2: hubs-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 4001}}"
-      caddy_3: hubslink-${APP_DOMAIN}
-      caddy_3.import: gateway_tls
-      caddy_3.reverse_proxy: "{{upstreams 4001}}"
-      caddy_4: hubslink-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_4.import: gateway_tls
-      caddy_4.reverse_proxy: "{{upstreams 4001}}"
-      caddy_5: hubslink-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_5.reverse_proxy: "{{upstreams 4001}}"
 
   postgrest:
     image: mozillareality/postgrest:8
@@ -226,24 +191,6 @@ services:
         aliases:
           - spoke
       pcs: {}
-    labels:
-      caddy_0: hubsspoke-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "https://{{upstreams 8080}}"
-      caddy_0.reverse_proxy.transport: http
-      caddy_0.reverse_proxy.transport.tls: ""
-      caddy_0.reverse_proxy.transport.tls_insecure_skip_verify: ""
-      caddy_1: hubsspoke-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "https://{{upstreams 8080}}"
-      caddy_1.reverse_proxy.transport: http
-      caddy_1.reverse_proxy.transport.tls: ""
-      caddy_1.reverse_proxy.transport.tls_insecure_skip_verify: ""
-      caddy_2: hubsspoke-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "https://{{upstreams 8080}}"
-      caddy_2.reverse_proxy.transport: http
-      caddy_2.reverse_proxy.transport.tls: ""
-      caddy_2.reverse_proxy.transport.tls_insecure_skip_verify: ""
 
   hubs-dialog:
     image: hubsfoundation/dialog:stable-331
@@ -279,24 +226,6 @@ services:
     networks:
       - hubs-net
       - pcs
-    labels:
-      caddy_0: hubsdialog-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "https://{{upstreams 4443}}"
-      caddy_0.reverse_proxy.transport: http
-      caddy_0.reverse_proxy.transport.tls: ""
-      caddy_0.reverse_proxy.transport.tls_insecure_skip_verify: ""
-      caddy_1: hubsdialog-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "https://{{upstreams 4443}}"
-      caddy_1.reverse_proxy.transport: http
-      caddy_1.reverse_proxy.transport.tls: ""
-      caddy_1.reverse_proxy.transport.tls_insecure_skip_verify: ""
-      caddy_2: hubsdialog-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "https://{{upstreams 4443}}"
-      caddy_2.reverse_proxy.transport: http
-      caddy_2.reverse_proxy.transport.tls: ""
-      caddy_2.reverse_proxy.transport.tls_insecure_skip_verify: ""
 
   hubs-nearspark:
     image: hubsfoundation/nearspark:stable-28
@@ -324,15 +253,6 @@ services:
         aliases:
           - nearspark
       pcs: {}
-    labels:
-      caddy_0: hubsnearspark-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 5000}}"
-      caddy_1: hubsnearspark-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 5000}}"
-      caddy_2: hubsnearspark-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 5000}}"
 
   photomnemonic:
     image: hubsfoundation/photomnemonic:stable-75
@@ -461,6 +381,16 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "stable-855"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: hubs, name: hubs, upstream-port: 4001 }
+    - { service: hubs-client, name: hubsassets, upstream-port: 8080, upstream-scheme: https, insecure-upstream: true }
+    - { service: hubs, name: hubslink, upstream-port: 4001 }
+    - { service: hubs-spoke, name: hubsspoke, upstream-port: 8080, upstream-scheme: https, insecure-upstream: true }
+    - { service: hubs-dialog, name: hubsdialog, upstream-port: 4443, upstream-scheme: https, insecure-upstream: true }
+    - { service: hubs-nearspark, name: hubsnearspark, upstream-port: 5000 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -581,4 +511,3 @@ x-compose-app:
     - path: /DATA/AppData/hubs/retstorage
       user: $PUID
       group: $PGID
-  webui-host: hubs-${domain}

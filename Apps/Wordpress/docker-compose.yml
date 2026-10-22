@@ -18,15 +18,6 @@ services:
       - pcs
     expose:
       - "80"
-    labels:
-      caddy_0: wordpress-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: wordpress-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: wordpress-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/html/:/var/www/html
     environment:
@@ -254,6 +245,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "7.1.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: wordpress, name: wordpress, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: wordpress
@@ -425,10 +421,9 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/html
       user: $PUID
       group: $PGID
-    - path: /DATA/AppData/$AppID/db
-      user: $PUID
-      group: $PGID
-  webui-host: wordpress-${domain}
+    # Not /DATA/AppData/$AppID/db: db starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
   secrets:
     # Seeded: an installed app's MariaDB was initialised with the former shared
     # password for both accounts, which it keeps; a fresh install gets its own.

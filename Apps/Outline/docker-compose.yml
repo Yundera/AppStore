@@ -24,15 +24,6 @@ services:
         condition: service_healthy
     expose:
       - "80"
-    labels:
-      caddy_0: outline-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: outline-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: outline-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       NODE_ENV: production
       PORT: "80"
@@ -90,14 +81,6 @@ services:
       # constant `$$2a$$10` and never change. Maison refuses `$` in a password, so
       # the plaintext survives interpolation intact.
       outline.dex-password-rev: ${OUTLINE_ADMIN_PASSWORD}
-      caddy_0: outline-auth-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 5556}}"
-      caddy_1: outline-auth-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 5556}}"
-      caddy_2: outline-auth-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 5556}}"
     command: ["dex", "serve", "/data/config.yaml"]
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/outline/dex/:/data/
@@ -431,6 +414,12 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.6.1"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: outline, name: outline, upstream-port: 80 }
+    - { service: outline-dex, name: outline-auth, upstream-port: 5556 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: outline
@@ -737,12 +726,11 @@ x-compose-app:
     - path: /DATA/AppData/outline/dex
       user: $PUID
       group: $PGID
-    - path: /DATA/AppData/outline/pgdata
-      user: $PUID
-      group: $PGID
+    # Not /DATA/AppData/outline/pgdata: outline-postgres starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
     - path: /DATA/AppData/outline/redis
       user: $PUID
       group: $PGID
       # Reclaims a dump.rdb written by the image's own uid 999 before the fix.
       recursive: true
-  webui-host: outline-${domain}

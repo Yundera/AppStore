@@ -17,15 +17,6 @@ services:
       - pcs
     expose:
       - "80"
-    labels:
-      caddy_0: notediscovery-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: notediscovery-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: notediscovery-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/app/data
     environment:
@@ -234,6 +225,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "0.19.2"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: notediscovery, name: notediscovery, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: notediscovery
@@ -433,4 +429,3 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/data
       user: $PUID
       group: $PGID
-  webui-host: notediscovery-${domain}

@@ -25,15 +25,6 @@ services:
       - 80
     networks:
       - pcs
-    labels:
-      caddy_0: rclone-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: rclone-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: rclone-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/rclone/config/:/config/rclone/
       - ${DATA_ROOT:-/DATA}/AppData/rclone/cache/:/cache/
@@ -148,6 +139,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.74.4"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: rclone, name: rclone, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -248,5 +244,3 @@ x-compose-app:
     - path: /DATA/Rclone
       user: $PUID
       group: $PGID
-  webui-host: rclone-${domain}
-  webui-path: "/"

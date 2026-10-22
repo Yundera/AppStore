@@ -34,7 +34,7 @@ services:
       FOUNDRY_LICENSE_KEY: ${FOUNDRY_LICENSE_KEY:-}
       # Administrator password for the setup screen (worlds, systems, modules).
       FOUNDRY_ADMIN_KEY: $FOUNDRYVTT_ADMIN_PASSWORD
-      # Behind Caddy on HTTPS 443: invitation links and A/V need to know it.
+      # Behind the router on HTTPS 443: invitation links and A/V need to know it.
       FOUNDRY_HOSTNAME: ${APP_HOST:-foundryvtt-${APP_DOMAIN}}
       FOUNDRY_PROXY_SSL: "true"
       FOUNDRY_PROXY_PORT: "443"
@@ -50,18 +50,6 @@ services:
     volumes:
       # Worlds, systems, modules, uploaded assets, config, logs and the release cache.
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/data
-    labels:
-      # Foundry has its own login (admin key + per-player passwords), and players are
-      # usually outside the PCS, so the Caddy labels sit on the app itself — no SSO
-      # sidecar. See rationale.md. Caddy proxies the websocket upgrade natively.
-      caddy_0: foundryvtt-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 30000}}"
-      caddy_1: foundryvtt-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 30000}}"
-      caddy_2: foundryvtt-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 30000}}"
     networks:
       - pcs
     deploy:
@@ -214,6 +202,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "14.368.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: foundryvtt, name: foundryvtt, upstream-port: 30000 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: foundryvtt
@@ -372,5 +365,3 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/data
       user: $PUID
       group: $PGID
-  webui-host: foundryvtt-${domain}
-  webui-path: /

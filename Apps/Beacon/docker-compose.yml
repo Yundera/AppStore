@@ -68,22 +68,13 @@ services:
     restart: unless-stopped
     expose:
       - 80
-    labels:
-      caddy_0: beacon-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: beacon-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: beacon-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: 0:0
     environment:
       BACKEND_HOST: "beacon-backend"
       BACKEND_PORT: "9300"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       # OAuth 2.1 broker (opt-in). When OAUTH_RESOURCE is set, AppShield runs an
       # OAuth/OIDC authorization server fronting Dex so claude.ai (via DCR) and
       # clients like n8n (via a manual client) can reach this resource with Bearer
@@ -123,8 +114,8 @@ networks:
     external: true
 
 x-casaos:
-  # The served service: beacon-proxy is what carries the caddy_N labels and what
-  # webui-host resolves to. beacon-backend is reachable only from inside `pcs`.
+  # The served service: beacon-proxy is the routed service, the
+  # one the tile opens. beacon-backend is reachable only from inside `pcs`.
   main: beacon-proxy
   index: /
 
@@ -318,6 +309,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.20"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: beacon-proxy, name: beacon, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -514,5 +510,3 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/oauth
       user: $PUID
       group: $PGID
-  webui-host: beacon-${domain}
-  webui-path: "/"

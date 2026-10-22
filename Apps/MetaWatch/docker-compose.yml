@@ -29,7 +29,7 @@ services:
   # ── AppShield sidecar ──────────────────────────────────────────────
   # AppShield in OIDC mode: self-registers with the PCS auth-registrar and
   # gates every request through the built-in Authelia SSO before proxying to
-  # metawatch-app. This is the only service with Caddy labels and the only one
+  # metawatch-app. This is the only routed service and the only one
   # a browser can reach.
   metawatch:
     image: ghcr.io/yundera/appshield:3.2.0
@@ -41,15 +41,6 @@ services:
     restart: unless-stopped
     expose:
       - "80"
-    labels:
-      caddy_0: metawatch-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: metawatch-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: metawatch-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       BACKEND_HOST: "metawatch-app"
       BACKEND_PORT: "3000"
@@ -69,7 +60,7 @@ services:
       ALLOWED_PATHS: "sw.js,js/downloads/cache.js,js/downloads/opfs.js"
       # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
     depends_on:
       - metawatch-app
     deploy:
@@ -79,12 +70,12 @@ services:
     cpu_shares: 80
     logging: *logging
     networks:
-      # `pcs` so Caddy can reach it; the app network is where its backend lives.
+      # `pcs` so the router can reach it; the app network is where its backend lives.
       - pcs
       - metawatch-internal
 
   # ── The UI back-end (protected) ────────────────────────────────────
-  # No Caddy labels and not on `pcs`: reachable only through AppShield. Holds
+  # Not routed and not on `pcs`: reachable only through AppShield. Holds
   # no libp2p identity of its own — it brokers to the two peers below.
   metawatch-app:
     image: ghcr.io/worph/meta-watch:1.0.34
@@ -421,6 +412,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.34"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: metawatch, name: metawatch, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: metawatch
@@ -540,5 +536,3 @@ x-compose-app:
     - /DATA/AppData/$AppID/search-data
     - /DATA/AppData/$AppID/metashare-config
     - /DATA/AppData/$AppID/share-data
-  webui-host: metawatch-${domain}
-  webui-path: "/"

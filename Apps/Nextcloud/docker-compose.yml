@@ -18,22 +18,6 @@ services:
         condition: service_healthy
     expose:
       - 80
-    labels:
-      caddy_0: nextcloud-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      # HSTS, set here rather than in .htaccess: the image replaces .htaccess with
-      # rsync --delete on every Nextcloud upgrade, so a line appended to it is lost.
-      # `>` defers the set until after the response comes back, so it replaces (not
-      # duplicates) the header older installs still send from their .htaccess.
-      caddy_0.header: '>Strict-Transport-Security "max-age=15552000; includeSubDomains"'
-      caddy_1: nextcloud-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_1.header: '>Strict-Transport-Security "max-age=15552000; includeSubDomains"'
-      caddy_2: nextcloud-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
-      caddy_2.header: '>Strict-Transport-Security "max-age=15552000; includeSubDomains"'
     logging:
       driver: "json-file"
       options:
@@ -60,7 +44,8 @@ services:
       # stays APCu, from the image's own apcu.config.php). The password below is
       # inert for the entrypoint and is what the configure-redis-and-cron step reads.
       - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN ${APP_HOST:-nextcloud-${APP_DOMAIN}} nextcloud-$APP_PUBLIC_IP_DASH.nip.io nextcloud-$APP_PUBLIC_IP_DASH.sslip.io
+      # Install-time only; the trusted-domains step keeps the list current afterwards.
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN ${APP_HOST:-nextcloud-${APP_DOMAIN}}
       - OVERWRITEPROTOCOL=https
       - OVERWRITEHOST=${APP_HOST:-nextcloud-${APP_DOMAIN}}
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
@@ -559,6 +544,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "33.0.3"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: nextcloud, name: nextcloud, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -677,7 +667,6 @@ x-compose-app:
     - path: /DATA/AppData/nextcloud/redis
       user: $PUID
       group: $PGID
-  webui-host: nextcloud-${domain}
   steps:
     # IMPORTANT: Keep these commands idempotent - safe to run multiple times.
     # Variables meant for the nextcloud container ($REDIS_HOST_PASSWORD) stay inside
@@ -686,7 +675,7 @@ x-compose-app:
     # cache and the file-locking backend are set here because REDIS_HOST cannot be
     # used (see the note in the nextcloud service environment).
     # Also switches background jobs to cron (the cron service handles the ticking).
-    # HSTS is no longer set here: see the caddy_N.header labels.
+    # HSTS is not set by the app: it belongs to the domain it is served on.
     - name: configure-redis-and-cron
       at: started
       run: once
@@ -716,3 +705,16 @@ x-compose-app:
           php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
           php occ background:cron && echo "Background jobs set to cron mode"
         '
+    # Every address the app is reached at, re-applied on every start so a domain the
+    # box gains later is trusted too (NEXTCLOUD_TRUSTED_DOMAINS only acts at install).
+    # Index 0 is localhost and 1 the bare domain, both set by the image at install.
+    - name: trusted-domains
+      at: started
+      run: always
+      script: |
+        compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || exit 0
+        i=2
+        for host in $(printf '%s' "${APP_HOSTS:-nextcloud-$APP_DOMAIN,nextcloud-$APP_PUBLIC_IP_DASH.nip.io,nextcloud-$APP_PUBLIC_IP_DASH.sslip.io}" | tr ',' ' '); do
+          compose exec nextcloud php occ config:system:set trusted_domains "$i" --value "$host" >/dev/null
+          i=$((i + 1))
+        done

@@ -15,15 +15,6 @@ services:
     container_name: yacy
     user: $PUID:$PGID
     restart: unless-stopped
-    labels:
-      caddy_0: yacy-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8090}}"
-      caddy_1: yacy-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8090}}"
-      caddy_2: yacy-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8090}}"
     networks:
       - pcs
     deploy:
@@ -304,6 +295,11 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: yacy, name: yacy, upstream-port: 8090 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: yacy
@@ -546,7 +542,6 @@ x-compose-app:
       4. 검색 인터페이스를 사용하여 인덱싱된 콘텐츠 찾기
 
       **팁:** 인덱싱이 어떻게 작동하는지 보려면 좋아하는 웹사이트를 작은 규모로 크롤링하는 것부터 시작하세요!
-  webui-host: yacy-${domain}
   secrets:
     # Seeded: an installed app's yacy.conf holds the hash of the former shared
     # password, which it keeps; a fresh install gets its own.

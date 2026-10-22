@@ -33,15 +33,6 @@ services:
       TZ: Etc/UTC
     expose:
       - 80
-    labels:
-      caddy_0: immich-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: immich-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: immich-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
       - redis
       - database
@@ -195,15 +186,14 @@ x-casaos:
 
         🔐 **First Setup**:
         1. Wait 5 minutes for Immich to fully start
-        2. Visit `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` and create your admin account
-        3. **Always use this sslip.io URL** for unlimited uploads
+        2. Open the app and create your admin account
+        3. For large uploads, use one of its direct addresses (below)
 
-        | Access Type | URL | Upload Limit |
-        |-------------|-----|--------------|
-        | **Recommended** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Unlimited |
-        | Standard | `${APP_URL:-https://immich-${APP_DOMAIN}}/` | 100 MB |
+        **Addresses:** `${APP_URLS:-https://immich-${APP_DOMAIN},https://immich-${APP_PUBLIC_IP_DASH}.nip.io,https://immich-${APP_PUBLIC_IP_DASH}.sslip.io}`
 
-        📱 **Mobile App**: Download the Immich app and connect using the sslip.io URL above for unlimited photo/video backup.
+        Behind a gateway, the first address may cap uploads (100 MB per file on a Yundera server); the others reach the server directly, with no limit.
+
+        📱 **Mobile App**: Download the Immich app and connect using one of the direct addresses above for unlimited photo/video backup.
 
         🔍 **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.
 
@@ -218,15 +208,14 @@ x-casaos:
 
         🔐 **Première configuration** :
         1. Attendez 5 minutes le démarrage complet d'Immich
-        2. Visitez `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` et créez votre compte admin
-        3. **Utilisez toujours cette URL sslip.io** pour des uploads illimités
+        2. Ouvrez l'app et créez votre compte admin
+        3. Pour les gros uploads, utilisez une de ses adresses directes (ci-dessous)
 
-        | Type d'accès | URL | Limite d'upload |
-        |--------------|-----|-----------------|
-        | **Recommandé** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Illimité |
-        | Standard | `${APP_URL:-https://immich-${APP_DOMAIN}}/` | 100 Mo |
+        **Adresses :** `${APP_URLS:-https://immich-${APP_DOMAIN},https://immich-${APP_PUBLIC_IP_DASH}.nip.io,https://immich-${APP_PUBLIC_IP_DASH}.sslip.io}`
 
-        📱 **Application mobile** : Téléchargez l'app Immich et connectez-vous avec l'URL sslip.io ci-dessus pour une sauvegarde illimitée de vos photos/vidéos.
+        Derrière une passerelle, la première adresse peut limiter les uploads (100 Mo par fichier sur un serveur Yundera) ; les autres joignent le serveur directement, sans limite.
+
+        📱 **Application mobile** : Téléchargez l'app Immich et connectez-vous avec une des adresses directes ci-dessus pour une sauvegarde illimitée de vos photos/vidéos.
 
         🔍 **OCR (Recherche de texte)** : Immich v2.x inclut l'OCR pour rechercher du texte dans vos photos. Pour activer l'OCR sur les photos existantes, allez dans Administration > Job Settings et lancez le job OCR.
 
@@ -239,6 +228,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "3.0.3"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: immich, name: immich, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: immich
@@ -288,8 +282,8 @@ x-compose-app:
     - amd64
     - arm64
   tips:
-    en_us: "**Setup Information:**\n\n\U0001F510 **First Setup**:\n1. Wait 5 minutes for Immich to fully start\n2. Visit `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` and create your admin account\n3. **Always use this sslip.io URL** for unlimited uploads\n\n| Access Type | URL | Upload Limit |\n|-------------|-----|--------------|\n| **Recommended** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Unlimited |\n| Standard | `${APP_URL:-https://immich-${APP_DOMAIN}}/` | 100 MB |\n\n\U0001F4F1 **Mobile App**: Download the Immich app and connect using the sslip.io URL above for unlimited photo/video backup.\n\n\U0001F50D **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.\n\n\U0001F4C1 **Import Existing Photos**: To import photos already on your PCS:\n1. Place files in `/DATA/Gallery/` using the Files app\n2. In Immich, go to **Administration → External Libraries**\n3. Create a library, add import path: `/import`\n4. Click **Scan Library**\n"
-    fr_fr: "**Informations de configuration :**\n\n\U0001F510 **Première configuration** :\n1. Attendez 5 minutes le démarrage complet d'Immich\n2. Visitez `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` et créez votre compte admin\n3. **Utilisez toujours cette URL sslip.io** pour des uploads illimités\n\n| Type d'accès | URL | Limite d'upload |\n|--------------|-----|-----------------|\n| **Recommandé** | `https://immich-$APP_PUBLIC_IP_DASH.sslip.io/` | ∞ Illimité |\n| Standard | `${APP_URL:-https://immich-${APP_DOMAIN}}/` | 100 Mo |\n\n\U0001F4F1 **Application mobile** : Téléchargez l'app Immich et connectez-vous avec l'URL sslip.io ci-dessus pour une sauvegarde illimitée de vos photos/vidéos.\n\n\U0001F50D **OCR (Recherche de texte)** : Immich v2.x inclut l'OCR pour rechercher du texte dans vos photos. Pour activer l'OCR sur les photos existantes, allez dans Administration > Job Settings et lancez le job OCR.\n\n\U0001F4C1 **Importer des photos existantes** : Pour importer des photos déjà sur votre PCS :\n1. Placez les fichiers dans `/DATA/Gallery/` via l'app Files\n2. Dans Immich, allez dans **Administration → External Libraries**\n3. Créez une bibliothèque, ajoutez le chemin : `/import`\n4. Cliquez sur **Scan Library**\n"
+    en_us: "**Setup Information:**\n\n\U0001F510 **First Setup**:\n1. Wait 5 minutes for Immich to fully start\n2. Open the app and create your admin account\n3. For large uploads, use one of its direct addresses (below)\n\n**Addresses:** `${APP_URLS:-https://immich-${APP_DOMAIN},https://immich-${APP_PUBLIC_IP_DASH}.nip.io,https://immich-${APP_PUBLIC_IP_DASH}.sslip.io}`\n\nBehind a gateway, the first address may cap uploads (100 MB per file on a Yundera server); the others reach the server directly, with no limit.\n\n\U0001F4F1 **Mobile App**: Download the Immich app and connect using one of the direct addresses above for unlimited photo/video backup.\n\n\U0001F50D **OCR (Text Search)**: Immich v2.x includes OCR to search text in your photos. To enable OCR for existing photos, go to Administration > Job Settings and run the OCR job.\n\n\U0001F4C1 **Import Existing Photos**: To import photos already on your PCS:\n1. Place files in `/DATA/Gallery/` using the Files app\n2. In Immich, go to **Administration → External Libraries**\n3. Create a library, add import path: `/import`\n4. Click **Scan Library**\n"
+    fr_fr: "**Informations de configuration :**\n\n\U0001F510 **Première configuration** :\n1. Attendez 5 minutes le démarrage complet d'Immich\n2. Ouvrez l'app et créez votre compte admin\n3. Pour les gros uploads, utilisez une de ses adresses directes (ci-dessous)\n\n**Adresses :** `${APP_URLS:-https://immich-${APP_DOMAIN},https://immich-${APP_PUBLIC_IP_DASH}.nip.io,https://immich-${APP_PUBLIC_IP_DASH}.sslip.io}`\n\nDerrière une passerelle, la première adresse peut limiter les uploads (100 Mo par fichier sur un serveur Yundera) ; les autres joignent le serveur directement, sans limite.\n\n\U0001F4F1 **Application mobile** : Téléchargez l'app Immich et connectez-vous avec une des adresses directes ci-dessus pour une sauvegarde illimitée de vos photos/vidéos.\n\n\U0001F50D **OCR (Recherche de texte)** : Immich v2.x inclut l'OCR pour rechercher du texte dans vos photos. Pour activer l'OCR sur les photos existantes, allez dans Administration > Job Settings et lancez le job OCR.\n\n\U0001F4C1 **Importer des photos existantes** : Pour importer des photos déjà sur votre PCS :\n1. Placez les fichiers dans `/DATA/Gallery/` via l'app Files\n2. Dans Immich, allez dans **Administration → External Libraries**\n3. Créez une bibliothèque, ajoutez le chemin : `/import`\n4. Cliquez sur **Scan Library**\n"
   secrets:
     # Seeded: an installed app keeps the shared password its cluster was initialised
     # with (so the re-assert below is a no-op there); a fresh install gets its own.
@@ -339,4 +333,3 @@ x-compose-app:
     # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
     exclude:
       - model-cache/
-  webui-host: immich-${domain}

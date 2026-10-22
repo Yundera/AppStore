@@ -22,22 +22,13 @@ services:
     restart: unless-stopped
     expose:
       - "80"
-    labels:
-      caddy_0: terminal-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: terminal-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: terminal-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     user: "0:0"
     environment:
       BACKEND_HOST: "terminal-ttyd"
       BACKEND_PORT: "7681"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       SESSION_DURATION_HOURS: "720"
     # The gate's sessions. Without a mount they live in the container and every
     # recreate (an update, a self-check redeploy) logs the user out. Root above, so
@@ -47,7 +38,7 @@ services:
     depends_on:
       - terminal-ttyd
     networks:
-      # On `pcs` because Caddy must reach it, and on the app's own
+      # On `pcs` because the router must reach it, and on the app's own
       # network because that is where its backend lives.
       - pcs
       - terminal-internal
@@ -226,6 +217,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.7.7"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: terminal, name: terminal, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: terminal
@@ -264,5 +260,3 @@ x-compose-app:
   # Tiles in Maison's System grid: a PCS ships with it preinstalled. The grid only —
   # it is still an ordinary app the user can stop, back up and uninstall.
   view: system
-  webui-host: terminal-${domain}
-  webui-path: "/"

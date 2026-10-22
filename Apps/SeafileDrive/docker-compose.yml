@@ -85,7 +85,7 @@ x-casaos:
   main: seafiledrive
 
   # Headless: the app publishes a folder, not a page, so there is no webui_port,
-  # no Caddy label group and no `webui-host` below — the tile has no open action
+  # no `routes` below — the tile has no open action
   # and the app is reached through the file manager, over SMB, or at
   # /DATA/Seafile on the host.
 

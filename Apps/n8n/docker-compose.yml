@@ -14,21 +14,12 @@ services:
     restart: unless-stopped
     user: $PUID:$PGID
     networks:
-      # On `pcs` because Caddy must reach it, and on the app's own network
+      # On `pcs` because the router must reach it, and on the app's own network
       # because that is where its database lives.
       - pcs
       - n8n-internal
     expose:
       - 80
-    labels:
-      caddy_0: n8n-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: n8n-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: n8n-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/home/node/.n8n
     environment:
@@ -317,6 +308,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.14.2"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: n8n, name: n8n, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: n8n
@@ -457,7 +453,6 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/data
       user: $PUID
       group: $PGID
-    - path: /DATA/AppData/$AppID/pgdata
-      user: $PUID
-      group: $PGID
-  webui-host: n8n-${domain}
+    # Not /DATA/AppData/$AppID/pgdata: n8n-postgres starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.

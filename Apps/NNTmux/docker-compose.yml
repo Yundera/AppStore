@@ -14,7 +14,7 @@ name: nntmux
 # `nntmux-setup api-user <name>`.
 #
 # Layout: the web container `nntmux` is the only one on `pcs` and the only one
-# with a Caddy route; MariaDB, Redis, Manticore and the scanner sit on the
+# with a route; MariaDB, Redis, Manticore and the scanner sit on the
 # private `nntmux-internal` network. Data lives under /DATA/AppData/nntmux/;
 # the scanner's scripts (scanner.sh, nntmux-setup) ship in this app's seed/
 # folder and are refreshed on every start and update.
@@ -194,7 +194,7 @@ services:
       - nntmux-internal
 
   # ---------------------------------------------------------------------------
-  # nntmux — the web UI + Newznab API. Exposed DIRECTLY via Caddy (no AppShield
+  # nntmux — the web UI + Newznab API. Routed DIRECTLY (no AppShield
   # gate): nntmux ships its own admin login (ADMIN_USER/ADMIN_PASS, seeded
   # below), the convention this store uses for every app that brings its own
   # auth. Also on `pcs` as `http://nntmux` — where Newznab clients on the box
@@ -226,7 +226,7 @@ services:
       TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
       TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
       ELASTICSEARCH_ENABLED: "false"
-      # Behind the box's Caddy (which terminates TLS) Laravel sees plain http and
+      # Behind the box's router (which terminates TLS) Laravel sees plain http and
       # trusts no proxy header (it only trusts Cloudflare's ranges), so every
       # redirect it builds — the login one first — is `http://…`, which the
       # gateway then bounces to an IP host with no valid certificate: the UI is
@@ -267,15 +267,8 @@ services:
         condition: service_started
       nntmux-manticore:
         condition: service_started
-    labels:
-      caddy_0: nntmux-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: nntmux-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: nntmux-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
+    expose:
+      - 80
     networks:
       - nntmux-internal
       - pcs
@@ -489,6 +482,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.3.6"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: nntmux, name: nntmux, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: nntmux
@@ -553,9 +551,9 @@ x-compose-app:
   # on the nzb store: it holds one file per release (a million+ on a real
   # catalog), and the image's own boot already walks it for minutes.
   folders:
-    - path: /DATA/AppData/nntmux/db
-      user: $PUID
-      group: $PGID
+    # Not /DATA/AppData/nntmux/db: nntmux-db starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
     - path: /DATA/AppData/nntmux/nntmux-env
       user: $PUID
       group: $PGID
@@ -638,6 +636,3 @@ x-compose-app:
       from: scanner/nntmux-setup
       ensure: always
       mode: "0755"
-  # Same string as the caddy_0 label, so the tile link and the route agree.
-  webui-host: nntmux-${domain}
-  webui-path: "/"

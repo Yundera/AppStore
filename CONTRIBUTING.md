@@ -40,8 +40,8 @@ describe the actual deviation covers nothing.
 `seed/`, `scripts/` and `rationale.md`. "Every service" includes every service in the
 compose. "Every image" includes migration steps and every `docker run` in a step.
 
-**Service apps.** An app whose compose declares no web UI (no `x-compose-app.webui-host` and no
-`routes` entry) is a **service app**: Maison puts its tile in the Services grid, and a click opens
+**Service apps.** An app whose compose declares no web UI (no `x-compose-app.routes` entry and no
+`webui-host`) is a **service app**: Maison puts its tile in the Services grid, and a click opens
 its settings rather than a page. Samba is one. Items that need a web UI say so on their `n-a`
 line, and a service app is reviewed on the rest.
 
@@ -101,23 +101,32 @@ line, and a service app is reviewed on the rest.
 
 ## 2. Routing and network
 
-### `caddy-wiring` — the web UI is routed the standard way
+### `routes-wiring` — the app says what is reachable, never how
 
 **Check:** static · **Severity:** Major
 **n-a:** a service app.
 
+A listing declares where it can be reached — `x-compose-app.routes`, one entry per host the app
+answers on — and nothing about the proxy in front: the box's routing setting decides that
+(labels for its proxy on a PCS, a published port at home, an external router elsewhere) and
+Maison writes it. A route is `{ service, name, upstream-port }`, with `path` for where the web
+UI opens, and `upstream-scheme: https` plus `insecure-upstream: true` for a backend that only
+speaks self-signed HTTPS. Anything beyond host → one port is the app's own job
+(`in-app-router`).
+
 - **Pass:** all of the following hold:
-  - the service that answers HTTP carries the `caddy_0`, `caddy_1` and `caddy_2` labels:
-    `caddy_0` on `<app>-${APP_DOMAIN}` and `caddy_1` on `<app>-${APP_PUBLIC_IP_DASH}.nip.io`,
-    both with `import: gateway_tls`, and `caddy_2` on `<app>-${APP_PUBLIC_IP_DASH}.sslip.io`
-    without it;
-  - the port in `{{upstreams N}}` is in that service's `expose:`;
-  - the service is on the shared network;
-  - `x-casaos.main` names that service, and `x-compose-app` has no `main`;
-  - `x-casaos.webui_port` equals the exposed port;
-  - `x-compose-app.webui-host` is the `caddy_0` host with `${domain}` in place of
-    `${APP_DOMAIN}`, and `webui-port`, if set, is a URL port rather than the container port.
-- **Fail:** any one of these is broken, or a label claims `auth-${APP_DOMAIN}`.
+  - `x-compose-app.routes` is declared, the web UI first;
+  - no service carries a proxy label (`caddy*`, `traefik.*`), and `x-compose-app` has no
+    `webui-host`, `webui-path`, `webui-port` or `webui-scheme` — `routes` replaces them;
+  - each route's `upstream-port` is in its service's `expose:`, and the service is on the
+    shared network;
+  - each `name` is the app id or starts with it (`outline-auth`, `kubo-gateway`), unless the
+    listing says why another name must be kept (Tuwunel's `matrix` identity);
+  - `x-casaos.main` names the first route's service and `x-casaos.webui_port` its port, for
+    CasaOS;
+  - `maison lint` passes.
+- **Fail:** any one of these is broken, or a route takes a name the platform uses itself
+  (`auth`, `local-auth`, `auth-console`, `mesh-console`, `maison`, `admin`).
 
 ### `own-address` — the app learns its address from the platform
 
@@ -129,30 +138,37 @@ or another router tomorrow. Maison tells each app its address, so a listing that
 own host reads that value and keeps today's spelling only as the fallback for a Maison
 that does not provide it yet.
 
-- **Pass:** every one of the app's own hosts outside its `caddy_*` labels and `webui-host` —
-  in `environment:`, `files`, steps and tips alike — is written as:
-  - the web UI's (the `webui-host` name): `${APP_URL:-https://<app>-${APP_DOMAIN}}` for a URL,
+- **Pass:** every one of the app's own hosts — in `environment:`, `files` and their seed
+  templates, steps and tips alike — is written as:
+  - the first route's: `${APP_URL:-https://<app>-${APP_DOMAIN}}` for a URL,
     `${APP_HOST:-<app>-${APP_DOMAIN}}` for a bare host;
-  - any other host it routes: `${ROUTE_<NAME>_URL:-https://<name>-${APP_DOMAIN}}` /
-    `${ROUTE_<NAME>_HOST:-<name>-${APP_DOMAIN}}`, `<NAME>` being the host's name upper-cased
-    with `-` as `_` (`hubsassets` → `ROUTE_HUBSASSETS_HOST`).
+  - any other route's: `${ROUTE_<NAME>_URL:-https://<name>-${APP_DOMAIN}}` /
+    `${ROUTE_<NAME>_HOST:-<name>-${APP_DOMAIN}}`, `<NAME>` being the route's name upper-cased
+    with `-` as `_` (`hubsassets` → `ROUTE_HUBSASSETS_HOST`);
+  - a list of all of them (CORS or CSRF origins, trusted hosts):
+    `${APP_URLS:-<today's addresses, comma-separated>}` or `${APP_HOSTS:-…}` (and
+    `ROUTE_<NAME>_URLS` / `_HOSTS`), primary first. A consumer that wants another separator
+    or a JSON array converts the comma list itself (`Apps/Kubo`, `Apps/Nextcloud`);
+  - a step that passes these to a container names them with `-e`, or the container sees only
+    the fallback (`Apps/SABnzbd`).
 
   `APP_URL` is an origin (`scheme://host[:port]`, no trailing slash): append the path after
   the closing brace, `${APP_URL:-https://gitea-${APP_DOMAIN}}/`. `APP_DOMAIN` stays fine for
   what is really the domain (`admin@${APP_DOMAIN}`), and another app's host is written as it
   is: nothing gives its address.
-- **Fail:** an own host spelled `<app>-${APP_DOMAIN}` outside the labels and `webui-host`.
+- **Fail:** an own host spelled `<app>-${APP_DOMAIN}` with no variable in front, or a list that
+  names the box's other domains (nip.io, sslip.io) outside a fallback.
 
 ### `in-app-router` — routing beyond one port lives in the app
 
 **Check:** static · **Severity:** Major
 **n-a:** every route is host → one service's port, with no path rules.
 
-The labels say only *which host goes to which port*. When one address is served by several
+A route says only *which host goes to which port*. When one address is served by several
 services (dispatch by path), or a request must be checked before it is proxied (an auth hook),
-or a path must be rewritten, the app ships its own router: an nginx service that carries the
-three standard labels and does the rest itself. The platform then routes the app like any
-other, and the listing stays independent of the platform's proxy. The references:
+or a path must be rewritten, the app ships its own router: an nginx service that is the
+route's service and does the rest itself. The platform then routes the app like any other,
+and the listing stays independent of the platform's proxy. The references:
 `Apps/Seafile` (path dispatch over three services), `Apps/ClaudeCode` (`auth_request` gate),
 `Apps/Vaultwarden` (only `/admin` through the AppShield gate) and `Apps/qBittorrent` (a header
 fix, behind the gate).
@@ -160,23 +176,24 @@ fix, behind the gate).
 With an AppShield gate, the router goes where its job is:
 
 - **in front of the gate** when the gate must see only some paths (Vaultwarden): the router
-  carries the labels and sends those paths to the gate — see `appshield-wiring`;
-- **behind the gate** when every request is gated anyway (qBittorrent): the gate keeps the
-  labels, its `BACKEND_HOST` is the router, and the router is on the app's own network only.
+  is the route's service and sends those paths to the gate — see `appshield-wiring`;
+- **behind the gate** when every request is gated anyway (qBittorrent): the gate stays the
+  route's service, its `BACKEND_HOST` is the router, and the router is on the app's own
+  network only.
   The gate forwards the client's headers verbatim, so the router sees what the browser sent.
 
 - **Pass:** all of the following hold:
-  - no label goes beyond the three groups of `caddy-wiring` — no `handle`, `handle_path`,
-    `forward_auth`, `rewrite`, `redir`, matcher or `header_up` sub-key;
-  - the router is a pinned nginx image named `<app>-router`; it carries the labels and is the
-    service `x-casaos.main` names, unless it sits behind an AppShield gate, which then keeps
-    both;
+  - every route is plain host → port (`routes-wiring`): path dispatch, auth hooks, rewrites,
+    redirects and header fixes are in the router;
+  - the router is a pinned nginx image named `<app>-router`; it is the route's service and the
+    one `x-casaos.main` names, unless it sits behind an AppShield gate, which then is both;
   - its config ships inline: top-level `configs: <app>-router: content: |`, with every nginx
     `$` written `$$`;
   - only the router is on the shared network, plus whatever needs it for another reason (a
     service other apps call, a gate that reaches the auth-registrar, a backend that sends mail
     through `smtp`); the services behind it are on the app's own network;
-  - the config handles what nginx does differently from Caddy, as far as the app needs it:
+  - the config handles what nginx does differently from the platform's proxy (Caddy on a
+    PCS), as far as the app needs it:
     `client_max_body_size 0` and `proxy_request_buffering off` / `proxy_buffering off` for
     uploads and downloads, raised `proxy_read_timeout`, websocket `Upgrade`/`Connection`,
     `X-Forwarded-Proto` passed through from the proxy in front (not `$scheme`), `Host
@@ -188,7 +205,7 @@ With an AppShield gate, the router goes where its job is:
     from the **last** `X-Forwarded-For` entry — the one the platform proxy appended — never the
     first, which the client controls. A router behind a gate passes on the gate's `X-Real-IP` /
     `X-Forwarded-For` unchanged.
-- **Fail:** a proxy-specific label tree, or a router that breaks uploads, websockets or the
+- **Fail:** a proxy-specific label, or a router that breaks uploads, websockets or the
   forwarded scheme.
 
 ### `container-name` — services on the shared network have stable names
@@ -202,11 +219,11 @@ With an AppShield gate, the router goes where its job is:
 
 **Check:** static · **Severity:** Minor
 
-- **Pass:** a service is on the shared network only if it carries Caddy labels or another app
+- **Pass:** a service is on the shared network only if it is a route's service or another app
   must reach it. Databases, caches and workers reached only by their siblings are on an
   app-internal network.
 
-### `no-published-web-port` — HTTP goes through Caddy only
+### `no-published-web-port` — HTTP goes through the platform's router only
 
 **Check:** static · **Severity:** Critical when the published port bypasses a login gate (e.g. an AppShield app's backend); Major otherwise
 
@@ -344,14 +361,16 @@ With an AppShield gate, the router goes where its job is:
 **n-a:** the app does not use AppShield.
 
 - **Pass:** all of the following hold:
-  - Caddy labels are on the sidecar only, and `x-casaos.main` names it — except when the gate
-    covers only some paths: then the labels and `x-casaos.main` are on the app's router
+  - the route's service is the sidecar, and `x-casaos.main` names it — except when the gate
+    covers only some paths: then the route and `x-casaos.main` are on the app's router
     (`in-app-router`), which sends exactly those paths plus `/nhl-auth/` to the sidecar
     (`Apps/Vaultwarden`);
-  - the backend has no labels and no published HTTP port;
+  - the backend is no route's service and publishes no HTTP port;
   - the sidecar's `container_name` equals the compose `name`, and `hostname:` equals `container_name`;
   - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL` and
-    `REDIRECT_HOST_SUFFIXES` are set;
+    `REDIRECT_HOST_SUFFIXES` are set, the last as
+    `"${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"`
+    — the primary domain first, since the gate derives its OAuth issuer from it;
   - the AppShield image is pinned;
   - no `AUTH_HASH`, `?hash=`, or `CREDENTIAL_VALIDATE_URL` appears;
   - a machine/API path is gated by `OAUTH_RESOURCE`, never opened by `ALLOWED_PATHS`.
@@ -402,7 +421,7 @@ With an AppShield gate, the router goes where its job is:
 - **Pass:** all of the following hold:
   - `x-compose-app` carries `schema_version: 2` (never higher), `title`, `tagline`,
     `description`, `developer`, `category`, `icon`, `screenshots`, `architectures` and,
-    for a web app, `webui-host`;
+    for a web app, `routes` (`routes-wiring`);
   - `x-casaos` repeats the same values under its own names (mapping in
     [GUIDELINES › Store info](GUIDELINES.md#store-info));
   - the two blocks don't contradict each other;

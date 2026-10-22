@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   # ── AppShield SSO gate ─────────────────────────────────────────────
-  # The only publicly reachable service: it carries the Caddy labels, and the
+  # The only publicly reachable service: it is the routed service, and the
   # qBittorrent WebUI behind it has none. AppShield (ghcr.io/yundera/appshield)
   # runs in OIDC mode — the presence of OIDC_REGISTRAR_URL makes it self-register
   # with the PCS auth-registrar on first login and send every request through the
@@ -27,15 +27,6 @@ services:
     restart: unless-stopped
     expose:
       - 80
-    labels:
-      caddy_0: qbittorrent-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: qbittorrent-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: qbittorrent-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       # The app's own router, not the WebUI: it fixes the tile's first request
       # before qBittorrent sees it (see qbittorrent-router below).
@@ -44,7 +35,7 @@ services:
       LISTEN_PORT: "80"
       # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       # "Add torrent file" POSTs the .torrent through the gate. A big multi-file
       # torrent is a few MB, and nginx's own default would cap the body at 1m and
       # answer 413, so the limit is raised here rather than left to the image.
@@ -64,7 +55,7 @@ services:
           memory: 128M
 
   # ── qBittorrent WebUI + engine (protected) ─────────────────────────
-  # No Caddy labels: the WebUI is reachable from the internet only through the
+  # Not routed: the WebUI is reachable from the internet only through the
   # gate above. It stays on `pcs` (rather than an app-private network) because
   # sibling apps talk to it directly — Radarr/Sonarr/Lidarr add it as a download
   # client at `qbittorrent-backend:80`. That path is container-to-container and
@@ -83,7 +74,7 @@ services:
       - pcs
       - qbittorrent-net
     # BitTorrent peer + DHT traffic on 6881 (matching TORRENTING_PORT below). Not
-    # HTTP, so neither Caddy nor the gate can carry it — reaching it means
+    # HTTP, so neither the router nor the gate can carry it — reaching it means
     # publishing it to the host. Shipped commented out because the client is usable
     # without it: qBittorrent still dials out to peers, so downloads work.
     # Uncomment to also accept incoming peers, which is faster and is what seeding
@@ -259,6 +250,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "5.1.4"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: qbittorrent, name: qbittorrent, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: qbittorrent
@@ -373,13 +369,13 @@ x-compose-app:
     #
     # What the check costs. qBittorrent compares host and port only (scheme is
     # explicitly not compared) and honours X-Forwarded-Host, so every same-origin
-    # request the WebUI itself makes is satisfied by the Caddy routes as shipped.
+    # request the WebUI itself makes is satisfied by the routes as shipped.
     # What it also rejects is the *cross-site navigation* that lands on the app —
     # the dashboard tile, and the redirect back from the SSO round trip, both of
     # which carry a foreign Referer. The check runs before authentication, so
     # bypassing the WebUI login below does not exempt it. That single entry
-    # request — and only it — is unpicked at the proxy by the @tilenav handler in
-    # the Caddy labels above; cross-site mutating requests still carry their Origin
+    # request — and only it — is unpicked by the app's own router in front of the
+    # gate; cross-site mutating requests still carry their Origin
     # and are still rejected here.
     - name: enable-csrf-protection
       at: setup
@@ -389,8 +385,8 @@ x-compose-app:
         docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/config/qBittorrent:/output" \
           busybox:1.37.0 sh -c "sed -i 's/CSRFProtection=false/CSRFProtection=true/' /output/qBittorrent.conf; touch /output/.csrf-protection-enabled"
     # Bypass the WebUI's own login for clients on the Docker private ranges — which
-    # is the only place the backend can be reached from, since it has no Caddy
-    # labels and publishes no HTTP port. The SSO gate becomes the single gate, so
+    # is the only place the backend can be reached from, since it is not
+    # routed and publishes no HTTP port. The SSO gate becomes the single gate, so
     # the tile opens straight into the UI instead of asking for a second password
     # after the server login. `WebUI\Username`/`Password_PBKDF2` are left seeded, so
     # a user who sets AuthSubnetWhitelistEnabled back to false has a known password
@@ -421,4 +417,3 @@ x-compose-app:
         mv /output/qBittorrent.conf.new /output/qBittorrent.conf
         touch /output/.sso-login-bypass
         SH
-  webui-host: qbittorrent-${domain}

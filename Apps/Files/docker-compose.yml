@@ -29,7 +29,7 @@ services:
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       # The one route that must answer without a session. Nothing else is exempt.
       ALLOWED_PATHS: "api/health"
       # This is a file manager: uploads are the point, and they pass through the
@@ -38,19 +38,10 @@ services:
       CLIENT_MAX_BODY_SIZE: "0"
     expose:
       - 80
-    labels:
-      caddy_0: files-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: files-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: files-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     depends_on:
       - files-backend
     networks:
-      # On `pcs` because Caddy and auth-registrar must reach it, and on the app's
+      # On `pcs` because the router and auth-registrar must reach it, and on the app's
       # own network because that is where its backend lives.
       - pcs
       - files-internal
@@ -108,7 +99,7 @@ services:
         target: /DATA/
     expose:
       - 8080
-    # No Caddy labels and NOT on `pcs`. This container has no authentication of
+    # Not routed and NOT on `pcs`. This container has no authentication of
     # its own and runs as root over all of /DATA, so the gate must be the only
     # path to it. `files-internal` is what enforces that — on `pcs`, any other
     # app on the server could reach it directly and read or delete anything.
@@ -304,6 +295,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "1.0.2"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: files, name: files, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: files
@@ -402,5 +398,3 @@ x-compose-app:
     - path: /DATA/AppData/$AppID
       user: $PUID
       group: $PGID
-  webui-host: files-${domain}
-  webui-path: /

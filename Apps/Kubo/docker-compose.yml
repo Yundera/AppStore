@@ -27,38 +27,13 @@ services:
     restart: unless-stopped
     expose:
       - 80
-    labels:
-      # The bare path "/" is redirected to the WebUI, because the RPC port serves
-      # nothing at the root and a user who types the hostname would otherwise land on
-      # an empty page. It is a redirect only, issued before the gate, and discloses
-      # nothing. Everything else -- /webui/*, /api/v0/*, and AppShield's own
-      # /nhl-auth/* -- is proxied through the gate.
-      #
-      # `redir` with a named matcher, not a `handle` branch: Caddy's directive order
-      # already puts redir ahead of reverse_proxy, and the handle form
-      # (`0_handle: "@root"` + `0_handle.redir`) renders as an empty handle block --
-      # tested on wisera, it answered "/" with a 200 and no body.
-      caddy_0: kubo-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.@root.path: "/"
-      caddy_0.redir: "@root /webui/ 302"
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: kubo-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.@root.path: "/"
-      caddy_1.redir: "@root /webui/ 302"
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: kubo-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.@root.path: "/"
-      caddy_2.redir: "@root /webui/ 302"
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       BACKEND_HOST: "kubo-backend"
       BACKEND_PORT: "5001"
       LISTEN_PORT: "80"
       # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
       # Adding a file is a POST of that whole file to /api/v0/add. Any cap here is a
       # cap on what the user can put in their own node, so there is none.
       CLIENT_MAX_BODY_SIZE: "0"
@@ -76,11 +51,10 @@ services:
           memory: 128M
 
   # ── Kubo, the IPFS node ────────────────────────────────────────────────────
-  # Carries Caddy labels of its own, which is the documented deviation in
-  # rationale.md: they publish `{{upstreams 8080}}`, the read-only gateway, and
-  # nothing else. Caddy builds routes only from what a label names, so port 5001 --
-  # the RPC API -- has no route on this hostname and stays reachable only through
-  # the gate above.
+  # Routed itself (the kubo-gateway route), which is the documented deviation in
+  # rationale.md: the route names 8080, the read-only gateway, and nothing else, so
+  # port 5001 -- the RPC API -- has no route on this hostname and stays reachable
+  # only through the gate above.
   kubo-backend:
     image: ipfs/kubo:v0.43.1
     container_name: kubo-backend
@@ -95,7 +69,7 @@ services:
       # 5001 RPC API + WebUI (behind the gate), 8080 read-only gateway.
       - 5001
       - 8080
-    # libp2p swarm. This is the peer protocol, not HTTP: Caddy cannot carry it, so
+    # libp2p swarm. This is the peer protocol, not HTTP: the router cannot carry it, so
     # reaching it means publishing it. Shipped enabled because a node no one can dial
     # can only pull -- other peers and the public gateways cannot fetch what this node
     # pins, and Kubo's AutoTLS never gets the libp2p.direct certificate that lets
@@ -105,21 +79,6 @@ services:
     ports:
       - 4001:4001/tcp
       - 4001:4001/udp
-    labels:
-      # The public read side, on its own hostname. Separate from kubo-${APP_DOMAIN}
-      # on purpose: a path gateway serves every shared file from the origin it is
-      # reached on, so sharing an HTML page from the WebUI's own origin would put
-      # attacker-authored script next to the RPC API with the user's session attached.
-      # On this hostname that script is cross-origin to the API, and Kubo's own origin
-      # check -- which allowlists only the three hostnames above -- answers it 403.
-      caddy_0: kubo-gateway-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 8080}}"
-      caddy_1: kubo-gateway-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 8080}}"
-      caddy_2: kubo-gateway-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 8080}}"
     environment:
       TZ: $TZ
       # Read at `ipfs init` only, so this shapes the repo the first time and is inert
@@ -136,7 +95,7 @@ services:
       # of being OOM-killed at the edge.
       GOMEMLIMIT: 768MiB
       # Consumed by seed/init.d/01-configure-node.sh on every start.
-      IPFS_ALLOWED_ORIGINS: '["${APP_URL:-https://kubo-${APP_DOMAIN}}","https://kubo-${APP_PUBLIC_IP_DASH}.nip.io","https://kubo-${APP_PUBLIC_IP_DASH}.sslip.io"]'
+      IPFS_ALLOWED_ORIGINS: "${APP_URLS:-https://kubo-${APP_DOMAIN},https://kubo-${APP_PUBLIC_IP_DASH}.nip.io,https://kubo-${APP_PUBLIC_IP_DASH}.sslip.io}"
       # Set to "false" to let the public gateway hostname fetch any CID from the
       # network on a visitor's behalf, turning this node into an open gateway for
       # anyone who finds the address. Left true, it serves only what this node holds.
@@ -288,6 +247,15 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "0.43.1"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: kubo, name: kubo, upstream-port: 80, path: /webui/ }
+    # The public read side, on its own host on purpose: a path gateway serves every
+    # shared file from the origin it is reached on, so an HTML page shared from the
+    # WebUI's origin would run next to the RPC API with the user's session attached.
+    - { service: kubo-backend, name: kubo-gateway, upstream-port: 8080 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: kubo
@@ -443,5 +411,3 @@ x-compose-app:
           exit 0
         fi
         SH
-  webui-host: kubo-${domain}
-  webui-path: /webui/

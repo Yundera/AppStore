@@ -8,7 +8,7 @@ x-logging: &logging
     max-file: "3"
 
 services:
-  # The SSO gate. It carries the Caddy labels, so this is the only service the
+  # The SSO gate. It is the routed service, so this is the only service the
   # internet can reach.
   #
   # The gate MUST own the bare name `prowlarr`. AppShield builds its OIDC redirect
@@ -31,15 +31,6 @@ services:
     restart: unless-stopped
     expose:
       - 80
-    labels:
-      caddy_0: prowlarr-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: prowlarr-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: prowlarr-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     networks:
       - pcs
     environment:
@@ -50,7 +41,7 @@ services:
       # self-registers with the PCS auth-registrar and every human request is
       # sent through the built-in Authelia SSO.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
     depends_on:
       - prowlarr-backend
     cpu_shares: 50
@@ -67,7 +58,7 @@ services:
     user: $PUID:$PGID
     expose:
       - 9696
-    # No Caddy labels: this service is deliberately NOT published. It sits on
+    # Not routed: this service is deliberately NOT published. It sits on
     # `pcs` so sibling apps can reach it at `prowlarr-backend:9696` with an
     # X-Api-Key, which is the wiring the Sonarr/Radarr/Lidarr tips describe. The
     # bare name `prowlarr` belongs to the SSO gate on :80 and will NOT serve the
@@ -188,6 +179,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.4.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: prowlarr-gate, name: prowlarr, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: prowlarr
@@ -301,4 +297,3 @@ x-compose-app:
         }' || { echo "prowlarr: could not register FlareSolverr" >&2; exit 1; }
         echo "prowlarr: registered FlareSolverr at $SOLVER_URL for tag flaresolverr"
         SH
-  webui-host: prowlarr-${domain}

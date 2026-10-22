@@ -11,7 +11,7 @@ services:
   # The public face of the app. Django with DEBUG=False serves neither /static/
   # nor /media/, and wger ships no whitenoise, so a front-end that can serve
   # files is required for the app to render at all -- upstream says the same.
-  # It is therefore also `x-casaos.main`: the service carrying the caddy labels.
+  # It is therefore also `x-casaos.main`: the routed service.
   wger:
     image: nginx:1.31.5-alpine
     container_name: wger
@@ -23,15 +23,6 @@ services:
     restart: unless-stopped
     expose:
       - 80
-    labels:
-      caddy_0: wger-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: wger-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: wger-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     environment:
       TZ: $TZ
     volumes:
@@ -84,7 +75,7 @@ services:
       # It is also the app's own default; set here so a change upstream cannot
       # silently point every phone at a path nginx does not route.
       POWERSYNC_URL_PATH: ps
-      CSRF_TRUSTED_ORIGINS: ${APP_URL:-https://wger-${APP_DOMAIN}},https://wger-${APP_PUBLIC_IP_DASH}.nip.io,https://wger-${APP_PUBLIC_IP_DASH}.sslip.io
+      CSRF_TRUSTED_ORIGINS: ${APP_URLS:-https://wger-${APP_DOMAIN},https://wger-${APP_PUBLIC_IP_DASH}.nip.io,https://wger-${APP_PUBLIC_IP_DASH}.sslip.io}
       # Set because the app really is behind a TLS-terminating proxy; without
       # them Django builds http:// links and rejects its own POST forms.
       X_FORWARDED_PROTO_HEADER_SET: "True"
@@ -747,6 +738,11 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2.7.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: wger, name: wger, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: wger
@@ -1027,9 +1023,9 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/config-powersync
       user: $PUID
       group: $PGID
-    - path: /DATA/AppData/$AppID/pgdata
-      user: $PUID
-      group: $PGID
+    # Not /DATA/AppData/$AppID/pgdata: wger-db starts as root and its image hands that directory to
+    # its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
     - path: /DATA/AppData/$AppID/redis
       user: $PUID
       group: $PGID
@@ -1306,5 +1302,3 @@ x-compose-app:
         admin.save(update_fields=['password', 'email'])
         print('wger: rotated the default admin password to the generated one')
         PY
-  webui-host: wger-${domain}
-  webui-path: /

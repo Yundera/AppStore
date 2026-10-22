@@ -1,4 +1,4 @@
-issuer: https://outline-auth-${APP_DOMAIN}
+issuer: ${ROUTE_OUTLINE_AUTH_URL:-https://outline-auth-${APP_DOMAIN}}
 storage:
   type: sqlite3
   config:
@@ -10,7 +10,7 @@ staticClients:
     secret: ${OUTLINE_OIDC_SECRET}
     name: Outline
     redirectURIs:
-      - https://outline-${APP_DOMAIN}/auth/oidc.callback
+      - ${APP_URL:-https://outline-${APP_DOMAIN}}/auth/oidc.callback
 enablePasswordDB: true
 staticPasswords:
   - email: "${APP_EMAIL:-admin@${APP_DOMAIN}}"
