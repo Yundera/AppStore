@@ -9,7 +9,7 @@ x-logging: &logging
 services:
   # Main MCP server — reachable at n8nmcp-backend:9640 on the pcs network
   n8nmcp-backend:
-    image: ghcr.io/worph/n8nmcp:1.0.1
+    image: ghcr.io/worph/n8nmcp:1.0.2
     container_name: n8nmcp-backend
     hostname: n8nmcp-backend
     # supervisord is PID 1 and MUST start as root so it can drop privileges for
@@ -251,7 +251,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.1"
+  version: "1.0.2"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).

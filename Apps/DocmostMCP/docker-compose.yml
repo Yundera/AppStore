@@ -49,7 +49,7 @@ services:
   # Beaconify sidecar — makes this MCP discoverable by the Beacon aggregator.
   # Proxies the upstream MCP and replies to Beacon's UDP discovery on port 9099.
   docmostmcp-beacon:
-    image: ghcr.io/worph/beaconify@sha256:63ce59fbe15365540cb3d45849a46b68b8132a2c1d605ea8b7b310d010540107
+    image: ghcr.io/worph/beaconify:1.0.2
     container_name: docmostmcp-beacon
     hostname: docmostmcp-beacon
     restart: unless-stopped

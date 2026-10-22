@@ -10,7 +10,7 @@ services:
   # Main container — Chromium + Playwright + MCP server + noVNC viewer.
   # Reachable at browsermcp-backend:9746 on the pcs network. Beacon discovery on UDP 9099.
   browsermcp-backend:
-    image: ghcr.io/worph/browser-mcp:1.1.4
+    image: ghcr.io/worph/browser-mcp:1.1.9
     container_name: browsermcp-backend
     hostname: browsermcp-backend
     restart: unless-stopped
@@ -25,7 +25,8 @@ services:
     environment:
       - TZ=$TZ
       - PORT=9746
-      - DISCOVERY_PORT=9099
+      # Beacon discovery (UDP). The image keeps it off unless this is set (since 1.1.5).
+      - BEACON_DISCOVERY_PORT=9099
       - CONFIG_PATH=/app/data/config.json
       - VNC_RESOLUTION=1280x720x24
       # Kill idle Chrome after this many ms (default 2h); respawns on next use.
@@ -320,7 +321,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.1.4"
+  version: "1.1.9"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).

@@ -12,7 +12,7 @@ services:
   # API (/api) and the MCP endpoint (/mcp), and answers Beacon's UDP discovery
   # on port 9099.
   trellomcp-backend:
-    image: ghcr.io/worph/trello-mcp:1.0.0
+    image: ghcr.io/worph/trello-mcp:1.0.1
     container_name: trellomcp-backend
     hostname: trellomcp-backend
     user: $PUID:$PGID
@@ -234,7 +234,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.0"
+  version: "1.0.1"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).

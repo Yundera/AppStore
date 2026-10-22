@@ -13,7 +13,7 @@ services:
   # rewrite the cron rules and trigger arbitrary MCP tool calls unauthenticated.
   # The perimeter is chronosmcp-proxy (AppShield) and nothing else.
   chronosmcp-backend:
-    image: ghcr.io/worph/chronos-mcp:1.0.7
+    image: ghcr.io/worph/chronos-mcp:1.0.8
     container_name: chronosmcp-backend
     hostname: chronosmcp-backend
     user: $PUID:$PGID
@@ -97,7 +97,7 @@ networks:
 
 x-casaos:
   architectures:
-    # amd64 only: the backend image ghcr.io/worph/chronos-mcp:1.0.7 publishes an
+    # amd64 only: the backend image ghcr.io/worph/chronos-mcp:1.0.8 publishes an
     # amd64 manifest only (the AppShield sidecar does ship arm64, but the app
     # cannot run without its backend). Re-add arm64 when the backend does.
     - amd64
@@ -299,7 +299,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.7"
+  version: "1.0.8"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
