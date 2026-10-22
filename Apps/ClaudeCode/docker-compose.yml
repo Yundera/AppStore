@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   claude:
-    image: ghcr.io/worph/claude-code-container:1.0.26
+    image: ghcr.io/worph/claude-code-container:1.0.30
     container_name: claude
     restart: unless-stopped
     user: 0:0
@@ -209,7 +209,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.26"
+  version: "1.0.30"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
