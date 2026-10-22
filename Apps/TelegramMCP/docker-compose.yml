@@ -27,7 +27,7 @@ services:
       - DISCOVERY_PORT=9099
       # Advertised public base URL. The bot registers its Telegram webhook at
       # ${PUBLIC_URL}/webhook and hands this out as the public MCP URL.
-      - PUBLIC_URL=https://telegrammcp-${APP_DOMAIN}
+      - PUBLIC_URL=${APP_URL:-https://telegrammcp-${APP_DOMAIN}}
     volumes:
       # config.json (bot token + MCP target) is created here on first start
       # — CONFIG_PATH=/app/data/config.json is baked into the image.
@@ -93,7 +93,7 @@ services:
       # SSO gate. Replaces ALLOWED_PATHS: "mcp", which exempted /mcp from the
       # gate and — with AUTH_HASH inert under Maison — left it uncredentialed, so an
       # anonymous caller could drive send_message / send_photo / get_chat_history.
-      OAUTH_RESOURCE: "https://telegrammcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -126,7 +126,7 @@ x-casaos:
   # attaches ${APP_NET} to. The tile's health follows main, so pointing it at the
   # backend tracked a container nobody reaches from outside.
   main: telegrammcp-proxy
-  hostname: telegrammcp-${APP_DOMAIN}
+  hostname: ${APP_HOST:-telegrammcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"
   index: /
@@ -190,7 +190,7 @@ x-casaos:
 
         **Setup (2 steps):**
         1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server)
-        2. Paste your **bot token**, pick **polling** or **webhook** mode, and click **Save**. In webhook mode the bot registers `https://telegrammcp-${APP_DOMAIN}/webhook` with Telegram automatically.
+        2. Paste your **bot token**, pick **polling** or **webhook** mode, and click **Save**. In webhook mode the bot registers `${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/webhook` with Telegram automatically.
 
         **MCP Integration (for AI/LLMs):**
 
@@ -205,7 +205,7 @@ x-casaos:
           "mcpServers": {
             "telegram": {
               "type": "http",
-              "url": "https://telegrammcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
@@ -227,7 +227,7 @@ x-casaos:
         *Note: Requires the AI assistant to be on the `pcs` Docker network.*
 
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://telegrammcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 3: Via Beacon (aggregated)**
@@ -314,7 +314,7 @@ x-compose-app:
 
       **Setup (2 steps):**
       1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server)
-      2. Paste your **bot token**, pick **polling** or **webhook** mode, and click **Save**. In webhook mode the bot registers `https://telegrammcp-${APP_DOMAIN}/webhook` with Telegram automatically.
+      2. Paste your **bot token**, pick **polling** or **webhook** mode, and click **Save**. In webhook mode the bot registers `${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/webhook` with Telegram automatically.
 
       **MCP Integration (for AI/LLMs):**
 
@@ -329,7 +329,7 @@ x-compose-app:
         "mcpServers": {
           "telegram": {
             "type": "http",
-            "url": "https://telegrammcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
@@ -351,7 +351,7 @@ x-compose-app:
       *Note: Requires the AI assistant to be on the `pcs` Docker network.*
 
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://telegrammcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 3: Via Beacon (aggregated)**

@@ -36,7 +36,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "80"
-      URL: https://outline-${APP_DOMAIN}
+      URL: ${APP_URL:-https://outline-${APP_DOMAIN}}
       SECRET_KEY: ${OUTLINE_SECRET_KEY}
       UTILS_SECRET: ${OUTLINE_UTILS_SECRET}
       DATABASE_URL: postgres://outline:${OUTLINE_DB_PASSWORD}@outline-postgres:5432/outline
@@ -50,7 +50,7 @@ services:
       # OIDC — Dex authentication
       OIDC_CLIENT_ID: outline
       OIDC_CLIENT_SECRET: ${OUTLINE_OIDC_SECRET}
-      OIDC_AUTH_URI: https://outline-auth-${APP_DOMAIN}/auth
+      OIDC_AUTH_URI: ${ROUTE_OUTLINE_AUTH_URL:-https://outline-auth-${APP_DOMAIN}}/auth
       OIDC_TOKEN_URI: http://outline-dex:5556/token
       OIDC_USERINFO_URI: http://outline-dex:5556/userinfo
       OIDC_DISPLAY_NAME: Login

@@ -22,12 +22,12 @@ services:
     environment:
       DOMAIN: "${APP_DOMAIN}"
       SUB_DOMAIN: "hubs"
-      turkeyCfg_thumbnail_server: "hubsnearspark-${APP_DOMAIN}"
-      turkeyCfg_base_assets_path: "https://hubsassets-${APP_DOMAIN}/hubs/"
-      turkeyCfg_non_cors_proxy_domains: "hubs-${APP_DOMAIN},hubsassets-${APP_DOMAIN}"
-      turkeyCfg_reticulum_server: "hubs-${APP_DOMAIN}"
-      turkeyCfg_cors_proxy_server: "hubs-${APP_DOMAIN}"
-      turkeyCfg_shortlink_domain: "hubs-${APP_DOMAIN}"
+      turkeyCfg_thumbnail_server: "${ROUTE_HUBSNEARSPARK_HOST:-hubsnearspark-${APP_DOMAIN}}"
+      turkeyCfg_base_assets_path: "${ROUTE_HUBSASSETS_URL:-https://hubsassets-${APP_DOMAIN}}/hubs/"
+      turkeyCfg_non_cors_proxy_domains: "${APP_HOST:-hubs-${APP_DOMAIN}},${ROUTE_HUBSASSETS_HOST:-hubsassets-${APP_DOMAIN}}"
+      turkeyCfg_reticulum_server: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_cors_proxy_server: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_shortlink_domain: "${APP_HOST:-hubs-${APP_DOMAIN}}"
       turkeyCfg_tier: "p1"
       PUID: $PUID
       PGID: $PGID
@@ -102,14 +102,14 @@ services:
       POD_IP: "127.0.0.1"
       POD_NAME: "reticulum-1"
       turkeyCfg_POD_NS: "hubs"
-      turkeyCfg_HUB_DOMAIN: "hubs-${APP_DOMAIN}"
-      turkeyCfg_DOMAIN: "hubs-${APP_DOMAIN}"
-      turkeyCfg_RET_HOST: "hubs-${APP_DOMAIN}"
-      turkeyCfg_LINK_HOST: "hubslink-${APP_DOMAIN}"
-      turkeyCfg_ASSETS_HOST: "hubsassets-${APP_DOMAIN}"
-      turkeyCfg_DIALOG_HOST: "hubsdialog-${APP_DOMAIN}"
-      turkeyCfg_NEARSPARK_HOST: "hubsnearspark-${APP_DOMAIN}"
-      turkeyCfg_SPOKE_HOST: "hubsspoke-${APP_DOMAIN}"
+      turkeyCfg_HUB_DOMAIN: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_DOMAIN: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_RET_HOST: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_LINK_HOST: "${ROUTE_HUBSLINK_HOST:-hubslink-${APP_DOMAIN}}"
+      turkeyCfg_ASSETS_HOST: "${ROUTE_HUBSASSETS_HOST:-hubsassets-${APP_DOMAIN}}"
+      turkeyCfg_DIALOG_HOST: "${ROUTE_HUBSDIALOG_HOST:-hubsdialog-${APP_DOMAIN}}"
+      turkeyCfg_NEARSPARK_HOST: "${ROUTE_HUBSNEARSPARK_HOST:-hubsnearspark-${APP_DOMAIN}}"
+      turkeyCfg_SPOKE_HOST: "${ROUTE_HUBSSPOKE_HOST:-hubsspoke-${APP_DOMAIN}}"
       turkeyCfg_DB_HOST: "db"
       turkeyCfg_DB_HOST_T: "db"
       turkeyCfg_APP_EMAIL: "${APP_EMAIL}"
@@ -200,13 +200,13 @@ services:
     environment:
       DOMAIN: "${APP_DOMAIN}"
       SUB_DOMAIN: "hubsspoke"
-      turkeyCfg_thumbnail_server: "hubsnearspark-${APP_DOMAIN}"
-      turkeyCfg_base_assets_path: "https://hubsspoke-${APP_DOMAIN}/spoke/"
-      turkeyCfg_non_cors_proxy_domains: "hubs-${APP_DOMAIN},hubsspoke-${APP_DOMAIN}"
-      turkeyCfg_reticulum_server: "hubs-${APP_DOMAIN}"
-      turkeyCfg_cors_proxy_server: "hubs-${APP_DOMAIN}"
-      turkeyCfg_shortlink_domain: "hubs-${APP_DOMAIN}"
-      turkeyCfg_hubs_server: "hubs-${APP_DOMAIN}"
+      turkeyCfg_thumbnail_server: "${ROUTE_HUBSNEARSPARK_HOST:-hubsnearspark-${APP_DOMAIN}}"
+      turkeyCfg_base_assets_path: "${ROUTE_HUBSSPOKE_URL:-https://hubsspoke-${APP_DOMAIN}}/spoke/"
+      turkeyCfg_non_cors_proxy_domains: "${APP_HOST:-hubs-${APP_DOMAIN}},${ROUTE_HUBSSPOKE_HOST:-hubsspoke-${APP_DOMAIN}}"
+      turkeyCfg_reticulum_server: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_cors_proxy_server: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_shortlink_domain: "${APP_HOST:-hubs-${APP_DOMAIN}}"
+      turkeyCfg_hubs_server: "${APP_HOST:-hubs-${APP_DOMAIN}}"
       PUID: $PUID
       PGID: $PGID
       TZ: UTC
@@ -404,54 +404,54 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **🔑 Initial admin: `${APP_EMAIL}`** — the only account with admin rights. Sign in with this email at https://hubs-${APP_DOMAIN} to receive a magic-link.
+        **🔑 Initial admin: `${APP_EMAIL}`** — the only account with admin rights. Sign in with this email at ${APP_URL:-https://hubs-${APP_DOMAIN}} to receive a magic-link.
 
         **Operator surfaces** (after admin sign-in):
-        - [Admin panel](https://hubs-${APP_DOMAIN}/admin)
-        - [Spoke scene editor](https://hubs-${APP_DOMAIN}/spoke/projects)
+        - [Admin panel](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)
+        - [Spoke scene editor](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)
 
         **Voice / video** needs UDP ports 40000-40050 reachable on the server's public IP. HTTPS-only tunnels leave signaling working but audio silent.
 
         **Resources:** ~3 GB RAM, ~2 vCPU. Suitable for rooms up to ~10 concurrent users.
         **More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
       fr_fr: |
-        **🔑 Administrateur initial : `${APP_EMAIL}`** — seul compte avec les droits admin. Connectez-vous avec cet email sur https://hubs-${APP_DOMAIN} pour recevoir un lien magique.
+        **🔑 Administrateur initial : `${APP_EMAIL}`** — seul compte avec les droits admin. Connectez-vous avec cet email sur ${APP_URL:-https://hubs-${APP_DOMAIN}} pour recevoir un lien magique.
 
         **Interfaces d'administration** (après connexion admin) :
-        - [Panneau admin](https://hubs-${APP_DOMAIN}/admin)
-        - [Éditeur de scène Spoke](https://hubs-${APP_DOMAIN}/spoke/projects)
+        - [Panneau admin](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)
+        - [Éditeur de scène Spoke](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)
 
         **Voix / vidéo** : les ports UDP 40000-40050 doivent être joignables sur l'IP publique du serveur. Un tunnel HTTPS uniquement laisse la signalisation fonctionnelle mais coupe le média.
 
         **Ressources :** ~3 Go de RAM, ~2 vCPU. Adapté aux salons jusqu'à ~10 utilisateurs simultanés.
         **More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
       es_es: |
-        **🔑 Administrador inicial: `${APP_EMAIL}`** — la única cuenta con permisos de admin. Inicia sesión con ese correo en https://hubs-${APP_DOMAIN} para recibir un enlace mágico.
+        **🔑 Administrador inicial: `${APP_EMAIL}`** — la única cuenta con permisos de admin. Inicia sesión con ese correo en ${APP_URL:-https://hubs-${APP_DOMAIN}} para recibir un enlace mágico.
 
         **Interfaces de administración** (tras iniciar sesión como admin):
-        - [Panel de admin](https://hubs-${APP_DOMAIN}/admin)
-        - [Editor de escenas Spoke](https://hubs-${APP_DOMAIN}/spoke/projects)
+        - [Panel de admin](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)
+        - [Editor de escenas Spoke](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)
 
         **Voz / vídeo:** los puertos UDP 40000-40050 deben estar accesibles en la IP pública del servidor. Un túnel solo HTTPS deja la señalización funcionando pero corta el audio.
 
         **Recursos:** ~3 GB de RAM, ~2 vCPU. Adecuado para salas de hasta ~10 usuarios simultáneos.
         **More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)
       zh_cn: |
-        **🔑 初始管理员：`${APP_EMAIL}`** —— 唯一拥有管理员权限的账户。在 https://hubs-${APP_DOMAIN} 使用该邮箱登录以接收魔法链接。
+        **🔑 初始管理员：`${APP_EMAIL}`** —— 唯一拥有管理员权限的账户。在 ${APP_URL:-https://hubs-${APP_DOMAIN}} 使用该邮箱登录以接收魔法链接。
 
         **管理员界面**（管理员登录后）：
-        - [管理面板](https://hubs-${APP_DOMAIN}/admin)
-        - [Spoke 场景编辑器](https://hubs-${APP_DOMAIN}/spoke/projects)
+        - [管理面板](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)
+        - [Spoke 场景编辑器](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)
 
         **语音 / 视频**：服务器公网 IP 的 UDP 端口 40000-40050 必须开放。仅 HTTPS 隧道可保持信令但会丢失媒体。
 
         **资源：** 约 3 GB 内存、~2 vCPU。适合 ~10 名以下并发用户的房间。
       ko_kr: |
-        **🔑 초기 관리자: `${APP_EMAIL}`** — 관리자 권한을 가진 유일한 계정입니다. https://hubs-${APP_DOMAIN} 에서 이 이메일로 로그인하면 매직 링크를 받게 됩니다.
+        **🔑 초기 관리자: `${APP_EMAIL}`** — 관리자 권한을 가진 유일한 계정입니다. ${APP_URL:-https://hubs-${APP_DOMAIN}} 에서 이 이메일로 로그인하면 매직 링크를 받게 됩니다.
 
         **운영자 화면** (관리자 로그인 후):
-        - [관리 패널](https://hubs-${APP_DOMAIN}/admin)
-        - [Spoke 씬 에디터](https://hubs-${APP_DOMAIN}/spoke/projects)
+        - [관리 패널](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)
+        - [Spoke 씬 에디터](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)
 
         **음성 / 영상**: 서버의 공인 IP에서 UDP 40000-40050 포트가 열려 있어야 합니다. HTTPS 전용 터널 환경에서는 시그널링만 동작하고 미디어는 끊깁니다.
 
@@ -493,11 +493,11 @@ x-compose-app:
   architectures:
     - amd64
   tips:
-    en_us: "**\U0001F511 Initial admin: `${APP_EMAIL}`** — the only account with admin rights. Sign in with this email at https://hubs-${APP_DOMAIN} to receive a magic-link.\n\n**Operator surfaces** (after admin sign-in):\n- [Admin panel](https://hubs-${APP_DOMAIN}/admin)\n- [Spoke scene editor](https://hubs-${APP_DOMAIN}/spoke/projects)\n\n**Voice / video** needs UDP ports 40000-40050 reachable on the server's public IP. HTTPS-only tunnels leave signaling working but audio silent.\n\n**Resources:** ~3 GB RAM, ~2 vCPU. Suitable for rooms up to ~10 concurrent users.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
-    fr_fr: "**\U0001F511 Administrateur initial : `${APP_EMAIL}`** — seul compte avec les droits admin. Connectez-vous avec cet email sur https://hubs-${APP_DOMAIN} pour recevoir un lien magique.\n\n**Interfaces d'administration** (après connexion admin) :\n- [Panneau admin](https://hubs-${APP_DOMAIN}/admin)\n- [Éditeur de scène Spoke](https://hubs-${APP_DOMAIN}/spoke/projects)\n\n**Voix / vidéo** : les ports UDP 40000-40050 doivent être joignables sur l'IP publique du serveur. Un tunnel HTTPS uniquement laisse la signalisation fonctionnelle mais coupe le média.\n\n**Ressources :** ~3 Go de RAM, ~2 vCPU. Adapté aux salons jusqu'à ~10 utilisateurs simultanés.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
-    es_es: "**\U0001F511 Administrador inicial: `${APP_EMAIL}`** — la única cuenta con permisos de admin. Inicia sesión con ese correo en https://hubs-${APP_DOMAIN} para recibir un enlace mágico.\n\n**Interfaces de administración** (tras iniciar sesión como admin):\n- [Panel de admin](https://hubs-${APP_DOMAIN}/admin)\n- [Editor de escenas Spoke](https://hubs-${APP_DOMAIN}/spoke/projects)\n\n**Voz / vídeo:** los puertos UDP 40000-40050 deben estar accesibles en la IP pública del servidor. Un túnel solo HTTPS deja la señalización funcionando pero corta el audio.\n\n**Recursos:** ~3 GB de RAM, ~2 vCPU. Adecuado para salas de hasta ~10 usuarios simultáneos.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
-    zh_cn: "**\U0001F511 初始管理员：`${APP_EMAIL}`** —— 唯一拥有管理员权限的账户。在 https://hubs-${APP_DOMAIN} 使用该邮箱登录以接收魔法链接。\n\n**管理员界面**（管理员登录后）：\n- [管理面板](https://hubs-${APP_DOMAIN}/admin)\n- [Spoke 场景编辑器](https://hubs-${APP_DOMAIN}/spoke/projects)\n\n**语音 / 视频**：服务器公网 IP 的 UDP 端口 40000-40050 必须开放。仅 HTTPS 隧道可保持信令但会丢失媒体。\n\n**资源：** 约 3 GB 内存、~2 vCPU。适合 ~10 名以下并发用户的房间。\n"
-    ko_kr: "**\U0001F511 초기 관리자: `${APP_EMAIL}`** — 관리자 권한을 가진 유일한 계정입니다. https://hubs-${APP_DOMAIN} 에서 이 이메일로 로그인하면 매직 링크를 받게 됩니다.\n\n**운영자 화면** (관리자 로그인 후):\n- [관리 패널](https://hubs-${APP_DOMAIN}/admin)\n- [Spoke 씬 에디터](https://hubs-${APP_DOMAIN}/spoke/projects)\n\n**음성 / 영상**: 서버의 공인 IP에서 UDP 40000-40050 포트가 열려 있어야 합니다. HTTPS 전용 터널 환경에서는 시그널링만 동작하고 미디어는 끊깁니다.\n\n**리소스:** RAM 약 3 GB, vCPU 약 2개. 동시 접속 ~10명 이하 룸에 적합합니다.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
+    en_us: "**\U0001F511 Initial admin: `${APP_EMAIL}`** — the only account with admin rights. Sign in with this email at ${APP_URL:-https://hubs-${APP_DOMAIN}} to receive a magic-link.\n\n**Operator surfaces** (after admin sign-in):\n- [Admin panel](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)\n- [Spoke scene editor](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)\n\n**Voice / video** needs UDP ports 40000-40050 reachable on the server's public IP. HTTPS-only tunnels leave signaling working but audio silent.\n\n**Resources:** ~3 GB RAM, ~2 vCPU. Suitable for rooms up to ~10 concurrent users.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
+    fr_fr: "**\U0001F511 Administrateur initial : `${APP_EMAIL}`** — seul compte avec les droits admin. Connectez-vous avec cet email sur ${APP_URL:-https://hubs-${APP_DOMAIN}} pour recevoir un lien magique.\n\n**Interfaces d'administration** (après connexion admin) :\n- [Panneau admin](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)\n- [Éditeur de scène Spoke](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)\n\n**Voix / vidéo** : les ports UDP 40000-40050 doivent être joignables sur l'IP publique du serveur. Un tunnel HTTPS uniquement laisse la signalisation fonctionnelle mais coupe le média.\n\n**Ressources :** ~3 Go de RAM, ~2 vCPU. Adapté aux salons jusqu'à ~10 utilisateurs simultanés.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
+    es_es: "**\U0001F511 Administrador inicial: `${APP_EMAIL}`** — la única cuenta con permisos de admin. Inicia sesión con ese correo en ${APP_URL:-https://hubs-${APP_DOMAIN}} para recibir un enlace mágico.\n\n**Interfaces de administración** (tras iniciar sesión como admin):\n- [Panel de admin](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)\n- [Editor de escenas Spoke](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)\n\n**Voz / vídeo:** los puertos UDP 40000-40050 deben estar accesibles en la IP pública del servidor. Un túnel solo HTTPS deja la señalización funcionando pero corta el audio.\n\n**Recursos:** ~3 GB de RAM, ~2 vCPU. Adecuado para salas de hasta ~10 usuarios simultáneos.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
+    zh_cn: "**\U0001F511 初始管理员：`${APP_EMAIL}`** —— 唯一拥有管理员权限的账户。在 ${APP_URL:-https://hubs-${APP_DOMAIN}} 使用该邮箱登录以接收魔法链接。\n\n**管理员界面**（管理员登录后）：\n- [管理面板](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)\n- [Spoke 场景编辑器](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)\n\n**语音 / 视频**：服务器公网 IP 的 UDP 端口 40000-40050 必须开放。仅 HTTPS 隧道可保持信令但会丢失媒体。\n\n**资源：** 约 3 GB 内存、~2 vCPU。适合 ~10 名以下并发用户的房间。\n"
+    ko_kr: "**\U0001F511 초기 관리자: `${APP_EMAIL}`** — 관리자 권한을 가진 유일한 계정입니다. ${APP_URL:-https://hubs-${APP_DOMAIN}} 에서 이 이메일로 로그인하면 매직 링크를 받게 됩니다.\n\n**운영자 화면** (관리자 로그인 후):\n- [관리 패널](${APP_URL:-https://hubs-${APP_DOMAIN}}/admin)\n- [Spoke 씬 에디터](${APP_URL:-https://hubs-${APP_DOMAIN}}/spoke/projects)\n\n**음성 / 영상**: 서버의 공인 IP에서 UDP 40000-40050 포트가 열려 있어야 합니다. HTTPS 전용 터널 환경에서는 시그널링만 동작하고 미디어는 끊깁니다.\n\n**리소스:** RAM 약 3 GB, vCPU 약 2개. 동시 접속 ~10명 이하 룸에 적합합니다.\n**More info:** [Hubs Community setup guide](https://yundera.com/blog/best-apps-1/hubs-community-available-in-one-click-40)\n"
   # postgres 14 reaches end-of-life in Nov 2026; the store moved to 17.11 on
   # 2026-10-16. postgres:17 will not start on a 14 cluster, so every earlier install
   # needs pg_upgrade once. Installs predate .data-version and arrive at data version
@@ -556,7 +556,7 @@ x-compose-app:
         docker run --rm --network hubs-net -v "$APP_DIR/secrets/.env:/secrets.env:ro" \
           -e SECRETS_ENV_FILE=/secrets.env \
           -e RET_INTERNAL_URL=https://hubs-reticulum:4000 \
-          -e RET_PUBLIC_URL="https://hubs-$APP_DOMAIN" \
+          -e RET_PUBLIC_URL="${APP_URL:-https://hubs-${APP_DOMAIN}}" \
           -e APP_EMAIL \
           ghcr.io/worph/hubs-seed:2.0.0
   # Created and owned by Maison before images are pulled, before any step runs and

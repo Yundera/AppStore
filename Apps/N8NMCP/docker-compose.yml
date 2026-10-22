@@ -96,7 +96,7 @@ services:
       # resource URL (/mcp) on Bearer tokens; everything else stays behind the
       # SSO gate. Replaces ALLOWED_PATHS, which exempted /mcp from the gate
       # and — with AUTH_HASH inert under Maison — left it uncredentialed.
-      OAUTH_RESOURCE: "https://n8nmcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://n8nmcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -207,13 +207,13 @@ x-casaos:
           "mcpServers": {
             "n8n-mcp": {
               "type": "http",
-              "url": "https://n8nmcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://n8nmcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://n8nmcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://n8nmcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 2: Local Docker connection (no auth required)**
@@ -336,13 +336,13 @@ x-compose-app:
         "mcpServers": {
           "n8n-mcp": {
             "type": "http",
-            "url": "https://n8nmcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://n8nmcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://n8nmcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://n8nmcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 2: Local Docker connection (no auth required)**

@@ -119,6 +119,30 @@ line, and a service app is reviewed on the rest.
     `${APP_DOMAIN}`, and `webui-port`, if set, is a URL port rather than the container port.
 - **Fail:** any one of these is broken, or a label claims `auth-${APP_DOMAIN}`.
 
+### `own-address` — the app learns its address from the platform
+
+**Check:** static · **Severity:** Minor
+**n-a:** nothing in the listing names one of the app's own hosts.
+
+Where an app is reached is the deployment's choice: the box's domain today, a published port
+or another router tomorrow. Maison tells each app its address, so a listing that names its
+own host reads that value and keeps today's spelling only as the fallback for a Maison
+that does not provide it yet.
+
+- **Pass:** every one of the app's own hosts outside its `caddy_*` labels and `webui-host` —
+  in `environment:`, `files`, steps and tips alike — is written as:
+  - the web UI's (the `webui-host` name): `${APP_URL:-https://<app>-${APP_DOMAIN}}` for a URL,
+    `${APP_HOST:-<app>-${APP_DOMAIN}}` for a bare host;
+  - any other host it routes: `${ROUTE_<NAME>_URL:-https://<name>-${APP_DOMAIN}}` /
+    `${ROUTE_<NAME>_HOST:-<name>-${APP_DOMAIN}}`, `<NAME>` being the host's name upper-cased
+    with `-` as `_` (`hubsassets` → `ROUTE_HUBSASSETS_HOST`).
+
+  `APP_URL` is an origin (`scheme://host[:port]`, no trailing slash): append the path after
+  the closing brace, `${APP_URL:-https://gitea-${APP_DOMAIN}}/`. `APP_DOMAIN` stays fine for
+  what is really the domain (`admin@${APP_DOMAIN}`), and another app's host is written as it
+  is: nothing gives its address.
+- **Fail:** an own host spelled `<app>-${APP_DOMAIN}` outside the labels and `webui-host`.
+
 ### `in-app-router` — routing beyond one port lives in the app
 
 **Check:** static · **Severity:** Major

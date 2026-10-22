@@ -44,7 +44,7 @@ services:
       # hostname means a login started on the nip.io or sslip.io alias
       # finishes on this one; all three are registered with the identity
       # provider by the register-oidc-client step below, so any entry point works.
-      HERMES_DASHBOARD_PUBLIC_URL: https://hermes-${APP_DOMAIN}
+      HERMES_DASHBOARD_PUBLIC_URL: ${APP_URL:-https://hermes-${APP_DOMAIN}}
       # Fallback sign-in, second to the server account. The dashboard's auth
       # gate is mandatory on a non-loopback bind and fails closed with no
       # provider, so this is what keeps the app reachable if the OIDC

@@ -186,7 +186,7 @@ x-casaos:
 
         The wiki sits behind your PCS sign-in, so nobody else can reach the installer. After opening the app, the main page will load directly. You **must** manually go to `/install.php` in the URL bar to run the setup wizard.
 
-        1. Go to [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — this link pre-selects the recommended ACL policy
+        1. Go to [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — this link pre-selects the recommended ACL policy
         2. Set your wiki name, superuser account, and password
         3. **Check the ACL policy dropdown before saving.** Opened without the link above, the installer pre-selects *Open Wiki (read, write, upload for everyone)*, which is more permissive than we recommend. Pick **Public Wiki**, or **Closed Wiki** to keep the wiki private
         4. Click Save — done!
@@ -197,7 +197,7 @@ x-casaos:
 
         이 위키는 PCS 로그인 뒤에 있으므로 다른 사람은 설치 마법사에 접근할 수 없습니다. 앱을 열면 메인 페이지가 바로 표시됩니다. 설정 마법사를 실행하려면 URL 주소창에 **직접** `/install.php`를 입력해야 합니다.
 
-        1. [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) 로 이동 — 이 링크는 권장 ACL 정책을 미리 선택합니다
+        1. [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) 로 이동 — 이 링크는 권장 ACL 정책을 미리 선택합니다
         2. 위키 이름, 관리자 계정, 비밀번호 설정
         3. **저장 전에 ACL 정책 드롭다운을 확인하세요.** 위 링크 없이 설치 마법사를 열면 *Open Wiki (모두에게 읽기, 쓰기, 업로드 허용)* 가 미리 선택되어 있으며, 이는 권장 설정보다 더 개방적입니다. **Public Wiki** 를 선택하거나, 비공개 위키를 원하면 **Closed Wiki** 를 선택하세요
         4. 저장 클릭 — 완료!
@@ -208,7 +208,7 @@ x-casaos:
 
         本维基位于您的 PCS 登录之后，其他人无法访问安装向导。打开应用后，主页会直接加载。您**必须**在地址栏中手动输入 `/install.php` 来运行设置向导。
 
-        1. 访问 [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — 此链接会预先选中推荐的 ACL 策略
+        1. 访问 [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — 此链接会预先选中推荐的 ACL 策略
         2. 设置维基名称、超级用户账户和密码
         3. **保存前请检查 ACL 策略下拉框。** 若未通过上面的链接打开安装向导，它会预选 *Open Wiki（所有人可读、可写、可上传）*，这比我们的推荐设置更开放。请选择 **Public Wiki**，或选择 **Closed Wiki** 使维基保持私有
         4. 点击保存 — 完成！
@@ -219,7 +219,7 @@ x-casaos:
 
         Le wiki est protege par la connexion de votre PCS: personne d'autre ne peut atteindre l'assistant d'installation. Apres l'ouverture de l'app, la page principale s'affiche directement. Vous **devez** saisir manuellement `/install.php` dans la barre d'adresse pour lancer l'assistant de configuration.
 
-        1. Allez sur [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — ce lien preselectionne la politique ACL recommandee
+        1. Allez sur [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — ce lien preselectionne la politique ACL recommandee
         2. Definissez le nom du wiki, le compte super-utilisateur et le mot de passe
         3. **Verifiez la liste deroulante ACL avant d'enregistrer.** Ouvert sans le lien ci-dessus, l'assistant preselectionne *Open Wiki (lecture, ecriture, envoi pour tout le monde)*, plus permissif que ce que nous recommandons. Choisissez **Public Wiki**, ou **Closed Wiki** pour un wiki prive
         4. Cliquez sur Enregistrer — termine!
@@ -230,7 +230,7 @@ x-casaos:
 
         El wiki esta detras del inicio de sesion de su PCS, asi que nadie mas puede llegar al instalador. Al abrir la app, la pagina principal se carga directamente. **Debe** escribir manualmente `/install.php` en la barra de direcciones para ejecutar el asistente de configuracion.
 
-        1. Vaya a [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — este enlace preselecciona la politica ACL recomendada
+        1. Vaya a [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — este enlace preselecciona la politica ACL recomendada
         2. Configure el nombre del wiki, cuenta de superusuario y contrasena
         3. **Revise la lista desplegable de ACL antes de guardar.** Si abre el instalador sin el enlace anterior, preselecciona *Open Wiki (lectura, escritura y subida para todos)*, mas permisivo de lo que recomendamos. Elija **Public Wiki**, o **Closed Wiki** para mantener el wiki privado
         4. Haga clic en Guardar — listo!
@@ -339,7 +339,7 @@ x-compose-app:
 
       The wiki sits behind your PCS sign-in, so nobody else can reach the installer. After opening the app, the main page will load directly. You **must** manually go to `/install.php` in the URL bar to run the setup wizard.
 
-      1. Go to [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — this link pre-selects the recommended ACL policy
+      1. Go to [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — this link pre-selects the recommended ACL policy
       2. Set your wiki name, superuser account, and password
       3. **Check the ACL policy dropdown before saving.** Opened without the link above, the installer pre-selects *Open Wiki (read, write, upload for everyone)*, which is more permissive than we recommend. Pick **Public Wiki**, or **Closed Wiki** to keep the wiki private
       4. Click Save — done!
@@ -350,7 +350,7 @@ x-compose-app:
 
       이 위키는 PCS 로그인 뒤에 있으므로 다른 사람은 설치 마법사에 접근할 수 없습니다. 앱을 열면 메인 페이지가 바로 표시됩니다. 설정 마법사를 실행하려면 URL 주소창에 **직접** `/install.php`를 입력해야 합니다.
 
-      1. [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) 로 이동 — 이 링크는 권장 ACL 정책을 미리 선택합니다
+      1. [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) 로 이동 — 이 링크는 권장 ACL 정책을 미리 선택합니다
       2. 위키 이름, 관리자 계정, 비밀번호 설정
       3. **저장 전에 ACL 정책 드롭다운을 확인하세요.** 위 링크 없이 설치 마법사를 열면 *Open Wiki (모두에게 읽기, 쓰기, 업로드 허용)* 가 미리 선택되어 있으며, 이는 권장 설정보다 더 개방적입니다. **Public Wiki** 를 선택하거나, 비공개 위키를 원하면 **Closed Wiki** 를 선택하세요
       4. 저장 클릭 — 완료!
@@ -361,7 +361,7 @@ x-compose-app:
 
       本维基位于您的 PCS 登录之后，其他人无法访问安装向导。打开应用后，主页会直接加载。您**必须**在地址栏中手动输入 `/install.php` 来运行设置向导。
 
-      1. 访问 [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — 此链接会预先选中推荐的 ACL 策略
+      1. 访问 [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — 此链接会预先选中推荐的 ACL 策略
       2. 设置维基名称、超级用户账户和密码
       3. **保存前请检查 ACL 策略下拉框。** 若未通过上面的链接打开安装向导，它会预选 *Open Wiki（所有人可读、可写、可上传）*，这比我们的推荐设置更开放。请选择 **Public Wiki**，或选择 **Closed Wiki** 使维基保持私有
       4. 点击保存 — 完成！
@@ -372,7 +372,7 @@ x-compose-app:
 
       Le wiki est protege par la connexion de votre PCS: personne d'autre ne peut atteindre l'assistant d'installation. Apres l'ouverture de l'app, la page principale s'affiche directement. Vous **devez** saisir manuellement `/install.php` dans la barre d'adresse pour lancer l'assistant de configuration.
 
-      1. Allez sur [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — ce lien preselectionne la politique ACL recommandee
+      1. Allez sur [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — ce lien preselectionne la politique ACL recommandee
       2. Definissez le nom du wiki, le compte super-utilisateur et le mot de passe
       3. **Verifiez la liste deroulante ACL avant d'enregistrer.** Ouvert sans le lien ci-dessus, l'assistant preselectionne *Open Wiki (lecture, ecriture, envoi pour tout le monde)*, plus permissif que ce que nous recommandons. Choisissez **Public Wiki**, ou **Closed Wiki** pour un wiki prive
       4. Cliquez sur Enregistrer — termine!
@@ -383,7 +383,7 @@ x-compose-app:
 
       El wiki esta detras del inicio de sesion de su PCS, asi que nadie mas puede llegar al instalador. Al abrir la app, la pagina principal se carga directamente. **Debe** escribir manualmente `/install.php` en la barra de direcciones para ejecutar el asistente de configuracion.
 
-      1. Vaya a [https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1](https://dokuwiki-${APP_DOMAIN}/install.php?d%5Bpolicy%5D=1) — este enlace preselecciona la politica ACL recomendada
+      1. Vaya a [${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1](${APP_URL:-https://dokuwiki-${APP_DOMAIN}}/install.php?d%5Bpolicy%5D=1) — este enlace preselecciona la politica ACL recomendada
       2. Configure el nombre del wiki, cuenta de superusuario y contrasena
       3. **Revise la lista desplegable de ACL antes de guardar.** Si abre el instalador sin el enlace anterior, preselecciona *Open Wiki (lectura, escritura y subida para todos)*, mas permisivo de lo que recomendamos. Elija **Public Wiki**, o **Closed Wiki** para mantener el wiki privado
       4. Haga clic en Guardar — listo!

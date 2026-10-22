@@ -76,7 +76,7 @@ services:
       # authorization server fronting Dex and gates exactly the path named by the
       # resource URL (/mcp) on Bearer tokens; everything else stays behind the
       # SSO gate.
-      OAUTH_RESOURCE: "https://browsermcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://browsermcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -207,13 +207,13 @@ x-casaos:
           "mcpServers": {
             "browser-mcp": {
               "type": "http",
-              "url": "https://browsermcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://browsermcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 2: Local Docker connection (no auth required)**
@@ -282,13 +282,13 @@ x-casaos:
           "mcpServers": {
             "browser-mcp": {
               "type": "http",
-              "url": "https://browsermcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://browsermcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
-        **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 创建。
+        **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** 创建。
 
         **选项 2：本地 Docker 连接（无需认证）**
         ```json
@@ -414,13 +414,13 @@ x-compose-app:
         "mcpServers": {
           "browser-mcp": {
             "type": "http",
-            "url": "https://browsermcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://browsermcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 2: Local Docker connection (no auth required)**
@@ -489,13 +489,13 @@ x-compose-app:
         "mcpServers": {
           "browser-mcp": {
             "type": "http",
-            "url": "https://browsermcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://browsermcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
-      **https://browsermcp-${APP_DOMAIN}/AppShield/oauth** 创建。
+      **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** 创建。
 
       **选项 2：本地 Docker 连接（无需认证）**
       ```json

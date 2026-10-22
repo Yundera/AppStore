@@ -262,7 +262,7 @@ x-compose-app:
           -e APP_DOMAIN -e APP_PUBLIC_IP_DASH busybox:1.37.0 sh -s <<'SH'
         set -e
         ini=/config/sabnzbd.ini
-        for host in "sabnzbd-$APP_DOMAIN" "sabnzbd-$APP_PUBLIC_IP_DASH.nip.io" \
+        for host in "${APP_HOST:-sabnzbd-${APP_DOMAIN}}" "sabnzbd-$APP_PUBLIC_IP_DASH.nip.io" \
                     "sabnzbd-$APP_PUBLIC_IP_DASH.sslip.io" sabnzbd-backend; do
           grep "^host_whitelist" "$ini" | grep -qF "$host" ||
             sed -i "s|^host_whitelist = |host_whitelist = $host, |" "$ini"

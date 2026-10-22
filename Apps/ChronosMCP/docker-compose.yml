@@ -73,7 +73,7 @@ services:
       # Bearer tokens. This is the machine/API path: clients like claude.ai
       # self-register via DCR, others get a manual client
       # from the admin page at https://chronosmcp-${APP_DOMAIN}/AppShield/oauth.
-      OAUTH_RESOURCE: "https://chronosmcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -196,13 +196,13 @@ x-casaos:
           "mcpServers": {
             "chronos-mcp": {
               "type": "http",
-              "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 2: Local Docker connection (no auth required) — on your server, use Option 1 instead**
@@ -268,13 +268,13 @@ x-casaos:
           "mcpServers": {
             "chronos-mcp": {
               "type": "http",
-              "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
-        **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** 创建。
+        **${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/AppShield/oauth** 创建。
 
         **选项 2：本地 Docker 连接（无需认证）— 在您的服务器上请改用选项 1**
 
@@ -386,13 +386,13 @@ x-compose-app:
         "mcpServers": {
           "chronos-mcp": {
             "type": "http",
-            "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 2: Local Docker connection (no auth required) — on your server, use Option 1 instead**
@@ -458,13 +458,13 @@ x-compose-app:
         "mcpServers": {
           "chronos-mcp": {
             "type": "http",
-            "url": "https://chronosmcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
-      **https://chronosmcp-${APP_DOMAIN}/AppShield/oauth** 创建。
+      **${APP_URL:-https://chronosmcp-${APP_DOMAIN}}/AppShield/oauth** 创建。
 
       **选项 2：本地 Docker 连接（无需认证）— 在您的服务器上请改用选项 1**
 

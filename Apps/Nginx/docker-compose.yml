@@ -153,7 +153,7 @@ x-casaos:
         1. Install the app
         2. Upload your website files to the www directory
         3. Access your site at:
-           - Via domain: `https://nginx-$APP_DOMAIN/`
+           - Via domain: `${APP_URL:-https://nginx-${APP_DOMAIN}}/`
            - Direct IP: `https://nginx-$APP_PUBLIC_IP_DASH.sslip.io/`
 
         **File Structure:**
@@ -191,7 +191,7 @@ x-compose-app:
     - arm64
     - arm
   tips:
-    en_us: "**\U0001F4C1 Setup Instructions**\nAfter installation, add your website files to:\n`/DATA/AppData/nginx/www/`\n\n**Quick Start:**\n1. Install the app\n2. Upload your website files to the www directory\n3. Access your site at:\n   - Via domain: `https://nginx-$APP_DOMAIN/`\n   - Direct IP: `https://nginx-$APP_PUBLIC_IP_DASH.sslip.io/`\n\n**File Structure:**\n```\n/DATA/AppData/nginx/\n├── www/              # Your website files go here\n│   └── index.html   # Main page\n└── nginx.conf       # nginx configuration\n```\n"
+    en_us: "**\U0001F4C1 Setup Instructions**\nAfter installation, add your website files to:\n`/DATA/AppData/nginx/www/`\n\n**Quick Start:**\n1. Install the app\n2. Upload your website files to the www directory\n3. Access your site at:\n   - Via domain: `${APP_URL:-https://nginx-${APP_DOMAIN}}/`\n   - Direct IP: `https://nginx-$APP_PUBLIC_IP_DASH.sslip.io/`\n\n**File Structure:**\n```\n/DATA/AppData/nginx/\n├── www/              # Your website files go here\n│   └── index.html   # Main page\n└── nginx.conf       # nginx configuration\n```\n"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
   # before images are pulled, before the seed/ tree is applied, and before any
   # container starts, on the first boot and every one after it.

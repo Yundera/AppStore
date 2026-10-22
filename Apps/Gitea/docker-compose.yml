@@ -27,8 +27,8 @@ services:
       # Every URL Gitea hands out — clone URLs, the registry host, and the
       # server_url the CI runner passes to jobs — is derived from ROOT_URL, so
       # it has to be the address that works from outside as well as inside.
-      GITEA__server__ROOT_URL: https://gitea-${APP_DOMAIN}/
-      GITEA__server__DOMAIN: gitea-${APP_DOMAIN}
+      GITEA__server__ROOT_URL: ${APP_URL:-https://gitea-${APP_DOMAIN}}/
+      GITEA__server__DOMAIN: ${APP_HOST:-gitea-${APP_DOMAIN}}
       GITEA__server__HTTP_PORT: "3000"
       GITEA__server__PROTOCOL: http
       # The address Gitea's own CLI uses to reach the running server's internal
@@ -108,7 +108,7 @@ services:
       # runner's *nested* daemon, on a network where `gitea` does not resolve.
       # So it has to be an address that works from the outside: checkout and
       # `docker login` from a workflow both go out and back over HTTPS.
-      GITEA_INSTANCE_URL: https://gitea-${APP_DOMAIN}
+      GITEA_INSTANCE_URL: ${APP_URL:-https://gitea-${APP_DOMAIN}}
       GITEA_RUNNER_REGISTRATION_TOKEN_FILE: /data/token
       GITEA_RUNNER_NAME: gitea-runner
       GITEA_RUNNER_LABELS: ubuntu-latest:docker://node:22-bookworm,ubuntu-22.04:docker://node:22-bookworm,docker:docker://docker:28.5-cli
@@ -211,7 +211,7 @@ x-casaos:
 
         | | |
         | --- | --- |
-        | Address | `https://gitea-$APP_DOMAIN` |
+        | Address | `${APP_URL:-https://gitea-${APP_DOMAIN}}` |
         | User | `gitea_admin` |
         | Password | shown when you open the app (tile menu → Credentials) |
 
@@ -236,8 +236,8 @@ x-casaos:
         Publishing images
 
         The registry lives at the same address as the web UI. In a workflow,
-        log in to `gitea-$APP_DOMAIN` and push to
-        `gitea-$APP_DOMAIN/<user>/<image>:<tag>`. Use an access token with the
+        log in to `${APP_HOST:-gitea-${APP_DOMAIN}}` and push to
+        `${APP_HOST:-gitea-${APP_DOMAIN}}/<user>/<image>:<tag>`. Use an access token with the
         `write:package` scope, kept as a repository secret — the token Actions
         injects as `secrets.GITHUB_TOKEN` is rejected by the registry.
 
@@ -252,7 +252,7 @@ x-casaos:
 
         | | |
         | --- | --- |
-        | Adresse | `https://gitea-$APP_DOMAIN` |
+        | Adresse | `${APP_URL:-https://gitea-${APP_DOMAIN}}` |
         | Utilisateur | `gitea_admin` |
         | Mot de passe | affiché à l'ouverture de l'application (menu de la tuile → Identifiants) |
 
@@ -277,8 +277,8 @@ x-casaos:
         Publier des images
 
         Le registre est à la même adresse que l'interface web. Dans un
-        workflow, connectez-vous à `gitea-$APP_DOMAIN` puis publiez vers
-        `gitea-$APP_DOMAIN/<utilisateur>/<image>:<tag>`. Utilisez un jeton
+        workflow, connectez-vous à `${APP_HOST:-gitea-${APP_DOMAIN}}` puis publiez vers
+        `${APP_HOST:-gitea-${APP_DOMAIN}}/<utilisateur>/<image>:<tag>`. Utilisez un jeton
         d'accès de portée `write:package`, conservé en secret de dépôt : le
         jeton fourni par Actions (`secrets.GITHUB_TOKEN`) est refusé par le
         registre.
@@ -294,7 +294,7 @@ x-casaos:
 
         | | |
         | --- | --- |
-        | 地址 | `https://gitea-$APP_DOMAIN` |
+        | 地址 | `${APP_URL:-https://gitea-${APP_DOMAIN}}` |
         | 用户 | `gitea_admin` |
         | 密码 | 打开应用时显示（磁贴菜单 → 凭据） |
 
@@ -313,8 +313,8 @@ x-casaos:
 
         发布镜像
 
-        容器仓库与网页界面位于同一地址。在工作流中登录 `gitea-$APP_DOMAIN`，
-        并推送到 `gitea-$APP_DOMAIN/<用户>/<镜像>:<标签>`。请使用具有
+        容器仓库与网页界面位于同一地址。在工作流中登录 `${APP_HOST:-gitea-${APP_DOMAIN}}`，
+        并推送到 `${APP_HOST:-gitea-${APP_DOMAIN}}/<用户>/<镜像>:<标签>`。请使用具有
         `write:package` 权限的访问令牌并存为仓库机密 —— Actions 注入的
         `secrets.GITHUB_TOKEN` 会被容器仓库拒绝。
 
@@ -402,7 +402,7 @@ x-compose-app:
 
       | | |
       | --- | --- |
-      | Address | `https://gitea-$APP_DOMAIN` |
+      | Address | `${APP_URL:-https://gitea-${APP_DOMAIN}}` |
       | User | `gitea_admin` |
       | Password | shown when you open the app (tile menu → Credentials) |
 
@@ -427,8 +427,8 @@ x-compose-app:
       Publishing images
 
       The registry lives at the same address as the web UI. In a workflow,
-      log in to `gitea-$APP_DOMAIN` and push to
-      `gitea-$APP_DOMAIN/<user>/<image>:<tag>`. Use an access token with the
+      log in to `${APP_HOST:-gitea-${APP_DOMAIN}}` and push to
+      `${APP_HOST:-gitea-${APP_DOMAIN}}/<user>/<image>:<tag>`. Use an access token with the
       `write:package` scope, kept as a repository secret — the token Actions
       injects as `secrets.GITHUB_TOKEN` is rejected by the registry.
 
@@ -443,7 +443,7 @@ x-compose-app:
 
       | | |
       | --- | --- |
-      | Adresse | `https://gitea-$APP_DOMAIN` |
+      | Adresse | `${APP_URL:-https://gitea-${APP_DOMAIN}}` |
       | Utilisateur | `gitea_admin` |
       | Mot de passe | affiché à l'ouverture de l'application (menu de la tuile → Identifiants) |
 
@@ -468,8 +468,8 @@ x-compose-app:
       Publier des images
 
       Le registre est à la même adresse que l'interface web. Dans un
-      workflow, connectez-vous à `gitea-$APP_DOMAIN` puis publiez vers
-      `gitea-$APP_DOMAIN/<utilisateur>/<image>:<tag>`. Utilisez un jeton
+      workflow, connectez-vous à `${APP_HOST:-gitea-${APP_DOMAIN}}` puis publiez vers
+      `${APP_HOST:-gitea-${APP_DOMAIN}}/<utilisateur>/<image>:<tag>`. Utilisez un jeton
       d'accès de portée `write:package`, conservé en secret de dépôt : le
       jeton fourni par Actions (`secrets.GITHUB_TOKEN`) est refusé par le
       registre.
@@ -485,7 +485,7 @@ x-compose-app:
 
       | | |
       | --- | --- |
-      | 地址 | `https://gitea-$APP_DOMAIN` |
+      | 地址 | `${APP_URL:-https://gitea-${APP_DOMAIN}}` |
       | 用户 | `gitea_admin` |
       | 密码 | 打开应用时显示（磁贴菜单 → 凭据） |
 
@@ -504,8 +504,8 @@ x-compose-app:
 
       发布镜像
 
-      容器仓库与网页界面位于同一地址。在工作流中登录 `gitea-$APP_DOMAIN`，
-      并推送到 `gitea-$APP_DOMAIN/<用户>/<镜像>:<标签>`。请使用具有
+      容器仓库与网页界面位于同一地址。在工作流中登录 `${APP_HOST:-gitea-${APP_DOMAIN}}`，
+      并推送到 `${APP_HOST:-gitea-${APP_DOMAIN}}/<用户>/<镜像>:<标签>`。请使用具有
       `write:package` 权限的访问令牌并存为仓库机密 —— Actions 注入的
       `secrets.GITHUB_TOKEN` 会被容器仓库拒绝。
 

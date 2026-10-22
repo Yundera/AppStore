@@ -38,8 +38,8 @@ services:
       GENERIC_TIMEZONE: $TZ
       N8N_PORT: 80
       N8N_PROTOCOL: https
-      N8N_EDITOR_BASE_URL: https://n8n-${APP_DOMAIN}/
-      WEBHOOK_URL: https://n8n-${APP_DOMAIN}/
+      N8N_EDITOR_BASE_URL: ${APP_URL:-https://n8n-${APP_DOMAIN}}/
+      WEBHOOK_URL: ${APP_URL:-https://n8n-${APP_DOMAIN}}/
       NODE_ENV: production_self_hosted
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: n8n-postgres

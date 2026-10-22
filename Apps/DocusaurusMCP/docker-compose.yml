@@ -93,7 +93,7 @@ services:
       # Bearer tokens. This is the machine/API path: clients like claude.ai
       # self-register via DCR, others get a manual client
       # from the admin page at https://docusaurusmcp-${APP_DOMAIN}/AppShield/oauth.
-      OAUTH_RESOURCE: "https://docusaurusmcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://docusaurusmcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -124,7 +124,7 @@ x-casaos:
     - arm64
   main: docusaurusmcp-proxy
   store_app_id: docusaurusmcp
-  hostname: docusaurusmcp-${APP_DOMAIN}
+  hostname: ${APP_HOST:-docusaurusmcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"
   index: /
@@ -180,13 +180,13 @@ x-casaos:
           "mcpServers": {
             "docusaurus-mcp": {
               "type": "http",
-              "url": "https://docusaurusmcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://docusaurusmcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://docusaurusmcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://docusaurusmcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 2: Local Docker connection (no auth required)**
@@ -291,13 +291,13 @@ x-compose-app:
         "mcpServers": {
           "docusaurus-mcp": {
             "type": "http",
-            "url": "https://docusaurusmcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://docusaurusmcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://docusaurusmcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://docusaurusmcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 2: Local Docker connection (no auth required)**

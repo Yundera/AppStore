@@ -76,7 +76,7 @@ services:
       TORRENT_PORT: "6881"
       # Public base URL for share links (/view). Points at the SSO-fronted
       # domain so shared links resolve for other viewers.
-      PUBLIC_URL: "https://annas-torrents-webui-${APP_DOMAIN}"
+      PUBLIC_URL: "${APP_URL:-https://annas-torrents-webui-${APP_DOMAIN}}"
       TZ: $TZ
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/annas-torrents-webui/data/:/data

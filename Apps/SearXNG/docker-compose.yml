@@ -228,7 +228,7 @@ x-casaos:
         engines) are stored in your browser, per device.
 
         **Make it your browser's search engine:** open the app once from your dashboard and sign in —
-        the session lasts 30 days — then add `https://searxng-$APP_DOMAIN/search?q=%s` as a custom
+        the session lasts 30 days — then add `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` as a custom
         engine. Searches go straight through; when the session lapses you are asked to sign in again.
 
         ## Configuration
@@ -249,7 +249,7 @@ x-casaos:
         검색 환경설정(테마, 언어, 사용 엔진)은 기기별로 브라우저에 저장됩니다.
 
         **브라우저 기본 검색 엔진으로 설정:** 대시보드에서 앱을 한 번 열어 로그인한 뒤(세션은 30일 유지)
-        `https://searxng-$APP_DOMAIN/search?q=%s`를 사용자 지정 엔진으로 추가하세요. 검색은 바로
+        `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s`를 사용자 지정 엔진으로 추가하세요. 검색은 바로
         연결되며, 세션이 만료되면 다시 로그인하라는 안내가 표시됩니다.
 
         ## 설정
@@ -269,7 +269,7 @@ x-casaos:
         搜索偏好（主题、语言、启用的引擎）按设备保存在浏览器中。
 
         **设为浏览器默认搜索引擎：** 先从仪表板打开一次应用并登录（会话保持 30 天），然后将
-        `https://searxng-$APP_DOMAIN/search?q=%s` 添加为自定义搜索引擎。搜索会直接通过；
+        `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` 添加为自定义搜索引擎。搜索会直接通过；
         会话过期后会提示您重新登录。
 
         ## 配置
@@ -291,7 +291,7 @@ x-casaos:
 
         **En faire le moteur de recherche du navigateur :** ouvrez l'application une fois depuis votre
         tableau de bord et connectez-vous — la session dure 30 jours — puis ajoutez
-        `https://searxng-$APP_DOMAIN/search?q=%s` comme moteur personnalisé. Les recherches passent
+        `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` comme moteur personnalisé. Les recherches passent
         directement ; à l'expiration de la session, une reconnexion vous est demandée.
 
         ## Configuration
@@ -313,7 +313,7 @@ x-casaos:
         activos) se guardan en tu navegador, por dispositivo.
 
         **Conviértelo en el buscador del navegador:** abre la aplicación una vez desde tu panel e inicia
-        sesión — la sesión dura 30 días — y luego añade `https://searxng-$APP_DOMAIN/search?q=%s` como
+        sesión — la sesión dura 30 días — y luego añade `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` como
         motor personalizado. Las búsquedas pasan directamente; cuando la sesión caduca se te pide
         iniciar sesión de nuevo.
 
@@ -437,7 +437,7 @@ x-compose-app:
       engines) are stored in your browser, per device.
 
       **Make it your browser's search engine:** open the app once from your dashboard and sign in —
-      the session lasts 30 days — then add `https://searxng-$APP_DOMAIN/search?q=%s` as a custom
+      the session lasts 30 days — then add `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` as a custom
       engine. Searches go straight through; when the session lapses you are asked to sign in again.
 
       ## Configuration
@@ -458,7 +458,7 @@ x-compose-app:
       검색 환경설정(테마, 언어, 사용 엔진)은 기기별로 브라우저에 저장됩니다.
 
       **브라우저 기본 검색 엔진으로 설정:** 대시보드에서 앱을 한 번 열어 로그인한 뒤(세션은 30일 유지)
-      `https://searxng-$APP_DOMAIN/search?q=%s`를 사용자 지정 엔진으로 추가하세요. 검색은 바로
+      `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s`를 사용자 지정 엔진으로 추가하세요. 검색은 바로
       연결되며, 세션이 만료되면 다시 로그인하라는 안내가 표시됩니다.
 
       ## 설정
@@ -478,7 +478,7 @@ x-compose-app:
       搜索偏好（主题、语言、启用的引擎）按设备保存在浏览器中。
 
       **设为浏览器默认搜索引擎：** 先从仪表板打开一次应用并登录（会话保持 30 天），然后将
-      `https://searxng-$APP_DOMAIN/search?q=%s` 添加为自定义搜索引擎。搜索会直接通过；
+      `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` 添加为自定义搜索引擎。搜索会直接通过；
       会话过期后会提示您重新登录。
 
       ## 配置
@@ -500,7 +500,7 @@ x-compose-app:
 
       **En faire le moteur de recherche du navigateur :** ouvrez l'application une fois depuis votre
       tableau de bord et connectez-vous — la session dure 30 jours — puis ajoutez
-      `https://searxng-$APP_DOMAIN/search?q=%s` comme moteur personnalisé. Les recherches passent
+      `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` comme moteur personnalisé. Les recherches passent
       directement ; à l'expiration de la session, une reconnexion vous est demandée.
 
       ## Configuration
@@ -522,7 +522,7 @@ x-compose-app:
       activos) se guardan en tu navegador, por dispositivo.
 
       **Conviértelo en el buscador del navegador:** abre la aplicación una vez desde tu panel e inicia
-      sesión — la sesión dura 30 días — y luego añade `https://searxng-$APP_DOMAIN/search?q=%s` como
+      sesión — la sesión dura 30 días — y luego añade `${APP_URL:-https://searxng-${APP_DOMAIN}}/search?q=%s` como
       motor personalizado. Las búsquedas pasan directamente; cuando la sesión caduca se te pide
       iniciar sesión de nuevo.
 

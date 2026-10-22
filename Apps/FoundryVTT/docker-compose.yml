@@ -35,7 +35,7 @@ services:
       # Administrator password for the setup screen (worlds, systems, modules).
       FOUNDRY_ADMIN_KEY: $FOUNDRYVTT_ADMIN_PASSWORD
       # Behind Caddy on HTTPS 443: invitation links and A/V need to know it.
-      FOUNDRY_HOSTNAME: foundryvtt-${APP_DOMAIN}
+      FOUNDRY_HOSTNAME: ${APP_HOST:-foundryvtt-${APP_DOMAIN}}
       FOUNDRY_PROXY_SSL: "true"
       FOUNDRY_PROXY_PORT: "443"
       # The public-IP probe reports the container's own port 30000, which is never
@@ -203,7 +203,7 @@ x-casaos:
 
         **3. Invite your players**
 
-        Players join at `https://foundryvtt-$APP_DOMAIN` from any browser.
+        Players join at `${APP_URL:-https://foundryvtt-${APP_DOMAIN}}` from any browser.
         Foundry's built-in users have **no password** until you set one: in the
         world, open **Settings → User Management** and give every user a password
         before sharing the link.
@@ -338,7 +338,7 @@ x-compose-app:
 
       **3. Invite your players**
 
-      Players join at `https://foundryvtt-$APP_DOMAIN` from any browser.
+      Players join at `${APP_URL:-https://foundryvtt-${APP_DOMAIN}}` from any browser.
       Foundry's built-in users have **no password** until you set one: in the
       world, open **Settings → User Management** and give every user a password
       before sharing the link.

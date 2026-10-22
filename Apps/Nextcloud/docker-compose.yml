@@ -60,9 +60,9 @@ services:
       # stays APCu, from the image's own apcu.config.php). The password below is
       # inert for the entrypoint and is what the configure-redis-and-cron step reads.
       - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN nextcloud-$APP_PUBLIC_IP_DASH.nip.io nextcloud-$APP_PUBLIC_IP_DASH.sslip.io
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN ${APP_HOST:-nextcloud-${APP_DOMAIN}} nextcloud-$APP_PUBLIC_IP_DASH.nip.io nextcloud-$APP_PUBLIC_IP_DASH.sslip.io
       - OVERWRITEPROTOCOL=https
-      - OVERWRITEHOST=nextcloud-$APP_DOMAIN
+      - OVERWRITEHOST=${APP_HOST:-nextcloud-${APP_DOMAIN}}
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
       - NC_maintenance_window_start=4
     volumes:

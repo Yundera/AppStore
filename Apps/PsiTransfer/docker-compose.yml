@@ -172,7 +172,7 @@ x-casaos:
         
         The admin and upload passwords are shown when you open the app (tile menu → Credentials).
         
-        **Access Admin Panel:** Navigate to `https://psitransfer-$APP_DOMAIN/admin` and enter the admin password.
+        **Access Admin Panel:** Navigate to `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` and enter the admin password.
         
         **Important Notes:**
         - Files are stored in `/DATA/AppData/psitransfer/data/`
@@ -182,7 +182,7 @@ x-casaos:
         
         관리자 비밀번호와 업로드 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
         
-        **관리자 패널 접근:** `https://psitransfer-$APP_DOMAIN/admin`으로 이동하여 관리자 비밀번호를 입력하세요.
+        **관리자 패널 접근:** `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin`으로 이동하여 관리자 비밀번호를 입력하세요.
         
         **중요 사항:**
         - 파일은 `/DATA/AppData/psitransfer/data/`에 저장됩니다
@@ -192,7 +192,7 @@ x-casaos:
 
         管理员密码和上传密码会在打开应用时显示（磁贴菜单 → Credentials）。
 
-        **访问管理面板：** 导航到 `https://psitransfer-$APP_DOMAIN/admin` 并输入管理员密码。
+        **访问管理面板：** 导航到 `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` 并输入管理员密码。
 
         **重要说明：**
         - 文件存储在 `/DATA/AppData/psitransfer/data/`
@@ -202,7 +202,7 @@ x-casaos:
 
         Les mots de passe admin et upload sont affichés à l'ouverture de l'app (menu de la tuile → Credentials).
 
-        **Accès au panneau admin :** Naviguez vers `https://psitransfer-$APP_DOMAIN/admin` et entrez le mot de passe administrateur.
+        **Accès au panneau admin :** Naviguez vers `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` et entrez le mot de passe administrateur.
 
         **Notes importantes :**
         - Les fichiers sont stockés dans `/DATA/AppData/psitransfer/data/`
@@ -212,7 +212,7 @@ x-casaos:
 
         Las contraseñas de admin y de subida se muestran al abrir la app (menú del icono → Credentials).
 
-        **Acceso al panel admin:** Navega a `https://psitransfer-$APP_DOMAIN/admin` e ingresa la contraseña de administrador.
+        **Acceso al panel admin:** Navega a `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` e ingresa la contraseña de administrador.
 
         **Notas importantes:**
         - Los archivos se almacenan en `/DATA/AppData/psitransfer/data/`
@@ -329,7 +329,7 @@ x-compose-app:
 
       The admin and upload passwords are shown when you open the app (tile menu → Credentials).
 
-      **Access Admin Panel:** Navigate to `https://psitransfer-$APP_DOMAIN/admin` and enter the admin password.
+      **Access Admin Panel:** Navigate to `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` and enter the admin password.
 
       **Important Notes:**
       - Files are stored in `/DATA/AppData/psitransfer/data/`
@@ -339,7 +339,7 @@ x-compose-app:
 
       관리자 비밀번호와 업로드 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
 
-      **관리자 패널 접근:** `https://psitransfer-$APP_DOMAIN/admin`으로 이동하여 관리자 비밀번호를 입력하세요.
+      **관리자 패널 접근:** `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin`으로 이동하여 관리자 비밀번호를 입력하세요.
 
       **중요 사항:**
       - 파일은 `/DATA/AppData/psitransfer/data/`에 저장됩니다
@@ -349,7 +349,7 @@ x-compose-app:
 
       管理员密码和上传密码会在打开应用时显示（磁贴菜单 → Credentials）。
 
-      **访问管理面板：** 导航到 `https://psitransfer-$APP_DOMAIN/admin` 并输入管理员密码。
+      **访问管理面板：** 导航到 `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` 并输入管理员密码。
 
       **重要说明：**
       - 文件存储在 `/DATA/AppData/psitransfer/data/`
@@ -359,7 +359,7 @@ x-compose-app:
 
       Les mots de passe admin et upload sont affichés à l'ouverture de l'app (menu de la tuile → Credentials).
 
-      **Accès au panneau admin :** Naviguez vers `https://psitransfer-$APP_DOMAIN/admin` et entrez le mot de passe administrateur.
+      **Accès au panneau admin :** Naviguez vers `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` et entrez le mot de passe administrateur.
 
       **Notes importantes :**
       - Les fichiers sont stockés dans `/DATA/AppData/psitransfer/data/`
@@ -369,7 +369,7 @@ x-compose-app:
 
       Las contraseñas de admin y de subida se muestran al abrir la app (menú del icono → Credentials).
 
-      **Acceso al panel admin:** Navega a `https://psitransfer-$APP_DOMAIN/admin` e ingresa la contraseña de administrador.
+      **Acceso al panel admin:** Navega a `${APP_URL:-https://psitransfer-${APP_DOMAIN}}/admin` e ingresa la contraseña de administrador.
 
       **Notas importantes:**
       - Los archivos se almacenan en `/DATA/AppData/psitransfer/data/`

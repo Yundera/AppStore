@@ -38,7 +38,7 @@ services:
       DOLI_DB_PASSWORD: ${DOLIBARR_DB_PASSWORD}
       DOLI_ADMIN_LOGIN: admin
       DOLI_ADMIN_PASSWORD: ${DOLIBARR_ADMIN_PASSWORD}
-      DOLI_URL_ROOT: https://dolibarr-${APP_DOMAIN}
+      DOLI_URL_ROOT: ${APP_URL:-https://dolibarr-${APP_DOMAIN}}
       DOLI_INSTALL_AUTO: 1
       DOLI_PROD: 1
       PHP_INI_DATE_TIMEZONE: $TZ

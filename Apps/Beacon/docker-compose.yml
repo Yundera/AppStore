@@ -19,10 +19,10 @@ services:
       MCP_CLIENT_TIMEOUT : 300
       WEB_PORT: "9300"
       LOG_LEVEL: info
-      PUBLIC_URL: "https://beacon-${APP_DOMAIN}/mcp"
+      PUBLIC_URL: "${APP_URL:-https://beacon-${APP_DOMAIN}}/mcp"
       # Surfaces a "Manage remote access" link in the Beacon dashboard pointing
       # at the AppShield-hosted OAuth admin page. Beacon itself does no OAuth.
-      OAUTH_ADMIN_URL: "https://beacon-${APP_DOMAIN}/AppShield/oauth"
+      OAUTH_ADMIN_URL: "${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth"
       TZ: $TZ
     expose:
       - 9300
@@ -90,7 +90,7 @@ services:
       # tokens. AppShield protects the path in the URL (/mcp) and advertises the
       # OAUTH_SCOPE below. Requires appshield >= 2.0.7 (older images read the
       # legacy MCP_OAUTH_RESOURCE name instead and hardcode the /mcp path + scope).
-      OAUTH_RESOURCE: "https://beacon-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://beacon-${APP_DOMAIN}}/mcp"
       # Scope this resource advertises/grants. Free-form label (AppShield's own
       # default is the generic "access"); set explicitly to "mcp" so Beacon's
       # advertised scope is unchanged from earlier releases.
@@ -211,13 +211,13 @@ x-casaos:
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "https://beacon-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://beacon-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom scripts),
-        open **https://beacon-${APP_DOMAIN}/AppShield/oauth** and create one there. The same
+        open **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** and create one there. The same
         page is linked from the Beacon dashboard as "Manage remote access".
 
         **Option 2: Local Docker connection (no auth required)**
@@ -285,13 +285,13 @@ x-casaos:
           "mcpServers": {
             "beacon": {
               "type": "http",
-              "url": "https://beacon-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://beacon-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         Pour les clients qui exigent un client_id/client_secret pre-cree (n8n, scripts),
-        ouvrez **https://beacon-${APP_DOMAIN}/AppShield/oauth** et creez-en un. La meme page
+        ouvrez **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** et creez-en un. La meme page
         est accessible depuis le tableau de bord Beacon via "Manage remote access".
 
         **Option 2: Connexion Docker locale (sans auth)**
@@ -400,13 +400,13 @@ x-compose-app:
         "mcpServers": {
           "beacon": {
             "type": "http",
-            "url": "https://beacon-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://beacon-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom scripts),
-      open **https://beacon-${APP_DOMAIN}/AppShield/oauth** and create one there. The same
+      open **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** and create one there. The same
       page is linked from the Beacon dashboard as "Manage remote access".
 
       **Option 2: Local Docker connection (no auth required)**
@@ -474,13 +474,13 @@ x-compose-app:
         "mcpServers": {
           "beacon": {
             "type": "http",
-            "url": "https://beacon-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://beacon-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       Pour les clients qui exigent un client_id/client_secret pre-cree (n8n, scripts),
-      ouvrez **https://beacon-${APP_DOMAIN}/AppShield/oauth** et creez-en un. La meme page
+      ouvrez **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** et creez-en un. La meme page
       est accessible depuis le tableau de bord Beacon via "Manage remote access".
 
       **Option 2: Connexion Docker locale (sans auth)**

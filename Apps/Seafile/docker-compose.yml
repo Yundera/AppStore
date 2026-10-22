@@ -88,7 +88,7 @@ services:
       - INIT_SEAFILE_ADMIN_EMAIL=admin@$APP_DOMAIN
       - INIT_SEAFILE_ADMIN_PASSWORD=${SEAFILE_ADMIN_PASSWORD}
 
-      - SEAFILE_SERVER_HOSTNAME=seafile-$APP_DOMAIN
+      - SEAFILE_SERVER_HOSTNAME=${APP_HOST:-seafile-${APP_DOMAIN}}
       - SEAFILE_SERVER_PROTOCOL=https
 
       - SITE_ROOT=/
@@ -115,11 +115,11 @@ services:
       - REDIS_PASSWORD=${SEAFILE_REDIS_PASSWORD}
 
       - ENABLE_SEADOC=true
-      - SEADOC_SERVER_URL=https://seafile-$APP_DOMAIN/sdoc-server
+      - SEADOC_SERVER_URL=${APP_URL:-https://seafile-${APP_DOMAIN}}/sdoc-server
 
       - ENABLE_NOTIFICATION_SERVER=true
       - INNER_NOTIFICATION_SERVER_URL=http://seafile-notification-server:8083
-      - NOTIFICATION_SERVER_URL=https://seafile-$APP_DOMAIN/notification
+      - NOTIFICATION_SERVER_URL=${APP_URL:-https://seafile-${APP_DOMAIN}}/notification
 
       - ENABLE_SEAFILE_AI=false
       - SEAFILE_AI_SERVER_URL=http://seafile-ai:8888
@@ -156,7 +156,7 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/seafile/shared/seafile/logs/:/shared/seafile/logs
     environment:
-      - SEAFILE_SERVER_HOSTNAME=seafile-$APP_DOMAIN
+      - SEAFILE_SERVER_HOSTNAME=${APP_HOST:-seafile-${APP_DOMAIN}}
       - SEAFILE_SERVER_PROTOCOL=https
       - SEAFILE_MYSQL_DB_HOST=db
       - SEAFILE_MYSQL_DB_PORT=3306
@@ -209,8 +209,8 @@ services:
       # repeated 4x, so this keeps their key byte-identical (seeded, see x-compose-app).
       - JWT_PRIVATE_KEY=${SEAFILE_JWT_KEY}${SEAFILE_JWT_KEY}${SEAFILE_JWT_KEY}${SEAFILE_JWT_KEY}
       - NON_ROOT=false
-      - SEAHUB_SERVICE_URL=https://seafile-$APP_DOMAIN
-      - SEAFILE_SERVER_HOSTNAME=seafile-$APP_DOMAIN
+      - SEAHUB_SERVICE_URL=${APP_URL:-https://seafile-${APP_DOMAIN}}
+      - SEAFILE_SERVER_HOSTNAME=${APP_HOST:-seafile-${APP_DOMAIN}}
       - SEAFILE_SERVER_PROTOCOL=https
     depends_on:
       db:
@@ -547,8 +547,8 @@ x-compose-app:
         # Reverse proxy HTTPS settings (Caddy terminates TLS, forwards X-Forwarded-Proto)
         USE_X_FORWARDED_HOST = True
         SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-        SERVICE_URL = 'https://seafile-$APP_DOMAIN'
-        FILE_SERVER_ROOT = 'https://seafile-$APP_DOMAIN/seafhttp'
+        SERVICE_URL = '${APP_URL:-https://seafile-${APP_DOMAIN}}'
+        FILE_SERVER_ROOT = '${APP_URL:-https://seafile-${APP_DOMAIN}}/seafhttp'
         EOF
           echo "Reverse-proxy HTTPS configuration added"; echo CHANGED
         fi

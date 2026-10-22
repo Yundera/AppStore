@@ -44,10 +44,10 @@ services:
     environment:
       TZ: $TZ
       # --- Identity (permanent — see caddy_1 note above) ---
-      TUWUNEL_SERVER_NAME: matrix-${APP_DOMAIN}
+      TUWUNEL_SERVER_NAME: ${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}
       # Federation runs over 443 (the gateway); no port 8448 needed.
       # Tuwunel serves /.well-known/matrix/{client,server} itself with these values.
-      TUWUNEL_WELL_KNOWN: '{client="https://matrix-${APP_DOMAIN}",server="matrix-${APP_DOMAIN}:443"}'
+      TUWUNEL_WELL_KNOWN: '{client="${ROUTE_MATRIX_URL:-https://matrix-${APP_DOMAIN}}",server="${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}:443"}'
       # --- Listener ---
       TUWUNEL_ADDRESS: 0.0.0.0
       TUWUNEL_PORT: "8008"
@@ -182,8 +182,8 @@ x-casaos:
 
         | Setting | Value |
         |---------|-------|
-        | Web Client (Element) | [🔗 Open Element](https://tuwunel-$APP_DOMAIN/) |
-        | Homeserver (for mobile apps) | `matrix-$APP_DOMAIN` |
+        | Web Client (Element) | [🔗 Open Element](${APP_URL:-https://tuwunel-${APP_DOMAIN}}/) |
+        | Homeserver (for mobile apps) | `${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}` |
 
         Keep the token private — anyone who has it can create accounts on your server.
 
@@ -215,7 +215,7 @@ x-compose-app:
     - amd64
     - arm64
   tips:
-    en_us: "**⚠️ Your Matrix identity is permanent**\n\nYour server name will be `matrix-<your-domain>` and your user ID `@name:matrix-<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.\n\n**\U0001F511 Registration**\n\nAccount creation requires a **registration token**. The **first account registered becomes the admin**. The token is shown when you open the app (tile menu → Credentials).\n\n| Setting | Value |\n|---------|-------|\n| Web Client (Element) | [\U0001F517 Open Element](https://tuwunel-$APP_DOMAIN/) |\n| Homeserver (for mobile apps) | `matrix-$APP_DOMAIN` |\n\nKeep the token private — anyone who has it can create accounts on your server.\n\n**\U0001F4F1 Connecting a client**\n\nThe app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix-<your-domain>`.\n"
+    en_us: "**⚠️ Your Matrix identity is permanent**\n\nYour server name will be `matrix-<your-domain>` and your user ID `@name:matrix-<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.\n\n**\U0001F511 Registration**\n\nAccount creation requires a **registration token**. The **first account registered becomes the admin**. The token is shown when you open the app (tile menu → Credentials).\n\n| Setting | Value |\n|---------|-------|\n| Web Client (Element) | [\U0001F517 Open Element](${APP_URL:-https://tuwunel-${APP_DOMAIN}}/) |\n| Homeserver (for mobile apps) | `${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}` |\n\nKeep the token private — anyone who has it can create accounts on your server.\n\n**\U0001F4F1 Connecting a client**\n\nThe app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix-<your-domain>`.\n"
   # Element's config carries the deployment's domain, so it is re-rendered on
   # every up rather than written once at install. The hook this replaces ran
   # exactly once: change the PCS domain afterwards and Element kept pointing at

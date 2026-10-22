@@ -31,7 +31,7 @@ services:
       - PGID=$PGID
       - TZ=$TZ
       - NTFY_ADMIN_PASSWORD=${NTFY_ADMIN_PASSWORD}
-      - NTFY_BASE_URL=https://ntfy-${APP_DOMAIN}
+      - NTFY_BASE_URL=${APP_URL:-https://ntfy-${APP_DOMAIN}}
     healthcheck:
       # 127.0.0.1, not localhost: nginx binds IPv4 only while busybox wget tries
       # ::1 first, so http://localhost:80/ is refused inside the container and the
@@ -127,7 +127,7 @@ x-casaos:
         Use these credentials for both the web UI and the ntfy mobile app:
         - **Username:** `admin`
         - **Password:** shown when you open the app (tile menu → Credentials)
-        - **Server URL:** `https://ntfy-${APP_DOMAIN}`
+        - **Server URL:** `${APP_URL:-https://ntfy-${APP_DOMAIN}}`
 
         **How to receive notifications:**
         1. Open the ntfy web UI from the app dashboard and sign in
@@ -171,7 +171,7 @@ x-casaos:
         网页界面和 ntfy 手机应用使用相同的凭据：
         - **用户名：** `admin`
         - **密码：** 打开应用时显示（磁贴菜单 → Credentials）
-        - **服务器 URL：** `https://ntfy-${APP_DOMAIN}`
+        - **服务器 URL：** `${APP_URL:-https://ntfy-${APP_DOMAIN}}`
 
         **如何接收通知：**
         1. 从应用仪表板打开 ntfy 网页界面并登录
@@ -261,7 +261,7 @@ x-compose-app:
       Use these credentials for both the web UI and the ntfy mobile app:
       - **Username:** `admin`
       - **Password:** shown when you open the app (tile menu → Credentials)
-      - **Server URL:** `https://ntfy-${APP_DOMAIN}`
+      - **Server URL:** `${APP_URL:-https://ntfy-${APP_DOMAIN}}`
 
       **How to receive notifications:**
       1. Open the ntfy web UI from the app dashboard and sign in
@@ -305,7 +305,7 @@ x-compose-app:
       网页界面和 ntfy 手机应用使用相同的凭据：
       - **用户名：** `admin`
       - **密码：** 打开应用时显示（磁贴菜单 → Credentials）
-      - **服务器 URL：** `https://ntfy-${APP_DOMAIN}`
+      - **服务器 URL：** `${APP_URL:-https://ntfy-${APP_DOMAIN}}`
 
       **如何接收通知：**
       1. 从应用仪表板打开 ntfy 网页界面并登录

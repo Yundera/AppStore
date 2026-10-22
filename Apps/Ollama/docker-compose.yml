@@ -29,7 +29,7 @@ services:
       - pcs
     environment:
       OLLAMA_BASE_URL: http://ollama-api:11434
-      WEBUI_URL: https://ollama-${APP_DOMAIN}
+      WEBUI_URL: ${APP_URL:-https://ollama-${APP_DOMAIN}}
       WEBUI_SECRET_KEY: ${OLLAMA_WEBUI_SECRET_KEY}
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/ollama/webui:/app/backend/data

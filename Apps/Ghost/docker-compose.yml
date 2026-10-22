@@ -32,7 +32,7 @@ services:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/content/:/var/lib/ghost/content
     environment:
       NODE_ENV: production
-      url: https://ghost-${APP_DOMAIN}
+      url: ${APP_URL:-https://ghost-${APP_DOMAIN}}
       database__client: mysql
       database__connection__host: ghost-db
       database__connection__port: 3306

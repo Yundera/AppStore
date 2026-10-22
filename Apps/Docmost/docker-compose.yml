@@ -81,7 +81,7 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/docmost/storage/:/app/data/storage
     environment:
-      APP_URL: https://docmost-${APP_DOMAIN}
+      APP_URL: ${APP_URL:-https://docmost-${APP_DOMAIN}}
       APP_SECRET: ${DOCMOST_APP_SECRET}
       PORT: 80
       DATABASE_URL: postgresql://docmost:${DOCMOST_DB_PASSWORD}@docmost-db:5432/docmost?schema=public

@@ -125,7 +125,7 @@ x-casaos:
             - Clean subdomain (served on a plain HTTPS address)
             - All-in-one streaming server with FFmpeg transcoding
             - Protected by the server's single sign-on (Authelia SSO)
-    hostname: stremio-${APP_DOMAIN}
+    hostname: ${APP_HOST:-stremio-${APP_DOMAIN}}
     index: /
     icon: icon.png
     is_uncontrolled: false

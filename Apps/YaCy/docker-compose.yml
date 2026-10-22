@@ -197,7 +197,7 @@ x-casaos:
 
         | Setting | Value |
         |---------|-------|
-        | Admin Panel | [Admin Panel](https://yacy-$APP_DOMAIN/) |
+        | Admin Panel | [Admin Panel](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
         The username and password are shown when you open the app (tile menu → Credentials).
 
@@ -220,13 +220,13 @@ x-casaos:
 
         **Peer status:** this app does not publish port 8090 to the internet, so YaCy runs as a junior peer: it searches the network and builds your own index, but other peers cannot connect in to fetch it.
 
-        **Public search page:** the search page at `https://yacy-$APP_DOMAIN/` is open to anyone with the link, like any public search portal. The admin pages (crawler, settings) require the admin login.
+        **Public search page:** the search page at `${APP_URL:-https://yacy-${APP_DOMAIN}}/` is open to anyone with the link, like any public search portal. The admin pages (crawler, settings) require the admin login.
       fr_fr: |
         **Acces Admin par Defaut**
 
         | Parametre | Valeur |
         |-----------|--------|
-        | Panneau Admin | [Panneau Admin](https://yacy-$APP_DOMAIN/) |
+        | Panneau Admin | [Panneau Admin](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
         L'identifiant et le mot de passe s'affichent a l'ouverture de l'application (menu de la tuile → Identifiants).
 
@@ -242,7 +242,7 @@ x-casaos:
 
         | Einstellung | Wert |
         |-------------|------|
-        | Admin-Panel | [Admin-Panel](https://yacy-$APP_DOMAIN/) |
+        | Admin-Panel | [Admin-Panel](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
         Benutzername und Passwort werden beim Oeffnen der App angezeigt (Kachelmenue → Zugangsdaten).
 
@@ -258,7 +258,7 @@ x-casaos:
 
         | Configuracion | Valor |
         |---------------|-------|
-        | Panel Admin | [Panel Admin](https://yacy-$APP_DOMAIN/) |
+        | Panel Admin | [Panel Admin](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
         El usuario y la contrasena se muestran al abrir la aplicacion (menu del icono → Credenciales).
 
@@ -274,7 +274,7 @@ x-casaos:
 
         | 设置 | 值 |
         |------|-----|
-        | 管理面板 | [管理面板](https://yacy-$APP_DOMAIN/) |
+        | 管理面板 | [管理面板](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
         打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
 
@@ -290,7 +290,7 @@ x-casaos:
 
         | 설정 | 값 |
         |------|-----|
-        | 관리자 패널 | [관리자 패널](https://yacy-$APP_DOMAIN/) |
+        | 관리자 패널 | [관리자 패널](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
         앱을 열면 사용자 이름과 비밀번호가 표시됩니다 (타일 메뉴 → 자격 증명).
 
@@ -442,7 +442,7 @@ x-compose-app:
 
       | Setting | Value |
       |---------|-------|
-      | Admin Panel | [Admin Panel](https://yacy-$APP_DOMAIN/) |
+      | Admin Panel | [Admin Panel](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
       The username and password are shown when you open the app (tile menu → Credentials).
 
@@ -465,13 +465,13 @@ x-compose-app:
 
       **Peer status:** this app does not publish port 8090 to the internet, so YaCy runs as a junior peer: it searches the network and builds your own index, but other peers cannot connect in to fetch it.
 
-      **Public search page:** the search page at `https://yacy-$APP_DOMAIN/` is open to anyone with the link, like any public search portal. The admin pages (crawler, settings) require the admin login.
+      **Public search page:** the search page at `${APP_URL:-https://yacy-${APP_DOMAIN}}/` is open to anyone with the link, like any public search portal. The admin pages (crawler, settings) require the admin login.
     fr_fr: |
       **Acces Admin par Defaut**
 
       | Parametre | Valeur |
       |-----------|--------|
-      | Panneau Admin | [Panneau Admin](https://yacy-$APP_DOMAIN/) |
+      | Panneau Admin | [Panneau Admin](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
       L'identifiant et le mot de passe s'affichent a l'ouverture de l'application (menu de la tuile → Identifiants).
 
@@ -487,7 +487,7 @@ x-compose-app:
 
       | Einstellung | Wert |
       |-------------|------|
-      | Admin-Panel | [Admin-Panel](https://yacy-$APP_DOMAIN/) |
+      | Admin-Panel | [Admin-Panel](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
       Benutzername und Passwort werden beim Oeffnen der App angezeigt (Kachelmenue → Zugangsdaten).
 
@@ -503,7 +503,7 @@ x-compose-app:
 
       | Configuracion | Valor |
       |---------------|-------|
-      | Panel Admin | [Panel Admin](https://yacy-$APP_DOMAIN/) |
+      | Panel Admin | [Panel Admin](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
       El usuario y la contrasena se muestran al abrir la aplicacion (menu del icono → Credenciales).
 
@@ -519,7 +519,7 @@ x-compose-app:
 
       | 设置 | 值 |
       |------|-----|
-      | 管理面板 | [管理面板](https://yacy-$APP_DOMAIN/) |
+      | 管理面板 | [管理面板](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
       打开应用时会显示用户名和密码（磁贴菜单 → 凭据）。
 
@@ -535,7 +535,7 @@ x-compose-app:
 
       | 설정 | 값 |
       |------|-----|
-      | 관리자 패널 | [관리자 패널](https://yacy-$APP_DOMAIN/) |
+      | 관리자 패널 | [관리자 패널](${APP_URL:-https://yacy-${APP_DOMAIN}}/) |
 
       앱을 열면 사용자 이름과 비밀번호가 표시됩니다 (타일 메뉴 → 자격 증명).
 

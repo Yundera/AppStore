@@ -136,7 +136,7 @@ services:
       # of being OOM-killed at the edge.
       GOMEMLIMIT: 768MiB
       # Consumed by seed/init.d/01-configure-node.sh on every start.
-      IPFS_ALLOWED_ORIGINS: '["https://kubo-${APP_DOMAIN}","https://kubo-${APP_PUBLIC_IP_DASH}.nip.io","https://kubo-${APP_PUBLIC_IP_DASH}.sslip.io"]'
+      IPFS_ALLOWED_ORIGINS: '["${APP_URL:-https://kubo-${APP_DOMAIN}}","https://kubo-${APP_PUBLIC_IP_DASH}.nip.io","https://kubo-${APP_PUBLIC_IP_DASH}.sslip.io"]'
       # Set to "false" to let the public gateway hostname fetch any CID from the
       # network on a visitor's behalf, turning this node into an open gateway for
       # anyone who finds the address. Left true, it serves only what this node holds.
@@ -182,14 +182,14 @@ x-casaos:
         interface and its control API open with your existing server login.
 
         🔗 **Sharing is a second address.** Anything you pin is readable at
-        `https://kubo-gateway-${APP_DOMAIN}/ipfs/<cid>`, open to whoever you send the
+        `${ROUTE_KUBO_GATEWAY_URL:-https://kubo-gateway-${APP_DOMAIN}}/ipfs/<cid>`, open to whoever you send the
         link to — they sign into nothing and install nothing. That address serves
         **only what you have pinned**: every other CID answers 404, so it stays your
         share link rather than a gateway to the rest of the network.
 
         ⚙️ **Two settings to make *Share link* use that address.** The web interface
         stores them in your browser, so set them once, per browser, under *Settings*:
-        put `https://kubo-gateway-${APP_DOMAIN}` in **Local HTTP Gateway**, and choose
+        put `${ROUTE_KUBO_GATEWAY_URL:-https://kubo-gateway-${APP_DOMAIN}}` in **Local HTTP Gateway**, and choose
         **Local gateway, path link** under **Sharing IPFS links**. File previews and the
         *Share link* button then both point at your own server. Left alone, they assume
         a gateway on the machine the browser is running on.
@@ -370,7 +370,7 @@ x-compose-app:
     - amd64
     - arm64
   tips:
-    en_us: "\U0001F510 **Protected by your server account (single sign-on).** The node's web\ninterface and its control API open with your existing server login.\n\n\U0001F517 **Sharing is a second address.** Anything you pin is readable at\n`https://kubo-gateway-${APP_DOMAIN}/ipfs/<cid>`, open to whoever you send the\nlink to — they sign into nothing and install nothing. That address serves\n**only what you have pinned**: every other CID answers 404, so it stays your\nshare link rather than a gateway to the rest of the network.\n\n⚙️ **Two settings to make *Share link* use that address.** The web interface\nstores them in your browser, so set them once, per browser, under *Settings*:\nput `https://kubo-gateway-${APP_DOMAIN}` in **Local HTTP Gateway**, and choose\n**Local gateway, path link** under **Sharing IPFS links**. File previews and the\n*Share link* button then both point at your own server. Left alone, they assume\na gateway on the machine the browser is running on.\n\n\U0001F4CC **Pins are what you keep.** Files you add are pinned and kept forever. Blocks\nyou merely visited are cached up to `IPFS_STORAGE_MAX` (20 GB by default) and\nswept hourly. Everything lives in `/DATA/AppData/kubo/`.\n\n\U0001F4E1 **Port 4001 is published** (TCP and UDP) so other peers can dial this node —\nthat is what lets them fetch what you pin, and what earns the node its\n`libp2p.direct` certificate. On a PCS with no directly reachable public address\nthe node still works, it just reaches fewer peers.\n"
+    en_us: "\U0001F510 **Protected by your server account (single sign-on).** The node's web\ninterface and its control API open with your existing server login.\n\n\U0001F517 **Sharing is a second address.** Anything you pin is readable at\n`${ROUTE_KUBO_GATEWAY_URL:-https://kubo-gateway-${APP_DOMAIN}}/ipfs/<cid>`, open to whoever you send the\nlink to — they sign into nothing and install nothing. That address serves\n**only what you have pinned**: every other CID answers 404, so it stays your\nshare link rather than a gateway to the rest of the network.\n\n⚙️ **Two settings to make *Share link* use that address.** The web interface\nstores them in your browser, so set them once, per browser, under *Settings*:\nput `${ROUTE_KUBO_GATEWAY_URL:-https://kubo-gateway-${APP_DOMAIN}}` in **Local HTTP Gateway**, and choose\n**Local gateway, path link** under **Sharing IPFS links**. File previews and the\n*Share link* button then both point at your own server. Left alone, they assume\na gateway on the machine the browser is running on.\n\n\U0001F4CC **Pins are what you keep.** Files you add are pinned and kept forever. Blocks\nyou merely visited are cached up to `IPFS_STORAGE_MAX` (20 GB by default) and\nswept hourly. Everything lives in `/DATA/AppData/kubo/`.\n\n\U0001F4E1 **Port 4001 is published** (TCP and UDP) so other peers can dial this node —\nthat is what lets them fetch what you pin, and what earns the node its\n`libp2p.direct` certificate. On a PCS with no directly reachable public address\nthe node still works, it just reaches fewer peers.\n"
   folders:
     # The fs-repo: keys, config, block store, pins. Kubo drops to the container's own
     # uid when started as root, but `user:` above pins it to $PUID:$PGID, so the repo

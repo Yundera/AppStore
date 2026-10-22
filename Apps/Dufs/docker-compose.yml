@@ -144,11 +144,11 @@ x-casaos:
         Default WebDAV Access
         Username `admin` (read/write). The password is shown when you open the app (tile menu → Credentials).
         
-        WebDAV URL: https://dufs-$APP_DOMAIN/
+        WebDAV URL: ${APP_URL:-https://dufs-${APP_DOMAIN}}/
         
         Mount Instructions:
-        • Windows: Map Network Drive → https://dufs-$APP_DOMAIN/
-        • macOS: Finder → Go → Connect to Server → https://dufs-$APP_DOMAIN/
+        • Windows: Map Network Drive → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
+        • macOS: Finder → Go → Connect to Server → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
         • Linux: Files → Other Locations → Connect to Server → dav://dufs-$APP_DOMAIN/
         
         For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
@@ -171,11 +171,11 @@ x-casaos:
         默认 WebDAV 访问
         用户名 `admin`（读/写）。打开应用时会显示密码（磁贴菜单 → Credentials）。
         
-        WebDAV 地址：https://dufs-$APP_DOMAIN/
+        WebDAV 地址：${APP_URL:-https://dufs-${APP_DOMAIN}}/
         
         挂载方法：
-        • Windows：映射网络驱动器 → https://dufs-$APP_DOMAIN/
-        • macOS：访达 → 前往 → 连接服务器 → https://dufs-$APP_DOMAIN/
+        • Windows：映射网络驱动器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
+        • macOS：访达 → 前往 → 连接服务器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
         • Linux：文件 → 其他位置 → 连接到服务器 → dav://dufs-$APP_DOMAIN/
         
         在 Windows 上传输大文件时，可以在管理员命令提示符中运行以下命令来提高上传大小限制：
@@ -276,11 +276,11 @@ x-compose-app:
       Default WebDAV Access
       Username `admin` (read/write). The password is shown when you open the app (tile menu → Credentials).
 
-      WebDAV URL: https://dufs-$APP_DOMAIN/
+      WebDAV URL: ${APP_URL:-https://dufs-${APP_DOMAIN}}/
 
       Mount Instructions:
-      • Windows: Map Network Drive → https://dufs-$APP_DOMAIN/
-      • macOS: Finder → Go → Connect to Server → https://dufs-$APP_DOMAIN/
+      • Windows: Map Network Drive → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
+      • macOS: Finder → Go → Connect to Server → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
       • Linux: Files → Other Locations → Connect to Server → dav://dufs-$APP_DOMAIN/
 
       For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
@@ -303,11 +303,11 @@ x-compose-app:
       默认 WebDAV 访问
       用户名 `admin`（读/写）。打开应用时会显示密码（磁贴菜单 → Credentials）。
 
-      WebDAV 地址：https://dufs-$APP_DOMAIN/
+      WebDAV 地址：${APP_URL:-https://dufs-${APP_DOMAIN}}/
 
       挂载方法：
-      • Windows：映射网络驱动器 → https://dufs-$APP_DOMAIN/
-      • macOS：访达 → 前往 → 连接服务器 → https://dufs-$APP_DOMAIN/
+      • Windows：映射网络驱动器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
+      • macOS：访达 → 前往 → 连接服务器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
       • Linux：文件 → 其他位置 → 连接到服务器 → dav://dufs-$APP_DOMAIN/
 
       在 Windows 上传输大文件时，可以在管理员命令提示符中运行以下命令来提高上传大小限制：
@@ -329,8 +329,8 @@ x-compose-app:
       username: admin
       password: ${DUFS_ADMIN_PASSWORD}
       note:
-        en_us: "WebDAV URL: https://dufs-${APP_DOMAIN}/"
-        zh_cn: "WebDAV 地址：https://dufs-${APP_DOMAIN}/"
+        en_us: "WebDAV URL: ${APP_URL:-https://dufs-${APP_DOMAIN}}/"
+        zh_cn: "WebDAV 地址：${APP_URL:-https://dufs-${APP_DOMAIN}}/"
       # --auth is read from the command line on every start, so a new value in .env
       # plus a recreate is the whole change. The rule `admin:pw@/:rw` is split at
       # the first "@/", so a password containing "/" could end the rule early.

@@ -156,7 +156,9 @@ references it.
 |---|---|
 | `APP_NET` | The shared network apps join (`pcs` on a PCS). Always write `${APP_NET:-pcs}`. |
 | `DATA_ROOT` | The data folder as the **Docker host** sees it, normally `/DATA`. Always write `${DATA_ROOT:-/DATA}` as the prefix of every bind source. |
-| `APP_DOMAIN` | The domain root for app URLs, e.g. `alice.nsl.sh`. An app URL is `https://<app>-${APP_DOMAIN}`. |
+| `APP_DOMAIN` | The domain root, e.g. `alice.nsl.sh`. Use it for what is really the domain (`admin@${APP_DOMAIN}`), not to spell the app's own address. |
+| `APP_URL` / `APP_HOST` | The app's own address: an origin (`https://myapp-alice.nsl.sh`, no trailing slash) and its host. Set by a Maison that knows the app's routes, so always write it with today's spelling as the fallback: `${APP_URL:-https://myapp-${APP_DOMAIN}}`. See `own-address` in CONTRIBUTING. |
+| `ROUTE_<NAME>_URL` / `ROUTE_<NAME>_HOST` | The same for each further host the app routes (`hubsassets` → `ROUTE_HUBSASSETS_HOST`). |
 | `APP_PUBLIC_IP_DASH` | The public IPv4 with dashes, used in the `nip.io` / `sslip.io` labels. |
 | `APP_EMAIL` | The admin email, `admin@<domain>`. |
 | `AppID` | The app's compose `name`. |
@@ -173,7 +175,7 @@ In a bind source, always write the variable.
 services:
   myapp:
     environment:
-      BASE_URL: https://myapp-${APP_DOMAIN}
+      BASE_URL: ${APP_URL:-https://myapp-${APP_DOMAIN}}
       TZ: $TZ
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/app/data
@@ -517,7 +519,7 @@ x-casaos:
 | `LISTEN_PORT` | yes | The port AppShield listens on. Matches `expose` and `{{upstreams}}`. |
 | `OIDC_REGISTRAR_URL` | yes | `http://auth-registrar:9092`. Its presence enables SSO. |
 | `REDIRECT_HOST_SUFFIXES` | yes | The three route suffixes, as above. |
-| `OAUTH_RESOURCE` | optional | Enables AppShield's OAuth 2.1 broker on exactly the path in the URL (e.g. `https://myapp-${APP_DOMAIN}/mcp`). This is the machine/API path for MCP servers. |
+| `OAUTH_RESOURCE` | optional | Enables AppShield's OAuth 2.1 broker on exactly the path in the URL (e.g. `${APP_URL:-https://myapp-${APP_DOMAIN}}/mcp`). This is the machine/API path for MCP servers. |
 | `OAUTH_SCOPE` | optional | The scope the resource advertises (default `access`; MCP apps use `mcp`). |
 | `OAUTH_DATA_DIR` | optional | Set to `/data/oauth` and bind-mount `${DATA_ROOT:-/DATA}/AppData/<app>/oauth` there, so registered clients survive redeploys. |
 
@@ -641,7 +643,7 @@ x-compose-app:
     MYAPP_ADMIN_PASSWORD: password:24               # a person logs in with it
     MYAPP_ADMIN_HASH: bcrypt:${MYAPP_ADMIN_PASSWORD}
   variables:                                        # re-rendered on every up
-    MYAPP_URL: https://myapp-${APP_DOMAIN}
+    MYAPP_URL: ${APP_URL:-https://myapp-${APP_DOMAIN}}
 ```
 
 The generators are `hex:N`, `base64:N`, `alnum:N`, `password:N`, `uuid` and `bcrypt:TEXT`.

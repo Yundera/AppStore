@@ -140,7 +140,7 @@ x-casaos:
         - Docker containers
         - System processes
 
-        **Access**: After installation, access at `https://netdata-${APP_DOMAIN}`
+        **Access**: After installation, access at `${APP_URL:-https://netdata-${APP_DOMAIN}}`
 
         **Note**: Netdata requires elevated privileges to monitor system resources.
       ko_kr: |
@@ -154,7 +154,7 @@ x-casaos:
         - Docker 컨테이너
         - 시스템 프로세스
 
-        **접속**: 설치 후 `https://netdata-${APP_DOMAIN}`에서 접속하세요
+        **접속**: 설치 후 `${APP_URL:-https://netdata-${APP_DOMAIN}}`에서 접속하세요
 
         **참고**: Netdata는 시스템 리소스 모니터링을 위해 상승된 권한이 필요합니다.
       zh_cn: |
@@ -168,7 +168,7 @@ x-casaos:
         - Docker 容器
         - 系统进程
 
-        **访问**：安装后，通过 `https://netdata-${APP_DOMAIN}` 访问
+        **访问**：安装后，通过 `${APP_URL:-https://netdata-${APP_DOMAIN}}` 访问
 
         **注意**：Netdata 需要提升的权限来监控系统资源。
       fr_fr: |
@@ -182,7 +182,7 @@ x-casaos:
         - Conteneurs Docker
         - Processus système
 
-        **Accès** : Après l'installation, accédez à `https://netdata-${APP_DOMAIN}`
+        **Accès** : Après l'installation, accédez à `${APP_URL:-https://netdata-${APP_DOMAIN}}`
 
         **Note** : Netdata nécessite des privilèges élevés pour surveiller les ressources système.
       es_es: |
@@ -196,7 +196,7 @@ x-casaos:
         - Contenedores Docker
         - Procesos del sistema
 
-        **Acceso**: Después de la instalación, accede en `https://netdata-${APP_DOMAIN}`
+        **Acceso**: Después de la instalación, accede en `${APP_URL:-https://netdata-${APP_DOMAIN}}`
 
         **Nota**: Netdata requiere privilegios elevados para monitorear recursos del sistema.
   index: /
@@ -247,7 +247,7 @@ x-compose-app:
       - Docker containers
       - System processes
 
-      **Access**: After installation, access at `https://netdata-${APP_DOMAIN}`
+      **Access**: After installation, access at `${APP_URL:-https://netdata-${APP_DOMAIN}}`
 
       **Note**: Netdata requires elevated privileges to monitor system resources.
     ko_kr: |
@@ -261,7 +261,7 @@ x-compose-app:
       - Docker 컨테이너
       - 시스템 프로세스
 
-      **접속**: 설치 후 `https://netdata-${APP_DOMAIN}`에서 접속하세요
+      **접속**: 설치 후 `${APP_URL:-https://netdata-${APP_DOMAIN}}`에서 접속하세요
 
       **참고**: Netdata는 시스템 리소스 모니터링을 위해 상승된 권한이 필요합니다.
     zh_cn: |
@@ -275,7 +275,7 @@ x-compose-app:
       - Docker 容器
       - 系统进程
 
-      **访问**：安装后，通过 `https://netdata-${APP_DOMAIN}` 访问
+      **访问**：安装后，通过 `${APP_URL:-https://netdata-${APP_DOMAIN}}` 访问
 
       **注意**：Netdata 需要提升的权限来监控系统资源。
     fr_fr: |
@@ -289,7 +289,7 @@ x-compose-app:
       - Conteneurs Docker
       - Processus système
 
-      **Accès** : Après l'installation, accédez à `https://netdata-${APP_DOMAIN}`
+      **Accès** : Après l'installation, accédez à `${APP_URL:-https://netdata-${APP_DOMAIN}}`
 
       **Note** : Netdata nécessite des privilèges élevés pour surveiller les ressources système.
     es_es: |
@@ -303,7 +303,7 @@ x-compose-app:
       - Contenedores Docker
       - Procesos del sistema
 
-      **Acceso**: Después de la instalación, accede en `https://netdata-${APP_DOMAIN}`
+      **Acceso**: Después de la instalación, accede en `${APP_URL:-https://netdata-${APP_DOMAIN}}`
 
       **Nota**: Netdata requiere privilegios elevados para monitorear recursos del sistema.
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.

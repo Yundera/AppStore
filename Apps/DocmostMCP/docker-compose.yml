@@ -106,7 +106,7 @@ services:
       # resource URL (/mcp) on Bearer tokens; everything else stays behind the
       # SSO gate. Replaces ALLOWED_PATHS, which exempted /mcp from the gate
       # and — with AUTH_HASH inert under Maison — left it uncredentialed.
-      OAUTH_RESOURCE: "https://docmostmcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://docmostmcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -138,7 +138,7 @@ x-casaos:
   # The served service: docmostmcp-proxy carries the caddy_N labels and is what
   # webui-host resolves to. docmostmcp-backend is reachable only inside `pcs`.
   main: docmostmcp-proxy
-  hostname: docmostmcp-${APP_DOMAIN}
+  hostname: ${APP_HOST:-docmostmcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"
   index: /
@@ -218,13 +218,13 @@ x-casaos:
           "mcpServers": {
             "docmost-mcp": {
               "type": "http",
-              "url": "https://docmostmcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://docmostmcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://docmostmcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://docmostmcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 2: Local Docker connection (no auth required)**
@@ -326,13 +326,13 @@ x-compose-app:
         "mcpServers": {
           "docmost-mcp": {
             "type": "http",
-            "url": "https://docmostmcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://docmostmcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://docmostmcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://docmostmcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 2: Local Docker connection (no auth required)**

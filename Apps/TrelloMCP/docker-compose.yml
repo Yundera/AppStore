@@ -29,7 +29,7 @@ services:
       # Public base URL. The web UI builds the Trello authorize return_url
       # (${BASE_URL}/callback) and the Power-Up origin it tells the user to
       # register from this value.
-      - BASE_URL=https://trellomcp-${APP_DOMAIN}
+      - BASE_URL=${APP_URL:-https://trellomcp-${APP_DOMAIN}}
     volumes:
       # config.json (API key, token, default board) is written here from the web
       # UI — CONFIG_PATH defaults to /data/config.json in the image. A state
@@ -87,7 +87,7 @@ services:
       # resource URL (/mcp) on Bearer tokens; everything else stays behind the
       # SSO gate. The backend itself has no auth on /mcp, so this is what keeps
       # an anonymous caller from driving the Trello account.
-      OAUTH_RESOURCE: "https://trellomcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://trellomcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -178,7 +178,7 @@ x-casaos:
         Trello MCP needs a Trello API key and token. You connect your account from the app's Web UI after install — the MCP server starts right away, but every Trello tool answers "credentials not configured" until you do.
 
         **Setup (2 steps):**
-        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `https://trellomcp-${APP_DOMAIN}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
+        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `${APP_URL:-https://trellomcp-${APP_DOMAIN}}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
         2. Click **Authorize with Trello** and approve — the token is captured automatically and saved
 
         **MCP Integration (for AI/LLMs):**
@@ -194,14 +194,14 @@ x-casaos:
           "mcpServers": {
             "trello": {
               "type": "http",
-              "url": "https://trellomcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://trellomcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
 
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://trellomcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 2: Local Docker connection (no auth required)**
@@ -300,7 +300,7 @@ x-compose-app:
       Trello MCP needs a Trello API key and token. You connect your account from the app's Web UI after install — the MCP server starts right away, but every Trello tool answers "credentials not configured" until you do.
 
       **Setup (2 steps):**
-      1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `https://trellomcp-${APP_DOMAIN}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
+      1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `${APP_URL:-https://trellomcp-${APP_DOMAIN}}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
       2. Click **Authorize with Trello** and approve — the token is captured automatically and saved
 
       **MCP Integration (for AI/LLMs):**
@@ -316,14 +316,14 @@ x-compose-app:
         "mcpServers": {
           "trello": {
             "type": "http",
-            "url": "https://trellomcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://trellomcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
 
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://trellomcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 2: Local Docker connection (no auth required)**

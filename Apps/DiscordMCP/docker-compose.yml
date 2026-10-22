@@ -73,7 +73,7 @@ services:
       REDIRECT_HOST_SUFFIXES: "${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io"
       # Machine/API auth for the MCP endpoint: AppShield gates exactly /mcp on
       # Bearer tokens; everything else stays behind the SSO gate.
-      OAUTH_RESOURCE: "https://discordmcp-${APP_DOMAIN}/mcp"
+      OAUTH_RESOURCE: "${APP_URL:-https://discordmcp-${APP_DOMAIN}}/mcp"
       OAUTH_SCOPE: "mcp"
       OAUTH_DATA_DIR: "/data/oauth"
     volumes:
@@ -104,7 +104,7 @@ x-casaos:
   # The AppShield sidecar, not the backend: it is the container the Caddy labels
   # point at and the one users actually reach.
   main: discordmcp-proxy
-  hostname: discordmcp-${APP_DOMAIN}
+  hostname: ${APP_HOST:-discordmcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"
   index: /
@@ -183,14 +183,14 @@ x-casaos:
           "mcpServers": {
             "discord": {
               "type": "http",
-              "url": "https://discordmcp-${APP_DOMAIN}/mcp"
+              "url": "${APP_URL:-https://discordmcp-${APP_DOMAIN}}/mcp"
             }
           }
         }
         ```
 
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **https://discordmcp-${APP_DOMAIN}/AppShield/oauth** and
+        scripts), open **${APP_URL:-https://discordmcp-${APP_DOMAIN}}/AppShield/oauth** and
         create one there.
 
         **Option 2: Local Docker connection (no auth required)**
@@ -305,14 +305,14 @@ x-compose-app:
         "mcpServers": {
           "discord": {
             "type": "http",
-            "url": "https://discordmcp-${APP_DOMAIN}/mcp"
+            "url": "${APP_URL:-https://discordmcp-${APP_DOMAIN}}/mcp"
           }
         }
       }
       ```
 
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **https://discordmcp-${APP_DOMAIN}/AppShield/oauth** and
+      scripts), open **${APP_URL:-https://discordmcp-${APP_DOMAIN}}/AppShield/oauth** and
       create one there.
 
       **Option 2: Local Docker connection (no auth required)**

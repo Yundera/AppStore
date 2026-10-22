@@ -400,7 +400,7 @@ x-casaos:
   main: nntmux
   index: /
   webui_port: 80
-  hostname: nntmux-${APP_DOMAIN}
+  hostname: ${APP_HOST:-nntmux-${APP_DOMAIN}}
   scheme: https
   port_map: "443"
   store_app_id: nntmux

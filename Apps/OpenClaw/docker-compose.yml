@@ -282,7 +282,7 @@ x-casaos:
 
         The gateway only accepts browser origins listed in its own config file, and that file is never overwritten once it exists - so an existing install keeps the old one. If the Web UI reports `Browser origin not allowed`, edit `/DATA/AppData/openclaw/openclaw.json`, add the block below inside `gateway.controlUi`, and restart the app:
 
-        `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`
+        `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`
 
         **Documentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       fr_fr: |
@@ -303,7 +303,7 @@ x-casaos:
 
         **Deja installe depuis une version anterieure ?**
 
-        Le fichier de configuration existant n'est jamais ecrase. Si l'interface affiche `Browser origin not allowed`, ajoutez `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dans `gateway.controlUi` de `/DATA/AppData/openclaw/openclaw.json`, puis redemarrez l'app.
+        Le fichier de configuration existant n'est jamais ecrase. Si l'interface affiche `Browser origin not allowed`, ajoutez `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dans `gateway.controlUi` de `/DATA/AppData/openclaw/openclaw.json`, puis redemarrez l'app.
 
         **Documentation :** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       de_de: |
@@ -324,7 +324,7 @@ x-casaos:
 
         **Bereits aus einer fruheren Version installiert?**
 
-        Die vorhandene Konfigurationsdatei wird nie uberschrieben. Meldet die Web-UI `Browser origin not allowed`, erganzen Sie in `/DATA/AppData/openclaw/openclaw.json` unter `gateway.controlUi` den Eintrag `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` und starten Sie die App neu.
+        Die vorhandene Konfigurationsdatei wird nie uberschrieben. Meldet die Web-UI `Browser origin not allowed`, erganzen Sie in `/DATA/AppData/openclaw/openclaw.json` unter `gateway.controlUi` den Eintrag `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` und starten Sie die App neu.
 
         **Dokumentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       es_es: |
@@ -345,7 +345,7 @@ x-casaos:
 
         **Ya instalado desde una version anterior?**
 
-        El archivo de configuracion existente nunca se sobrescribe. Si la interfaz muestra `Browser origin not allowed`, anade `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dentro de `gateway.controlUi` en `/DATA/AppData/openclaw/openclaw.json` y reinicia la app.
+        El archivo de configuracion existente nunca se sobrescribe. Si la interfaz muestra `Browser origin not allowed`, anade `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dentro de `gateway.controlUi` en `/DATA/AppData/openclaw/openclaw.json` y reinicia la app.
 
         **Documentacion:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       zh_cn: |
@@ -366,7 +366,7 @@ x-casaos:
 
         **从旧版本升级？**
 
-        已存在的配置文件不会被覆盖。如果界面提示 `Browser origin not allowed`，请在 `/DATA/AppData/openclaw/openclaw.json` 的 `gateway.controlUi` 中加入 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`，然后重启应用。
+        已存在的配置文件不会被覆盖。如果界面提示 `Browser origin not allowed`，请在 `/DATA/AppData/openclaw/openclaw.json` 的 `gateway.controlUi` 中加入 `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`，然后重启应用。
 
         **文档：** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
       ko_kr: |
@@ -387,7 +387,7 @@ x-casaos:
 
         **이전 버전에서 이미 설치했나요?**
 
-        기존 설정 파일은 덮어쓰지 않습니다. 웹 UI에 `Browser origin not allowed` 가 표시되면 `/DATA/AppData/openclaw/openclaw.json` 의 `gateway.controlUi` 안에 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` 를 추가하고 앱을 재시작하세요.
+        기존 설정 파일은 덮어쓰지 않습니다. 웹 UI에 `Browser origin not allowed` 가 표시되면 `/DATA/AppData/openclaw/openclaw.json` 의 `gateway.controlUi` 안에 `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` 를 추가하고 앱을 재시작하세요.
 
         **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
   index: /
@@ -559,7 +559,7 @@ x-compose-app:
 
       The gateway only accepts browser origins listed in its own config file, and that file is never overwritten once it exists - so an existing install keeps the old one. If the Web UI reports `Browser origin not allowed`, edit `/DATA/AppData/openclaw/openclaw.json`, add the block below inside `gateway.controlUi`, and restart the app:
 
-      `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`
+      `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`
 
       **Documentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
     fr_fr: |
@@ -580,7 +580,7 @@ x-compose-app:
 
       **Deja installe depuis une version anterieure ?**
 
-      Le fichier de configuration existant n'est jamais ecrase. Si l'interface affiche `Browser origin not allowed`, ajoutez `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dans `gateway.controlUi` de `/DATA/AppData/openclaw/openclaw.json`, puis redemarrez l'app.
+      Le fichier de configuration existant n'est jamais ecrase. Si l'interface affiche `Browser origin not allowed`, ajoutez `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dans `gateway.controlUi` de `/DATA/AppData/openclaw/openclaw.json`, puis redemarrez l'app.
 
       **Documentation :** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
     de_de: |
@@ -601,7 +601,7 @@ x-compose-app:
 
       **Bereits aus einer fruheren Version installiert?**
 
-      Die vorhandene Konfigurationsdatei wird nie uberschrieben. Meldet die Web-UI `Browser origin not allowed`, erganzen Sie in `/DATA/AppData/openclaw/openclaw.json` unter `gateway.controlUi` den Eintrag `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` und starten Sie die App neu.
+      Die vorhandene Konfigurationsdatei wird nie uberschrieben. Meldet die Web-UI `Browser origin not allowed`, erganzen Sie in `/DATA/AppData/openclaw/openclaw.json` unter `gateway.controlUi` den Eintrag `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` und starten Sie die App neu.
 
       **Dokumentation:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
     es_es: |
@@ -622,7 +622,7 @@ x-compose-app:
 
       **Ya instalado desde una version anterior?**
 
-      El archivo de configuracion existente nunca se sobrescribe. Si la interfaz muestra `Browser origin not allowed`, anade `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dentro de `gateway.controlUi` en `/DATA/AppData/openclaw/openclaw.json` y reinicia la app.
+      El archivo de configuracion existente nunca se sobrescribe. Si la interfaz muestra `Browser origin not allowed`, anade `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` dentro de `gateway.controlUi` en `/DATA/AppData/openclaw/openclaw.json` y reinicia la app.
 
       **Documentacion:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
     zh_cn: |
@@ -643,7 +643,7 @@ x-compose-app:
 
       **从旧版本升级？**
 
-      已存在的配置文件不会被覆盖。如果界面提示 `Browser origin not allowed`，请在 `/DATA/AppData/openclaw/openclaw.json` 的 `gateway.controlUi` 中加入 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`，然后重启应用。
+      已存在的配置文件不会被覆盖。如果界面提示 `Browser origin not allowed`，请在 `/DATA/AppData/openclaw/openclaw.json` 的 `gateway.controlUi` 中加入 `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]`，然后重启应用。
 
       **文档：** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
     ko_kr: |
@@ -664,7 +664,7 @@ x-compose-app:
 
       **이전 버전에서 이미 설치했나요?**
 
-      기존 설정 파일은 덮어쓰지 않습니다. 웹 UI에 `Browser origin not allowed` 가 표시되면 `/DATA/AppData/openclaw/openclaw.json` 의 `gateway.controlUi` 안에 `"allowedOrigins": ["https://openclaw-$APP_DOMAIN", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` 를 추가하고 앱을 재시작하세요.
+      기존 설정 파일은 덮어쓰지 않습니다. 웹 UI에 `Browser origin not allowed` 가 표시되면 `/DATA/AppData/openclaw/openclaw.json` 의 `gateway.controlUi` 안에 `"allowedOrigins": ["${APP_URL:-https://openclaw-${APP_DOMAIN}}", "https://openclaw-$APP_PUBLIC_IP_DASH.nip.io", "https://openclaw-$APP_PUBLIC_IP_DASH.sslip.io"]` 를 추가하고 앱을 재시작하세요.
 
       **문서:** [https://docs.openclaw.ai/](https://docs.openclaw.ai/)
   # The gateway token (see OPENCLAW_GATEWAY_TOKEN above). Seeded: an install that
