@@ -46,6 +46,11 @@ services:
         target: /home/claude/.claude.json
     networks:
       claude-net: null
+      # On `pcs` so Beacon's UDP discovery (port 9099) can reach the responder when
+      # a box turns MCP on in its override. Trade-off: co-tenant containers on
+      # `pcs` reach ttyd (8080) and the auth server (9090) directly, past the
+      # router's gate. See rationale.md.
+      pcs: null
     cpu_shares: 70
     logging: *logging
     deploy:
