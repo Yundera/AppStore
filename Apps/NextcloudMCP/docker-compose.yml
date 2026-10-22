@@ -11,7 +11,7 @@ services:
   # and the Web UI on 9650. Reachable at nextcloudmcp-backend:9650 inside the pcs
   # network so Beacon and other MCP clients can call it directly.
   nextcloudmcp-backend:
-    image: ghcr.io/worph/nextcloud-mcp:1.0.3
+    image: ghcr.io/worph/nextcloud-mcp:1.0.4
     container_name: nextcloudmcp-backend
     hostname: nextcloudmcp-backend
     # supervisord is PID 1 and MUST start as root so it can drop privileges for
@@ -117,7 +117,7 @@ networks:
     external: true
 
 x-casaos:
-  # amd64 only: the backend image ghcr.io/worph/nextcloud-mcp:1.0.3 publishes a
+  # amd64 only: the backend image ghcr.io/worph/nextcloud-mcp:1.0.4 publishes a
   # linux/amd64 manifest only. The AppShield sidecar does ship arm64, but the app
   # can only run on the intersection of all its images.
   architectures:
@@ -380,7 +380,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.3"
+  version: "1.0.4"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
