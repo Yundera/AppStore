@@ -67,12 +67,14 @@ container is mounted, so root here is root of an empty sandbox.
 - **Fully sandboxed.** No `/var/run/docker.sock`, no host SSH mount, no `/DATA`
   mount, no `privileged: true`, no `cap_add`. The only bind mounts are this
   app's own `workspace/` and `config/` under `/DATA/AppData/claude/`.
-- **The gate cannot be walked around.** Only `claude-router` is on the shared
-  `pcs` network; `claude` is on the app-private `claude-net`. ttyd (8080) has no
-  login of its own — the gate is the router — and no other container on the box
-  can reach it or the auth server (9090) directly. (Before the router, `claude`
-  sat on `pcs` and any co-tenant container could open `http://claude:8080/`
-  past the gate.)
+- **The gate holds from outside the box, not from inside it.** Browsers reach
+  the app only through `claude-router`. `claude` itself is on both the
+  app-private `claude-net` and the shared `pcs` network — on `pcs` so Beacon's
+  UDP discovery can find the MCP responder when a box enables MCP in its
+  override. ttyd (8080) has no login of its own, so a co-tenant container on
+  `pcs` can open `http://claude:8080/` past the router's gate. That is a known,
+  accepted gap (see "Alternatives considered" below); closing it needs Beacon to
+  reach `/mcp` through the router rather than by joining `pcs`.
 - **No published host ports.** `expose:` only, so the router's port 80 is
   reachable from outside solely through the gateway-terminated Caddy routes.
 - **Pinned image** `ghcr.io/worph/claude-code-container:1.0.26`; resource limits
@@ -104,11 +106,13 @@ container is mounted, so root here is root of an empty sandbox.
   address the leak, which is a UDP responder on the shared network that no HTTP
   proxy sits in front of.
 - **Move the container off the `pcs` network so the responder has no audience.**
-  Was rejected because Caddy resolved the upstreams on `pcs`. Done since
-  2026-10-21: the router is the only service there, and `claude` now sits on the
-  app-private `claude-net`, whose only other member is the router. MCP stays off
-  all the same — re-enabling it is a separate decision, to be taken against the
-  image's responder as it stands then.
+  Done on 2026-10-21 (the router became the only service on `pcs`) and reverted
+  on 2026-10-22: off `pcs`, Beacon's discovery broadcast never reaches the
+  responder, so a box that enables MCP in its override (the deployed Touchstone
+  audits through it via Beacon) loses its agent entirely. `claude` is back on
+  `pcs` beside `claude-net`. MCP stays off in this listing all the same —
+  enabling it is a per-box decision, taken against the image's responder as it
+  stands then.
 
 ## Routing: the app's own router
 
