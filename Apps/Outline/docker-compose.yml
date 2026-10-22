@@ -146,7 +146,13 @@ services:
     image: redis:7.2.13-alpine
     container_name: outline-redis
     restart: unless-stopped
-    user: "0:0"
+    # Not root: the image's entrypoint would drop to its own `redis` user (uid 999)
+    # and take /data only at start, while `folders:` hands the directory back to
+    # $PUID:$PGID on every later `up`. A Redis left running then fails every
+    # background save ("Failed opening the temp RDB file ... Permission denied")
+    # and, with stop-writes-on-bgsave-error, refuses all writes (MISCONF). Same
+    # fix as Wger's wger-cache.
+    user: "$PUID:$PGID"
     cpu_shares: 30
     logging: *logging
     volumes:
@@ -737,4 +743,6 @@ x-compose-app:
     - path: /DATA/AppData/outline/redis
       user: $PUID
       group: $PGID
+      # Reclaims a dump.rdb written by the image's own uid 999 before the fix.
+      recursive: true
   webui-host: outline-${domain}
