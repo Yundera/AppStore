@@ -48,6 +48,7 @@ x-casaos:
     - amd64
     - arm64
   main: duplicati
+  webui_port: 8200
   category: Cloud
   tags: ["files", "privacy", "personal"]
   description:

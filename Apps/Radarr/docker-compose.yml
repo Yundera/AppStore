@@ -37,6 +37,7 @@ networks:
 
 x-casaos:
   main: radarr
+  webui_port: 7878
   index: /
   tips:
     before_install:

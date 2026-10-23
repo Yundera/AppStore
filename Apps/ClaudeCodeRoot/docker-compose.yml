@@ -162,6 +162,7 @@ x-casaos:
     - amd64
     - arm64
   main: clauderoot-router
+  webui_port: 80
   category: Developer
   tags: ["developer", "ai"]
   description:

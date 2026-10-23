@@ -58,6 +58,7 @@ x-casaos:
     - amd64
     - arm64
   main: ntfy
+  webui_port: 80
   index: /
   category: Utilities
   tags: ["developer", "ai"]

@@ -117,6 +117,7 @@ x-casaos:
   # attaches ${APP_NET} to. The tile's health follows main, so pointing it at the
   # backend tracked a container nobody reaches from outside.
   main: telegrammcp-proxy
+  webui_port: 80
   hostname: ${APP_HOST:-telegrammcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"

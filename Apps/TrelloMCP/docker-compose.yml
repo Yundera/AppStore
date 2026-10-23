@@ -111,6 +111,7 @@ x-casaos:
   # point at and the one users actually reach, and it is the service Maison
   # attaches ${APP_NET} to.
   main: trellomcp-proxy
+  webui_port: 80
   index: /
   category: Developer
   tags: ["developer", "ai"]

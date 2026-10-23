@@ -91,6 +91,7 @@ x-casaos:
     - amd64
     - arm64
   main: guacamole
+  webui_port: 8080
   index: /guacamole
   category: Productivity
   tags: ["productivity", "developer"]

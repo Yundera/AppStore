@@ -64,6 +64,7 @@ networks:
 
 x-casaos:
   main: aiostreams
+  webui_port: 3000
   index: /stremio/configure
   store_app_id: aiostreams
   architectures:

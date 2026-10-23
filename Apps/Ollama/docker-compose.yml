@@ -61,6 +61,7 @@ networks:
 
 x-casaos:
   main: ollama
+  webui_port: 8080
   index: /
   store_app_id: ollama
   architectures:

@@ -107,6 +107,7 @@ x-casaos:
   # off the network the router uses (503). It also makes the tile's health
   # reflect the service the user actually reaches.
   main: chronosmcp-proxy
+  webui_port: 80
   index: /
   category: Utilities
   tags: ["developer", "ai"]

@@ -72,6 +72,7 @@ networks:
 
 x-casaos:
   main: suwayomi
+  webui_port: 80
   index: /
   store_app_id: suwayomi
   architectures:
