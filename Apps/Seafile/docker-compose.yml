@@ -43,7 +43,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:8-alpine
+    image: redis:8.10.2-alpine
     user: 0:0
     container_name: seafile-redis
     restart: unless-stopped
