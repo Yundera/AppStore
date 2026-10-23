@@ -123,6 +123,7 @@ x-casaos:
   main: n8nmcp-proxy
   webui_port: 80
   index: /
+  developer: Worph
   category: Developer
   tags: ["developer", "ai"]
   description:
@@ -294,6 +295,7 @@ x-compose-app:
       - Configurer la connexion n8n via l'interface Web integree — sans editer de fichiers
 
       **Parfait si vous:** Voulez que Claude / Cursor / tout client MCP construise et pilote vos automatisations n8n, ou combiner avec d'autres apps MCP (Beacon, Ntfy, Chronos) pour des workflows pilotes par IA de bout en bout.
+  developer: Worph
   category: Developer
   icon: icon.png
   thumbnail: thumbnail.png

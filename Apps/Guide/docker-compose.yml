@@ -49,6 +49,7 @@ x-casaos:
     - amd64
     - arm64
   store_app_id: guide
+  developer: Yundera
   category: Utilities
   tags: ["personal", "family", "business"]
 
@@ -202,6 +203,7 @@ x-compose-app:
 
       PCS를 처음 설정한 뒤 바로 설치하기에 좋아요 — 몇 분 만에 오리엔테이션을
       마치고 Guide에서 App Store로 이동해 원하는 앱을 설치할 수 있습니다.
+  developer: Yundera
   category: Utilities
   icon: icon.png
   thumbnail: thumbnail.png

@@ -151,6 +151,7 @@ x-casaos:
       description:
         en_us: HTTP timeout (seconds) for Docmost API calls. Default 30.
         fr_fr: Delai d'expiration HTTP (en secondes) pour les appels a l'API Docmost. Par defaut 30.
+  developer: Yundera
   category: Developer
   tags: ["developer", "ai"]
   description:
@@ -291,6 +292,7 @@ x-compose-app:
       Enveloppe le serveur Python communautaire [`aleksvin8888/local-docmost-mcp`](https://github.com/aleksvin8888/local-docmost-mcp) avec un shim de transport streamable-HTTP pour que tout client compatible MCP puisse se connecter (Claude Desktop, Claude Code, Cursor, VS Code, etc.).
 
       **Parfait si vous:** Avez un Docmost auto-heberge et voulez que des assistants IA lisent, ecrivent ou maintiennent son contenu sans payer le plan Enterprise de Docmost (le seul niveau avec support MCP integre).
+  developer: Yundera
   category: Developer
   icon: icon.png
   thumbnail: thumbnail.png

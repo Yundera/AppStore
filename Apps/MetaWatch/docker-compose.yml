@@ -302,6 +302,7 @@ x-casaos:
   webui_port: 80
   index: /
   store_app_id: metawatch
+  developer: Worph
   category: Media
   # `needs-public-ip` is the reserved functional tag: this app publishes raw
   # libp2p TCP ports (4003/4004) that remote peers must dial inbound. Behind
@@ -488,6 +489,7 @@ x-compose-app:
       télécharge. Il n'embarque ni indexeur ni contenu propre. Ce qui est légal
       de télécharger ou partager varie selon les juridictions — utilisez-le en
       conséquence.
+  developer: Worph
   category: Media
   icon: icon.png
   thumbnail: thumbnail.png

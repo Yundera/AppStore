@@ -184,6 +184,7 @@ x-casaos:
     - screenshot-1.png
   tagline:
     en_us: "Admin shell on your server, in the browser"
+  developer: tsl0922
   category: Utilities
   tags: ["developer"]
   description:
@@ -240,6 +241,7 @@ x-compose-app:
       Access is protected by the server's single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in server account reaches the shell. You sign in with that same account instead of setting a separate app password.
 
       Install it only on a PCS you administer yourself. See rationale.md for the full privilege and mitigation write-up.
+  developer: tsl0922
   category: Utilities
   icon: icon.png
   thumbnail: thumbnail.png

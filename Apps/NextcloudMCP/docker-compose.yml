@@ -125,6 +125,7 @@ x-casaos:
   main: nextcloudmcp-proxy
   webui_port: 80
   index: /
+  developer: Worph
   category: Utilities
   tags: ["developer", "ai"]
   description:
@@ -439,6 +440,7 @@ x-compose-app:
       - 通过 Beacon MCP 聚合器（自动检测）统一驱动所有功能。
 
       **138 个工具 — 118 个 Nextcloud + 20 个 Talk — 合并为一个 MCP 服务器。** 一次应用密码设置。基于轮询（无需管理员 CLI）。详见内置文档。
+  developer: Worph
   category: Utilities
   icon: icon.png
   screenshots:
