@@ -88,7 +88,6 @@ x-casaos:
     - screenshot-2.png
     - screenshot-3.png
   icon: icon.png
-  thumbnail: thumbnail.png
   category: Cloud
   title:
     en_us: Rclone
@@ -167,7 +166,6 @@ x-compose-app:
   developer: Rclone
   category: Cloud
   icon: icon.png
-  thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
     - screenshot-2.png
