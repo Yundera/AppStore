@@ -1,0 +1,46 @@
+# Synapse configuration. Written once at install: edit freely afterwards, then
+# restart the app. Reference: https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
+
+# Permanent: every user ID and room is tied to it.
+server_name: "${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}"
+public_baseurl: "${ROUTE_MATRIX_URL:-https://matrix-${APP_DOMAIN}}/"
+# Federation over 443 through Caddy: other servers read /.well-known/matrix/server
+# instead of dialing port 8448.
+serve_server_wellknown: true
+
+listeners:
+  - port: 8008
+    type: http
+    tls: false
+    bind_addresses: ["0.0.0.0"]
+    x_forwarded: true
+    resources:
+      - names: [client, federation]
+        compress: false
+
+database:
+  name: psycopg2
+  args:
+    host: synapse-db
+    port: 5432
+    user: synapse
+    password: "${SYNAPSE_DB_PASSWORD}"
+    database: synapse
+    cp_min: 5
+    cp_max: 10
+
+media_store_path: /data/media_store
+max_upload_size: 100M
+signing_key_path: /data/signing.key
+trusted_key_servers:
+  - server_name: matrix.org
+suppress_key_server_warning: true
+
+# Closed registration: the admin adds accounts with register_new_matrix_user,
+# which authenticates with the shared secret below.
+enable_registration: false
+registration_shared_secret: "${SYNAPSE_REGISTRATION_SHARED_SECRET}"
+macaroon_secret_key: "${SYNAPSE_MACAROON_SECRET_KEY}"
+form_secret: "${SYNAPSE_FORM_SECRET}"
+
+report_stats: false
