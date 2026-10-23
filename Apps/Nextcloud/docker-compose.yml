@@ -7,6 +7,10 @@ services:
     restart: unless-stopped
     user: $PUID:$PGID
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     depends_on:
       db:
         condition: service_healthy
@@ -14,15 +18,6 @@ services:
         condition: service_healthy
     expose:
       - 80
-    labels:
-      caddy_0: nextcloud-${APP_DOMAIN}
-      caddy_0.import: gateway_tls
-      caddy_0.reverse_proxy: "{{upstreams 80}}"
-      caddy_1: nextcloud-${APP_PUBLIC_IP_DASH}.nip.io
-      caddy_1.import: gateway_tls
-      caddy_1.reverse_proxy: "{{upstreams 80}}"
-      caddy_2: nextcloud-${APP_PUBLIC_IP_DASH}.sslip.io
-      caddy_2.reverse_proxy: "{{upstreams 80}}"
     logging:
       driver: "json-file"
       options:
@@ -32,26 +27,27 @@ services:
       - PUID=$PUID
       - PGID=$PGID
       - TZ=$TZ
-      # Auto-install: skip the setup wizard, log in directly with admin / $APP_DEFAULT_PASSWORD
+      # Auto-install: skip the setup wizard, log in directly with admin / $NEXTCLOUD_ADMIN_PASSWORD
       - NEXTCLOUD_ADMIN_USER=admin
-      - NEXTCLOUD_ADMIN_PASSWORD=$APP_DEFAULT_PASSWORD
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
       - MYSQL_HOST=db
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
       # Do NOT set REDIS_HOST here. The official entrypoint reacts to it by writing
       # /usr/local/etc/php/conf.d/redis-session.ini, a root-owned path baked into
       # the image that no volume covers, so this container (running as
       # $PUID:$PGID) cannot create it: the entrypoint dies and `restart:
       # unless-stopped` loops it forever. Without REDIS_HOST the entrypoint keeps
       # PHP's default session handler; Redis is wired up as the distributed cache
-      # and file-locking backend by post-install-cmd instead (memcache.local
+      # and file-locking backend by the configure-redis-and-cron step instead (memcache.local
       # stays APCu, from the image's own apcu.config.php). The password below is
-      # inert for the entrypoint and is what post-install-cmd reads.
-      - REDIS_HOST_PASSWORD=$APP_DEFAULT_PASSWORD
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN nextcloud-$APP_DOMAIN nextcloud-$APP_PUBLIC_IP_DASH.nip.io nextcloud-$APP_PUBLIC_IP_DASH.sslip.io
+      # inert for the entrypoint and is what the configure-redis-and-cron step reads.
+      - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
+      # Install-time only; the trusted-domains step keeps the list current afterwards.
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN ${APP_HOST:-nextcloud-${APP_DOMAIN}}
       - OVERWRITEPROTOCOL=https
-      - OVERWRITEHOST=nextcloud-$APP_DOMAIN
+      - OVERWRITEHOST=${APP_HOST:-nextcloud-${APP_DOMAIN}}
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
       - NC_maintenance_window_start=4
     volumes:
@@ -78,6 +74,10 @@ services:
     container_name: nextcloud_db
     user: $PUID:$PGID
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     command: >
       --innodb-buffer-pool-size=256M
       --transaction-isolation=READ-COMMITTED
@@ -90,10 +90,10 @@ services:
         max-file: "2"
     environment:
       - TZ=$TZ
-      - MYSQL_ROOT_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_ROOT_PASSWORD=${NEXTCLOUD_DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=$APP_DEFAULT_PASSWORD
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
       - MARIADB_AUTO_UPGRADE=1
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/nextcloud/db/:/var/lib/mysql/
@@ -111,10 +111,14 @@ services:
     image: redis:8.6.2-alpine3.23
     container_name: nextcloud_redis
     cpu_shares: 70
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     # Stated explicitly per the Permission Strategy, and it matches the ownership
     # `x-compose-app.folders` gives /DATA/AppData/nextcloud/redis.
     user: $PUID:$PGID
-    command: redis-server --requirepass $APP_DEFAULT_PASSWORD
+    command: redis-server --requirepass ${NEXTCLOUD_REDIS_PASSWORD}
     logging:
       driver: "json-file"
       options:
@@ -128,7 +132,7 @@ services:
     networks:
       - nextcloud-network
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a $APP_DEFAULT_PASSWORD ping | grep -q PONG"]
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a ${NEXTCLOUD_REDIS_PASSWORD} ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -139,6 +143,10 @@ services:
     container_name: nextcloud_cron
     restart: unless-stopped
     cpu_shares: 30
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     # Must match the `nextcloud` service exactly so cron.php sees the same file
     # ownership as the web container.
     user: $PUID:$PGID
@@ -192,6 +200,61 @@ services:
         max-size: "10m"
         max-file: "2"
 
+  # Talk High-Performance Backend: the official Nextcloud AIO talk image bundles the
+  # signaling server, Janus (SFU), NATS and an eturnal TURN server. Without it Talk
+  # runs every call peer-to-peer, which falls apart past ~4 participants.
+  # Browsers reach signaling over HTTPS on its own route (nextcloud-signaling → 8081);
+  # media goes through TURN on 3478 tcp/udp of the server's public IP, which Janus
+  # also relays through, so 3478 is the only port the call path needs.
+  talk:
+    image: ghcr.io/nextcloud-releases/aio-talk:20260929_105435
+    container_name: nextcloud_talk
+    restart: unless-stopped
+    user: $PUID:$PGID
+    init: true
+    read_only: true
+    tmpfs:
+      - /run
+      - /opt/eturnal/run
+      - /conf
+      - /tmp
+    cap_drop:
+      - NET_RAW
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    expose:
+      - 8081
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+    environment:
+      - TZ=$TZ
+      - NC_DOMAIN=${APP_HOST:-nextcloud-${APP_DOMAIN}}
+      # Same as AIO: TALK_HOST is the container itself, so TURN relays on the
+      # container address and Janus (same container) reaches TURN without hairpin.
+      - TALK_HOST=nextcloud_talk
+      - TURN_DOMAIN=nextcloud_talk
+      - TALK_PORT=3478
+      - TURN_SECRET=${TALK_TURN_SECRET}
+      - SIGNALING_SECRET=${TALK_SIGNALING_SECRET}
+      - INTERNAL_SECRET=${TALK_INTERNAL_SECRET}
+      - AIO_LOG_LEVEL=warn
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - pcs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
 networks:
   nextcloud-network:
     driver: bridge
@@ -213,7 +276,9 @@ x-casaos:
 
   category: Utilities
 
-  tags: ["files", "productivity", "business", "personal"]
+  # `needs-public-ip`: the talk service publishes TURN on 3478 tcp/udp, which call
+  # participants reach directly. See the ports: block on that service.
+  tags: ["files", "productivity", "business", "personal", "needs-public-ip"]
   architectures: [amd64, arm64]
   developer: Nextcloud GmbH
   description:
@@ -490,109 +555,180 @@ x-casaos:
     de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
     es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
 
-  # IMPORTANT: Keep these commands idempotent - safe to run multiple times.
-  # Maison runs this hook verbatim through /bin/bash with the app's .env in the
-  # environment, so shell variables are plain $timeout / $((...)) - do not escape
-  # them as $$, bash would expand $$ to its own PID. Variables meant for the
-  # nextcloud container ($REDIS_HOST_PASSWORD) stay inside the single-quoted
-  # `docker exec bash -c` block and are expanded there, not here.
-  # Redis: memcache.local comes from the image's apcu.config.php; the distributed
-  # cache and the file-locking backend are set here because REDIS_HOST cannot be
-  # used (see the note in the nextcloud service environment).
-  # Security & setup warnings fixes "Some headers are not set correctly on your
-  # instance - The Strict-Transport-Security HTTP header is not set". Also
-  # switches background jobs to cron (the cron service handles the ticking).
-  post-install-cmd: |
-    timeout=300
-    while [ $timeout -gt 0 ]; do
-      if docker exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true'; then
-        echo "NextCloud installation complete"
-        break
-      fi
-      echo "Waiting for NextCloud auto-installation... $timeout s remaining"
-      sleep 5
-      timeout=$((timeout-5))
-    done &&
-    docker exec nextcloud bash -c '
-      php occ config:system:set redis host --value redis
-      php occ config:system:set redis port --value 6379 --type=integer
-      php occ config:system:set redis password --value "$REDIS_HOST_PASSWORD"
-      php occ config:system:set memcache.distributed --value "\OC\Memcache\Redis"
-      php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
-      a2enmod headers 2>/dev/null || true
-      if [ -f /var/www/html/.htaccess ] && ! grep -q "Strict-Transport-Security" /var/www/html/.htaccess; then
-        echo "Header always set Strict-Transport-Security \"max-age=15552000; includeSubDomains\"" >> /var/www/html/.htaccess
-        echo "HSTS header added to .htaccess"
-      else
-        echo "HSTS header already present or .htaccess not found"
-      fi
-      php occ background:cron && echo "Background jobs set to cron mode"
-    '
   tips:
     before_install:
       en_us: |
         **Login**
 
-        After installation, log in with:
-        | Field | Value |
-        |-------|-------|
-        | Username | `admin` |
-        | Password | `$APP_DEFAULT_PASSWORD` |
+        After installation, log in as `admin`. The password is shown when you open the app (tile menu → Credentials).
 
         First-time install takes 1–3 minutes. If the page shows "Gateway time-out" or appears stuck, **refresh** after a minute and the login screen will appear.
 
-        You can change the admin password from inside NextCloud after logging in (Settings → Personal → Security).
+        To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
+
+        **Talk video calls** come with a High-Performance Backend already connected, so group calls stay smooth beyond a handful of people. Calls need TCP and UDP port **3478** reachable on the server's public IP.
       ko_kr: |
         **로그인**
 
-        설치 후 다음 정보로 로그인하세요:
-        | 필드 | 값 |
-        |-------|-------|
-        | 사용자명 | `admin` |
-        | 비밀번호 | `$APP_DEFAULT_PASSWORD` |
+        설치 후 `admin` 사용자로 로그인하세요. 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
 
         최초 설치는 1~3분 소요됩니다. 페이지에 "Gateway time-out"이 표시되거나 멈춘 것처럼 보이면 1분 후 **새로고침**하면 로그인 화면이 나타납니다.
 
-        로그인 후 NextCloud 내부에서 관리자 비밀번호를 변경할 수 있습니다 (Settings → Personal → Security).
+        변경하려면 Maison의 앱 설정(보안 탭)을 사용하세요. 그래야 자격 증명 창이 정확하게 유지됩니다.
+
+        **Talk 화상통화**에는 고성능 백엔드가 이미 연결되어 있어, 여러 명이 참여하는 그룹 통화도 원활합니다. 통화를 하려면 서버 공인 IP의 TCP/UDP **3478** 포트가 열려 있어야 합니다.
       zh_cn: |
         **登录**
 
-        安装后使用以下信息登录：
-        | 字段 | 值 |
-        |-------|-------|
-        | 用户名 | `admin` |
-        | 密码 | `$APP_DEFAULT_PASSWORD` |
+        安装后以 `admin` 用户登录。密码会在打开应用时显示（磁贴菜单 → Credentials）。
 
         首次安装需要 1~3 分钟。如果页面显示 "Gateway time-out" 或看起来卡住，请等待 1 分钟后**刷新页面**即可看到登录界面。
 
-        登录后可以在 NextCloud 内部更改管理员密码 (Settings → Personal → Security)。
+        如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
+
+        **Talk 视频通话**已连接高性能后端，多人群组通话也能保持流畅。通话需要服务器公网 IP 的 TCP/UDP **3478** 端口可访问。
       fr_fr: |
         **Connexion**
 
-        Après l'installation, connectez-vous avec :
-        | Champ | Valeur |
-        |-------|-------|
-        | Utilisateur | `admin` |
-        | Mot de passe | `$APP_DEFAULT_PASSWORD` |
+        Après l'installation, connectez-vous avec l'utilisateur `admin`. Le mot de passe s'affiche à l'ouverture de l'application (menu de la tuile → Credentials).
 
         La première installation prend 1 à 3 minutes. Si la page affiche "Gateway time-out" ou semble bloquée, **rafraîchissez** après une minute pour voir l'écran de connexion.
 
-        Vous pouvez changer le mot de passe administrateur depuis NextCloud après vous être connecté (Settings → Personal → Security).
+        Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
+
+        **Les appels vidéo Talk** sont déjà reliés à un backend haute performance, pour des appels de groupe fluides au-delà de quelques participants. Les appels nécessitent que les ports TCP et UDP **3478** soient joignables sur l'IP publique du serveur.
       es_es: |
         **Inicio de sesión**
 
-        Después de la instalación, inicia sesión con:
-        | Campo | Valor |
-        |-------|-------|
-        | Usuario | `admin` |
-        | Contraseña | `$APP_DEFAULT_PASSWORD` |
+        Después de la instalación, inicia sesión con el usuario `admin`. La contraseña se muestra al abrir la aplicación (menú del icono → Credentials).
 
         La primera instalación tarda 1-3 minutos. Si la página muestra "Gateway time-out" o parece bloqueada, **actualiza** después de un minuto para ver la pantalla de inicio de sesión.
 
-        Puedes cambiar la contraseña de administrador desde dentro de NextCloud después de iniciar sesión (Settings → Personal → Security).
+        Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
+
+        **Las videollamadas de Talk** ya están conectadas a un backend de alto rendimiento, para llamadas grupales fluidas más allá de unas pocas personas. Las llamadas necesitan los puertos TCP y UDP **3478** accesibles en la IP pública del servidor.
 
 x-compose-app:
   schema_version: 2
+  version: "33.0.3"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: nextcloud, name: nextcloud, upstream-port: 80 }
+    # Talk's signaling server (HPB) on its own host; the talk-backend step registers
+    # it in Nextcloud as ROUTE_NEXTCLOUD_SIGNALING_URL.
+    - { service: talk, name: nextcloud-signaling, upstream-port: 8081 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Nextcloud
+    ko_kr: Nextcloud
+    zh_cn: Nextcloud
+    fr_fr: Nextcloud
+    es_es: Nextcloud
+  tagline:
+    en_us: Build your Teams alternative with guided app installation
+    ko_kr: 가이드된 앱 설치로 Teams 대안 구축
+    zh_cn: 通过引导式应用安装构建您的Teams替代方案
+    fr_fr: Construisez votre alternative Teams avec l'installation guidée d'applications
+    de_de: Erstellen Sie Ihre Teams-Alternative mit geführter App-Installation
+    es_es: Construya su alternativa a Teams con instalación guiada de aplicaciones
+  description:
+    en_us: "**☁️ What is Nextcloud?**\n\n**Nextcloud** is your own personal cloud : like **Google Drive, Dropbox, Microsoft Teams, and WhatsApp all-in-one**, but fully under your control.\n\nIf you want to sync your files across devices, you'll need to use the Nextcloud Files app --- it's like your own private version of Google Drive or Dropbox.\n\nYou can **store files, share them, collaborate, chat, and even manage calendars and tasks**, all from a single private space.\n\nThink of it as your **own private workspace**, with apps you choose, running on your own server.\n\n**\U0001F527 What Can You Do with Nextcloud?**\n\nNextcloud is modular : you can **add features like apps on a phone**. Here are some of the most popular ones:\n\n• \U0001F4C1 **Nextcloud Files**: Upload, access, and share files --- like your own Google Drive\n• \U0001F5D3️ **Calendar**: Manage events and sync with your phone or laptop\n• \U0001F4C7 **Contacts**: Store and sync all your contacts privately\n• \U0001F5E3️ **Talk**: Chat and video call with your team or family --- like a private WhatsApp or Zoom\n• ✅ **Deck**: Organize tasks and projects like Trello or Notion\n• \U0001F4DD **Nextcloud Office**: Open and edit Word, Excel, and PowerPoint files in your browser --- just like Google Docs\n• \U0001F4E6 **More Apps**: Over 100+ apps available to customize your workspace\n\n**\U0001F680 Why Use Nextcloud?**\n\n• **No more Google or Microsoft** --- keep your files and data private\n• **Fully customizable** --- add only the tools you need\n• **Accessible anywhere** --- use the official Nextcloud mobile app or desktop app\n• **Share with others** --- send files, create shared folders, or chat securely\n• **Control your data** --- your files, your server, your rules\n\n**\U0001F6E0️ Example Use Cases**\n\n• Use **Nextcloud Files** like Google Drive\n• Use **Talk** to message and call like WhatsApp or Zoom\n• Use **Office + Calendar + Deck** to replace Microsoft Teams\n• Invite your team or family and manage everything from one place\n"
+    en_gb: "**☁️ What is Nextcloud?**\n\n**Nextcloud** is your own personal cloud : like **Google Drive, Dropbox, Microsoft Teams, and WhatsApp all-in-one**, but fully under your control.\n\nIf you want to sync your files across devices, you'll need to use the Nextcloud Files app --- it's like your own private version of Google Drive or Dropbox.\n\nYou can **store files, share them, collaborate, chat, and even manage calendars and tasks**, all from a single private space.\n\nThink of it as your **own private workspace**, with apps you choose, running on your own server.\n\n**\U0001F527 What Can You Do with Nextcloud?**\n\nNextcloud is modular : you can **add features like apps on a phone**. Here are some of the most popular ones:\n\n• \U0001F4C1 **Nextcloud Files**: Upload, access, and share files --- like your own Google Drive\n• \U0001F5D3️ **Calendar**: Manage events and sync with your phone or laptop\n• \U0001F4C7 **Contacts**: Store and sync all your contacts privately\n• \U0001F5E3️ **Talk**: Chat and video call with your team or family --- like a private WhatsApp or Zoom\n• ✅ **Deck**: Organise tasks and projects like Trello or Notion\n• \U0001F4DD **Nextcloud Office**: Open and edit Word, Excel, and PowerPoint files in your browser --- just like Google Docs\n• \U0001F4E6 **More Apps**: Over 100+ apps available to customise your workspace\n\n**\U0001F680 Why Use Nextcloud?**\n\n• **No more Google or Microsoft** --- keep your files and data private\n• **Fully customisable** --- add only the tools you need\n• **Accessible anywhere** --- use the official Nextcloud mobile app or desktop app\n• **Share with others** --- send files, create shared folders, or chat securely\n• **Control your data** --- your files, your server, your rules\n\n**\U0001F6E0️ Example Use Cases**\n\n• Use **Nextcloud Files** like Google Drive\n• Use **Talk** to message and call like WhatsApp or Zoom\n• Use **Office + Calendar + Deck** to replace Microsoft Teams\n• Invite your team or family and manage everything from one place\n"
+    ko_kr: "**☁️ Nextcloud란 무엇인가요?**\n\n**Nextcloud**는 **Google Drive, Dropbox, Microsoft Teams, WhatsApp을 하나로 합친** 것과 같은 개인 클라우드이지만, 완전히 당신의 통제 하에 있습니다.\n\n여러 기기에서 파일을 동기화하려면 Nextcloud Files 앱을 사용해야 합니다 --- 이는 Google Drive나 Dropbox의 개인 버전과 같습니다.\n\n단일 개인 공간에서 **파일 저장, 공유, 협업, 채팅, 심지어 일정과 작업 관리**까지 모든 것을 할 수 있습니다.\n\n자신의 서버에서 실행되는, 원하는 앱으로 구성된 **개인 워크스페이스**라고 생각하세요.\n\n**\U0001F527 Nextcloud로 무엇을 할 수 있나요?**\n\nNextcloud는 모듈식입니다 : **휴대폰의 앱처럼 기능을 추가**할 수 있습니다. 가장 인기 있는 것들은 다음과 같습니다:\n\n• \U0001F4C1 **Nextcloud Files**: 파일 업로드, 접근, 공유 --- 자신만의 Google Drive\n• \U0001F5D3️ **Calendar**: 이벤트 관리 및 휴대폰이나 노트북과 동기화\n• \U0001F4C7 **Contacts**: 모든 연락처를 개인적으로 저장하고 동기화\n• \U0001F5E3️ **Talk**: 팀이나 가족과 채팅 및 화상 통화 --- 개인 WhatsApp이나 Zoom\n• ✅ **Deck**: Trello나 Notion처럼 작업과 프로젝트 정리\n• \U0001F4DD **Nextcloud Office**: 브라우저에서 Word, Excel, PowerPoint 파일 열기 및 편집 --- Google Docs와 동일\n• \U0001F4E6 **더 많은 앱**: 워크스페이스를 사용자 정의할 수 있는 100개 이상의 앱\n\n**\U0001F680 왜 Nextcloud를 사용해야 하나요?**\n\n• **더 이상 Google이나 Microsoft 없음** --- 파일과 데이터를 개인적으로 유지\n• **완전히 사용자 정의 가능** --- 필요한 도구만 추가\n• **어디서나 접근 가능** --- 공식 Nextcloud 모바일 앱이나 데스크톱 앱 사용\n• **다른 사람과 공유** --- 파일 전송, 공유 폴더 생성, 안전한 채팅\n• **데이터 통제** --- 당신의 파일, 당신의 서버, 당신의 규칙\n\n**\U0001F6E0️ 사용 사례 예시**\n\n• **Nextcloud Files**를 Google Drive처럼 사용\n• **Talk**를 WhatsApp이나 Zoom처럼 메시지 및 통화에 사용\n• **Office + Calendar + Deck**를 Microsoft Teams 대체로 사용\n• 팀이나 가족을 초대하고 한 곳에서 모든 것을 관리\n"
+    zh_cn: "**☁️ 什么是Nextcloud？**\n\n**Nextcloud**是您自己的个人云：就像**Google Drive、Dropbox、Microsoft Teams和WhatsApp的集合体**，但完全在您的控制之下。\n\n如果您想跨设备同步文件，需要使用Nextcloud Files应用程序 --- 这就像您自己的私人版Google Drive或Dropbox。\n\n您可以在单一私人空间中**存储文件、共享文件、协作、聊天，甚至管理日历和任务**。\n\n可以将其视为您**自己的私人工作空间**，使用您选择的应用程序，在您自己的服务器上运行。\n\n**\U0001F527 Nextcloud能做什么？**\n\nNextcloud是模块化的：您可以**像在手机上添加应用程序一样添加功能**。以下是一些最受欢迎的功能：\n\n• \U0001F4C1 **Nextcloud Files**: 上传、访问和共享文件 --- 就像您自己的Google Drive\n• \U0001F5D3️ **Calendar**: 管理事件并与您的手机或笔记本电脑同步\n• \U0001F4C7 **Contacts**: 私下存储和同步所有联系人\n• \U0001F5E3️ **Talk**: 与您的团队或家人聊天和视频通话 --- 就像私人WhatsApp或Zoom\n• ✅ **Deck**: 像Trello或Notion一样组织任务和项目\n• \U0001F4DD **Nextcloud Office**: 在浏览器中打开和编辑Word、Excel和PowerPoint文件 --- 就像Google Docs\n• \U0001F4E6 **更多应用**: 超过100个应用程序可用于自定义您的工作空间\n\n**\U0001F680 为什么使用Nextcloud？**\n\n• **不再依赖Google或Microsoft** --- 保持文件和数据私密\n• **完全可定制** --- 只添加您需要的工具\n• **随处可访问** --- 使用官方Nextcloud移动应用或桌面应用\n• **与他人共享** --- 发送文件、创建共享文件夹或安全聊天\n• **控制您的数据** --- 您的文件、您的服务器、您的规则\n\n**\U0001F6E0️ 使用案例示例**\n\n• 像使用Google Drive一样使用**Nextcloud Files**\n• 像WhatsApp或Zoom一样使用**Talk**进行消息传递和通话\n• 使用**Office + Calendar + Deck**替代Microsoft Teams\n• 邀请您的团队或家人，在一个地方管理一切\n"
+    fr_fr: "**☁️ Qu'est-ce que Nextcloud ?**\n\n**Nextcloud** est votre cloud personnel : comme **Google Drive, Dropbox, Microsoft Teams et WhatsApp tout-en-un**, mais entièrement sous votre contrôle.\n\nSi vous voulez synchroniser vos fichiers entre appareils, vous devrez utiliser l'application Nextcloud Files --- c'est comme votre propre version privée de Google Drive ou Dropbox.\n\nVous pouvez **stocker des fichiers, les partager, collaborer, chatter et même gérer les calendriers et tâches**, tout depuis un seul espace privé.\n\nPensez-y comme votre **propre espace de travail privé**, avec les applications que vous choisissez, fonctionnant sur votre propre serveur.\n\n**\U0001F527 Que pouvez-vous faire avec Nextcloud ?**\n\nNextcloud est modulaire : vous pouvez **ajouter des fonctionnalités comme des applications sur un téléphone**. Voici quelques-unes des plus populaires :\n\n• \U0001F4C1 **Nextcloud Files** : Téléchargez, accédez et partagez des fichiers --- comme votre propre Google Drive\n• \U0001F5D3️ **Calendar** : Gérez les événements et synchronisez avec votre téléphone ou ordinateur portable\n• \U0001F4C7 **Contacts** : Stockez et synchronisez tous vos contacts en privé\n• \U0001F5E3️ **Talk** : Chattez et passez des appels vidéo avec votre équipe ou famille --- comme un WhatsApp ou Zoom privé\n• ✅ **Deck** : Organisez les tâches et projets comme Trello ou Notion\n• \U0001F4DD **Nextcloud Office** : Ouvrez et modifiez les fichiers Word, Excel et PowerPoint dans votre navigateur --- comme Google Docs\n• \U0001F4E6 **Plus d'applications** : Plus de 100 applications disponibles pour personnaliser votre espace de travail\n\n**\U0001F680 Pourquoi utiliser Nextcloud ?**\n\n• **Fini Google ou Microsoft** --- gardez vos fichiers et données privés\n• **Entièrement personnalisable** --- ajoutez seulement les outils dont vous avez besoin\n• **Accessible partout** --- utilisez l'application mobile ou desktop officielle Nextcloud\n• **Partagez avec d'autres** --- envoyez des fichiers, créez des dossiers partagés ou chattez en sécurité\n• **Contrôlez vos données** --- vos fichiers, votre serveur, vos règles\n\n**\U0001F6E0️ Exemples d'utilisation**\n\n• Utilisez **Nextcloud Files** comme Google Drive\n• Utilisez **Talk** pour messagerie et appels comme WhatsApp ou Zoom\n• Utilisez **Office + Calendar + Deck** pour remplacer Microsoft Teams\n• Invitez votre équipe ou famille et gérez tout depuis un seul endroit\n"
+    de_de: "**☁️ Was ist Nextcloud?**\n\n**Nextcloud** ist Ihre eigene persönliche Cloud: wie **Google Drive, Dropbox, Microsoft Teams und WhatsApp in einem**, aber vollständig unter Ihrer Kontrolle.\n\nWenn Sie Ihre Dateien geräteübergreifend synchronisieren möchten, müssen Sie die Nextcloud Files App verwenden --- es ist wie Ihre eigene private Version von Google Drive oder Dropbox.\n\nSie können **Dateien speichern, teilen, zusammenarbeiten, chatten und sogar Kalender und Aufgaben verwalten**, alles von einem einzigen privaten Raum aus.\n\nDenken Sie daran als Ihren **eigenen privaten Arbeitsbereich**, mit Apps Ihrer Wahl, die auf Ihrem eigenen Server laufen.\n\n**\U0001F527 Was können Sie mit Nextcloud machen?**\n\nNextcloud ist modular: Sie können **Funktionen wie Apps auf einem Telefon hinzufügen**. Hier sind einige der beliebtesten:\n\n• \U0001F4C1 **Nextcloud Files**: Dateien hochladen, zugreifen und teilen --- wie Ihr eigenes Google Drive\n• \U0001F5D3️ **Calendar**: Ereignisse verwalten und mit Ihrem Telefon oder Laptop synchronisieren\n• \U0001F4C7 **Contacts**: Alle Ihre Kontakte privat speichern und synchronisieren\n• \U0001F5E3️ **Talk**: Mit Ihrem Team oder Familie chatten und Videoanrufe führen --- wie ein privates WhatsApp oder Zoom\n• ✅ **Deck**: Aufgaben und Projekte wie Trello oder Notion organisieren\n• \U0001F4DD **Nextcloud Office**: Word-, Excel- und PowerPoint-Dateien in Ihrem Browser öffnen und bearbeiten --- genau wie Google Docs\n• \U0001F4E6 **Weitere Apps**: Über 100 Apps verfügbar, um Ihren Arbeitsbereich anzupassen\n\n**\U0001F680 Warum Nextcloud verwenden?**\n\n• **Schluss mit Google oder Microsoft** --- halten Sie Ihre Dateien und Daten privat\n• **Vollständig anpassbar** --- fügen Sie nur die Tools hinzu, die Sie benötigen\n• **Überall zugänglich** --- verwenden Sie die offizielle Nextcloud Mobile- oder Desktop-App\n• **Mit anderen teilen** --- Dateien senden, gemeinsame Ordner erstellen oder sicher chatten\n• **Ihre Daten kontrollieren** --- Ihre Dateien, Ihr Server, Ihre Regeln\n\n**\U0001F6E0️ Beispiel-Anwendungsfälle**\n\n• Verwenden Sie **Nextcloud Files** wie Google Drive\n• Verwenden Sie **Talk** für Nachrichten und Anrufe wie WhatsApp oder Zoom\n• Verwenden Sie **Office + Calendar + Deck** als Microsoft Teams Ersatz\n• Laden Sie Ihr Team oder Familie ein und verwalten Sie alles von einem Ort aus\n"
+    es_es: "**☁️ ¿Qué es Nextcloud?**\n\n**Nextcloud** es tu propia nube personal: como **Google Drive, Dropbox, Microsoft Teams y WhatsApp todo en uno**, pero completamente bajo tu control.\n\nSi quieres sincronizar tus archivos entre dispositivos, necesitarás usar la aplicación Nextcloud Files --- es como tu propia versión privada de Google Drive o Dropbox.\n\nPuedes **almacenar archivos, compartirlos, colaborar, chatear e incluso gestionar calendarios y tareas**, todo desde un único espacio privado.\n\nPiénsalo como tu **propio espacio de trabajo privado**, con las aplicaciones que elijas, ejecutándose en tu propio servidor.\n\n**\U0001F527 ¿Qué puedes hacer con Nextcloud?**\n\nNextcloud es modular: puedes **añadir funciones como aplicaciones en un teléfono**. Aquí tienes algunas de las más populares:\n\n• \U0001F4C1 **Nextcloud Files**: Sube, accede y comparte archivos --- como tu propio Google Drive\n• \U0001F5D3️ **Calendar**: Gestiona eventos y sincroniza con tu teléfono o portátil\n• \U0001F4C7 **Contacts**: Almacena y sincroniza todos tus contactos de forma privada\n• \U0001F5E3️ **Talk**: Chatea y haz videollamadas con tu equipo o familia --- como un WhatsApp o Zoom privado\n• ✅ **Deck**: Organiza tareas y proyectos como Trello o Notion\n• \U0001F4DD **Nextcloud Office**: Abre y edita archivos de Word, Excel y PowerPoint en tu navegador --- como Google Docs\n• \U0001F4E6 **Más aplicaciones**: Más de 100 aplicaciones disponibles para personalizar tu espacio de trabajo\n\n**\U0001F680 ¿Por qué usar Nextcloud?**\n\n• **Adiós a Google o Microsoft** --- mantén tus archivos y datos privados\n• **Totalmente personalizable** --- añade solo las herramientas que necesitas\n• **Accesible desde cualquier lugar** --- usa la aplicación móvil o de escritorio oficial de Nextcloud\n• **Comparte con otros** --- envía archivos, crea carpetas compartidas o chatea de forma segura\n• **Controla tus datos** --- tus archivos, tu servidor, tus reglas\n\n**\U0001F6E0️ Ejemplos de casos de uso**\n\n• Usa **Nextcloud Files** como Google Drive\n• Usa **Talk** para mensajes y llamadas como WhatsApp o Zoom\n• Usa **Office + Calendar + Deck** para reemplazar Microsoft Teams\n• Invita a tu equipo o familia y gestiona todo desde un solo lugar\n"
+  developer: Nextcloud GmbH
+  category: Utilities
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures: [amd64, arm64]
+  tips:
+    en_us: |
+      **Login**
+
+      After installation, log in as `admin`. The password is shown when you open the app (tile menu → Credentials).
+
+      First-time install takes 1–3 minutes. If the page shows "Gateway time-out" or appears stuck, **refresh** after a minute and the login screen will appear.
+
+      To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
+
+      **Talk video calls** come with a High-Performance Backend already connected, so group calls stay smooth beyond a handful of people. Calls need TCP and UDP port **3478** reachable on the server's public IP.
+    ko_kr: |
+      **로그인**
+
+      설치 후 `admin` 사용자로 로그인하세요. 비밀번호는 앱을 열 때 표시됩니다 (타일 메뉴 → Credentials).
+
+      최초 설치는 1~3분 소요됩니다. 페이지에 "Gateway time-out"이 표시되거나 멈춘 것처럼 보이면 1분 후 **새로고침**하면 로그인 화면이 나타납니다.
+
+      변경하려면 Maison의 앱 설정(보안 탭)을 사용하세요. 그래야 자격 증명 창이 정확하게 유지됩니다.
+
+      **Talk 화상통화**에는 고성능 백엔드가 이미 연결되어 있어, 여러 명이 참여하는 그룹 통화도 원활합니다. 통화를 하려면 서버 공인 IP의 TCP/UDP **3478** 포트가 열려 있어야 합니다.
+    zh_cn: |
+      **登录**
+
+      安装后以 `admin` 用户登录。密码会在打开应用时显示（磁贴菜单 → Credentials）。
+
+      首次安装需要 1~3 分钟。如果页面显示 "Gateway time-out" 或看起来卡住，请等待 1 分钟后**刷新页面**即可看到登录界面。
+
+      如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
+
+      **Talk 视频通话**已连接高性能后端，多人群组通话也能保持流畅。通话需要服务器公网 IP 的 TCP/UDP **3478** 端口可访问。
+    fr_fr: |
+      **Connexion**
+
+      Après l'installation, connectez-vous avec l'utilisateur `admin`. Le mot de passe s'affiche à l'ouverture de l'application (menu de la tuile → Credentials).
+
+      La première installation prend 1 à 3 minutes. Si la page affiche "Gateway time-out" ou semble bloquée, **rafraîchissez** après une minute pour voir l'écran de connexion.
+
+      Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
+
+      **Les appels vidéo Talk** sont déjà reliés à un backend haute performance, pour des appels de groupe fluides au-delà de quelques participants. Les appels nécessitent que les ports TCP et UDP **3478** soient joignables sur l'IP publique du serveur.
+    es_es: |
+      **Inicio de sesión**
+
+      Después de la instalación, inicia sesión con el usuario `admin`. La contraseña se muestra al abrir la aplicación (menú del icono → Credentials).
+
+      La primera instalación tarda 1-3 minutos. Si la página muestra "Gateway time-out" o parece bloqueada, **actualiza** después de un minuto para ver la pantalla de inicio de sesión.
+
+      Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
+
+      **Las videollamadas de Talk** ya están conectadas a un backend de alto rendimiento, para llamadas grupales fluidas más allá de unas pocas personas. Las llamadas necesitan los puertos TCP y UDP **3478** accesibles en la IP pública del servidor.
+  # Seeded: an installed Nextcloud was initialised (admin account, MariaDB,
+  # Redis config written into config.php) with the box-wide password and keeps
+  # it; a fresh install gets its own values.
+  secrets:
+    NEXTCLOUD_DB_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    NEXTCLOUD_DB_ROOT_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    NEXTCLOUD_REDIS_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
+    NEXTCLOUD_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+    # Talk HPB: shared between the talk service and the talk-backend step only.
+    TALK_SIGNALING_SECRET: hex:32
+    TALK_TURN_SECRET: hex:32
+    TALK_INTERNAL_SECRET: hex:32
+  credentials:
+    - label:
+        en_us: Administrator
+      username: admin
+      password: ${NEXTCLOUD_ADMIN_PASSWORD}
+      note:
+        en_us: Change it from the app's settings in Maison (Security tab) so this stays correct; a change made inside Nextcloud is not reflected here.
+      # Nextcloud keeps its own hash; NEXTCLOUD_ADMIN_PASSWORD is read only by the
+      # first-run auto-install. occ resets it on the running app.
+      change:
+        apply: script
+        script: |
+          # No -u: the service already runs as $PUID:$PGID, the owner of config.php.
+          OC_PASS="$NEXTCLOUD_ADMIN_PASSWORD" compose exec -e OC_PASS nextcloud \
+            php occ user:resetpassword --password-from-env admin
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
   # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
   # in `volumes:` above — re-run it instead of editing this block by hand.
@@ -615,4 +751,81 @@ x-compose-app:
     - path: /DATA/AppData/nextcloud/redis
       user: $PUID
       group: $PGID
-  webui-host: nextcloud-${domain}
+  steps:
+    # IMPORTANT: Keep these commands idempotent - safe to run multiple times.
+    # Variables meant for the nextcloud container ($REDIS_HOST_PASSWORD) stay inside
+    # the single-quoted `compose exec … bash -c` block and are expanded there, not here.
+    # Redis: memcache.local comes from the image's apcu.config.php; the distributed
+    # cache and the file-locking backend are set here because REDIS_HOST cannot be
+    # used (see the note in the nextcloud service environment).
+    # Also switches background jobs to cron (the cron service handles the ticking).
+    # HSTS is not set by the app: it belongs to the domain it is served on.
+    - name: configure-redis-and-cron
+      at: started
+      run: once
+      script: |
+        timeout=300
+        while [ $timeout -gt 0 ]; do
+          if compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true'; then
+            echo "NextCloud installation complete"
+            break
+          fi
+          echo "Waiting for NextCloud auto-installation... $timeout s remaining"
+          sleep 5
+          timeout=$((timeout-5))
+        done
+        # The loop above always ends with status 0, so check the outcome itself: on a
+        # timeout, fail loudly (Maison logs the failed step and retries it on the next
+        # up) instead of running occ against an uninstalled Nextcloud.
+        compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || {
+          echo "Nextcloud did not finish installing within 300 s; Redis cache and cron were not configured" >&2
+          exit 1
+        }
+        compose exec nextcloud bash -c '
+          php occ config:system:set redis host --value redis
+          php occ config:system:set redis port --value 6379 --type=integer
+          php occ config:system:set redis password --value "$REDIS_HOST_PASSWORD"
+          php occ config:system:set memcache.distributed --value "\OC\Memcache\Redis"
+          php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
+          php occ background:cron && echo "Background jobs set to cron mode"
+        '
+    # Talk + its High-Performance Backend (the `talk` service), re-applied on every
+    # start so a new address or public IP follows. Runs after configure-redis-and-cron,
+    # which waits for the install. Each server is deleted before being added so a
+    # rerun never stacks duplicates.
+    - name: talk-backend
+      at: started
+      run: always
+      script: |
+        compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || {
+          echo "Nextcloud is not installed yet; Talk backend not configured" >&2
+          exit 1
+        }
+        compose exec \
+          -e SIG_URL="${ROUTE_NEXTCLOUD_SIGNALING_URL:-https://nextcloud-signaling-$APP_DOMAIN}" \
+          -e SIG_SECRET="$TALK_SIGNALING_SECRET" \
+          -e TURN_HOST="$APP_PUBLIC_IPV4:3478" \
+          -e TURN_SECRET="$TALK_TURN_SECRET" \
+          nextcloud bash -c '
+          php occ app:install spreed >/dev/null 2>&1 || php occ app:enable spreed
+          php occ talk:signaling:delete "$SIG_URL" >/dev/null 2>&1 || true
+          php occ talk:signaling:add "$SIG_URL" "$SIG_SECRET"
+          php occ talk:turn:delete turn "$TURN_HOST" udp,tcp >/dev/null 2>&1 || true
+          php occ talk:turn:add turn "$TURN_HOST" udp,tcp --secret="$TURN_SECRET"
+          php occ talk:stun:delete "$TURN_HOST" >/dev/null 2>&1 || true
+          php occ talk:stun:add "$TURN_HOST"
+          echo "Talk High-Performance Backend configured"
+        '
+    # Every address the app is reached at, re-applied on every start so a domain the
+    # box gains later is trusted too (NEXTCLOUD_TRUSTED_DOMAINS only acts at install).
+    # Index 0 is localhost and 1 the bare domain, both set by the image at install.
+    - name: trusted-domains
+      at: started
+      run: always
+      script: |
+        compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || exit 0
+        i=2
+        for host in $(printf '%s' "${APP_HOSTS:-nextcloud-$APP_DOMAIN,nextcloud-$APP_PUBLIC_IP_DASH.nip.io,nextcloud-$APP_PUBLIC_IP_DASH.sslip.io}" | tr ',' ' '); do
+          compose exec nextcloud php occ config:system:set trusted_domains "$i" --value "$host" >/dev/null
+          i=$((i + 1))
+        done
