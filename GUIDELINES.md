@@ -433,7 +433,12 @@ A login gate enabled by default is **mandatory**. Acceptable gates:
 - The app's own login, protected by a [generated credential](#3-credentials).
 - An onboarding flow that creates the first account on first visit (e.g. Jellyfin). This
   needs a `rationale.md` explaining why the window before the first account is created is
-  acceptable.
+  acceptable: that the app's own login is mandatory once the account exists, why no
+  credential can be generated for it, and what happens to a later sign-up (refused, or held
+  for the admin's approval). `Apps/UptimeKuma` and `Apps/Ollama` are examples.
+
+What `auth-default` asks is that a login is **there** as shipped, not who provides it. An app
+whose own login is mandatory does not need AppShield in front of it as well.
 
 A public website with no login also needs a `rationale.md`.
 
