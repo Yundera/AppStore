@@ -129,6 +129,7 @@ x-casaos:
   # The served service: docmostmcp-proxy is the routed service, the
   # one the tile opens. docmostmcp-backend is reachable only inside `pcs`.
   main: docmostmcp-proxy
+  webui_port: 80
   hostname: ${APP_HOST:-docmostmcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"

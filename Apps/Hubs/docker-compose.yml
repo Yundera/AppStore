@@ -284,6 +284,7 @@ x-casaos:
   architectures:
     - amd64
   main: hubs
+  webui_port: 4001
 
   author: Hubs Foundation
   developer: Hubs Foundation

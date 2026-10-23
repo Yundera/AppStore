@@ -117,6 +117,7 @@ x-casaos:
   # The served service: beacon-proxy is the routed service, the
   # one the tile opens. beacon-backend is reachable only from inside `pcs`.
   main: beacon-proxy
+  webui_port: 80
   index: /
 
   icon: icon.png

@@ -85,12 +85,12 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  # Backend+proxy pattern (cf. lystik): main = the backend service name = subdomain prefix;
-  # the -proxy sidecar is the routed service and forwards
-  # to the host-mode wg-easy. The store installer injects `hostname` (user-specific) at install;
-  # scheme/port_map are static. Health probe follows redirects: / -> /login -> 200. (webui_port
-  # is deprecated.)
-  main: wgeasyhost
+  # Backend+proxy pattern: the -proxy sidecar is the routed service (the first route's) and
+  # forwards to the host-mode wg-easy, so main / webui_port name it and its port, for CasaOS.
+  # The store installer injects `hostname` (user-specific) at install. Health probe follows
+  # redirects: / -> /login -> 200.
+  main: wgeasyhost-proxy
+  webui_port: 80
   store_app_id: wgeasyhost
   index: /
   developer: WeejeWel

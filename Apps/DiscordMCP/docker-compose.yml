@@ -95,6 +95,7 @@ x-casaos:
   # The AppShield sidecar, not the backend: it is the container the routes
   # point at and the one users actually reach.
   main: discordmcp-proxy
+  webui_port: 80
   hostname: ${APP_HOST:-discordmcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"

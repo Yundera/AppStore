@@ -37,6 +37,7 @@ networks:
 
 x-casaos:
   main: sonarr
+  webui_port: 8989
   index: /
   tips:
     before_install:

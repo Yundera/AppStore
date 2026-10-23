@@ -37,6 +37,7 @@ networks:
 
 x-casaos:
   main: lidarr
+  webui_port: 8686
   index: /
   tips:
     before_install:

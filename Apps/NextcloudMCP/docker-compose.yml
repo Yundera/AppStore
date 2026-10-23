@@ -123,6 +123,7 @@ x-casaos:
   architectures:
     - amd64
   main: nextcloudmcp-proxy
+  webui_port: 80
   index: /
   category: Utilities
   tags: ["developer", "ai"]

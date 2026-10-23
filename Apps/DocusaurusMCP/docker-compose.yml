@@ -114,6 +114,7 @@ x-casaos:
     - amd64
     - arm64
   main: docusaurusmcp-proxy
+  webui_port: 80
   store_app_id: docusaurusmcp
   hostname: ${APP_HOST:-docusaurusmcp-${APP_DOMAIN}}
   scheme: https

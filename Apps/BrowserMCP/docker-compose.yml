@@ -112,6 +112,7 @@ x-casaos:
   # tracks what is served instead of staying green while the served container is
   # unreachable. It is also the service Maison attaches ${APP_NET} to.
   main: browsermcp-proxy
+  webui_port: 80
   index: /
   developer: Worph
   category: Developer

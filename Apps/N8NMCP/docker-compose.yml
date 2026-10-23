@@ -121,6 +121,7 @@ x-casaos:
   # attaches ${APP_NET} to. The tile's health follows main, so pointing it at the
   # backend reported "unhealthy" while the app was serving correctly.
   main: n8nmcp-proxy
+  webui_port: 80
   index: /
   category: Developer
   tags: ["developer", "ai"]
