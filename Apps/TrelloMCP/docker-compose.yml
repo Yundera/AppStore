@@ -193,8 +193,7 @@ x-casaos:
         ```
 
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth** and
-        create one there.
+        scripts), create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -320,8 +319,7 @@ x-compose-app:
       ```
 
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth** and
-      create one there.
+      scripts), create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://trellomcp-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them.
 
       **Option 2: Local Docker connection (no auth required)**
 

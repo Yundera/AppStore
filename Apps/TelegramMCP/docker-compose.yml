@@ -219,8 +219,7 @@ x-casaos:
         *Note: Requires the AI assistant to be on the `pcs` Docker network.*
 
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth** and
-        create one there.
+        scripts), create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them.
 
         **Option 3: Via Beacon (aggregated)**
 
@@ -348,8 +347,7 @@ x-compose-app:
       *Note: Requires the AI assistant to be on the `pcs` Docker network.*
 
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth** and
-      create one there.
+      scripts), create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them.
 
       **Option 3: Via Beacon (aggregated)**
 

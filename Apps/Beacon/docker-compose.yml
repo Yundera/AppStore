@@ -209,7 +209,7 @@ x-casaos:
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom scripts),
-        open **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** and create one there. The same
+        create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them. The same
         page is linked from the Beacon dashboard as "Manage remote access".
 
         **Option 2: Local Docker connection (no auth required)**
@@ -283,7 +283,7 @@ x-casaos:
         }
         ```
         Pour les clients qui exigent un client_id/client_secret pre-cree (n8n, scripts),
-        ouvrez **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** et creez-en un. La meme page
+        creez-le par un `POST` de son enregistrement (JSON avec `client_name` et `redirect_uris`) vers **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth/clients**, depuis un navigateur connecte a cette app ; **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** liste les clients existants et permet de les revoquer. La meme page
         est accessible depuis le tableau de bord Beacon via "Manage remote access".
 
         **Option 2: Connexion Docker locale (sans auth)**
@@ -403,7 +403,7 @@ x-compose-app:
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom scripts),
-      open **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** and create one there. The same
+      create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them. The same
       page is linked from the Beacon dashboard as "Manage remote access".
 
       **Option 2: Local Docker connection (no auth required)**
@@ -477,7 +477,7 @@ x-compose-app:
       }
       ```
       Pour les clients qui exigent un client_id/client_secret pre-cree (n8n, scripts),
-      ouvrez **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** et creez-en un. La meme page
+      creez-le par un `POST` de son enregistrement (JSON avec `client_name` et `redirect_uris`) vers **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth/clients**, depuis un navigateur connecte a cette app ; **${APP_URL:-https://beacon-${APP_DOMAIN}}/AppShield/oauth** liste les clients existants et permet de les revoquer. La meme page
       est accessible depuis le tableau de bord Beacon via "Manage remote access".
 
       **Option 2: Connexion Docker locale (sans auth)**
