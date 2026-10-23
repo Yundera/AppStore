@@ -10,7 +10,7 @@ x-logging: &logging
 services:
   stirlingpdf:
     image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:2.14.3
-    container_name: stirling-pdf
+    container_name: stirlingpdf
     restart: unless-stopped
     expose:
       - 80
