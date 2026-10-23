@@ -138,7 +138,6 @@ x-casaos:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
-  thumbnail: thumbnail.png
   tagline:
     en_us: Anonymous, decentralized BitTorrent client with a built-in onion network.
     fr_fr: Client BitTorrent anonyme et décentralisé avec un réseau onion intégré.
@@ -175,7 +174,6 @@ x-compose-app:
   developer: Tribler
   category: Downloader
   icon: icon.png
-  thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
     - screenshot-2.png
