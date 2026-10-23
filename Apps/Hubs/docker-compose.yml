@@ -124,7 +124,7 @@ services:
       - pcs
 
   postgrest:
-    image: mozillareality/postgrest:8
+    image: mozillareality/postgrest:8@sha256:ab00c933c3d74164041e2316f0d95ad6ed50e5ae13b54223cabe5de9a18d619d
     container_name: hubs-postgrest
     restart: unless-stopped
     user: "0:0"

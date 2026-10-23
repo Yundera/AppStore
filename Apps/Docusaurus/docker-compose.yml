@@ -160,7 +160,7 @@ x-compose-app:
         [ -e "$APP_DIR/src/.initialized" ] && exit 0
         docker run --rm -i --entrypoint sh --user 0:0 \
           -v "$APP_DIR/src:/output" -v "$APP_DIR/build:/build-output" \
-          node:20-alpine3.20 -s <<'SH'
+          node:20.19.2-alpine3.20 -s <<'SH'
         set -e
         cd /tmp
         echo "Initializing Docusaurus project..."
