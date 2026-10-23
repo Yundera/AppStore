@@ -1,0 +1,271 @@
+name: synapse
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # Matrix homeserver. Serves the client and federation APIs on the canonical
+  # Matrix identity domain, matrix-<domain> — the same one Tuwunel uses, so a
+  # user's @name:matrix-<domain> does not depend on which engine runs it.
+  # Federation runs over 443 (serve_server_wellknown), no port 8448 needed.
+  synapse:
+    image: ghcr.io/element-hq/synapse:v1.163.0
+    container_name: synapse
+    hostname: synapse
+    restart: unless-stopped
+    cpu_shares: 70
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    environment:
+      TZ: $TZ
+      # The image's entrypoint drops to this uid/gid, matching the folders below.
+      UID: $PUID
+      GID: $PGID
+      SYNAPSE_CONFIG_PATH: /data/homeserver.yaml
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/data
+    depends_on:
+      synapse-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fSs", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    expose:
+      - 8008
+    networks:
+      # On `pcs` because its `matrix` route serves it, and on the app's own
+      # network because that is where its database lives.
+      - pcs
+      - synapse-internal
+
+  synapse-db:
+    image: postgres:16.13-alpine
+    container_name: synapse-db
+    restart: unless-stopped
+    user: "0:0"
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      POSTGRES_DB: synapse
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD: ${SYNAPSE_DB_PASSWORD}
+      # Synapse refuses to start on a database whose collation is not C.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/pgdata/:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      # App-private only: nothing outside this compose project talks to the
+      # database, so it has no business on the shared network.
+      - synapse-internal
+
+  # Element Web, preconfigured for this homeserver. It is the app's WebUI.
+  synapse-element:
+    image: vectorim/element-web:v1.12.32
+    container_name: synapse-element
+    restart: unless-stopped
+    user: $PUID:$PGID
+    cpu_shares: 30
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      synapse:
+        condition: service_healthy
+    environment:
+      TZ: $TZ
+      # MUST stay 8080: running as $PUID the image cannot render its nginx
+      # template and falls back to the baked default.conf, which listens on 8080.
+      ELEMENT_WEB_PORT: "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/config.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    expose:
+      - 8080
+    volumes:
+      # Rendered from seed/element/config.json.tmpl on every up (x-compose-app.files).
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/element/config.json:/app/config.json:ro
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  # App-private link between Synapse and its database.
+  synapse-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: synapse-element
+  store_app_id: synapse
+  webui_port: 8080
+  index: /
+  category: Chat
+  developer: Element
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  title:
+    en_us: Synapse
+  tagline:
+    en_us: The reference Matrix homeserver — federated, private chat under your domain
+  description:
+    en_us: &desc |
+      **Synapse** is the reference **Matrix homeserver**, built by the Element team. Matrix is an open, federated chat network: thousands of servers talk to each other, like email, and nobody owns the network.
+
+      **What you get:**
+      - Your own chat identity: `@you:matrix-<your-domain>`, issued by your server
+      - Chat with anyone on Matrix (matrix.org, mozilla.org and thousands more)
+      - End-to-end encrypted rooms, voice and video calls, file sharing
+      - Message history and media stay on your server
+      - **Element Web included**, already pointed at your server; works with Element on desktop, iOS and Android too
+
+      **Synapse or Tuwunel?** Both are Matrix homeservers on the same `matrix-<your-domain>` identity. Synapse is the most complete and widely used; Tuwunel is lighter. Install one of them, not both.
+  tips:
+    before_install:
+      en_us: &tips |
+        **⚠️ Install either Synapse or Tuwunel, not both.** They serve the same `matrix-<your-domain>` identity and cannot run side by side.
+
+        **⚠️ Your Matrix identity is permanent.** User IDs look like `@name:matrix-<your-domain>` and cannot be renamed later.
+
+        **🔑 Admin account**
+
+        An `admin` account is created at install. Its password is shown when you open the app (tile menu → Credentials). Open registration is off: the admin adds people.
+
+        **Add a user** (run on the server):
+        `docker exec -it synapse register_new_matrix_user -c /data/homeserver.yaml http://localhost:8008`
+
+        **Connecting a client:** open the app for Element Web. In the Element desktop or mobile app, set the homeserver to `matrix-<your-domain>`.
+
+        **🌍 Accounts from other servers are not self-hosted**
+
+        Matrix is federated: people with an account on another server (for example one created on matrix.org, which is Element's default) can join your rooms without an account here. Their account and a copy of every room they join live on that other server, not yours. Only `@name:matrix-<your-domain>` accounts are fully self-hosted. To keep everything on your server, create accounts here and have people pick `matrix-<your-domain>` as their homeserver.
+
+        **Keep it to your own accounts (optional):**
+        - **One room:** when creating it in Element, open *Advanced* and tick *Block anyone not part of matrix-<your-domain> from ever joining this room*. This cannot be changed later.
+        - **The whole server:** add `federation_domain_whitelist: []` to `/DATA/AppData/synapse/data/homeserver.yaml` and restart the app. Your server then stops talking to every other Matrix server.
+
+x-compose-app:
+  schema_version: 2
+  version: "1.163.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: synapse-element, name: synapse, upstream-port: 8080 }
+    # matrix-* is the CANONICAL Matrix identity domain shared with Tuwunel: the
+    # server_name, in every user id (@user:matrix-<domain>). Kept engine-neutral on
+    # purpose so an identity survives a switch between homeservers. NEVER rename it.
+    - { service: synapse, name: matrix, upstream-port: 8008 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: synapse
+  title:
+    en_us: Synapse
+  tagline:
+    en_us: The reference Matrix homeserver — federated, private chat under your domain
+  description:
+    en_us: *desc
+  developer: Element
+  category: Chat
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: *tips
+  secrets:
+    SYNAPSE_DB_PASSWORD: alnum:32
+    SYNAPSE_REGISTRATION_SHARED_SECRET: hex:32
+    SYNAPSE_MACAROON_SECRET_KEY: hex:32
+    SYNAPSE_FORM_SECRET: hex:32
+    SYNAPSE_ADMIN_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: Administrator
+      username: admin
+      password: ${SYNAPSE_ADMIN_PASSWORD}
+      note:
+        en_us: Sign in to Element with this account. Change the password in Element under Settings → Security & Privacy.
+  files:
+    # Written once: server_name and the signing key are permanent, and an admin
+    # may tune the rest. Holds the generated secrets above.
+    - path: /DATA/AppData/$AppID/data/homeserver.yaml
+      from: synapse/homeserver.yaml.tmpl
+      ensure: once
+      mode: "0600"
+    # Follows the deployment's domain, so re-rendered on every up.
+    - path: /DATA/AppData/$AppID/element/config.json
+      from: element/config.json.tmpl
+      ensure: always
+  steps:
+    # The federation signing key: an ed25519 key in Synapse's own format, which no
+    # secrets generator produces. Guarded on the key file, so reruns are no-ops.
+    - name: signing-key
+      at: setup
+      run: always
+      script: |
+        [ -e "$APP_DIR/data/signing.key" ] && exit 0
+        docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/data:/data" \
+          --entrypoint generate_signing_key \
+          ghcr.io/element-hq/synapse:v1.163.0 -o /data/signing.key
+    # The admin account, through the shared-secret registration Synapse exposes on
+    # localhost. Waits for the homeserver; --exists-ok makes reruns a no-op.
+    - name: admin-account
+      at: started
+      run: always
+      script: |
+        for i in $(seq 1 60); do
+          compose exec synapse curl -fsS http://localhost:8008/health >/dev/null 2>&1 && break
+          sleep 5
+        done
+        compose exec synapse register_new_matrix_user -c /data/homeserver.yaml --exists-ok \
+          -u admin -p "$SYNAPSE_ADMIN_PASSWORD" -a http://localhost:8008
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/pgdata
+      user: $PUID
+      group: $PGID
+    # Holds the Element config.json declared under files above.
+    - path: /DATA/AppData/$AppID/element
+      user: $PUID
+      group: $PGID
