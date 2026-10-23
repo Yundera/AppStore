@@ -99,9 +99,9 @@ x-casaos:
         Give players the address below, plus the port of the server you
         created:
  
-        - **Java (Java Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`:`25565`
+        - **Java (Java Edition on PC):** host `${APP_PUBLIC_IPV4:-${APP_PUBLIC_IPV6}}`:`25565`
           (or whichever port you chose)
-        - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `19132`
+        - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `${APP_PUBLIC_IPV4:-${APP_PUBLIC_IPV6}}`, port `19132`
 
         Your server must be reachable from the internet on that port. If your
         PCS is behind CGNAT or the port is not forwarded, players outside your
@@ -169,9 +169,9 @@ x-compose-app:
       Give players the address below, plus the port of the server you
       created:
 
-      - **Java (Java Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`:`25565`
+      - **Java (Java Edition on PC):** host `${APP_PUBLIC_IPV4:-${APP_PUBLIC_IPV6}}`:`25565`
         (or whichever port you chose)
-      - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `$APP_PUBLIC_IP_DASH.sslip.io`, port `19132`
+      - **Bedrock (Consoles + Mobile + Bedrock Edition on PC):** host `${APP_PUBLIC_IPV4:-${APP_PUBLIC_IPV6}}`, port `19132`
 
       Your server must be reachable from the internet on that port. If your
       PCS is behind CGNAT or the port is not forwarded, players outside your
