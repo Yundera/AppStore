@@ -867,7 +867,8 @@ x-compose-app:
 - The tile opens the first route (`routes`, under Routing) at its `path`. An app with no web
   UI declares no route.
 - An app with no web UI lands in `service` on its own. Leave `view` alone unless the app is a
-  platform piece.
+  platform piece, such as Terminal, the owner's host shell. A platform piece is `system` whether it
+  ships preinstalled or comes from the store. Say why in `rationale.md`.
 - `parent` is for apps that only make sense beside another one, such as a companion indexer or
   a request front end. It is presentation only. If the parent is not installed, the app shows
   as an ordinary tile.

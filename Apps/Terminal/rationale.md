@@ -18,6 +18,14 @@ Four deviations, and they only make sense together:
    through a bind mount.** The setup runs after `nsenter --mount`, so it works on
    host paths directly. The path still starts with `${DATA_ROOT:-/DATA}`.
 
+## `view: system`
+
+Terminal is a platform piece, not an ordinary app: it is the owner's root shell on their own
+PCS and its recovery path. A PCS ships it preinstalled, and it sits in the **system** grid
+whether it came preinstalled or was installed from the store, so it is always found in the same
+place. `view` only chooses the grid. It does not stop the owner from stopping, updating or
+uninstalling the app; no `lifecycle` key is `false`.
+
 ## How it works
 
 Two steps, both in the `terminal-ttyd` container:
