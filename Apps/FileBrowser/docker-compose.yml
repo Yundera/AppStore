@@ -507,10 +507,15 @@ x-compose-app:
         [ -e "$APP_DIR/db/database.db" ] && exit 0
         docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/db:/db" \
           filebrowser/filebrowser:v2.63.23 config init --database /db/database.db
+    # Guarded on the data, not only on `once`: an uninstall that keeps the data
+    # removes the marker, and `users add` exits 1 on a database that has `admin`.
     - name: add-admin
       at: setup
       run: once
       script: |
+        docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/db:/db" \
+          filebrowser/filebrowser:v2.63.23 \
+          users find admin --database /db/database.db >/dev/null 2>&1 && exit 0
         docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/db:/db" \
           filebrowser/filebrowser:v2.63.23 \
           users add admin "$FILEBROWSER_ADMIN_PASSWORD" --perm.admin --database /db/database.db

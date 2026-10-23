@@ -670,8 +670,9 @@ x-compose-app:
       script: |
         [ -e "$APP_DIR/home/keys/radicle" ] && exit 0
         docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/home:/radicle-home" \
+          -e APP_PUBLIC_IP_DASH \
           dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2 \
-          sh -c "yes '' | rad auth --alias radicle-$APP_PUBLIC_IP_DASH --stdin"
+          sh -c 'yes "" | rad auth --alias "radicle-$APP_PUBLIC_IP_DASH" --stdin'
     # Puts an empty RADICLE_OWNER line in the app's .env so the setting shows up in
     # the .env editor, where the user fills it in. Not a `variables:` entry: those are
     # re-rendered on every up and would wipe what the user typed. $MAISON_ENV only adds
