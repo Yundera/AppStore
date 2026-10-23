@@ -10,7 +10,7 @@ x-logging: &logging
 services:
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:3.0.5
-    container_name: paperless
+    container_name: paperlessngx
     restart: unless-stopped
     networks:
       - paperless-network
@@ -62,7 +62,7 @@ services:
       resources:
         limits:
           memory: 512M
-    cpu_shares: 10
+    cpu_shares: 30
     logging: *logging
 
   gotenberg:
@@ -79,7 +79,7 @@ services:
       resources:
         limits:
           memory: 512M
-    cpu_shares: 10
+    cpu_shares: 30
     logging: *logging
 
   broker:
@@ -96,7 +96,7 @@ services:
       resources:
         limits:
           memory: 256M
-    cpu_shares: 10
+    cpu_shares: 50
     logging: *logging
 
   db:
@@ -121,7 +121,7 @@ services:
       resources:
         limits:
           memory: 512M
-    cpu_shares: 20
+    cpu_shares: 70
     logging: *logging
 
 networks:
