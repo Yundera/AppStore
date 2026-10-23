@@ -206,8 +206,7 @@ x-casaos:
         }
         ```
         For clients that need a pre-created client_id/client_secret (n8n, custom
-        scripts), open **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** and
-        create one there.
+        scripts), create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them.
 
         **Option 2: Local Docker connection (no auth required)**
 
@@ -280,8 +279,7 @@ x-casaos:
           }
         }
         ```
-        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
-        **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** 创建。
+        对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请从已登录本应用的浏览器向 **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth/clients** 发送 `POST` 注册请求（包含 `client_name` 和 `redirect_uris` 的 JSON）来创建；**${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** 页面可列出并撤销已有客户端。
 
         **选项 2：本地 Docker 连接（无需认证）**
         ```json
@@ -418,8 +416,7 @@ x-compose-app:
       }
       ```
       For clients that need a pre-created client_id/client_secret (n8n, custom
-      scripts), open **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** and
-      create one there.
+      scripts), create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them.
 
       **Option 2: Local Docker connection (no auth required)**
 
@@ -492,8 +489,7 @@ x-compose-app:
         }
       }
       ```
-      对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请打开
-      **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** 创建。
+      对于需要预先创建 client_id/client_secret 的客户端（n8n、自定义脚本），请从已登录本应用的浏览器向 **${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth/clients** 发送 `POST` 注册请求（包含 `client_name` 和 `redirect_uris` 的 JSON）来创建；**${APP_URL:-https://browsermcp-${APP_DOMAIN}}/AppShield/oauth** 页面可列出并撤销已有客户端。
 
       **选项 2：本地 Docker 连接（无需认证）**
       ```json
