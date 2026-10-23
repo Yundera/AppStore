@@ -7,7 +7,7 @@
   "node": {
     "alias": "radicle-${APP_PUBLIC_IP_DASH}",
     "listen": ["0.0.0.0:8776"],
-    "externalAddresses": ["radicle-${APP_PUBLIC_IP_DASH}.sslip.io:8776"],
+    "externalAddresses": ["${APP_PUBLIC_IPV4:-[${APP_PUBLIC_IPV6}]}:8776"],
     "seedingPolicy": {
       "default": "block"
     }

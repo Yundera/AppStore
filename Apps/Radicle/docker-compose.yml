@@ -255,7 +255,7 @@ x-casaos:
         `node.connect`, and restart your node (`rad node stop && rad node start`):
 
         ```
-        <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+        <nid>@${APP_PUBLIC_IPV4:-[${APP_PUBLIC_IPV6}]}:8776
         ```
 
         `<nid>` is this server's Node ID, the `nid` field at
@@ -313,7 +313,7 @@ x-casaos:
         `node.connect`, puis redémarrez votre nœud (`rad node stop && rad node start`) :
 
         ```
-        <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+        <nid>@${APP_PUBLIC_IPV4:-[${APP_PUBLIC_IPV6}]}:8776
         ```
 
         `<nid>` est le Node ID de ce serveur, champ `nid` sur
@@ -370,7 +370,7 @@ x-casaos:
         `preferredSeeds` 和 `node.connect`，再重启节点（`rad node stop && rad node start`）：
 
         ```
-        <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+        <nid>@${APP_PUBLIC_IPV4:-[${APP_PUBLIC_IPV6}]}:8776
         ```
 
         `<nid>` 是本服务器的 Node ID，即 `${ROUTE_RADICLE_API_URL:-https://radicle-api-${APP_DOMAIN}}/api/v1` 的
@@ -503,7 +503,7 @@ x-compose-app:
       `node.connect`, and restart your node (`rad node stop && rad node start`):
 
       ```
-      <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+      <nid>@${APP_PUBLIC_IPV4:-[${APP_PUBLIC_IPV6}]}:8776
       ```
 
       `<nid>` is this server's Node ID, the `nid` field at
@@ -561,7 +561,7 @@ x-compose-app:
       `node.connect`, puis redémarrez votre nœud (`rad node stop && rad node start`) :
 
       ```
-      <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+      <nid>@${APP_PUBLIC_IPV4:-[${APP_PUBLIC_IPV6}]}:8776
       ```
 
       `<nid>` est le Node ID de ce serveur, champ `nid` sur
@@ -618,7 +618,7 @@ x-compose-app:
       `preferredSeeds` 和 `node.connect`，再重启节点（`rad node stop && rad node start`）：
 
       ```
-      <nid>@radicle-$APP_PUBLIC_IP_DASH.sslip.io:8776
+      <nid>@${APP_PUBLIC_IPV4:-[${APP_PUBLIC_IPV6}]}:8776
       ```
 
       `<nid>` 是本服务器的 Node ID，即 `${ROUTE_RADICLE_API_URL:-https://radicle-api-${APP_DOMAIN}}/api/v1` 的
