@@ -108,6 +108,7 @@ x-casaos:
     architectures:
         - amd64
         - arm64
+    developer: Stremio
     category: Entertainment
     description:
         en_us: |
@@ -162,6 +163,7 @@ x-compose-app:
       - Clean subdomain (served on a plain HTTPS address)
       - All-in-one streaming server with FFmpeg transcoding
       - Protected by the server's single sign-on (Authelia SSO)
+  developer: Stremio
   category: Entertainment
   icon: icon.png
   thumbnail: thumbnail.png

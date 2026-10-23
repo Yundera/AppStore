@@ -120,6 +120,7 @@ x-casaos:
   scheme: https
   port_map: "443"
   index: /
+  developer: Yundera
   category: Developer
   tags: ["developer", "ai"]
   icon: icon.png
@@ -259,6 +260,7 @@ x-compose-app:
       Docusaurus MCP expose votre projet Docusaurus auto-heberge en tant que serveur MCP (Model Context Protocol), permettant aux LLMs et assistants IA de lister les documents, lire les pages, creer et mettre a jour le contenu, rechercher dans tous les docs, et declencher des reconstructions du site.
 
       **Parfait si vous:** Avez un Docusaurus auto-heberge et voulez que des assistants IA lisent, ecrivent, recherchent et reconstruisent votre documentation.
+  developer: Yundera
   category: Developer
   icon: icon.png
   thumbnail: thumbnail.png
