@@ -140,7 +140,7 @@ x-casaos:
         Mount Instructions:
         • Windows: Map Network Drive → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
         • macOS: Finder → Go → Connect to Server → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
-        • Linux: Files → Other Locations → Connect to Server → dav://dufs-$APP_DOMAIN/
+        • Linux: Files → Other Locations → Connect to Server → dav://${APP_HOST:-dufs-${APP_DOMAIN}}/
         
         For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
         ```
@@ -167,7 +167,7 @@ x-casaos:
         挂载方法：
         • Windows：映射网络驱动器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
         • macOS：访达 → 前往 → 连接服务器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
-        • Linux：文件 → 其他位置 → 连接到服务器 → dav://dufs-$APP_DOMAIN/
+        • Linux：文件 → 其他位置 → 连接到服务器 → dav://${APP_HOST:-dufs-${APP_DOMAIN}}/
         
         在 Windows 上传输大文件时，可以在管理员命令提示符中运行以下命令来提高上传大小限制：
         ```
@@ -277,7 +277,7 @@ x-compose-app:
       Mount Instructions:
       • Windows: Map Network Drive → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
       • macOS: Finder → Go → Connect to Server → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
-      • Linux: Files → Other Locations → Connect to Server → dav://dufs-$APP_DOMAIN/
+      • Linux: Files → Other Locations → Connect to Server → dav://${APP_HOST:-dufs-${APP_DOMAIN}}/
 
       For large file on windows you can increase the upload size limit by running the following commands in an elevated command prompt:
       ```
@@ -304,7 +304,7 @@ x-compose-app:
       挂载方法：
       • Windows：映射网络驱动器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
       • macOS：访达 → 前往 → 连接服务器 → ${APP_URL:-https://dufs-${APP_DOMAIN}}/
-      • Linux：文件 → 其他位置 → 连接到服务器 → dav://dufs-$APP_DOMAIN/
+      • Linux：文件 → 其他位置 → 连接到服务器 → dav://${APP_HOST:-dufs-${APP_DOMAIN}}/
 
       在 Windows 上传输大文件时，可以在管理员命令提示符中运行以下命令来提高上传大小限制：
       ```
