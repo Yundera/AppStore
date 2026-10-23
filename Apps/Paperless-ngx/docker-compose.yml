@@ -151,7 +151,7 @@ x-casaos:
     es_es: Transforma tus documentos en papel en un archivo digital con busqueda
   title:
     en_us: Paperless-ngx
-  store_app_id: paperless-ngx
+  store_app_id: paperlessngx
   main: paperless
   webui_port: 8000
   description:
@@ -264,7 +264,7 @@ x-compose-app:
     - { service: paperless, name: paperlessngx, upstream-port: 8000 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
-  id: paperless-ngx
+  id: paperlessngx
   title:
     en_us: Paperless-ngx
   tagline:
