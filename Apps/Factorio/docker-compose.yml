@@ -1,0 +1,330 @@
+name: factorio
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  factorio:
+    image: factoriotools/factorio:2.1.23
+    container_name: factorio
+    hostname: factorio
+    # No user: the entrypoint starts as root, remaps its `factorio` user to PUID:PGID,
+    # re-owns /factorio and drops to that user before the server runs.
+    cpu_shares: 50
+    logging: *logging
+    restart: unless-stopped
+    # The server saves the map on a clean shutdown; give a large map time to write it.
+    stop_grace_period: 60s
+    ports:
+      - "34197:34197/udp"               # Factorio game protocol (UDP), what players connect to
+    # RCON (27015/tcp) is deliberately not published. See tips to add it.
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      # Space Age needs every player to own the expansion; set false for the base game only.
+      DLC_SPACE_AGE: ${FACTORIO_SPACE_AGE:-true}
+      # Load the newest save (autosave included); a first start generates a new map.
+      LOAD_LATEST_SAVE: "true"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/factorio
+    # RCON answers only once the map is loaded and the game is running (paused counts),
+    # through the image's own client, which reads the generated password itself.
+    # /version must come back non-empty: the client exits 0 on a reply-less command.
+    # The start period covers generating a new map or loading a large save.
+    healthcheck:
+      test: ["CMD-SHELL", "rcon /version | grep -q ."]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5m
+    # No memory limit on purpose: a map's RAM grows with the factory (a late Space Age
+    # save already takes ~2 GB), and an OOM kill loses everything since the last save.
+    # See rationale.md.
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  category: Games
+  tags: ["games", "personal", "family", "needs-public-ip"]
+  developer: Wube Software
+  store_app_id: factorio
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  title:
+    en_us: Factorio
+  tagline:
+    en_us: Dedicated Factorio server for you and your friends
+    fr_fr: Serveur Factorio dédié pour vous et vos amis
+  description:
+    en_us: |
+      Factorio is a game about building and maintaining factories: mine resources,
+      research technologies, automate production lines and defend them, alone or
+      with friends.
+
+      This app runs the official headless Factorio server, so your factory keeps
+      a home that is online whenever your friends are. It has no web page: players
+      join from the game with Multiplayer → Connect to address.
+
+      • Generates a new map on first start, then always loads the newest save
+      • Autosaves every 10 minutes, saves on shutdown
+      • Space Age expansion enabled by default, switchable off for the base game
+      • Protected by a generated game password
+      • Saves, mods and settings are in /DATA/AppData/factorio/data
+
+      Every player needs their own copy of Factorio (and of Space Age while it is
+      enabled). The server is reached on UDP port 34197, so the PCS needs a public
+      IP address.
+
+      **Hardware.** Factorio runs its simulation mostly on one CPU core, and a large
+      late-game map needs a fast one. A typical PCS handles early and mid game well,
+      but a late Space Age save can run well below full speed: one measured at about
+      18 updates per second out of 60 on a 3-vCPU server, so the game ran at a third
+      of normal speed for everyone. Large maps also take several GB of RAM.
+    fr_fr: |
+      Factorio est un jeu de construction et de gestion d'usines : extrayez des
+      ressources, recherchez des technologies, automatisez vos chaînes de
+      production et défendez-les, seul ou entre amis.
+
+      Cette application fait tourner le serveur Factorio officiel sans interface,
+      pour que votre usine reste en ligne quand vos amis le sont. Elle n'a pas de
+      page web : les joueurs se connectent depuis le jeu avec Multijoueur →
+      Se connecter à une adresse.
+
+      • Crée une nouvelle carte au premier démarrage, puis charge toujours la dernière sauvegarde
+      • Sauvegarde automatique toutes les 10 minutes et à l'arrêt
+      • Extension Space Age activée par défaut, désactivable pour le jeu de base
+      • Protégé par un mot de passe de partie généré
+      • Sauvegardes, mods et réglages dans /DATA/AppData/factorio/data
+
+      Chaque joueur a besoin de sa propre copie de Factorio (et de Space Age tant
+      qu'elle est activée). Le serveur écoute sur le port UDP 34197 : le PCS doit
+      avoir une adresse IP publique.
+
+      **Matériel.** Factorio fait tourner sa simulation surtout sur un seul cœur de
+      processeur, et une grande carte de fin de partie en demande un rapide. Un PCS
+      classique gère bien le début et le milieu de partie, mais une sauvegarde Space
+      Age avancée peut tourner bien en dessous de la vitesse normale : mesurée à
+      environ 18 mises à jour par seconde sur 60 sur un serveur à 3 vCPU, la partie
+      allait trois fois moins vite pour tout le monde. Les grandes cartes prennent
+      aussi plusieurs Go de mémoire.
+  tips:
+    before_install:
+      en_us: |
+        **Joining.** In Factorio: Multiplayer → Connect to address → `${APP_PUBLIC_IP}`
+        (port 34197 is the default). The game password is in the tile menu → Credentials.
+
+        **Space Age.** On by default, so every player needs the expansion. For the base
+        game, set `FACTORIO_SPACE_AGE=false` in the app's settings → Config → Env and save.
+
+        **Game version.** Players' game must be the same version as the server. To run an
+        older one, set the `factorio` service's image to that version in the app's settings →
+        Config → Compose, e.g. `factoriotools/factorio:2.0.77`, and save; it then stays on it
+        through store updates until you clear the field. A server can load saves from older
+        versions but never from newer ones, so going back a version needs a new map: stop
+        the app and move the files out of `data/saves/` and `data/config/map-settings.json`
+        plus `map-gen-settings.json` (written by the newer version, the older one refuses
+        them), then start it. Or put one of your own saves from that version in `saves/`.
+        On Steam, older versions are under Properties → Betas.
+
+        **Big maps.** The game runs mostly on one CPU core. If it feels slow, turn on
+        `show-fps` in the debug settings (F4) and watch UPS: below 60 means the server
+        cannot keep up, and a bigger PCS with more cores will not fix it, a faster core will.
+        Large maps also need several GB of RAM.
+
+        **Pausing.** The game pauses by itself while nobody is connected, and resumes when
+        someone joins (`auto_pause` in the server settings).
+
+        **A new map.** The first start generates one. To start over, stop the app, move the
+        files out of `/DATA/AppData/factorio/data/saves/` with the Files app, then start it.
+
+        **Your own map.** Stop the app, copy your save (`.zip`) into
+        `/DATA/AppData/factorio/data/saves/`, then start it: the newest save is loaded.
+
+        **Settings and admins.** Server settings are in
+        `/DATA/AppData/factorio/data/config/server-settings.json`. To make yourself admin,
+        put your Factorio username in `config/server-adminlist.json` (`["yourname"]`).
+        Restart the app after either change.
+
+        **Mods.** Drop mod `.zip` files in `/DATA/AppData/factorio/data/mods/` and restart.
+        Players get the same mods automatically when they join.
+
+        **Only over a VPN.** The game port is open to the whole internet. To reach it only
+        through a VPN, open the app's settings → Config → Ports and change the
+        `34197:34197/udp` row to `<address>:34197:34197/udp`, for example
+        `10.9.0.1:34197:34197/udp` with WireGuard Easy - Host (or your Tailscale IP, which
+        `tailscale ip -4` gives). Players then connect to that address from the VPN.
+
+        **RCON (remote console).** Not needed to run or start a server, and not published. To
+        send server commands from an RCON tool, add `27015:27015` in the app's settings →
+        Config → Ports (a VPN address in front is recommended); the password is in
+        `data/config/rconpw`.
+
+x-compose-app:
+  schema_version: 2
+  version: "2.1.23"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Factorio
+  tagline:
+    en_us: Dedicated Factorio server for you and your friends
+    fr_fr: Serveur Factorio dédié pour vous et vos amis
+  description:
+    en_us: |
+      Factorio is a game about building and maintaining factories: mine resources,
+      research technologies, automate production lines and defend them, alone or
+      with friends.
+
+      This app runs the official headless Factorio server, so your factory keeps
+      a home that is online whenever your friends are. It has no web page: players
+      join from the game with Multiplayer → Connect to address.
+
+      • Generates a new map on first start, then always loads the newest save
+      • Autosaves every 10 minutes, saves on shutdown
+      • Space Age expansion enabled by default, switchable off for the base game
+      • Protected by a generated game password
+      • Saves, mods and settings are in /DATA/AppData/factorio/data
+
+      Every player needs their own copy of Factorio (and of Space Age while it is
+      enabled). The server is reached on UDP port 34197, so the PCS needs a public
+      IP address.
+
+      **Hardware.** Factorio runs its simulation mostly on one CPU core, and a large
+      late-game map needs a fast one. A typical PCS handles early and mid game well,
+      but a late Space Age save can run well below full speed: one measured at about
+      18 updates per second out of 60 on a 3-vCPU server, so the game ran at a third
+      of normal speed for everyone. Large maps also take several GB of RAM.
+    fr_fr: |
+      Factorio est un jeu de construction et de gestion d'usines : extrayez des
+      ressources, recherchez des technologies, automatisez vos chaînes de
+      production et défendez-les, seul ou entre amis.
+
+      Cette application fait tourner le serveur Factorio officiel sans interface,
+      pour que votre usine reste en ligne quand vos amis le sont. Elle n'a pas de
+      page web : les joueurs se connectent depuis le jeu avec Multijoueur →
+      Se connecter à une adresse.
+
+      • Crée une nouvelle carte au premier démarrage, puis charge toujours la dernière sauvegarde
+      • Sauvegarde automatique toutes les 10 minutes et à l'arrêt
+      • Extension Space Age activée par défaut, désactivable pour le jeu de base
+      • Protégé par un mot de passe de partie généré
+      • Sauvegardes, mods et réglages dans /DATA/AppData/factorio/data
+
+      Chaque joueur a besoin de sa propre copie de Factorio (et de Space Age tant
+      qu'elle est activée). Le serveur écoute sur le port UDP 34197 : le PCS doit
+      avoir une adresse IP publique.
+
+      **Matériel.** Factorio fait tourner sa simulation surtout sur un seul cœur de
+      processeur, et une grande carte de fin de partie en demande un rapide. Un PCS
+      classique gère bien le début et le milieu de partie, mais une sauvegarde Space
+      Age avancée peut tourner bien en dessous de la vitesse normale : mesurée à
+      environ 18 mises à jour par seconde sur 60 sur un serveur à 3 vCPU, la partie
+      allait trois fois moins vite pour tout le monde. Les grandes cartes prennent
+      aussi plusieurs Go de mémoire.
+  developer: Wube Software
+  category: Games
+  tags: ["games", "personal", "family", "needs-public-ip"]
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **Joining.** In Factorio: Multiplayer → Connect to address → `${APP_PUBLIC_IP}`
+      (port 34197 is the default). The game password is in the tile menu → Credentials.
+
+      **Space Age.** On by default, so every player needs the expansion. For the base
+      game, set `FACTORIO_SPACE_AGE=false` in the app's settings → Config → Env and save.
+
+      **Game version.** Players' game must be the same version as the server. To run an
+      older one, set the `factorio` service's image to that version in the app's settings →
+      Config → Compose, e.g. `factoriotools/factorio:2.0.77`, and save; it then stays on it
+      through store updates until you clear the field. A server can load saves from older
+      versions but never from newer ones, so going back a version needs a new map: stop
+      the app and move the files out of `data/saves/` and `data/config/map-settings.json`
+      plus `map-gen-settings.json` (written by the newer version, the older one refuses
+      them), then start it. Or put one of your own saves from that version in `saves/`.
+      On Steam, older versions are under Properties → Betas.
+
+      **Big maps.** The game runs mostly on one CPU core. If it feels slow, turn on
+      `show-fps` in the debug settings (F4) and watch UPS: below 60 means the server
+      cannot keep up, and a bigger PCS with more cores will not fix it, a faster core will.
+      Large maps also need several GB of RAM.
+
+      **Pausing.** The game pauses by itself while nobody is connected, and resumes when
+      someone joins (`auto_pause` in the server settings).
+
+      **A new map.** The first start generates one. To start over, stop the app, move the
+      files out of `/DATA/AppData/factorio/data/saves/` with the Files app, then start it.
+
+      **Your own map.** Stop the app, copy your save (`.zip`) into
+      `/DATA/AppData/factorio/data/saves/`, then start it: the newest save is loaded.
+
+      **Settings and admins.** Server settings are in
+      `/DATA/AppData/factorio/data/config/server-settings.json`. To make yourself admin,
+      put your Factorio username in `config/server-adminlist.json` (`["yourname"]`).
+      Restart the app after either change.
+
+      **Mods.** Drop mod `.zip` files in `/DATA/AppData/factorio/data/mods/` and restart.
+      Players get the same mods automatically when they join.
+
+      **Only over a VPN.** The game port is open to the whole internet. To reach it only
+      through a VPN, open the app's settings → Config → Ports and change the
+      `34197:34197/udp` row to `<address>:34197:34197/udp`, for example
+      `10.9.0.1:34197:34197/udp` with WireGuard Easy - Host (or your Tailscale IP, which
+      `tailscale ip -4` gives). Players then connect to that address from the VPN.
+
+      **RCON (remote console).** Not needed to run or start a server, and not published. To
+      send server commands from an RCON tool, add `27015:27015` in the app's settings →
+      Config → Ports (a VPN address in front is recommended); the password is in
+      `data/config/rconpw`.
+  folders:
+    - /DATA/AppData/$AppID/data
+    - /DATA/AppData/$AppID/data/config
+  secrets:
+    # The password players type to join. alnum keeps it easy to read out to friends.
+    FACTORIO_GAME_PASSWORD: alnum:16
+  credentials:
+    - label:
+        en_us: Game password
+      password: ${FACTORIO_GAME_PASSWORD}
+      note:
+        en_us: Players enter it in Multiplayer → Connect to address.
+      # The password lives in server-settings.json (seeded once, then the owner's file),
+      # so the change edits it there; Maison's recreate then restarts the server on it.
+      change:
+        apply: script
+        images:
+          - factoriotools/factorio:2.1.23
+        script: |
+          docker run --rm -i --user "$PUID:$PGID" --entrypoint sh \
+            -e FACTORIO_GAME_PASSWORD -v "$APP_DIR/data/config:/config" \
+            factoriotools/factorio:2.1.23 -s <<'SH'
+          set -e
+          f=/config/server-settings.json
+          jq --arg p "$FACTORIO_GAME_PASSWORD" '.game_password = $p' "$f" > "$f.new"
+          mv "$f.new" "$f"
+          SH
+        policy:
+          min_length: 8
+          max_length: 64
+  steps:
+    # Surfaces the Space Age switch in App settings › Env; MAISON_ENV only adds the key
+    # when .env lacks it, so the owner's choice is kept.
+    - name: space-age-setting
+      at: setup
+      run: always
+      script: |
+        echo "FACTORIO_SPACE_AGE=true" >> "$MAISON_ENV"
