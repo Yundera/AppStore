@@ -106,10 +106,19 @@ the way the app is used.
 
 ## Security posture
 
-- **One mount, and it is the app's own.** `/DATA/AppData/hermes` is all the container
-  sees. The agent runs shell commands and reads and writes files by design — that is the
-  product — but `/DATA/Documents`, `/DATA/Media` and `/DATA/Downloads` are not mounted,
-  and there is no docker socket and no host path.
+- **One mount, and it holds only the agent's data.** `/DATA/AppData/hermes/data` is all
+  the container sees. The agent runs shell commands and reads and writes files by design —
+  that is the product — but `/DATA/Documents`, `/DATA/Media` and `/DATA/Downloads` are
+  not mounted, and there is no docker socket and no host path.
+- **The mount is a subfolder of the app folder, never the folder itself.** The app folder
+  also holds Maison's `docker-compose.yml`, its override and the app's `.env`. Mounted
+  whole, those were the agent's working tree: its file browser could read and rewrite the
+  compose, and its Keys page *was* Maison's `.env` (`HERMES_HOME/.env`), so a prompt or a
+  dashboard user could grant the app privileges Maison would apply on the next start. With
+  `data/` as `HERMES_HOME`, the agent's `.env` is its own file and the deployment is out
+  of its reach. Migration 2 (`data_version: 2`) moves an existing install's state into
+  `data/` and copies the provider keys it had saved into `data/.env`, leaving Maison's
+  own keys behind.
 - **The web UI is gated before anything else.** The dashboard exposes a config editor, an
   API-key manager that reads and writes `.env`, a file browser and a cron scheduler; it is
   never reachable unauthenticated. Only `/api/health`, `/api/status` and a small
