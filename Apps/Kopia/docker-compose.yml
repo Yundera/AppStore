@@ -115,10 +115,12 @@ services:
       - kopia-internal
     cpu_shares: 50
     logging: *logging
+    # 4G: as the maintenance owner this server runs the daily full maintenance, whose
+    # memory grows with the repository (1G was OOM-killed at ~1.9M contents, 119 GB).
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 4G
 
   kopia-engine:
     image: ghcr.io/yundera/maison-kopia-engine:1.3.0
