@@ -231,15 +231,19 @@ x-compose-app:
       aussi plusieurs Go de mémoire.
   developer: Wube Software
   category: Games
-  tags: ["games", "personal", "family", "needs-public-ip"]
   icon: icon.png
   screenshots:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Raw TCP/UDP must be dialled from the internet: hidden on a box behind NAT or the tunnel.
+  requires: [public-ip]
   architectures:
     - amd64
     - arm64
+  # Uncapped: a late-game map takes ~2G and grows with the factory; one fast core.
+  resources:
+    recommended: { memory: 4G }
   tips:
     en_us: |
       **Joining.** In Factorio: Multiplayer → Connect to address → `${APP_PUBLIC_IP}`

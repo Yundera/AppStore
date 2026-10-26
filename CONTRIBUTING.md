@@ -96,6 +96,17 @@ line, and a service app is reviewed on the rest.
 **Check:** static · **Severity:** Minor
 
 - **Pass:** `architectures` is declared and every image listed supports each architecture named.
+  Maison refuses to install the app on a box of an architecture not listed, so a missing entry
+  hides a working app and an extra one breaks an install.
+
+### `resources-declared` — heavy apps say what they need
+
+**Check:** static · **Severity:** Minor
+**n-a:** the service memory limits add up to less than 2G, and no service is uncapped.
+
+- **Pass:** `x-compose-app.resources.recommended` states the box the app wants (`memory`, and
+  `cpu` when the app is CPU-bound). `resources.min` is set only for a floor the app really has.
+  See [GUIDELINES › Requirements](GUIDELINES.md#requirements).
 
 ---
 
@@ -231,13 +242,17 @@ With an AppShield gate, the router goes where its job is:
   non-HTTP traffic (BitTorrent, WebRTC media, SMB, WireGuard, a game protocol), with a comment
   saying what it is for.
 
-### `needs-public-ip-tag` — apps that need inbound connections say so
+### `requires-public-ip` — apps that need inbound connections say so
 
-**Check:** static · **Severity:** Minor
-**n-a:** the app publishes no port.
+**Check:** static (`maison lint`) · **Severity:** Minor
+**n-a:** the app publishes no port on every address.
 
 - **Pass:** an app whose published port must be dialled from the internet for the app to work
-  carries `needs-public-ip` in `x-compose-app.tags`.
+  declares `requires: [public-ip]` in `x-compose-app`, and keeps the `needs-public-ip` tag in
+  `x-casaos.tags` for CasaOS. Maison hides it on a box behind NAT or the tunnel.
+- `maison lint` fails any app that publishes a port on every address without it. A port bound
+  to one named address (a VPN's) is exempt.
+- Formerly `needs-public-ip-tag`.
 
 ---
 

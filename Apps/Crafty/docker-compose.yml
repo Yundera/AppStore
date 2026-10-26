@@ -149,9 +149,14 @@ x-compose-app:
   thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
+  # Raw TCP/UDP must be dialled from the internet: hidden on a box behind NAT or the tunnel.
+  requires: [public-ip]
   architectures:
     - amd64
     - arm64
+  # The server is capped at 2G; the box needs room around it.
+  resources:
+    recommended: { cpu: 2, memory: 4G }
   tips:
     en_us: |
       **Getting started**

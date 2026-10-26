@@ -534,6 +534,9 @@ x-compose-app:
   icon: icon.png
   architectures:
     - amd64
+  # Sum of the service limits (~7.6G); indexing is CPU-bound.
+  resources:
+    recommended: { cpu: 4, memory: 8G }
   # Seeded: an installed NNTmux created its admin account and database with the
   # box-wide password and keeps it; a fresh install gets its own values.
   secrets:

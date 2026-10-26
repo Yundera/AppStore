@@ -307,6 +307,8 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Raw TCP/UDP must be dialled from the internet: hidden on a box behind NAT or the tunnel.
+  requires: [public-ip]
   architectures:
     - amd64
     - arm64

@@ -310,6 +310,9 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # kopia-app runs full repository maintenance under a 4G cap.
+  resources:
+    recommended: { memory: 4G }
   tips:
     en_us: |
       Setup takes three steps

@@ -497,8 +497,13 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Raw TCP/UDP must be dialled from the internet: hidden on a box behind NAT or the tunnel.
+  requires: [public-ip]
   architectures:
     - amd64
+  # Sum of the service limits (~5.4G).
+  resources:
+    recommended: { cpu: 4, memory: 6G }
   tips:
     en_us: |
       **Access & sign-in**

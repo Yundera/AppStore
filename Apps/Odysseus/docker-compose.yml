@@ -531,6 +531,9 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # Sum of the service limits (~4.6G, rationale.md).
+  resources:
+    recommended: { memory: 6G }
   tips:
     en_us: |
       **No separate login.** Odysseus is protected by AppShield, so opening it from

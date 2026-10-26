@@ -131,7 +131,9 @@ two blocks equal:
 | `routes` (the first one) | `hostname` (`<name>-${domain}`) / `index` (its `path`) |
 | — | `webui_port` (the exposed web UI port) |
 | — | `main` (the first route's service; CasaOS only, Maison does not read it) |
-| — | `tags` (no `x-compose-app` key yet) |
+| `requires: [public-ip]` | `tags: [..., "needs-public-ip"]` |
+| `resources` | — (`min_memory`, in MB, is the closest; prefer `resources`) |
+| — | `tags` (topical tags have no `x-compose-app` key) |
 
 Rules:
 
@@ -140,7 +142,8 @@ Rules:
 - Don't write the per-service `x-casaos.envs` / `volumes` / `ports` / `devices` description
   lists. Nothing reads them. Anything the user must know goes in `description`, `tips` or
   `rationale.md`.
-- `min_memory` (MB) is an optional, advisory field that the store displays.
+- `requires` and `resources` are described in [Requirements](#requirements). `min_memory` (MB)
+  is superseded by `resources.min.memory`.
 
 Field reference: [Maison `x-compose-app.md` › Fields](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#fields).
 
@@ -391,11 +394,17 @@ dial the box directly:
 | App | Published | Why |
 |---|---|---|
 | `Apps/Crafty` | `25500-25600/tcp`, `19132/udp` | Minecraft Java + Bedrock |
+| `Apps/Factorio` | `34197/udp` | Factorio multiplayer |
 | `Apps/Hubs` | `40000-40050/tcp+udp` | WebRTC media |
-| `Apps/Samba` | `445/tcp` | SMB |
+| `Apps/Kubo` | `4001/tcp+udp` | IPFS swarm |
+| `Apps/MetaWatch` | `4003/tcp`, `4004/tcp` | libp2p (share, search) |
+| `Apps/Radicle` | `8776/tcp` | Radicle peer-to-peer |
 | `Apps/WireGuardEasy` | `51820/udp` | WireGuard |
 | `Apps/AnnasTorrents` | `6881/tcp+udp` | BitTorrent peers + DHT |
 | `Apps/qBittorrent` | `6881/tcp+udp` (commented out) | same, but the client works without it |
+
+Samba publishes nothing by default: SMB belongs on a VPN address, which the owner adds through
+the app's override.
 
 - Publish **only** the non-HTTP ports, and add a comment beside each one saying what it is for.
 - Use fixed ports that stay clear of the host's own (`22`, `80`, `443`). Two apps that publish
@@ -405,23 +414,40 @@ dial the box directly:
 - **Ship the port enabled if the app needs it to work.** Comment it out only when it is a pure
   enhancement, and say in `tips` what to uncomment.
 
-### Reserved tag: `needs-public-ip`
+## Requirements
 
-*Requirements:* `needs-public-ip-tag`
+*Requirements:* `requires-public-ip` `resources-declared` `architectures`
 
-Most `x-casaos.tags` are topical. `needs-public-ip` is functional: add it to any app that only
-works properly when inbound connections from the internet reach the host.
+What the app needs from the box. Maison uses it to decide what the store shows on each box:
 
 ```yaml
-x-casaos:
-  tags: ["files", "personal", "needs-public-ip"]
+x-compose-app:
+  architectures: [amd64, arm64]
+  requires: [public-ip]               # public-ip | gpu-nvidia | gpu-dri
+  resources:
+    min:         { memory: 2G }       # only for a real floor
+    recommended: { cpu: 2, memory: 4G }
 ```
 
-A PCS behind CGNAT, or one routed through the mesh-router WireGuard tunnel, gets its HTTPS
-routes from the gateway but has no directly reachable address for raw TCP/UDP. On such a box
-the app installs and starts, then quietly underperforms: a torrent client with no inbound
-peers, a game server nobody can join. The tag lets the user see that before installing. No
-extra `tips` text is required.
+- **`requires`** lists what the app **cannot work without**. Maison hides the app on a box
+  that lacks one, and asks the owner to confirm before installing it anyway.
+  - `public-ip`: inbound connections from the internet reach the host. A PCS behind CGNAT, or
+    one routed through the mesh-router WireGuard tunnel, gets its HTTPS routes from the gateway
+    but has no reachable address for raw TCP/UDP. There the app installs and starts, then
+    quietly fails: a torrent client with no inbound peers, a game server nobody can join. Every
+    app that publishes a port on every address needs it, and `maison lint` checks this.
+  - `gpu-nvidia`: the app reserves an NVIDIA GPU (`deploy.resources.reservations.devices`).
+  - `gpu-dri`: the app needs `/dev/dri` for video acceleration.
+  - An app that only runs **better** with something lists nothing. A media server that falls
+    back to CPU transcoding does not `require` a GPU.
+- **`resources`** states the box the app wants, in compose sizes (`512M`, `4G`).
+  - `recommended`: below it the store shows a note. Declare it on any app whose service limits
+    add up to 2G or more, or that has an uncapped service. Base it on those limits plus the
+    `rationale.md` notes.
+  - `min`: below it, installing asks for confirmation. Set it only for a floor the app
+    documents, such as Immich's 4G.
+- Keep the CasaOS mirror: `needs-public-ip` stays in `x-casaos.tags`. CasaOS shows it, and a
+  Maison that reads only `x-casaos` translates it to `requires: [public-ip]`.
 
 ## Authentication
 
