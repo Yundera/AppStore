@@ -402,6 +402,9 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # Sum of the service limits (~4.1G).
+  resources:
+    recommended: { memory: 4G }
   tips:
     en_us: |
       **Default Admin Account**

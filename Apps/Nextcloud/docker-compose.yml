@@ -581,6 +581,9 @@ x-compose-app:
     - screenshot-2.png
     - screenshot-3.png
   architectures: [amd64, arm64]
+  # Sum of the service limits (~2.75G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 4G }
   tips:
     en_us: |
       **Login**

@@ -353,6 +353,9 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # Sum of the service limits (~3.75G); OCR is CPU-bound.
+  resources:
+    recommended: { cpu: 2, memory: 4G }
   tips:
     en_us: |
       **Quick Start:**

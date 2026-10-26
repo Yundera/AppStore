@@ -304,6 +304,10 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # The engine is uncapped: a 1B model needs ~1.5G, a 7B/8B one ~5-6G (rationale.md).
+  resources:
+    min: { memory: 4G }
+    recommended: { cpu: 4, memory: 8G }
   tips:
     en_us: |
       **Getting Started**

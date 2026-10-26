@@ -267,6 +267,9 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # Sum of the service limits (~1.5G).
+  resources:
+    recommended: { memory: 2G }
   tips:
     en_us: "## Initial Setup Information\n\nAfter installation, use the following information to create your database on first access:\n\n| Item | Value |\n| --- | --- |\n| Master Password | Shown when you open the app (tile menu → Credentials) |\n| Database Name | `odoo` |\n| Email | Admin email address |\n| Password | Admin account password |\n| Language | Select your preferred language |\n| Country | Your country |\n\n**Note**: \n- Initial setup may take a few minutes\n- After database creation, you can log in with your admin account\n"
     ko_kr: "## 초기 설정 정보\n\n설치 후 첫 접속시 다음 정보를 사용하여 데이터베이스를 생성하세요:\n\n| 항목 | 값 |\n| --- | --- |\n| 마스터 비밀번호 | 앱을 열 때 표시됨 (타일 메뉴 → Credentials) |\n| 데이터베이스 이름 | `odoo` |\n| 이메일 | 관리자 이메일 주소 |\n| 비밀번호 | 관리자 계정 비밀번호 |\n| 언어 | 원하는 언어 선택 |\n| 국가 | 대한민국 |\n\n**참고**: \n- 첫 설정 시 몇 분이 소요될 수 있습니다\n- 데이터베이스 생성 후 관리자 계정으로 로그인할 수 있습니다\n"
