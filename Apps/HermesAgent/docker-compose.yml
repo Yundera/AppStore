@@ -55,8 +55,11 @@ services:
     volumes:
       # Everything the agent owns lives here: config.yaml, .env (API keys),
       # sessions, memories, skills, cron jobs, logs, and the per-profile HOME
-      # its tool subprocesses run in.
-      - ${DATA_ROOT:-/DATA}/AppData/$AppID:/opt/data
+      # its tool subprocesses run in. A subfolder, not the app folder itself:
+      # the app folder also holds Maison's compose, override and .env, and an
+      # agent that runs shell commands must not read or rewrite its own
+      # deployment.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/opt/data
     expose:
       # The dashboard. 8642 (the OpenAI-compatible gateway API) is deliberately
       # left unexposed: it is a second credentialled entry point to the same
@@ -195,7 +198,7 @@ x-casaos:
 
         **What it can reach**
 
-        The agent runs shell commands and reads and writes files as part of doing its job. It is confined to its own folder, `/DATA/AppData/hermes` — your documents and media are not mounted into it.
+        The agent runs shell commands and reads and writes files as part of doing its job. It is confined to its own folder, `/DATA/AppData/hermes/data` — your documents and media are not mounted into it.
 
         **Disk**
 
@@ -213,7 +216,7 @@ x-casaos:
 
         **Ce à quoi il a accès**
 
-        L'agent exécute des commandes shell et lit et écrit des fichiers, c'est son mode de fonctionnement. Il est confiné à son propre dossier, `/DATA/AppData/hermes` — vos documents et vos médias n'y sont pas montés.
+        L'agent exécute des commandes shell et lit et écrit des fichiers, c'est son mode de fonctionnement. Il est confiné à son propre dossier, `/DATA/AppData/hermes/data` — vos documents et vos médias n'y sont pas montés.
 
         **Disque**
 
@@ -231,7 +234,7 @@ x-casaos:
 
         **A qué tiene acceso**
 
-        El agente ejecuta comandos de shell y lee y escribe archivos; así es como trabaja. Está confinado a su propia carpeta, `/DATA/AppData/hermes`: tus documentos y tu contenido multimedia no están montados dentro.
+        El agente ejecuta comandos de shell y lee y escribe archivos; así es como trabaja. Está confinado a su propia carpeta, `/DATA/AppData/hermes/data`: tus documentos y tu contenido multimedia no están montados dentro.
 
         **Disco**
 
@@ -249,7 +252,7 @@ x-casaos:
 
         **它能访问什么**
 
-        该代理会执行 shell 命令、读写文件，这正是它的工作方式。它被限制在自己的目录 `/DATA/AppData/hermes` 内 —— 你的文档与媒体并未挂载给它。
+        该代理会执行 shell 命令、读写文件，这正是它的工作方式。它被限制在自己的目录 `/DATA/AppData/hermes/data` 内 —— 你的文档与媒体并未挂载给它。
 
         **磁盘**
 
@@ -267,7 +270,7 @@ x-casaos:
 
         **접근 범위**
 
-        이 에이전트는 셸 명령을 실행하고 파일을 읽고 씁니다. 그것이 작동 방식입니다. 자신의 폴더 `/DATA/AppData/hermes` 안에 갇혀 있으며, 문서와 미디어는 마운트되지 않습니다.
+        이 에이전트는 셸 명령을 실행하고 파일을 읽고 씁니다. 그것이 작동 방식입니다. 자신의 폴더 `/DATA/AppData/hermes/data` 안에 갇혀 있으며, 문서와 미디어는 마운트되지 않습니다.
 
         **디스크**
 
@@ -278,6 +281,33 @@ x-casaos:
 x-compose-app:
   schema_version: 2
   version: "2026.9.14"
+  # 2: the agent's state moved from the app folder itself into its data/
+  # subfolder, so that the agent no longer sees Maison's compose and .env.
+  data_version: 2
+  migrations:
+    # Moves everything the agent wrote at the top of the app folder into data/,
+    # leaving Maison's own files where they are. The agent kept its API keys in
+    # the app's .env, which Maison shares; they are copied into data/.env
+    # without Maison's keys. Safe on converted data: nothing is moved over an
+    # existing entry, and data/.env is written only when absent.
+    - id: 2
+      name:
+        en_us: agent-state-into-data-folder
+      images: [alpine:3.20.3]
+      script: |
+        docker run --rm --user "$PUID:$PGID" -v "$APP_DIR:/app" alpine:3.20.3 sh -euc '
+          cd /app
+          for f in * .[!.]* ..?*; do
+            [ -e "$f" ] || [ -L "$f" ] || continue
+            case "$f" in
+              data|docker-compose*.yml|.env|.init|.data-version|.icon.png) continue ;;
+            esac
+            [ -e "data/$f" ] || mv "$f" "data/$f"
+          done'
+        if [ -f "$APP_DIR/.env" ] && [ ! -e "$APP_DIR/data/.env" ]; then
+          { grep -v -E '^(AppID|APP_[A-Za-z0-9_]*|ROUTE_[A-Za-z0-9_]*|DATA_ROOT|DATA_HOST_PATH|Default[A-Za-z]*|domain|PUID|PGID|TZ|HERMESAGENT_ADMIN_PASSWORD)=' "$APP_DIR/.env" || true; } |
+            docker run --rm -i --user "$PUID:$PGID" -v "$APP_DIR/data:/data" alpine:3.20.3 sh -c 'cat > /data/.env'
+        fi
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -393,7 +423,7 @@ x-compose-app:
 
       **What it can reach**
 
-      The agent runs shell commands and reads and writes files as part of doing its job. It is confined to its own folder, `/DATA/AppData/hermes` — your documents and media are not mounted into it.
+      The agent runs shell commands and reads and writes files as part of doing its job. It is confined to its own folder, `/DATA/AppData/hermes/data` — your documents and media are not mounted into it.
 
       **Disk**
 
@@ -411,7 +441,7 @@ x-compose-app:
 
       **Ce à quoi il a accès**
 
-      L'agent exécute des commandes shell et lit et écrit des fichiers, c'est son mode de fonctionnement. Il est confiné à son propre dossier, `/DATA/AppData/hermes` — vos documents et vos médias n'y sont pas montés.
+      L'agent exécute des commandes shell et lit et écrit des fichiers, c'est son mode de fonctionnement. Il est confiné à son propre dossier, `/DATA/AppData/hermes/data` — vos documents et vos médias n'y sont pas montés.
 
       **Disque**
 
@@ -429,7 +459,7 @@ x-compose-app:
 
       **A qué tiene acceso**
 
-      El agente ejecuta comandos de shell y lee y escribe archivos; así es como trabaja. Está confinado a su propia carpeta, `/DATA/AppData/hermes`: tus documentos y tu contenido multimedia no están montados dentro.
+      El agente ejecuta comandos de shell y lee y escribe archivos; así es como trabaja. Está confinado a su propia carpeta, `/DATA/AppData/hermes/data`: tus documentos y tu contenido multimedia no están montados dentro.
 
       **Disco**
 
@@ -447,7 +477,7 @@ x-compose-app:
 
       **它能访问什么**
 
-      该代理会执行 shell 命令、读写文件，这正是它的工作方式。它被限制在自己的目录 `/DATA/AppData/hermes` 内 —— 你的文档与媒体并未挂载给它。
+      该代理会执行 shell 命令、读写文件，这正是它的工作方式。它被限制在自己的目录 `/DATA/AppData/hermes/data` 内 —— 你的文档与媒体并未挂载给它。
 
       **磁盘**
 
@@ -465,7 +495,7 @@ x-compose-app:
 
       **접근 범위**
 
-      이 에이전트는 셸 명령을 실행하고 파일을 읽고 씁니다. 그것이 작동 방식입니다. 자신의 폴더 `/DATA/AppData/hermes` 안에 갇혀 있으며, 문서와 미디어는 마운트되지 않습니다.
+      이 에이전트는 셸 명령을 실행하고 파일을 읽고 씁니다. 그것이 작동 방식입니다. 자신의 폴더 `/DATA/AppData/hermes/data` 안에 갇혀 있으며, 문서와 미디어는 마운트되지 않습니다.
 
       **디스크**
 
@@ -497,6 +527,9 @@ x-compose-app:
         ko_kr: 먼저 서버 계정으로 로그인하세요. 이 계정은 통합 로그인을 쓸 수 없을 때를 위한 대체 수단입니다.
   folders:
     - path: /DATA/AppData/$AppID
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/data
       user: $PUID
       group: $PGID
   steps:
