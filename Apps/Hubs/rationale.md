@@ -67,7 +67,7 @@ Forcing these images to run unprivileged would require maintaining a downstream 
 - **No `ports:` on the user-facing services.** Only `dialog` exposes host ports (UDP/TCP 40000-40050), required by the Mediasoup SFU for WebRTC media. Everything else is reachable solely via the internal `hubs-net` network and the `pcs` network through Caddy reverse-proxy labels.
 - **Caddy gateway termination.** All HTTP/HTTPS traffic is terminated by the PCS's `mesh-router-caddy`, not the Hubs containers themselves. Public Caddy labels point at internal `expose:` ports on the `pcs` network, so direct host-port exposure is limited to the SFU media range.
 - **Per-service `cpu_shares`** prevent a runaway service (e.g. compromised `nearspark` thumbnail proxy) from starving the host.
-- **Bootstrap secrets are mode `0600`**, owned by `PUID:PGID`. The compose `.env`, `perms.key.pem`, and `perms.pub.pem` are not world-readable.
+- **Internal secrets are generated per app** under `x-compose-app.secrets` and kept in the app's `.env` (mode `0600`). The RSA permissions keypair (`perms.key.pem`, mode `0600`, and `perms.pub.pem`) is written by the `perms-keypair` step running as `PUID:PGID`.
 - **Postgres data dir is owned by uid 70** (the in-image postgres user), declared as `x-compose-app.folders` → `/DATA/AppData/hubs/pgdata` with `user: 70`, `group: 70`, `recursive: true`. Maison applies it before images are pulled and before every `up`, so a stray framework-level chown can't relock the cluster directory and crashloop the database.
 
 ## Alternatives considered and rejected
@@ -78,7 +78,6 @@ Forcing these images to run unprivileged would require maintaining a downstream 
 
 ## Data protection
 
-- All persistent state lives under `/DATA/AppData/hubs/` and survives uninstall/reinstall. The `bootstrap` step (`run: once`) runs `hubs-seed bootstrap`, which is **idempotent** — on re-run it preserves existing secrets in `secrets/.env` (DB password, NODE_COOKIE, GUARDIAN_KEY, PHX_KEY, DASHBOARD_ACCESS_KEY, POSTGREST_PASSWORD, PERMS_KEY) and reuses the existing RSA keypair. Regenerating the keypair would invalidate every minted Guardian admin token.
-- Framework-passthrough env vars (`APP_DOMAIN`, `APP_PUBLIC_IP_DASH`, `APP_PUBLIC_IPV4`, `APP_EMAIL`, `PUID`, `PGID`) **are** refreshed on every install — that is intentional, so a redeploy fixes drifted Caddy labels (the original outage's root cause).
-- The compose's `.env` file is mode `0600`. The RSA private key (`perms.key.pem`) is mode `0600`. Both are owned by `PUID:PGID`.
+- All persistent state lives under `/DATA/AppData/hubs/` and survives uninstall/reinstall. The internal credentials (DB password, NODE_COOKIE, GUARDIAN_KEY, PHX_KEY, DASHBOARD_ACCESS_KEY, POSTGREST_PASSWORD) are `x-compose-app.secrets`, generated once and never regenerated; an install made by the former `hubs-seed bootstrap` step keeps the values it already holds under the same names. The `perms-keypair` step reuses an existing RSA keypair — regenerating it would invalidate every minted permissions token.
+- The app's `.env` file is mode `0600`. The RSA private key (`perms.key.pem`) is mode `0600`, owned by `PUID:PGID`.
 - No user-owned content (Documents/Downloads/Media/Gallery) is touched by any Hubs container; the blast radius of a root container escape is bounded to `/DATA/AppData/hubs/`.

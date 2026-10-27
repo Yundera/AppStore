@@ -1,0 +1,197 @@
+[peerage]
+dns_name = "ret.<POD_NS>.svc.cluster.local"
+app_name = "ret"
+
+[ret."Elixir.Ret"]
+pool = "hubs"
+
+[ret."Elixir.RetWeb.Plugs.DashboardHeaderAuthorization"]
+dashboard_access_key = "<DASHBOARD_ACCESS_KEY>"
+
+[ret."Elixir.Ret.DiscordClient"]
+client_id = ""
+client_secret = ""
+bot_token = ""
+
+[ret."Elixir.RetWeb.Endpoint".https]
+port = 4000
+certfile = "/ret/cert.pem"
+cacertfile = "/ret/cacert.pem"
+keyfile = "/ret/key.pem"
+
+[ret."Elixir.RetWeb.Endpoint"]
+allowed_origins = "*"
+secret_key_base = "<PHX_KEY>"
+allow_crawlers = true
+
+[ret."Elixir.RetWeb.Endpoint".secondary_url]
+
+[ret."Elixir.RetWeb.Endpoint".cors_proxy_url]
+host = "<RET_HOST>"
+port = 443
+
+[ret."Elixir.RetWeb.Endpoint".imgproxy_url]
+host = "nearspark"
+port = 5000
+scheme = "http"
+
+[ret."Elixir.RetWeb.Endpoint".assets_url]
+host = "<ASSETS_HOST>"
+port = 443
+
+[ret."Elixir.RetWeb.Endpoint".link_url]
+host = "<LINK_HOST>"
+port = 443
+
+[ret."Elixir.RetWeb.Endpoint".url]
+host = "<RET_HOST>"
+port = 443
+
+[ret."Elixir.RetWeb.Endpoint".static_url]
+host = "<RET_HOST>"
+
+[ret."Elixir.Ret.Repo"]
+username = "<DB_USER>"
+password = "<DB_PASS>"
+database = "<DB_NAME>"
+hostname = "<DB_HOST>"
+template = "template0"
+pool_size = 10
+port = 5432
+
+[ret."Elixir.Ret.SessionLockRepo"]
+username = "<DB_USER>"
+password = "<DB_PASS>"
+database = "<DB_NAME>"
+hostname = "<DB_HOST>"
+template = "template0"
+port = 5432
+
+[ret."Elixir.Ret.Locking".session_lock_db]
+username = "<DB_USER>"
+password = "<DB_PASS>"
+database = "<DB_NAME>"
+hostname = "<DB_HOST>"
+port = 5432
+
+[ret."Elixir.Ret.Habitat"]
+ip = "127.0.0.1"
+http_port = 9631
+
+[ret."Elixir.Ret.JanusLoadStatus"]
+default_janus_host = "<DIALOG_HOST>"
+janus_service_name = ""
+janus_admin_secret = ""
+janus_admin_port = 7000
+janus_port = 443
+
+[ret."Elixir.Ret.Guardian"]
+secret_key = "<GUARDIAN_KEY>"
+issuer = "<RET_HOST>"
+
+[ret."Elixir.Ret.PermsToken"]
+perms_key = "<PERMS_KEY>"
+
+[ret."Elixir.Ret.OAuthToken"]
+oauth_token_key = ""
+
+[ret]
+bot_access_key = ""
+
+[ret."Elixir.Ret.MediaResolver"]
+ytdl_host = ""
+photomnemonic_endpoint = "http://photomnemonic:5000"
+sketchfab_api_key = ""
+tenor_api_key = ""
+
+[ret."Elixir.Ret.PageOriginWarmer"]
+hubs_page_origin = "https://hubs-client:8080/hubs/pages"
+spoke_page_origin = "https://spoke:8080/spoke/pages"
+admin_page_origin = "https://hubs-client:8080/hubs/pages"
+insecure_ssl = true
+
+[ret."Elixir.Ret.HttpUtils"]
+insecure_ssl = true
+
+[ret."Elixir.Ret.Storage"]
+storage_path = "/storage"
+ttl = 172800
+host = "https://<RET_HOST>"
+quota_gb = "100"
+
+[ret."Elixir.RetWeb.Email"]
+from = "noreply@<RET_HOST>"
+
+[ret."Elixir.Ret.Mailer"]
+relay = "<MAILER_RELAY>"
+port = "<MAILER_PORT>"
+username = ""
+password = ""
+server = ""
+tls = "<MAILER_TLS>"
+auth = "never"
+
+[ret."Elixir.Ret.Support"]
+slack_webhook_url = ""
+
+[ret."Elixir.RetWeb.Plugs.AddCSP"]
+child_src = ""
+connect_src = "<RET_HOST> <ASSETS_HOST> <SPOKE_HOST> <DIALOG_HOST> wss://<DIALOG_HOST>"
+font_src = "<SPOKE_HOST>"
+form_action = ""
+frame_src = ""
+img_src = "<RET_HOST> <ASSETS_HOST> <SPOKE_HOST> <NEARSPARK_HOST>"
+manifest_src = ""
+media_src = "<RET_HOST> <ASSETS_HOST> <SPOKE_HOST>"
+script_src = "<SPOKE_HOST> 'sha256-HdoAyVHHhir7+8DfZLbxtfYc9gLaWgaL6GwPs6mic0k=' 'sha256-1OX1cqGDXGZOzQijoLpHf88OwS4EEX61lCMqICZfrGQ=' 'sha256-R+8PnBsB2H1En6tmpYadztHDOHsp2tWRUjkYhEnP4/w='"
+style_src = "<SPOKE_HOST>"
+worker_src = "<SPOKE_HOST>"
+
+[ret."Ret.Repo.Migrations.AdminSchemaInit"]
+postgrest_password = "<POSTGREST_PASSWORD>"
+
+[ret."Elixir.RetWeb.Plugs.PostgrestProxy"]
+hostname = "postgrest"
+
+[ret."Elixir.Ret.StatsJob"]
+
+[ret."Elixir.RetWeb.HealthController"]
+
+[ret."Elixir.RetWeb.PageController"]
+skip_cache = false
+extra_avatar_headers = ""
+extra_index_headers = ""
+extra_room_headers = ""
+extra_scene_headers = ""
+extra_avatar_html = ""
+extra_index_html = ""
+extra_room_html = ""
+extra_scene_html = ""
+extra_avatar_script = ""
+extra_index_script = ""
+extra_room_script = ""
+extra_scene_script = ""
+
+[ret."Elixir.Ret.Account"]
+admin_email = "<APP_EMAIL>"
+
+[ret."Elixir.Ret.Coturn"]
+realm = "turkey"
+public_tls_ports = "5349"
+
+[web_push_encryption.vapid_details]
+subject = ""
+public_key = ""
+private_key = ""
+
+[sentry]
+dsn = ""
+
+[run]
+hostname_dns_suffix = "turkey"
+
+[hackney]
+max_connections = 250
+
+[ret."Elixir.Ret.Meta"]
+phx_host = "<RET_HOST>"
