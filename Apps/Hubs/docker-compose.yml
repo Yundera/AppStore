@@ -50,9 +50,9 @@ services:
         limits:
           memory: 512M
     environment:
-      POSTGRES_USER: $POSTGRES_USER
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
-      POSTGRES_DB: $POSTGRES_DB
+      POSTGRES_DB: ${POSTGRES_DB:-ret_production}
       PUID: $PUID
       PGID: $PGID
       TZ: UTC
@@ -98,9 +98,9 @@ services:
       turkeyCfg_MAILER_RELAY: "smtp"
       turkeyCfg_MAILER_PORT: "587"
       turkeyCfg_MAILER_TLS: "never"
-      turkeyCfg_DB_USER: $turkeyCfg_DB_USER
-      turkeyCfg_DB_PASS: $turkeyCfg_DB_PASS
-      turkeyCfg_DB_NAME: $turkeyCfg_DB_NAME
+      turkeyCfg_DB_USER: ${POSTGRES_USER:-postgres}
+      turkeyCfg_DB_PASS: $POSTGRES_PASSWORD
+      turkeyCfg_DB_NAME: ${POSTGRES_DB:-ret_production}
       turkeyCfg_NODE_COOKIE: $turkeyCfg_NODE_COOKIE
       turkeyCfg_GUARDIAN_KEY: $turkeyCfg_GUARDIAN_KEY
       turkeyCfg_PHX_KEY: $turkeyCfg_PHX_KEY
@@ -135,7 +135,7 @@ services:
         limits:
           memory: 128M
     environment:
-      PGRST_DB_URI: $PGRST_DB_URI
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ret_production}
       PGRST_JWT_SECRET: $PGRST_JWT_SECRET
       PGRST_LOG_LEVEL: info
       PGRST_DB_SCHEMA: ret0_admin
@@ -441,9 +441,9 @@ x-compose-app:
   # on a cluster already at 17.
   data_version: 2
   migrations:
-    # POSTGRES_USER / POSTGRES_DB are hubs-seed's (merged into .env by bootstrap;
-    # the defaults are its own). The -alpine variant because postgres:14-alpine
-    # wrote the cluster (musl collation). As root, as the service runs: it chowns
+    # POSTGRES_USER / POSTGRES_DB are in .env on an install made by the former
+    # hubs-seed bootstrap step; the defaults are the values it wrote. The -alpine
+    # variant because postgres:14-alpine wrote the cluster (musl collation). As root, as the service runs: it chowns
     # for the upgrade and restores the original (uid 70) ownership afterwards.
     # PostgREST 8 was checked against 17.11: it connects, loads its schema cache and
     # serves the ret0_admin views and RPCs.
@@ -456,41 +456,64 @@ x-compose-app:
           -e POSTGRES_USER="${POSTGRES_USER:-postgres}" -e POSTGRES_DB="${POSTGRES_DB:-ret_production}" \
           -v "$APP_DIR/pgdata:/var/lib/postgresql/data" \
           pgautoupgrade/pgautoupgrade:17.11-alpine
-  # Both halves of the seeding run hubs-seed's own image. bootstrap is idempotent:
-  # it reuses an existing keypair and preserves every secret already in
-  # secrets/.env, so a reinstall keeps the credentials the existing pgdata was
-  # initialised with.
+  # Every internal credential is generated here, once, and kept in .env. The
+  # names and sizes are the ones the former hubs-seed bootstrap step minted, so
+  # an installed box keeps the values its pgdata was initialised with: a key the
+  # .env already holds is reused, never regenerated.
+  secrets:
+    POSTGRES_PASSWORD: hex:24
+    turkeyCfg_NODE_COOKIE: hex:32
+    turkeyCfg_GUARDIAN_KEY: hex:48
+    turkeyCfg_PHX_KEY: hex:48
+    turkeyCfg_DASHBOARD_ACCESS_KEY: hex:24
+    turkeyCfg_POSTGREST_PASSWORD: hex:24
+  # reticulum's config template: hubs-seed 2.0.0's templates/config.toml.template,
+  # with one change. Its CSP script_src adds the hashes of the Google Analytics
+  # loader inline in the hubs-client stable-3111 pages; reticulum's built-in list
+  # holds only older builds' hashes, so the browser refused the script and logged an
+  # error on every page. `always` so a template change in the store reaches
+  # installed apps, as the former bootstrap step's rewrite on every run did.
+  files:
+    - path: /DATA/AppData/hubs/config.toml.template
+      from: config.toml.template
+      ensure: always
   steps:
-    - name: bootstrap
-      at: setup
-      run: once
-      script: |
-        docker run --rm -v "$APP_DIR:/data/hubs" -v "$APP_DIR/secrets:/data/compose" \
-          -e APP_DOMAIN -e APP_PUBLIC_IP_DASH -e APP_PUBLIC_IPV4 -e APP_EMAIL -e PUID -e PGID \
-          ghcr.io/worph/hubs-seed:2.0.0 bootstrap
-    # The merge: bootstrap writes hubs-seed's generated credentials to secrets/.env,
-    # and they have to reach the app's own .env — the only env file the platform
-    # passes to `docker compose`. The key set is whatever hubs-seed decided to
-    # generate, so nobody can name them in `variables:`.
-    #
-    # $MAISON_ENV only ever adds a key the app's .env does not have yet: Maison has
-    # already written APP_DOMAIN, APP_NET, PUID/PGID and the rest into that file, and
-    # the framework passthroughs hubs-seed re-emits must not shadow them. `always`,
-    # because that makes it free to repeat and lets a key a newer hubs-seed adds reach
-    # existing installs.
-    - name: merge-credentials
+    # Reticulum's permissions keypair: RSA, which no `secrets` generator produces.
+    # The private key signs room permission tokens and is reused when present -
+    # regenerating it would invalidate every token already minted. Run as the app's
+    # user, so the two files it writes are the app's. Prints the two values derived
+    # from the key, in the exact shape the former bootstrap step wrote them; $MAISON_ENV
+    # adds a key only when .env lacks it, so an installed box keeps its own.
+    - name: perms-keypair
       at: setup
       run: always
+      images: [ghcr.io/worph/hubs-seed:2.0.0]
       script: |
-        grep -v -e '^#' -e '^$' "$APP_DIR/secrets/.env" >> "$MAISON_ENV"
+        docker run --rm -i --network none --user "$PUID:$PGID" -v "$APP_DIR:/out" \
+          --entrypoint node ghcr.io/worph/hubs-seed:2.0.0 - >> "$MAISON_ENV" <<'JS'
+        const fs = require("node:fs");
+        const crypto = require("node:crypto");
+        const privPath = "/out/perms.key.pem", pubPath = "/out/perms.pub.pem";
+        if (!(fs.existsSync(privPath) && fs.existsSync(pubPath))) {
+          const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
+          fs.writeFileSync(privPath, privateKey.export({ format: "pem", type: "pkcs1" }), { mode: 0o600 });
+          fs.writeFileSync(pubPath, publicKey.export({ format: "pem", type: "spki" }));
+        }
+        const priv = fs.readFileSync(privPath, "utf8");
+        const jwk = crypto.createPublicKey(priv).export({ format: "jwk" });
+        process.stdout.write("PGRST_JWT_SECRET=" + JSON.stringify({ alg: "RS256", kty: jwk.kty, n: jwk.n, e: jwk.e }) + "\n");
+        process.stdout.write("turkeyCfg_PERMS_KEY=" + priv.split("\n").join("\\\\n") + "\n");
+        JS
     # Runs after the stack is up, on the app's own network, because it talks to
-    # reticulum.
+    # reticulum: mints an admin token with the dashboard key and uploads the default
+    # scene and branding.
     - name: seed
       at: started
       run: once
       script: |
-        docker run --rm --network hubs-net -v "$APP_DIR/secrets/.env:/secrets.env:ro" \
-          -e SECRETS_ENV_FILE=/secrets.env \
+        DASHBOARD_ACCESS_KEY="$turkeyCfg_DASHBOARD_ACCESS_KEY" \
+        docker run --rm --network hubs-net \
+          -e DASHBOARD_ACCESS_KEY \
           -e RET_INTERNAL_URL=https://hubs-reticulum:4000 \
           -e RET_PUBLIC_URL="${APP_URL:-https://hubs-${APP_DOMAIN}}" \
           -e APP_EMAIL \
@@ -501,12 +524,6 @@ x-compose-app:
     - path: /DATA/AppData/hubs
       user: $PUID
       group: $PGID
-    # hubs-seed's generated .env: the database password and the Guardian /
-    # Phoenix / PostgREST keys.
-    - path: /DATA/AppData/hubs/secrets
-      user: $PUID
-      group: $PGID
-      mode: "0700"
     # postgres:17.11-alpine drops to uid 70 through gosu, so the cluster directory
     # has to be its own. recursive because a chown of /DATA/AppData can re-lock
     # the tree to PUID between boots, which crash-loops the database.
