@@ -140,7 +140,7 @@ services:
       ODYSSEUS_ADMIN_USER: admin
       ODYSSEUS_ADMIN_PASSWORD: ${ODYSSEUS_ADMIN_PASSWORD}
       # comma-separated exact origins - all three published hostnames must be listed
-      ALLOWED_ORIGINS: ${APP_URLS:-https://odysseus-${APP_DOMAIN},https://odysseus-${APP_PUBLIC_IP_DASH}.nip.io,https://odysseus-${APP_PUBLIC_IP_DASH}.sslip.io}
+      ALLOWED_ORIGINS: ${APP_URLS:-https://odysseus-${APP_DOMAIN},https://odysseus-${APP_PUBLIC_IP_DASH}.sslip.io}
       # --- model backend ---
       # no model ships with the app; set a provider key or a reachable model
       # server URL in Settings on first use (see tips.before_install)

@@ -138,7 +138,7 @@ x-casaos:
         To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
 
         For better performance, open Guacamole on one of its direct addresses (not
-        through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.nip.io,https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
+        through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
       zh_cn: |
         默认账号
 
@@ -199,7 +199,7 @@ x-compose-app:
       To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
 
       For better performance, open Guacamole on one of its direct addresses (not
-      through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.nip.io,https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
+      through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
     zh_cn: |
       默认账号
 

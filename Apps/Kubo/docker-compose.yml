@@ -95,7 +95,7 @@ services:
       # of being OOM-killed at the edge.
       GOMEMLIMIT: 768MiB
       # Consumed by seed/init.d/01-configure-node.sh on every start.
-      IPFS_ALLOWED_ORIGINS: "${APP_URLS:-https://kubo-${APP_DOMAIN},https://kubo-${APP_PUBLIC_IP_DASH}.nip.io,https://kubo-${APP_PUBLIC_IP_DASH}.sslip.io}"
+      IPFS_ALLOWED_ORIGINS: "${APP_URLS:-https://kubo-${APP_DOMAIN},https://kubo-${APP_PUBLIC_IP_DASH}.sslip.io}"
       # Set to "false" to let the public gateway hostname fetch any CID from the
       # network on a visitor's behalf, turning this node into an open gateway for
       # anyone who finds the address. Left true, it serves only what this node holds.
