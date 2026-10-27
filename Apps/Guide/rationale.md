@@ -3,7 +3,7 @@
 ## What deviation / exception is being requested
 Guide requests **two** documented exceptions:
 
-1. **No authentication / no AppShield sidecar.** No AppShield/OIDC, no Basic Auth, no built-in login. All routes on `guide-${APP_DOMAIN}` (and the `nip.io` / `sslip.io` aliases) are publicly reachable — because the container is a read-only tutorial that exposes no actions to gate.
+1. **No authentication / no AppShield sidecar.** No AppShield/OIDC, no Basic Auth, no built-in login. All routes on `guide-${APP_DOMAIN}` (and the `ip.<zone>` / `sslip.io` aliases) are publicly reachable — because the container is a read-only tutorial that exposes no actions to gate.
 2. **Runs as `user: 0:0` (root).** The single service is `ghcr.io/yundera/guideapp:1.0.3` — an nginx image built `FROM nginx:1.27-alpine` with the static site and catalogue baked in — bound to port 80, which requires root to bind the privileged port.
 
 ## Why it is necessary

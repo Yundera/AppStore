@@ -24,8 +24,8 @@ server:
     - levels: "info|warning|error"
 
   # externalUrl is deliberately left unset. Quantum then builds share links from
-  # the Host of the request, so a link works on whichever of the app's three
-  # routes (<app>-<domain>, nip.io, sslip.io) the owner happened to be using.
+  # the Host of the request, so a link works on whichever of the app's
+  # routes (<app>-<domain>, ip.<zone>, sslip.io) the owner happened to be using.
   # Setting it would pin every share link to one of them.
 
   sources:

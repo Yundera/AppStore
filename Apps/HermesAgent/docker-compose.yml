@@ -41,8 +41,8 @@ services:
       HERMES_DASHBOARD_PORT: "9119"
       # Used verbatim as the OAuth redirect_uri base, in preference to
       # reconstructing it from proxy headers. Pinning it to the canonical
-      # hostname means a login started on the nip.io or sslip.io alias
-      # finishes on this one; all three are registered with the identity
+      # hostname means a login started on an ip.<zone> or sslip.io alias
+      # finishes on this one; every route is registered with the identity
       # provider by the register-oidc-client step below, so any entry point works.
       HERMES_DASHBOARD_PUBLIC_URL: ${APP_URL:-https://hermes-${APP_DOMAIN}}
       # Fallback sign-in, second to the server account. The dashboard's auth

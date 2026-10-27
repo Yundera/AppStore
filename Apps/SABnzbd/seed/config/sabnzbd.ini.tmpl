@@ -43,7 +43,7 @@ inet_exposure = 4
 #     integrations 403 while the browser works fine.
 # Rendered once, here; the `refresh-host-whitelist` init step in the compose file
 # keeps it current if the deployment's domain later changes.
-host_whitelist = sabnzbd-backend, ${APP_HOSTS:-sabnzbd-${APP_DOMAIN},sabnzbd-${APP_PUBLIC_IP_DASH}.nip.io,sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io}
+host_whitelist = sabnzbd-backend, ${APP_HOSTS:-sabnzbd-${APP_DOMAIN},sabnzbd-${APP_PUBLIC_IP_DASH}.sslip.io}
 
 # Match the container's mounts. Stock puts both under /config, which would bury
 # finished downloads inside AppData instead of the shared Downloads folder.

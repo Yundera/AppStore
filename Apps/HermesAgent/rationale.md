@@ -53,7 +53,7 @@ restarts it so the dashboard registers the provider:
 ```
 POST http://auth-registrar:9092/register {"callback_path":"/auth/callback"}
 → {"client_id":"hermes","client_secret":"…","issuer_url":"https://auth-<user>.<server>",
-   "redirect_uris":["https://hermes-<user>.<server>/auth/callback", …nip.io, …sslip.io]}
+   "redirect_uris":["https://hermes-<user>.<server>/auth/callback", …ip.<zone>, …sslip.io]}
 ```
 
 Three properties make this safe to run from a step:

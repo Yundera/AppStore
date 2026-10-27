@@ -717,7 +717,7 @@ x-compose-app:
       script: |
         compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || exit 0
         i=2
-        for host in $(printf '%s' "${APP_HOSTS:-nextcloud-$APP_DOMAIN,nextcloud-$APP_PUBLIC_IP_DASH.nip.io,nextcloud-$APP_PUBLIC_IP_DASH.sslip.io}" | tr ',' ' '); do
+        for host in $(printf '%s' "${APP_HOSTS:-nextcloud-$APP_DOMAIN,nextcloud-$APP_PUBLIC_IP_DASH.sslip.io}" | tr ',' ' '); do
           compose exec nextcloud php occ config:system:set trusted_domains "$i" --value "$host" >/dev/null
           i=$((i + 1))
         done

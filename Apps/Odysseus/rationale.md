@@ -142,7 +142,8 @@ original `Host`, so the origins the app sees are unchanged.
   at all. `ODYSSEUS_ADMIN_PASSWORD` is a per-app secret generated at 24 characters
   (installs that predate it keep the 12-character box-wide password they were set up with).
 - `ALLOWED_ORIGINS` is a comma-separated list of *exact* origins with no wildcard
-  support, so all three published hostnames are listed. Omitting the `.nip.io`
+  support, so every published hostname must be listed (Maison passes them as
+  `APP_URLS`). Omitting the `ip.<zone>`
   and `.sslip.io` entries breaks login on those URLs.
 
 ## `user: "0:0"` on the main service
