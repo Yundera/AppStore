@@ -383,9 +383,12 @@ With an AppShield gate, the router goes where its job is:
   - the backend is no route's service and publishes no HTTP port;
   - the sidecar's `container_name` equals the compose `name`, and `hostname:` equals `container_name`;
   - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL` and
-    `REDIRECT_HOST_SUFFIXES` are set, the last as
-    `"${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"`
-    — the primary domain first, since the gate derives its OAuth issuer from it;
+    `REDIRECT_HOST_SUFFIXES` are set, the last as `"${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"` —
+    the primary domain only. The registrar decides every host the app is reached on; this
+    names the canonical one, which the gate uses as its OAuth issuer and its fallback login
+    host. Listing the platform's other zones (`nip.io`, `sslip.io`) is a guess that goes
+    stale: a gate older than 2.0.10 registers exactly that list, and one host the registrar
+    no longer allows fails the whole login;
   - the AppShield image is pinned;
   - no `AUTH_HASH`, `?hash=`, or `CREDENTIAL_VALIDATE_URL` appears;
   - a machine/API path is gated by `OAUTH_RESOURCE`, never opened by `ALLOWED_PATHS`.

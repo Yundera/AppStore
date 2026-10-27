@@ -16,7 +16,7 @@ services:
     environment:
       # Presence of OIDC_REGISTRAR_URL enables OIDC mode (self-registers via container_name).
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
       BACKEND_HOST: "tribler-backend"
       BACKEND_PORT: "8086"
       LISTEN_PORT: "80"

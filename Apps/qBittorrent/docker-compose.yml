@@ -35,7 +35,7 @@ services:
       LISTEN_PORT: "80"
       # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
       # "Add torrent file" POSTs the .torrent through the gate. A big multi-file
       # torrent is a few MB, and nginx's own default would cap the body at 1m and
       # answer 413, so the limit is raised here rather than left to the image.

@@ -41,7 +41,7 @@ services:
       # self-registers with the PCS auth-registrar and every human request is
       # sent through the built-in Authelia SSO.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
     depends_on:
       - prowlarr-backend
     cpu_shares: 50
