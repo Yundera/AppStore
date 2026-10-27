@@ -21,7 +21,7 @@ services:
             # to configure, and no static credentials (USER/PASSWORD would be ignored
             # in this mode anyway).
             OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-            REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+            REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
             # Stremio streams torrent content from /<40-hex-chars>/... paths where the
             # hash itself is the capability; external players and casting devices cannot
             # carry the SSO session cookie. Everything else stays behind the gate.

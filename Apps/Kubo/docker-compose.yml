@@ -33,7 +33,7 @@ services:
       LISTEN_PORT: "80"
       # Presence of OIDC_REGISTRAR_URL enables OIDC (Authelia SSO) mode.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
       # Adding a file is a POST of that whole file to /api/v0/add. Any cap here is a
       # cap on what the user can put in their own node, so there is none.
       CLIENT_MAX_BODY_SIZE: "0"

@@ -484,14 +484,14 @@ services:
   myapp-proxy:
     image: ghcr.io/yundera/appshield:3.2.0
     container_name: myapp        # = the compose name; the OIDC client id derives from it
-    hostname: myapp              # = container_name; redirect URIs are built from it
+    hostname: myapp              # = container_name; the registrar names the app from it
     restart: unless-stopped
     environment:
       BACKEND_HOST: "myapp-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
     expose:
       - 80
     depends_on:
@@ -540,7 +540,7 @@ x-casaos:
 | `BACKEND_HOST` / `BACKEND_PORT` | yes | The protected container's name and port. |
 | `LISTEN_PORT` | yes | The port AppShield listens on. Matches `expose` and the route's `upstream-port`. |
 | `OIDC_REGISTRAR_URL` | yes | `http://auth-registrar:9092`. Its presence enables SSO. |
-| `REDIRECT_HOST_SUFFIXES` | yes | Every domain the app is reached on, after `<name>-`: `${APP_HOST_SUFFIXES:-…}` as above, the primary domain first (the gate derives its OAuth issuer from it). |
+| `REDIRECT_HOST_SUFFIXES` | yes | The primary domain only, as above. The gate sends the registrar its callback path and adopts the hosts the registrar returns, so it does not need — and must not guess — the platform's other zones. This one names the canonical host: the OAuth issuer, and where a login from an unrecognised host is sent. |
 | `OAUTH_RESOURCE` | optional | Enables AppShield's OAuth 2.1 broker on exactly the path in the URL (e.g. `${APP_URL:-https://myapp-${APP_DOMAIN}}/mcp`). This is the machine/API path for MCP servers. |
 | `OAUTH_SCOPE` | optional | The scope the resource advertises (default `access`; MCP apps use `mcp`). |
 | `OAUTH_DATA_DIR` | optional | Set to `/data/oauth` and bind-mount `${DATA_ROOT:-/DATA}/AppData/<app>/oauth` there, so registered clients survive redeploys. |

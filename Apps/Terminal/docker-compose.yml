@@ -28,7 +28,7 @@ services:
       BACKEND_PORT: "7681"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
       SESSION_DURATION_HOURS: "720"
     # The gate's sessions. Without a mount they live in the container and every
     # recreate (an update, a self-check redeploy) logs the user out. Root above, so

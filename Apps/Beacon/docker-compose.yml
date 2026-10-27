@@ -74,7 +74,7 @@ services:
       BACKEND_PORT: "9300"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN},${APP_PUBLIC_IP_DASH}.nip.io,${APP_PUBLIC_IP_DASH}.sslip.io}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
       # OAuth 2.1 broker (opt-in). When OAUTH_RESOURCE is set, AppShield runs an
       # OAuth/OIDC authorization server fronting Dex so claude.ai (via DCR) and
       # clients like n8n (via a manual client) can reach this resource with Bearer
