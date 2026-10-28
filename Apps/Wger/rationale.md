@@ -30,7 +30,7 @@ Brute-force protection (`django-axes`, 10 failures then a 30-minute cool-off) is
 enabled, as upstream ships it.
 
 **2. `user: 0:0` on two services.**
-- `wger` (nginx): the master process writes `/var/run/nginx.pid` and `/var/cache/nginx`,
+- `wger-router` (nginx): the master process writes `/var/run/nginx.pid` and `/var/cache/nginx`,
   neither writable by an unprivileged uid in `nginx:alpine`; the workers drop to the
   `nginx` user by themselves. This is the same arrangement as `Apps/Nginx` and
   `Apps/Plex`'s front-end in this store.
@@ -79,7 +79,7 @@ slot resumes from where it stopped; deleting the slot is both lossier and needs
 
 ## Security mitigations in place
 
-- Only the nginx front-end is on the shared `pcs` network. The application, database,
+- Only the nginx front-end (`wger-router`) is on the shared `pcs` network. The application, database,
   cache and both celery processes are on an app-private bridge and are not addressable
   from any other app on the box.
 - No host port is published by any service.
