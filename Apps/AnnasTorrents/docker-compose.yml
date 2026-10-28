@@ -13,8 +13,8 @@ services:
   # mode. It self-registers as an OIDC client with the PCS auth-registrar on
   # first login and gates every request through the built-in Authelia SSO
   # before proxying to the backend. Only this service is publicly reachable
-  # (routed); the backend is not routed and lives on the internal
-  # pcs network.
+  # (routed); the backend is not routed and lives on the app's own
+  # internal network.
   annas-torrents-webui:
     image: ghcr.io/yundera/appshield:3.2.0
     container_name: annas-torrents-webui
@@ -36,7 +36,10 @@ services:
     depends_on:
       - annas-torrents-webui-backend
     networks:
+      # On `pcs` because the router must reach it, and on the app's own
+      # network because that is where its backend lives.
       - pcs
+      - annas-torrents-webui-internal
     deploy:
       resources:
         limits:
@@ -72,7 +75,9 @@ services:
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/annas-torrents-webui/data/:/data
     networks:
-      - pcs
+      # App-private: reached only by its AppShield sidecar, so it has no
+      # business on the shared network.
+      - annas-torrents-webui-internal
     cpu_shares: 50
     logging: *logging
     deploy:
@@ -91,6 +96,9 @@ networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
+  # App-private link between the sidecar and the backend.
+  annas-torrents-webui-internal:
+    driver: bridge
 
 x-casaos:
   architectures:
@@ -255,6 +263,9 @@ x-compose-app:
     - screenshot-1.png
   # Raw TCP/UDP must be dialled from the internet: hidden on a box behind NAT or the tunnel.
   requires: [public-ip]
+  # Sum of the service limits (~2.1G: the torrent backend and the gate) plus headroom.
+  resources:
+    recommended: { memory: 3G }
   architectures:
     - amd64
     - arm64
