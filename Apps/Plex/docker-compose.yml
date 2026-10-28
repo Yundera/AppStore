@@ -34,7 +34,7 @@ services:
       - pcs
 
   plex:
-    image: lscr.io/linuxserver/plex:1.43.0
+    image: lscr.io/linuxserver/plex:1.43.5
     container_name: plex
     restart: unless-stopped
     user: "0:0"
@@ -194,7 +194,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.43.0"
+  version: "1.43.5"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
