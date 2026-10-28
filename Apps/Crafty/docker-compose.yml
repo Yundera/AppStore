@@ -8,7 +8,7 @@ x-logging: &logging
 
 services:
   crafty:
-    image: registry.gitlab.com/crafty-controller/crafty-4:4.10.7
+    image: registry.gitlab.com/crafty-controller/crafty-4:4.11.0
     container_name: crafty
     hostname: crafty
     user: "0:0"                          # Crafty requires root; see rationale.md
@@ -44,7 +44,7 @@ services:
   # scheme kept. It also makes the self-signed HTTPS hop to 8443 itself, so the
   # route is plain HTTP.
   crafty-router:
-    image: nginx:1.28.0-alpine
+    image: nginx:1.31.8-alpine
     container_name: crafty-router
     restart: unless-stopped
     cpu_shares: 50
@@ -204,7 +204,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "4.10.7"
+  version: "4.11.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -319,7 +319,7 @@ x-compose-app:
         [ -e "$APP_DIR/config/credits.json" ] && exit 0
         docker run --rm -i --entrypoint sh --user "$PUID:$PGID" \
           -v "$APP_DIR/config:/out" -e CRAFTY_ADMIN_PASSWORD \
-          registry.gitlab.com/crafty-controller/crafty-4:4.10.7 -s <<'SH'
+          registry.gitlab.com/crafty-controller/crafty-4:4.11.0 -s <<'SH'
         set -e
         cp -r /crafty/app/config_original/. /out/
         printf '{"username":"admin","password":"%s!"}' "$CRAFTY_ADMIN_PASSWORD" > /out/default.json
