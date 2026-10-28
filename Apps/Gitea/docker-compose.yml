@@ -390,6 +390,9 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Sum of the service limits (~3G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 4G }
   architectures:
     - amd64
   tips:
