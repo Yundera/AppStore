@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   filebrowserquantum:
-    image: gtstef/filebrowser:1.5.5-stable
+    image: gtstef/filebrowser:1.5.8-stable
     container_name: filebrowserquantum
     user: $PUID:$PGID
     restart: unless-stopped
@@ -192,7 +192,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.5.5"
+  version: "1.5.8"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
