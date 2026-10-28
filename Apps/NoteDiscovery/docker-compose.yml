@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   notediscovery:
-    image: ghcr.io/gamosoft/notediscovery:0.19.2
+    image: ghcr.io/gamosoft/notediscovery:0.33.0
     container_name: notediscovery
     restart: unless-stopped
     user: "0:0"
@@ -224,7 +224,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.19.2"
+  version: "0.33.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
