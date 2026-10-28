@@ -69,7 +69,7 @@ services:
       retries: 5
 
   seafile:
-    image: seafileltd/seafile-mc:13.0.19
+    image: seafileltd/seafile-mc:13.0.28
     container_name: seafile
     restart: unless-stopped
     user: 0:0
@@ -141,7 +141,7 @@ services:
       retries: 5
 
   seafile-notification-server:
-    image: seafileltd/notification-server:13.0.10
+    image: seafileltd/notification-server:13.0.21
     container_name: seafile-notification-server
     restart: unless-stopped
     user: 0:0
@@ -183,7 +183,7 @@ services:
       retries: 5
 
   seafile-seadoc:
-    image: seafileltd/sdoc-server:2.0.9
+    image: seafileltd/sdoc-server:2.0.10
     container_name: seafile-seadoc
     hostname: seafile-seadoc
     restart: unless-stopped
@@ -224,7 +224,7 @@ services:
   # Caddy handle_path tree lives here instead. The platform only ever routes a
   # host to this container's port 80.
   seafile-router:
-    image: nginx:1.28.0-alpine
+    image: nginx:1.31.8-alpine
     container_name: seafile-router
     restart: unless-stopped
     cpu_shares: 50
@@ -367,7 +367,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "13.0.19"
+  version: "13.0.28"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -514,7 +514,7 @@ x-compose-app:
           echo "Seafile did not write seahub_settings.py within 25 minutes; WebDAV, SMTP and proxy settings were not applied" >&2
           exit 1
         fi
-        out=$(compose exec -e APP_DOMAIN="$APP_DOMAIN" seafile bash -s <<'SCRIPT'
+        out=$(compose exec -e APP_DOMAIN="$APP_DOMAIN" -e APP_URL seafile bash -s <<'SCRIPT'
         set -e
         CONF=/shared/seafile/conf
         S=$CONF/seahub_settings.py
