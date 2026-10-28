@@ -52,7 +52,7 @@ services:
           memory: 128M
 
   prowlarr-backend:
-    image: lscr.io/linuxserver/prowlarr:2.4.0
+    image: lscr.io/linuxserver/prowlarr:2.6.5
     container_name: prowlarr-backend
     restart: unless-stopped
     user: $PUID:$PGID
@@ -95,7 +95,7 @@ services:
   # with "tab crashed". 2G fits ~6-7 concurrent solves; idle it sits near 350 MB.
   # (Not /dev/shm: FlareSolverr already starts Chrome with --disable-dev-shm-usage.)
   prowlarr-flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
     container_name: prowlarr-flaresolverr
     hostname: prowlarr-flaresolverr
     # The image's own unprivileged `flaresolverr` user. No volumes, so PUID/PGID
@@ -147,7 +147,7 @@ x-casaos:
 
         🔗 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):
         - **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.
-        - **qBittorrent** (`qbittorrent:80`) — add it as a *Download Client* inside **Radarr/Sonarr** for automated grabs (a download client added in Prowlarr only powers Prowlarr's own manual searches and does not sync to apps).
+        - **qBittorrent** (`qbittorrent-backend:80`) — add it as a *Download Client* inside **Radarr/Sonarr** for automated grabs (a download client added in Prowlarr only powers Prowlarr's own manual searches and does not sync to apps).
         - **Jellyfin** — point it at `/DATA/Media` to stream everything Radarr/Sonarr import.
 
         ❓ Questions? Contact us at help@yundera.com
@@ -178,7 +178,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.4.0"
+  version: "2.6.5"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -205,11 +205,14 @@ x-compose-app:
   thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
+  # Sum of the service limits (~2.62G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 4G }
   architectures:
     - amd64
     - arm64
   tips:
-    en_us: "\U0001F50D **Prowlarr** is an indexer manager — it manages your trackers/indexers in one place and syncs them to Radarr, Sonarr and other *arr apps automatically.\n\n\U0001F4C2 Config lives in `/DATA/AppData/prowlarr/`.\n\n\U0001F510 **Protected by your server account (single sign-on).** Prowlarr sits\nbehind the PCS SSO gate, so your existing server login is the only\npassword you need — open the tile and you are already signed in. Every\nrequest from the internet passes through that gate first.\n\n\U0001F6E1️ **Cloudflare-protected indexers work out of the box.** FlareSolverr is\nbundled and already registered in Prowlarr (*Settings → Indexers*). It is\nused for every indexer carrying the `flaresolverr` tag — when an indexer's\ntest fails with a Cloudflare error, edit it and add that tag.\n\n\U0001F517 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):\n- **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.\n- **qBittorrent** (`qbittorrent:80`) — add it as a *Download Client* inside **Radarr/Sonarr** for automated grabs (a download client added in Prowlarr only powers Prowlarr's own manual searches and does not sync to apps).\n- **Jellyfin** — point it at `/DATA/Media` to stream everything Radarr/Sonarr import.\n\n❓ Questions? Contact us at help@yundera.com\n"
+    en_us: "\U0001F50D **Prowlarr** is an indexer manager — it manages your trackers/indexers in one place and syncs them to Radarr, Sonarr and other *arr apps automatically.\n\n\U0001F4C2 Config lives in `/DATA/AppData/prowlarr/`.\n\n\U0001F510 **Protected by your server account (single sign-on).** Prowlarr sits\nbehind the PCS SSO gate, so your existing server login is the only\npassword you need — open the tile and you are already signed in. Every\nrequest from the internet passes through that gate first.\n\n\U0001F6E1️ **Cloudflare-protected indexers work out of the box.** FlareSolverr is\nbundled and already registered in Prowlarr (*Settings → Indexers*). It is\nused for every indexer carrying the `flaresolverr` tag — when an indexer's\ntest fails with a Cloudflare error, edit it and add that tag.\n\n\U0001F517 **Wire up the full media stack** (each app is available standalone in the store, reachable by container name on the same server):\n- **Radarr** (`radarr:7878`) & **Sonarr** (`sonarr:8989`) — add them as *Applications* in Prowlarr so your indexers sync to them automatically.\n- **qBittorrent** (`qbittorrent-backend:80`) — add it as a *Download Client* inside **Radarr/Sonarr** for automated grabs (a download client added in Prowlarr only powers Prowlarr's own manual searches and does not sync to apps).\n- **Jellyfin** — point it at `/DATA/Media` to stream everything Radarr/Sonarr import.\n\n❓ Questions? Contact us at help@yundera.com\n"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` —
   # before the image is pulled, before any step, before the container starts.
   # Derived from the bind mounts in `volumes:` above; the container drops to
@@ -241,7 +244,7 @@ x-compose-app:
           -v "$APP_DIR/config:/prowlarr:ro" \
           -e PROWLARR_API=http://prowlarr-backend:9696 \
           -e SOLVER_URL=http://prowlarr-flaresolverr:8191/ \
-          curlimages/curl:8.14.1 -s <<'SH'
+          curlimages/curl:8.23.0 -s <<'SH'
         set -u
 
         # First boot runs migrations and only then writes <ApiKey> into
