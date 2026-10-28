@@ -12,9 +12,9 @@ services:
   # Kubo serves both on one port: the WebUI is a static bundle at /webui/ and it
   # drives the node through /api/v0/* on the same origin. That API is unauthenticated
   # and total -- add, pin, unpin, rewrite the config, shut the daemon down -- so the
-  # whole port sits behind AppShield in OIDC mode and never leaves the shared network
-  # on its own. The public read side is a separate hostname on the node's gateway
-  # port; see kubo-backend below and rationale.md.
+  # whole port sits behind AppShield in OIDC mode, and the node itself is on the app's
+  # own network only. The public read side is a separate hostname on the node's gateway
+  # port; see kubo-router below and rationale.md.
   kubo:
     image: ghcr.io/yundera/appshield:3.2.0
     container_name: kubo
@@ -42,7 +42,9 @@ services:
     depends_on:
       - kubo-backend
     networks:
+      # `pcs` for the proxy and the auth-registrar, kubo-internal for the node.
       - pcs
+      - kubo-internal
     cpu_shares: 80
     logging: *logging
     deploy:
@@ -51,10 +53,10 @@ services:
           memory: 128M
 
   # ── Kubo, the IPFS node ────────────────────────────────────────────────────
-  # Routed itself (the kubo-gateway route), which is the documented deviation in
-  # rationale.md: the route names 8080, the read-only gateway, and nothing else, so
-  # port 5001 -- the RPC API -- has no route on this hostname and stays reachable
-  # only through the gate above.
+  # No route and not on `pcs`: port 5001 -- the RPC API -- is reachable only through
+  # the gate above, and port 8080 -- the read-only gateway -- only through kubo-router
+  # below. Being off the shared network is what keeps the RPC API away from every
+  # other container on the box too, since it has no authentication of its own.
   kubo-backend:
     image: ipfs/kubo:v0.43.1
     container_name: kubo-backend
@@ -118,7 +120,7 @@ services:
       retries: 3
       start_period: 30s
     networks:
-      - pcs
+      - kubo-internal
     cpu_shares: 70
     logging: *logging
     deploy:
@@ -126,10 +128,72 @@ services:
         limits:
           memory: 1024M
 
+  # ── The public read side: the kubo-gateway route ──────────────────────────
+  # The route's service for the share-link hostname, so the node itself is no route's
+  # service. It proxies to the gateway port (8080) and to nothing else: port 5001 is
+  # not in its config, so the RPC API has no way out through this hostname.
+  kubo-router:
+    image: nginx:1.31.8-alpine
+    container_name: kubo-router
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    expose:
+      - 8080
+    configs:
+      - source: kubo-router
+        target: /etc/nginx/conf.d/default.conf
+    networks:
+      - pcs
+      - kubo-internal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/_router/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
+  # The gate and the router reach the node here. Named explicitly so the pin-webui
+  # step can join it. A plain bridge, not `internal: true`: the node dials peers out.
+  kubo-internal:
+    name: kubo-internal
+
+configs:
+  kubo-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      map $$http_x_forwarded_proto $$fwd_proto { default $$http_x_forwarded_proto; "" $$scheme; }
+
+      server {
+        listen 8080;
+        absolute_redirect off;
+
+        # Shared files can be large: stream them, no cap, no buffering.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$fwd_proto;
+        proxy_set_header X-Forwarded-Host $$http_host;
+
+        set $$gateway kubo-backend:8080;
+
+        location = /_router/health { access_log off; return 204; }
+        location / { proxy_pass http://$$gateway; }
+      }
 
 x-casaos:
   main: kubo
@@ -255,7 +319,7 @@ x-compose-app:
     # The public read side, on its own host on purpose: a path gateway serves every
     # shared file from the origin it is reached on, so an HTML page shared from the
     # WebUI's origin would run next to the RPC API with the user's session attached.
-    - { service: kubo-backend, name: kubo-gateway, upstream-port: 8080 }
+    - { service: kubo-router, name: kubo-gateway, upstream-port: 8080 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: kubo
@@ -385,12 +449,12 @@ x-compose-app:
     # its API, and Kubo's own 503 page explains the missing WebUI.
     #
     # No volumes: every call goes to the running daemon over --api, so this container
-    # needs no repo of its own.
+    # needs no repo of its own. On kubo-internal, the only network the node is on.
     - name: pin-webui
       at: started
       run: always
       script: |
-        docker run --rm -i --entrypoint sh --network "$APP_NET" ipfs/kubo:v0.43.1 -s <<'SH'
+        docker run --rm -i --entrypoint sh --network kubo-internal ipfs/kubo:v0.43.1 -s <<'SH'
         API=/dns/kubo-backend/tcp/5001
         # A started step runs when `compose up` returns -- the container has started, the
         # daemon has not necessarily finished opening its repo.

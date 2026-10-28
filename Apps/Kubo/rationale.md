@@ -4,7 +4,8 @@
 
 1. **One hostname is served without authentication.** `kubo-gateway-${APP_DOMAIN}` reaches
    the node's read-only gateway with no login in front of it.
-2. **Caddy labels sit on the backend container**, not only on the AppShield sidecar.
+2. **A second route that does not go through the AppShield sidecar**: `kubo-gateway` is
+   served by the app's own router, `kubo-router`, which proxies to the node's gateway port.
 3. **A host port is published**: `4001/tcp` and `4001/udp`, the libp2p swarm.
 
 ## Why it is necessary
@@ -26,10 +27,10 @@ script cross-origin to the API, where Kubo's own origin check rejects it: the AP
 anything else gets 403. Verified on Kubo 0.43.1 — allowlisted origin 200, every other
 origin 403.
 
-**2. The labels on `kubo-backend` are what publish that hostname.** They name
-`{{upstreams 8080}}` and nothing else. Caddy builds routes only from what a label names, so
-port 5001 — the RPC API and the WebUI — has no route on any hostname except through the
-AppShield sidecar. This is the shape `Apps/Radicle` already ships for `radicle-api`.
+**2. `kubo-router` is what publishes that hostname.** Its nginx config proxies to
+`kubo-backend:8080` and nothing else, so port 5001 — the RPC API and the WebUI — has no way
+out on any hostname except through the AppShield sidecar. The node itself is no route's
+service and sits on the app's own network (`kubo-internal`) only.
 
 **3. libp2p is not HTTP.** An HTTP reverse proxy cannot carry the swarm protocol, so a node
 that is to be dialable has to publish the port. It is shipped enabled rather than commented
@@ -56,8 +57,9 @@ reachable address — hence `needs-public-ip` rather than a hard requirement.
   no cookies, no session, no credentialed requests, and only blocks the owner pinned — so it
   lets a script read bytes it could already have fetched server-side. The public gateways
   send the same header. The API's allowlist on 5001 is unaffected and stays exact.
-- **The RPC API and WebUI are behind AppShield in OIDC mode** and carry no Caddy labels of
-  their own, so 5001 never leaves the shared network unauthenticated.
+- **The RPC API and WebUI are behind AppShield in OIDC mode**, and the node is not on the
+  shared `pcs` network, so 5001 is reachable neither from the internet nor from other apps'
+  containers without the gate.
 - **Origin allowlist is explicit**, re-applied from the deployment's own domains on every
   start, and covers those three hostnames only.
 - **Resource limits** on both services; `GOMEMLIMIT` under the container limit so the Go
@@ -78,7 +80,7 @@ files rendering at all and take the feature with it.
 
 - **Gate the gateway too.** Kills sharing outright — see above.
 - **Path split on one hostname** (`/ipfs/*` public, the rest gated, as `Apps/Vaultwarden`
-  does for `/admin`). Cheaper in labels, but it is exactly the same-origin arrangement the
+  does for `/admin`). One route fewer, but it is exactly the same-origin arrangement the
   separate hostname exists to avoid.
 - **`Gateway.DeserializedResponses: false`.** Closes the origin question by serving raw
   blocks with a download disposition — a shared photo arrives as
