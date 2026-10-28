@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:3.0.5
+    image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4
     container_name: paperlessngx
     restart: unless-stopped
     networks:
@@ -66,7 +66,7 @@ services:
     logging: *logging
 
   gotenberg:
-    image: docker.io/gotenberg/gotenberg:8.36.0
+    image: docker.io/gotenberg/gotenberg:8.38.1
     container_name: paperless-gotenberg
     restart: unless-stopped
     networks:
@@ -83,7 +83,7 @@ services:
     logging: *logging
 
   broker:
-    image: docker.io/valkey/valkey:9.1.1-alpine
+    image: docker.io/valkey/valkey:9.1.2-alpine
     container_name: paperless-broker
     restart: unless-stopped
     networks:
@@ -256,7 +256,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "3.0.5"
+  version: "3.3.4"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
