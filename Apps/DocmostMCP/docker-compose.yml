@@ -9,7 +9,7 @@ x-logging: &logging
 services:
   # Main MCP server — reachable at docmostmcp-backend:8000 on the pcs network
   docmostmcp-backend:
-    image: ghcr.io/yundera/docmost-mcp:1.1.0
+    image: ghcr.io/yundera/docmost-mcp:1.2.1
     container_name: docmostmcp-backend
     hostname: docmostmcp-backend
     user: "0:0"
@@ -259,7 +259,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.1.0"
+  version: "1.2.1"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
