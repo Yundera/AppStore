@@ -39,7 +39,7 @@ services:
       - pcs
       - netdata-internal
   netdata-backend:
-    image: netdata/netdata:v2.10.3
+    image: netdata/netdata:v2.12.2
     container_name: netdata-backend
     hostname: netdata-backend
     user: 0:0
@@ -197,7 +197,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.10.3"
+  version: "2.12.2"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
