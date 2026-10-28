@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   aiostreams:
-    image: ghcr.io/viren070/aiostreams:v2.31.1
+    image: ghcr.io/viren070/aiostreams:v2.37.0
     container_name: aiostreams
     restart: unless-stopped
     user: $PUID:$PGID
@@ -200,7 +200,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.31.1"
+  version: "2.37.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
