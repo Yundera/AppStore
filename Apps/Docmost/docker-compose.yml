@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   docmost-db:
-    image: postgres:16.13-alpine
+    image: postgres:16.15-alpine
     container_name: docmost-db
     restart: unless-stopped
     user: "0:0"
@@ -39,7 +39,7 @@ services:
     logging: *logging
 
   docmost-redis:
-    image: redis:7.2.13-alpine
+    image: redis:7.4.11-alpine
     container_name: docmost-redis
     restart: unless-stopped
     # Not root: the image's entrypoint would drop to its own `redis` user (uid 999)
@@ -64,7 +64,7 @@ services:
     logging: *logging
 
   docmost:
-    image: docmost/docmost:0.70.3
+    image: docmost/docmost:0.97.0
     container_name: docmost
     restart: unless-stopped
     user: "0:0"
@@ -305,7 +305,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.70.3"
+  version: "0.97.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -420,6 +420,9 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Sum of the service limits (~2.62G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 4G }
   architectures:
     - amd64
     - arm64
