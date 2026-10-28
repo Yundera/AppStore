@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   caddy:
-    image: caddy:2.9.1-alpine
+    image: caddy:2.11.7-alpine
     container_name: caddy
     user: $PUID:$PGID
     restart: unless-stopped
@@ -180,7 +180,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.9.1"
+  version: "2.11.7"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
