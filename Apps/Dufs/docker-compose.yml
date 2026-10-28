@@ -14,7 +14,7 @@ services:
       PUID: $PUID
       PGID: $PGID
       TZ: $TZ
-    image: sigoden/dufs:v0.46.0
+    image: sigoden/dufs:v0.47.0
     restart: unless-stopped
     command: [
       "/srv",
@@ -183,7 +183,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.46.0"
+  version: "0.47.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
