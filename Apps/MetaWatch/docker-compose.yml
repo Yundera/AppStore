@@ -78,7 +78,7 @@ services:
   # Not routed and not on `pcs`: reachable only through AppShield. Holds
   # no libp2p identity of its own — it brokers to the two peers below.
   metawatch-app:
-    image: ghcr.io/worph/meta-watch:1.0.34
+    image: ghcr.io/worph/meta-watch:1.0.85
     container_name: metawatch-app
     hostname: metawatch-app
     restart: unless-stopped
@@ -121,7 +121,7 @@ services:
   # Federated search, record metadata, poster/thumbnail recovery, and the
   # identity + User Data Layer chain (meta-watch → meta-search → meta-core).
   metawatch-search:
-    image: ghcr.io/worph/meta-search:1.1.0
+    image: ghcr.io/worph/meta-search:1.2.9
     container_name: metawatch-search
     hostname: metawatch-search
     restart: unless-stopped
@@ -185,7 +185,7 @@ services:
   # Fetches and serves bytes by CID over bitswap + a BitTorrent tier, and seeds
   # whatever it fetches.
   metawatch-share:
-    image: ghcr.io/worph/meta-share:1.0.26
+    image: ghcr.io/worph/meta-share:1.0.37
     container_name: metawatch-share
     hostname: metawatch-share
     restart: unless-stopped
@@ -251,7 +251,7 @@ services:
   # ratings) + ingested records. File watcher OFF: MetaWatch is a consumer, not
   # a library indexer, so this core mounts no media and needs no rclone.
   metawatch-core:
-    image: ghcr.io/worph/meta-core:1.0.12
+    image: ghcr.io/worph/meta-core:1.0.23
     container_name: metawatch-core
     hostname: metawatch-core
     restart: unless-stopped
@@ -412,7 +412,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.34"
+  version: "1.0.85"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
