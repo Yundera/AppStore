@@ -49,7 +49,7 @@ services:
     logging: *logging
 
   db:
-    image: mariadb:11.8.8
+    image: mariadb:11.8.9
     container_name: dolibarr-db
     restart: unless-stopped
     user: "0:0"
@@ -323,6 +323,9 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Sum of the service limits (~2G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 3G }
   architectures:
     - amd64
     - arm64
