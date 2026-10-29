@@ -72,7 +72,7 @@ services:
         environment:
             AUTO_SERVER_URL: "1"
             NO_CORS: "1"
-        image: tsaridas/stremio-docker:v1.2.12
+        image: tsaridas/stremio-docker:v1.3.14
         logging:
             driver: json-file
             options:
@@ -143,7 +143,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.2.12"
+  version: "1.3.14"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
