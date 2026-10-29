@@ -50,7 +50,7 @@ services:
           memory: 128M
 
   terminal-ttyd:
-    image: tsl0922/ttyd:1.7.7
+    image: tsl0922/ttyd:1.7.8
     container_name: terminaltty
     restart: unless-stopped
     user: "root"
@@ -217,7 +217,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.7.7"
+  version: "1.7.8"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
