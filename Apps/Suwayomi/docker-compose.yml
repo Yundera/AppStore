@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   suwayomi:
-    image: ghcr.io/suwayomi/tachidesk:v2.3.2333
+    image: ghcr.io/suwayomi/tachidesk:v2.4.2435
     user: $PUID:$PGID
     container_name: suwayomi
     restart: unless-stopped
@@ -48,7 +48,7 @@ services:
           memory: 1G
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:v3.4.6
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
     container_name: suwayomi-flaresolverr
     user: 0:0
     restart: unless-stopped
@@ -195,7 +195,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.3.2333"
+  version: "2.4.2435"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
