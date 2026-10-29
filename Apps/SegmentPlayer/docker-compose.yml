@@ -10,7 +10,7 @@ x-logging: &logging
 services:
 
   segmentplayer-backend:
-    image: ghcr.io/worph/segmentplayer:1.4.2
+    image: ghcr.io/worph/segmentplayer:1.5.0
     container_name: segmentplayer-backend
     deploy:
       resources:
@@ -155,7 +155,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.4.2"
+  version: "1.5.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -210,6 +210,9 @@ x-compose-app:
   thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
+  # Sum of the service limits (~2.12G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 3G }
   architectures:
     - amd64
     - arm64
