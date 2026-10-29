@@ -45,12 +45,10 @@ services:
         source: ${DATA_ROOT:-/DATA}/AppData/claude/config/.claude.json
         target: /home/claude/.claude.json
     networks:
+      # App-private only: ttyd (8080) has no login of its own, so only
+      # claude-router (behind its auth_request gate) is on the shared network.
+      # See rationale.md.
       claude-net: null
-      # On `pcs` so Beacon's UDP discovery (port 9099) can reach the responder when
-      # a box turns MCP on in its override. Trade-off: co-tenant containers on
-      # `pcs` reach ttyd (8080) and the auth server (9090) directly, past the
-      # router's gate. See rationale.md.
-      pcs: null
     cpu_shares: 70
     logging: *logging
     deploy:
@@ -260,6 +258,9 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # Sum of the service limits (2048M + 64M, ~2.1G).
+  resources:
+    recommended: { memory: 4G }
   tips:
     en_us: |
       Authentication options:
@@ -296,3 +297,4 @@ x-compose-app:
       # Open terminals are logged out by the recreate.
       change:
         apply: env
+

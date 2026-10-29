@@ -2,12 +2,15 @@
 
 ## What deviation / exception is being requested
 
-Two things are recorded here:
+Three things are recorded here:
 
-1. **`MCP_ENABLED=false`** — the app ships with the image's MCP endpoint turned
+1. **Anthropic is the required identity provider** — Claude Code itself only
+   becomes usable once it is signed in to an Anthropic account (see
+   "Third-party sign-in" below).
+2. **`MCP_ENABLED=false`** — the app ships with the image's MCP endpoint turned
    off, even though this is the sandboxed variant and `ClaudeCodeRoot`'s own
    rationale describes this app as the one that carries MCP.
-2. **`user: 0:0`** — the container's supervisor starts ttyd and the auth/MCP
+3. **`user: 0:0`** — the container's supervisor starts ttyd and the auth/MCP
    process and must be root to do so; it is the image's only supported mode.
 
 No exception is requested on authentication: it is on by default (see below).
@@ -67,14 +70,11 @@ container is mounted, so root here is root of an empty sandbox.
 - **Fully sandboxed.** No `/var/run/docker.sock`, no host SSH mount, no `/DATA`
   mount, no `privileged: true`, no `cap_add`. The only bind mounts are this
   app's own `workspace/` and `config/` under `/DATA/AppData/claude/`.
-- **The gate holds from outside the box, not from inside it.** Browsers reach
-  the app only through `claude-router`. `claude` itself is on both the
-  app-private `claude-net` and the shared `pcs` network — on `pcs` so Beacon's
-  UDP discovery can find the MCP responder when a box enables MCP in its
-  override. ttyd (8080) has no login of its own, so a co-tenant container on
-  `pcs` can open `http://claude:8080/` past the router's gate. That is a known,
-  accepted gap (see "Alternatives considered" below); closing it needs Beacon to
-  reach `/mcp` through the router rather than by joining `pcs`.
+- **Only the router is on the shared network.** `claude-router` is the one
+  service on `${APP_NET:-pcs}`; `claude` (ttyd on 8080, which has no login of
+  its own, and the auth server on 9090) is on the app-private `claude-net`
+  only. A co-tenant container on `pcs` therefore cannot reach ttyd past the
+  router's gate: every request goes through `auth_request`.
 - **No published host ports.** `expose:` only, so the router's port 80 is
   reachable from outside solely through the gateway-terminated Caddy routes.
 - **Pinned image** `ghcr.io/worph/claude-code-container:1.0.26`; resource limits
@@ -105,14 +105,29 @@ container is mounted, so root here is root of an empty sandbox.
   `auth-registrar` attests the OIDC client identity against. It also would not
   address the leak, which is a UDP responder on the shared network that no HTTP
   proxy sits in front of.
-- **Move the container off the `pcs` network so the responder has no audience.**
-  Done on 2026-10-21 (the router became the only service on `pcs`) and reverted
-  on 2026-10-22: off `pcs`, Beacon's discovery broadcast never reaches the
-  responder, so a box that enables MCP in its override (the deployed Touchstone
-  audits through it via Beacon) loses its agent entirely. `claude` is back on
-  `pcs` beside `claude-net`. MCP stays off in this listing all the same —
-  enabling it is a per-box decision, taken against the image's responder as it
-  stands then.
+- **Keep `claude` on `pcs` for Beacon's UDP discovery.** Tried on 2026-10-22
+  and reverted: discovery only matters when a box enables MCP, which this
+  listing ships off, while being on `pcs` let every co-tenant container open
+  ttyd (no login) directly, past the router's gate. `claude` is on `claude-net`
+  only. A box that enables MCP in its override takes that decision — and the
+  network it needs, against the image's responder as it stands then — for
+  itself.
+
+## Third-party sign-in: Anthropic
+
+Claude Code is Anthropic's CLI and cannot do anything until it is signed in to
+**Anthropic**. On first start its own wizard offers three login methods, all of
+them accounts on services the box owner does not control:
+
+1. a Claude subscription (Pro/Max) — an OAuth sign-in at `claude.com`;
+2. an Anthropic Console account (API billing, `console.anthropic.com`);
+3. Amazon Bedrock, Microsoft Foundry or Google Vertex AI.
+
+So the app's usable screen sits behind an account on Anthropic (or one of those
+clouds), the same shape as Plex against plex.tv. Everything before that is
+in-browser and needs no file edit or command: the terminal login (password in
+the tile's Credentials dialog), then Claude Code's own theme and login-method
+screens. The store description and Tips name the options.
 
 ## Routing: the app's own router
 
@@ -146,3 +161,4 @@ the announcement behind an explicit opt-in (e.g. `DISCOVERY_ANNOUNCE_AUTH`)
 defaulting to off. Once a tag ships with that, this app can set
 `MCP_ENABLED=true` again. Source:
 <https://github.com/yundera/claude-code-container>.
+
