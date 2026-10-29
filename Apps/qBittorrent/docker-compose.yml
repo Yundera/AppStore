@@ -65,7 +65,7 @@ services:
   # two containers claiming `qbittorrent` round-robin between them.
   qbittorrent-backend:
     user: $PUID:$PGID
-    image: lscr.io/linuxserver/qbittorrent:5.1.4
+    image: lscr.io/linuxserver/qbittorrent:5.3.0
     container_name: qbittorrent-backend
     restart: unless-stopped
     expose:
@@ -120,7 +120,7 @@ services:
   # unchanged, so this sees exactly what the browser sent. See rationale.md.
   # On the app's own network only: the gate is the one way in.
   qbittorrent-router:
-    image: nginx:1.28.0-alpine
+    image: nginx:1.31.8-alpine
     container_name: qbittorrent-router
     restart: unless-stopped
     cpu_shares: 50
@@ -249,7 +249,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "5.1.4"
+  version: "5.3.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
