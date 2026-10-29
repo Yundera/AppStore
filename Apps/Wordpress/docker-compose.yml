@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   wordpress:
-    image: wordpress:7.1.0-apache
+    image: wordpress:7.1.3-apache
     container_name: wordpress
     restart: unless-stopped
     user: "0:0"
@@ -39,7 +39,7 @@ services:
     logging: *logging
 
   db:
-    image: mariadb:11.8.8
+    image: mariadb:11.8.9
     container_name: wordpress-db
     restart: unless-stopped
     user: "0:0"
@@ -244,7 +244,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "7.1.0"
+  version: "7.1.3"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -340,6 +340,9 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Sum of the service limits (~2G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 3G }
   architectures:
     - amd64
     - arm64
