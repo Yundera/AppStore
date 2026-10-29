@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   tuwunel:
-    image: ghcr.io/matrix-construct/tuwunel:v1.8.2
+    image: ghcr.io/matrix-construct/tuwunel:v1.9.4
     container_name: tuwunel
     restart: unless-stopped
     cpu_shares: 70
@@ -54,7 +54,7 @@ services:
   # Element Web — bundled Matrix client, preconfigured to this homeserver.
   # This is the app's WebUI; the homeserver itself has no UI.
   tuwunel-element:
-    image: vectorim/element-web:v1.12.24
+    image: vectorim/element-web:v1.12.32
     container_name: tuwunel-element
     restart: unless-stopped
     user: $PUID:$PGID
@@ -169,7 +169,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.8.2"
+  version: "1.9.4"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
