@@ -45,7 +45,7 @@ services:
   # shim shares the backend's network namespace and republishes the UI on 0.0.0.0:8086
   # so the sidecar can reach it as tribler-backend:8086 over the pcs network.
   tribler-fwd:
-    image: alpine/socat:1.8.0.0
+    image: alpine/socat:1.8.1.3
     container_name: tribler-fwd
     restart: unless-stopped
     network_mode: "service:tribler-backend"
