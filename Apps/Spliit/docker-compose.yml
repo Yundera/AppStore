@@ -42,7 +42,7 @@ services:
       - spliit-internal
 
   spliit-db:
-    image: postgres:16.13-alpine
+    image: postgres:16.15-alpine
     container_name: spliit-db
     user: 0:0
     cpu_shares: 50
@@ -71,7 +71,7 @@ services:
           memory: 512M
 
   spliit-backend:
-    image: ghcr.io/spliit-app/spliit:1.19.0
+    image: ghcr.io/spliit-app/spliit:1.30.0
     container_name: spliit-backend
     restart: unless-stopped
     user: "0:0"
@@ -217,7 +217,7 @@ x-casaos:
         Partagez le lien du groupe avec vos amis - ils se connectent avec leur compte du serveur.
 x-compose-app:
   schema_version: 2
-  version: "1.19.0"
+  version: "1.30.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
