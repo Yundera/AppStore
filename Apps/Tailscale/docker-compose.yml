@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   tailscale:
-    image: ghcr.io/tailscale/tailscale:v1.94.2
+    image: ghcr.io/tailscale/tailscale:v1.104.2
     container_name: tailscale
     hostname: tailscale
     user: 0:0
@@ -152,7 +152,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.94.2"
+  version: "1.104.2"
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
