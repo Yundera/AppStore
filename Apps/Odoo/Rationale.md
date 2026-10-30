@@ -18,9 +18,18 @@ CasaOS automatically applies `PUID:PGID` (1000:1000) when no `user` field is spe
 ## Security mitigations in place
 
 - **Volume isolation**: All volumes map exclusively to `/DATA/AppData/odoo/` — no access to user directories (`/DATA/Documents/`, `/DATA/Media/`, etc.).
-- **Network isolation**: PostgreSQL is only reachable on the internal `odoo-internal` network. Only the Odoo web UI (port 80) is exposed via Caddy on the `pcs` network.
-- **Official images**: `postgres:18.3` and `odoo:19.0` from Docker Hub, regularly updated and security-audited.
-- **Resource limits**: PostgreSQL capped at 512M memory, Odoo at 1G.
+- **Network isolation**: PostgreSQL is only reachable on the internal `odoo-internal` network. The app's route is `odoo-router`; Odoo itself stays on `pcs` only to send mail through `smtp` and for a root domain pointed at `odoo:80`. No port is published.
+- **Official images**: `postgres:18.3`, `odoo:19.0` and `nginx:1.31.8-alpine` from Docker Hub, regularly updated and security-audited.
+- **Resource limits**: PostgreSQL capped at 1G memory, Odoo at 2G, the router at 64M.
+
+## Multi-process mode and `odoo-router`
+
+Odoo runs with `--workers` (Odoo's documented production setup), not its default single threaded process. The default holds one pool of 64 database connections for every request; a burst of slow pages (a crawler walking blog tag/date combinations) exhausts it and every request then answers 500 `The Connection Pool Is Full` — yundera.com on yunderateam, 2026-10-30. Reproduced locally with 400 requests at 80 concurrency: 269 × 500 before, 396 × 200 after (the rest refused at Odoo's listen queue instead of failing inside it).
+
+- The flags sit on the `command:` line, with `ODOO_WORKERS` / `ODOO_DB_MAXCONN` overridable in Env, because `seed/config/odoo.conf.tmpl` is create-if-absent and would never reach an existing install. A flag overrides the same key in `odoo.conf`.
+- `--limit-time-*` kill a runaway request; `--limit-memory-*` recycle a worker before the container limit is hit (3 × 576M hard + the gevent process < 2G). Odoo's defaults (2G / 2.5G per worker) are above the container limit, which would let the kernel kill all of Odoo instead.
+- In this mode only the gevent process (port 8072) answers `/websocket` (Discuss, notifications, website live chat); port 80 answers it with a 500. A route is one port, so `odoo-router` dispatches `/websocket` → 8072 and the rest → 80 (`in-app-router`). It passes `X-Forwarded-For` through unchanged, since `--proxy-mode` reads its last entry.
+- Port 80 is kept, not moved to Odoo's usual 8069, so a box whose root domain targets `odoo:80` keeps serving pages after the update; target `odoo-router:80` for the live channel too.
 - **Master password set from a generated secret**: `/web/database/manager` (backup, duplicate, restore, drop) needs no session, so it is gated on `admin_passwd`, which is set to the per-app secret `ODOO_MASTER_PASSWORD` (seeded from the old box-wide password on installs that already had it, generated otherwise) rather than left on the upstream default.
 
 ## Alternatives considered and rejected
