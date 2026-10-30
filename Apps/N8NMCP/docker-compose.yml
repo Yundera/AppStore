@@ -31,6 +31,12 @@ services:
       # Pre-seed the companion n8n app's in-network hostname.
       # The API key is left blank — paste it in the Web UI on first launch.
       - N8N_BASE_URL=http://n8n:80
+      # n8n-mcp's SSRF guard defaults to `strict`, which refuses private IPs — and the
+      # companion n8n is reached at its container address on the shared network, so
+      # every API call fails with "Private IP addresses not allowed". `permissive`
+      # allows private addresses and still blocks cloud metadata endpoints. Read by
+      # the upstream process, which supervisord starts with this environment.
+      - WEBHOOK_SECURITY_MODE=permissive
     # The image inherits HEALTHCHECK CMD-SHELL "curl ... /health" from the upstream
     # n8n-mcp stage, but the wrapper never implements a /health route (only
     # /api/status), so the container permanently reports unhealthy even while
