@@ -64,7 +64,8 @@ knowingly rather than inheriting it.
   and skip the gateway. The same step sets wg-easy's uplink device, which it hard-codes to
   `eth0`, to the host's actual default-route interface.
 - **A host-mode container cannot be a Caddy upstream**, which is why the web UI is not
-  served directly. `wgeasyhost` binds the UI on host port `51821`, and the bridged
+  served directly. `wgeasyhost` binds the UI on port `51821` of the host-gateway
+  address only, and the bridged
   `wgeasyhost-proxy` sidecar on the `pcs` network carries the gateway labels and
   forwards to it via `host.docker.internal`.
 
@@ -89,10 +90,11 @@ knowingly rather than inheriting it.
   VPN, `64m` / `cpu_shares: 80` for the proxy).
 - **The proxy image is pinned** to `nginx:1.29.3-alpine`, and its config ships in `seed/`
   (no CDN fetch at install time) and is bind-mounted read-only.
-- **Host port exposure is disclosed before install.** `tips.before_install` tells the
-  user that UDP `51820` must be open on their firewall and that the management UI also
-  binds host port `51821` over plain HTTP, with the advice to reach it through the
-  HTTPS gateway link and firewall `51821` otherwise.
+- **The web UI is not published on the host.** wg-easy's plain-HTTP UI port `51821`
+  is bound (`HOST`) to the Docker host-gateway address only — the address the proxy
+  dials as `host.docker.internal` — not to every host interface, so it cannot be
+  reached from the internet or the LAN, only through the proxy and the gateway.
+  `tips.before_install` tells the user that UDP `51820` must be open on their firewall.
 
 ## Alternatives considered and rejected
 
