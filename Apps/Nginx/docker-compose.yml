@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   nginx:
-    image: nginx:1.29.3-alpine
+    image: nginx:1.31.8-alpine
     container_name: nginx
     user: "0:0"
     restart: unless-stopped
@@ -160,7 +160,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.29.3"
+  version: "1.31.8"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
