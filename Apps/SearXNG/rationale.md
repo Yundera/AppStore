@@ -40,6 +40,18 @@ Maison as `$PUID:$PGID` before the container first starts, rather than by the co
   container does not start.
 - **No added capabilities.** Same failure: the entrypoint cannot prepare its mounts.
 
+## `ALLOWED_PATHS: "manifest.json"` on the AppShield gate
+
+Browsers fetch a page's `<link rel=manifest>` without credentials, so the SSO cookie never
+reaches the gate: it answered with a 302 to the login host, which the browser then blocked
+as a cross-origin redirect, logging a console error on every first load. `/manifest.json` is
+static PWA metadata (instance name, theme colours, icon paths) and carries nothing about the
+user or their searches, so it is exempted from the gate. The match is per path segment:
+`/search`, `/preferences`, `/config` and every other route stay behind the SSO login. This
+is not a machine-client path, so `OAUTH_RESOURCE` (Bearer tokens) does not apply; the other
+remedy, `crossorigin="use-credentials"` on the link, is in SearXNG's templates and not
+something the listing can change.
+
 ## Data protection
 
 The mounts hold only SearXNG's settings and its cache. No user data is reachable from the
