@@ -23,6 +23,13 @@ services:
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+      # The page's <link rel=manifest> is fetched by the browser without cookies
+      # (the spec's default), so behind the gate it 302s to the SSO login and the
+      # cross-origin redirect is a console error on every first load. The PWA
+      # manifest holds only the instance name, theme colours and icon paths;
+      # matching is per-segment, so this exempts /manifest.json and nothing else.
+      # Search, preferences and every other path stay gated. See rationale.md.
+      ALLOWED_PATHS: "manifest.json"
     expose:
       - 80
     depends_on:
