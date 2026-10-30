@@ -34,7 +34,7 @@ services:
           memory: 1G
 
   ollama-api:
-    image: ollama/ollama:0.30.7
+    image: ollama/ollama:0.40.11
     user: 0:0
     container_name: ollama-api
     restart: unless-stopped
@@ -210,7 +210,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.30.7"
+  version: "0.40.11"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
