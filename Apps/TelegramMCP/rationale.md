@@ -21,18 +21,22 @@ UDP discovery responder (`mcp-announce.cjs`, `DISCOVERY_PORT=9099`).
 The main container answers Beacon's discovery broadcast directly, so the
 service simply exposes `9099` — same approach as N8NMCP. No sidecar.
 
-## `ALLOWED_PATHS: "webhook"` alongside `OAUTH_RESOURCE`
+## `/webhook` routed past the gate, alongside `OAUTH_RESOURCE`
 
 CONTRIBUTING says machine/API clients must be gated with `OAUTH_RESOURCE`, and
 that the `ALLOWED_PATHS` pattern must not be copied — an exempted path bypasses
 the SSO gate with nothing put in its place, because `AUTH_HASH` is inert under
-Maison. `/mcp` follows that rule: AppShield 2.0.9 runs its OAuth 2.1 broker over
+Maison. `/mcp` follows that rule: AppShield runs its OAuth 2.1 broker over
 `https://telegrammcp-${APP_DOMAIN}/mcp` and every MCP request must carry a
 Bearer token. (The earlier listing exempted `/mcp` via `ALLOWED_PATHS` and
 claimed a URL-hash mitigation; that hash never existed under Maison, so the
 endpoint was reachable anonymously. It is gated now.)
 
-`/webhook` is a deliberate, single-path exception.
+`/webhook` is a deliberate, single-path exception. The app's own router,
+`telegrammcp-router`, sends `/webhook` (and `/webhook/…`) straight to the backend
+and every other path through the AppShield sidecar — the shape
+`Apps/Vaultwarden` uses to send only `/admin` through it — so the sidecar has no
+`ALLOWED_PATHS` at all.
 
 **Why it is necessary.** In webhook mode the client is *Telegram itself*.
 Telegram's servers POST update callbacks to `${PUBLIC_URL}/webhook` as a plain
@@ -51,13 +55,14 @@ any request whose header does not match. The token is regenerated on each
 restart and is never published. In polling mode no webhook is registered at all
 and `/webhook` answers `404 Webhook not active`.
 
-**Ordering is safe.** AppShield renders the OAuth resource as `location ^~ /mcp`,
-an nginx prefix match that suppresses regex evaluation, so it outranks the
-`location ~ ^/(webhook)(/|$)` bypass. Listing `webhook` cannot widen the
-exemption to `/mcp`.
+**The split cannot widen.** The router matches `location = /webhook` and
+`location /webhook/` only; `/mcp` and everything else fall through to the gate.
 
 **Alternatives rejected.**
-- *Removing `ALLOWED_PATHS` entirely* — webhook mode stops working; every update
+- *`ALLOWED_PATHS: "webhook"` on the sidecar* — what this listing shipped before.
+  Same reach, but it opens a machine path inside the gate, which the store forbids;
+  the router makes the split explicit and keeps the sidecar out of `/webhook`.
+- *Gating `/webhook` with SSO as well* — webhook mode stops working; every update
   gets the SSO redirect instead of reaching the bot.
 - *`OAUTH_RESOURCE` on `/webhook`* — Telegram cannot obtain or send a Bearer
   token; the endpoint would 401 on every callback.
