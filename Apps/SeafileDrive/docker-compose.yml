@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   seafiledrive:
-    image: rclone/rclone:1.74.4
+    image: rclone/rclone:1.75.2
     container_name: seafiledrive
     hostname: seafiledrive
     restart: unless-stopped
@@ -184,7 +184,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.74.4"
+  version: "1.75.2"
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: seafiledrive
@@ -306,7 +306,7 @@ x-compose-app:
           echo "Seafile's admin password not found in AppData/seafile/.env: install Seafile, then start this app again" >&2
           exit 1
         fi
-        obscured=$(docker run --rm rclone/rclone:1.74.4 obscure "$p")
+        obscured=$(docker run --rm rclone/rclone:1.75.2 obscure "$p")
         echo "RCLONE_OBSCURED_PASS=$obscured" >> "$MAISON_OUTPUT"
   # Directories Maison creates and chowns to $PUID:$PGID before every `up` — one
   # per trailing-slash bind mount in `volumes:` above.
