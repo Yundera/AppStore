@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   navidrome:
-    image: deluan/navidrome:0.61.1
+    image: deluan/navidrome:0.64.2
     container_name: navidrome
     restart: unless-stopped
     user: "0:0"
@@ -191,7 +191,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.61.1"
+  version: "0.64.2"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
