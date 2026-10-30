@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   wgeasy:
-    image: ghcr.io/wg-easy/wg-easy:15.3.0
+    image: ghcr.io/wg-easy/wg-easy:15.5.0
     container_name: wgeasy
     restart: unless-stopped
     user: "0:0"
@@ -221,7 +221,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "15.3.0"
+  version: "15.5.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
