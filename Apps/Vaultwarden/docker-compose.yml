@@ -48,7 +48,7 @@ services:
       - pcs
 
   vaultwarden-backend:
-    image: vaultwarden/server:1.37.0
+    image: vaultwarden/server:1.37.4
     container_name: vaultwarden-backend
     user: $PUID:$PGID
     deploy:
@@ -103,7 +103,7 @@ services:
   # to the AppShield gate, everything else straight to the backend. This was a Caddy
   # handle tree in the labels; the platform now only routes the host to port 80 here.
   vaultwarden-router:
-    image: nginx:1.28.0-alpine
+    image: nginx:1.31.8-alpine
     container_name: vaultwarden-router
     restart: unless-stopped
     cpu_shares: 50
@@ -625,7 +625,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.37.0"
+  version: "1.37.4"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
