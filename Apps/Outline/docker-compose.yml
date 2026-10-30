@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   outline:
-    image: outlinewiki/outline:1.6.1
+    image: outlinewiki/outline:1.12.0
     container_name: outline
     restart: unless-stopped
     user: "0:0"
@@ -63,7 +63,7 @@ services:
       - pcs
 
   outline-dex:
-    image: ghcr.io/dexidp/dex:v2.45.1
+    image: ghcr.io/dexidp/dex:v2.46.1
     container_name: outline-dex
     restart: unless-stopped
     user: "0:0"
@@ -99,7 +99,7 @@ services:
       - pcs
 
   outline-postgres:
-    image: postgres:16.13-alpine
+    image: postgres:16.15-alpine
     container_name: outline-postgres
     restart: unless-stopped
     user: "0:0"
@@ -126,7 +126,7 @@ services:
       - outline-internal
 
   outline-redis:
-    image: redis:7.2.13-alpine
+    image: redis:7.4.11-alpine
     container_name: outline-redis
     restart: unless-stopped
     # Not root: the image's entrypoint would drop to its own `redis` user (uid 999)
@@ -413,7 +413,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.6.1"
+  version: "1.12.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -537,6 +537,9 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Sum of the service limits (~2G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 3G }
   architectures:
     - amd64
     - arm64
