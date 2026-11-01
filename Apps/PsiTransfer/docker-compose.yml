@@ -23,8 +23,9 @@ services:
 
     expose:
       - 80
+    # Reached only through psitransfer-router below.
     networks:
-      - pcs
+      - psitransfer-net
 
     environment:
       - TZ=$TZ
@@ -45,16 +46,107 @@ services:
       retries: 3
       start_period: 20s
 
+  # ── The app's own router, in front of PsiTransfer ──────────────────
+  # PsiTransfer's upload page finishes every upload with
+  # `PATCH /files/<sid>?lock=yes` to lock the bucket, but sends it as a bare
+  # fetch with no `x-passwd` header (app/src/Upload/store/upload.js), while the
+  # server gates every /files request behind the upload password. With
+  # PSITRANSFER_UPLOAD_PASS set, the lock answers 401, the browser logs an
+  # error, and the bucket is never locked. Still so in v2.4.5.
+  #
+  # Fix: add the upload password to exactly that request — PATCH of
+  # /files/<sid>?lock=yes, matched on the raw URI — and to nothing else. The
+  # server answers that request by locking the bucket and returning, so the
+  # header buys nothing beyond the lock: no upload, no read. Every other
+  # request keeps the headers the browser sent.
+  psitransfer-router:
+    image: nginx:1.28.0-alpine
+    container_name: psitransfer-router
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    expose:
+      - 80
+    environment:
+      # Rendered into the config by the image's envsubst on every start, so a
+      # changed upload password recreates this container with the new value.
+      - PSITRANSFER_UPLOAD_PASS=${PSITRANSFER_UPLOAD_PASSWORD}
+    configs:
+      - source: psitransfer-router
+        target: /etc/nginx/templates/default.conf.template
+    depends_on:
+      - psitransfer
+    networks:
+      - pcs
+      - psitransfer-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 networks:
+  psitransfer-net:
+    name: psitransfer-net
   pcs:
     name: ${APP_NET:-pcs}
     external: true
+
+configs:
+  psitransfer-router:
+    # `$$` is compose's escape for nginx's own `$`; `$${PSITRANSFER_UPLOAD_PASS}`
+    # is left for the image's envsubst.
+    content: |
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      map $$http_upgrade $$connection_upgrade { default upgrade; "" close; }
+      # The bucket lock the upload page sends without its password.
+      map "$$request_method $$request_uri" $$bucket_lock {
+        "~^PATCH /files/[A-Za-z0-9_-]+[?]lock=yes$$" 1;
+        default 0;
+      }
+      map $$bucket_lock $$fwd_passwd {
+        1 "$${PSITRANSFER_UPLOAD_PASS}";
+        default $$http_x_passwd;
+      }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # Uploads (tus) and downloads stream straight through.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_http_version 1.1;
+        # The platform's proxy set these from the real client; pass them on.
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$http_x_real_ip;
+        proxy_set_header X-Forwarded-For $$http_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $$http_x_forwarded_host;
+        proxy_set_header Upgrade $$http_upgrade;
+        proxy_set_header Connection $$connection_upgrade;
+        proxy_set_header x-passwd $$fwd_passwd;
+
+        set $$psitransfer psitransfer:80;
+
+        location = /_router/health { access_log off; return 204; }
+        location / { proxy_pass http://$$psitransfer; }
+      }
 
 x-casaos:
   architectures:
     - amd64
     - arm64
-  main: psitransfer
+  main: psitransfer-router
   author: CasaOS Team
   category: Utilities
   tags: ["files", "personal"]
@@ -216,7 +308,7 @@ x-compose-app:
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
   routes:
-    - { service: psitransfer, name: psitransfer, upstream-port: 80 }
+    - { service: psitransfer-router, name: psitransfer, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   id: psitransfer
@@ -395,7 +487,8 @@ x-compose-app:
         fr_fr: Mot de passe upload
         es_es: Contraseña upload
       password: ${PSITRANSFER_UPLOAD_PASSWORD}
-      # Same as the admin password: read from the environment on every start.
+      # Same as the admin password: read from the environment on every start,
+      # by PsiTransfer and by psitransfer-router alike.
       change:
         apply: env
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
