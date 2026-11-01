@@ -2,22 +2,17 @@
 
 ## What deviation / exception is being requested
 
-1. The **NNTmux web UI is published on its own hostname** (`nntmux-<user>.<domain>`) with no
-   AppShield sidecar in front of it — it is protected by NNTmux's own login only.
-2. The seeded `nntmux.env` contains TMDB and TVDB API keys as literals.
+The **NNTmux web UI is published on its own hostname** (`nntmux-<user>.<domain>`) with no
+AppShield sidecar in front of it — it is protected by NNTmux's own login only.
 
 ## Why it is necessary
 
-1. NNTmux is a Laravel application with its own user table, session handling and admin
-   role. Its admin account is created at install from `$NNTMUX_ADMIN_PASSWORD`, so
-   authentication is **enabled by default** — the "app's own built-in auth" alternative the
-   security checklist accepts. Fronting it with AppShield as well would double-prompt on
-   every page and break its own OTP and password-reset flows. Its Newznab API is keyed per
-   user (`apikey` / `r=`), as every Newznab client expects.
-2. Those two keys are NNTmux's upstream project defaults, shipped in its own
-   `.env.example`. They are shared read-only application keys for public metadata catalogs,
-   not user credentials, and they make the app work immediately after installation. An
-   operator can replace them from the NNTmux admin UI.
+NNTmux is a Laravel application with its own user table, session handling and admin
+role. Its admin account is created at install from `$NNTMUX_ADMIN_PASSWORD`, so
+authentication is **enabled by default** — the "app's own built-in auth" alternative the
+security checklist accepts. Fronting it with AppShield as well would double-prompt on
+every page and break its own OTP and password-reset flows. Its Newznab API is keyed per
+user (`apikey` / `r=`), as every Newznab client expects.
 
 ## Security mitigations in place
 
@@ -45,8 +40,6 @@
 
 - **AppShield in front of NNTmux.** Two independent login gates on one UI; its OTP,
   password-reset and API endpoints break behind the OIDC redirect.
-- **Blank the TMDB/TVDB keys.** Covers and metadata then silently fail until the user finds
-  two upstream registration flows.
 
 ## Data protection
 
