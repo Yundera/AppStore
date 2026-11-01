@@ -9,9 +9,8 @@ name: nntmux
 #
 # First run: everything is set from the app settings (Maison: App settings >
 # Env) — NNTP_* for your provider, NNTMUX_* for what to scan — and applied by
-# the scanner on its own; `docker exec nntmux-scanner nntmux-setup status` says
-# what is still missing. Newznab clients (Prowlarr, Sonarr…) get an API key from
-# `nntmux-setup api-user <name>`.
+# the scanner on its own. Newznab clients (Prowlarr, Sonarr…) use the API key on
+# a user's profile page; `nntmux-setup api-user <name>` is a terminal shortcut.
 #
 # Layout: the web container `nntmux` is the only one on `pcs` and the only one
 # with a route; MariaDB, Redis, Manticore and the scanner sit on the
@@ -39,9 +38,8 @@ name: nntmux
 #      inactive group silently does nothing. See the tips below for the SQL
 #      to activate one.
 # One FIRST-BOOT-ONLY loud bug: the entrypoint runs `config:cache` before
-# `key:generate`, so every session route 500s until you run
-# `docker exec nntmux php artisan config:clear` once (and again after ANY edit
-# of nntmux.env — the cached config keeps the old values). See tips.
+# `key:generate`, so the cached config has no APP_KEY and every session route
+# 500s. The `nntmux` service below wraps the entrypoint and drops that cache.
 #
 # ⚠ Four more, found the hard way on a live box (2026-07-26) after this stack
 # came up with SEVEN healthy containers and returned ZERO results for every
@@ -211,6 +209,25 @@ services:
     hostname: nntmux
     restart: unless-stopped
     stop_grace_period: 30s
+    # Runs the image's own install entrypoint (`true` stands in for the server,
+    # so it returns here), then starts the server with what it needs fixed:
+    # - the config cache goes: on first boot it predates APP_KEY (every session
+    #   route 500s), later it would hide edits of nntmux.env;
+    # - all-js.js binds the header search on pages that have no header (/login,
+    #   /admin/*), a TypeError that stops the rest of that script;
+    # - the admin user list points its note icons at a path that does not exist.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        docker-entrypoint true
+        rm -f bootstrap/cache/config.php
+        sed -i 's/getElementById("headsearch_go")\.addEventListener/getElementById("headsearch_go")?.addEventListener/' public/assets/js/all-js.js
+        sed -i 's#/shared/images/icons/#/assets/images/icons/#' resources/views/themes/admin/user-list.tpl
+        exec docker-php-entrypoint "$$@"
+      - --
+    command: ["--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
     # The working set scales with scan breadth (group set x backfill depth), an
     # operator choice (see tips), so this is a ceiling rather than a size: 3g
     # is what a real corpus needed on a live box — 1536m was reached and
@@ -226,6 +243,9 @@ services:
       TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
       TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
       ELASTICSEARCH_ENABLED: "false"
+      # Optional metadata keys, entered in App settings > Env; blank means none.
+      TMDB_APIKEY: "${TMDB_APIKEY:-}"
+      TVDB_APIKEY: "${TVDB_APIKEY:-}"
       # Behind the box's router (which terminates TLS) Laravel sees plain http and
       # trusts no proxy header (it only trusts Cloudflare's ranges), so every
       # redirect it builds — the login one first — is `http://…`, which the
@@ -331,6 +351,8 @@ services:
       TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
       TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
       ELASTICSEARCH_ENABLED: "false"
+      TMDB_APIKEY: "${TMDB_APIKEY:-}"
+      TVDB_APIKEY: "${TVDB_APIKEY:-}"
       # The app settings (this app's .env, Maison > App settings > Env), for
       # `nntmux-setup apply` before every pass. PREFIXED on purpose: nntmux's
       # dotenv is immutable, so an EMPTY NNTP_SERVER in a process environment
@@ -403,6 +425,8 @@ x-casaos:
   category: Media
   developer: NNTmux Project
   icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
   title:
     en_us: NNTmux
   tagline:
@@ -445,8 +469,8 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **1. Log in:** user `admin`, password = this app's default password
-        (shown in this app's tips once installed). Change it afterwards.
+        **1. Log in:** user `admin`; the password is shown when you open the app
+        (tile menu › Credentials). Change it afterwards.
 
         **2. Set it up in App settings › Env** (Save applies it — no file editing,
         no restart needed):
@@ -454,8 +478,8 @@ x-casaos:
           Usenet provider. Optional: `NNTP_CONNECTIONS` (keep it at 1-2: the
           scanner shares your provider's connection slots), `NNTP_SSLENABLED`.
         - `NNTMUX_GROUPS` — the groups to index, comma-separated
-          (e.g. `alt.binaries.teevee`). Find names with
-          `docker exec nntmux-scanner nntmux-setup groups teevee`.
+          (e.g. `alt.binaries.teevee`). Names are listed in the app at
+          `/admin/group-list`.
         - `NNTMUX_SCAN=on` to start scanning. Optional: `NNTMUX_BACKFILL=on` +
           `NNTMUX_BACKFILL_DAYS` (how far back — start small, a deep backfill is
           hundreds of GB), `NNTMUX_MONITOR_DELAY` (seconds between passes).
@@ -463,18 +487,23 @@ x-casaos:
         - `NNTMUX_MIN_RELEASE_MB` — postings smaller than this never become
           releases (default 20). Busy groups carry tens of thousands of
           single-article posts under random names that no indexer can name.
+        - `TMDB_APIKEY`, `TVDB_APIKEY` — optional, your own keys for covers and
+          metadata.
 
         A blank setting is left to nntmux's own admin UI. Set ones are re-applied
         by the scanner before every pass, so they survive restarts (nntmux resets
         its groups and scheduler on each boot).
 
-        **3. Check:** `docker exec nntmux-scanner nntmux-setup status` — provider
-        connection test, active groups, scan state, and the next step.
-        Watch the scan: `docker logs -f nntmux-scanner`.
+        **3. Check:** active groups show at `/admin/group-list`, and releases
+        appear under Browse as the scan collates them.
 
-        **API clients** (Prowlarr, Sonarr…): give each its own key with
-        `docker exec nntmux-scanner nntmux-setup api-user <name>` — a user with
-        raised daily API/download limits, made for Newznab clients.
+        **API clients** (Prowlarr, Sonarr…): add a user for each at
+        `/admin/user-edit?action=add` and use the API key on its profile page.
+
+        **Optional, from a terminal:**
+        `docker exec nntmux-scanner nntmux-setup status` tests the provider
+        connection; `... nntmux-setup api-user <name>` makes a user with raised
+        daily API limits; `docker logs -f nntmux-scanner` follows the scan.
 
 # Maison (Yundera dashboard) configuration. Read in preference to x-casaos.
 # schema_version 2 is required for `folders`: an older Maison refuses the app
@@ -532,6 +561,8 @@ x-compose-app:
   developer: NNTmux Project
   category: Media
   icon: icon.png
+  screenshots:
+    - screenshot-1.png
   architectures:
     - amd64
   # Sum of the service limits (~7.6G); indexing is CPU-bound.
@@ -581,27 +612,33 @@ x-compose-app:
       **Set up in App settings › Env** (Save applies it):
       - `NNTP_SERVER`, `NNTP_PORT`, `NNTP_USERNAME`, `NNTP_PASSWORD` — your Usenet
         provider (`NNTP_CONNECTIONS` 1-2 recommended).
-      - `NNTMUX_GROUPS` — groups to index, comma-separated. Find names:
-        `docker exec nntmux-scanner nntmux-setup groups <text>`
+      - `NNTMUX_GROUPS` — groups to index, comma-separated. Names are listed in
+        the app at `/admin/group-list`.
       - `NNTMUX_SCAN=on` to scan; optional `NNTMUX_BACKFILL=on` +
         `NNTMUX_BACKFILL_DAYS`, `NNTMUX_MONITOR_DELAY`.
       - `NNTMUX_REGISTRATION`: `closed` (default) / `invite` / `open`.
       - `NNTMUX_MIN_RELEASE_MB` (default 20): smaller postings are dropped —
         random-named fragments that no indexer can name.
+      - `TMDB_APIKEY`, `TVDB_APIKEY` — optional, your own keys for covers and
+        metadata.
 
-      **Check:** `docker exec nntmux-scanner nntmux-setup status` (says what is
-      missing). Watch: `docker logs -f nntmux-scanner`.
+      **Check:** active groups show at `/admin/group-list`, and releases appear
+      under Browse as the scan collates them.
 
-      **API key for a client** (Prowlarr, Sonarr…):
-      `docker exec nntmux-scanner nntmux-setup api-user <name>`
+      **API key for a client** (Prowlarr, Sonarr…): add a user for it at
+      `/admin/user-edit?action=add` and use the key on its profile page.
+
+      **Optional, from a terminal:**
+      `docker exec nntmux-scanner nntmux-setup status` tests the provider
+      connection; `... nntmux-setup api-user <name>` makes a user with raised daily
+      API limits; `docker logs -f nntmux-scanner` follows the scan.
     fr_fr: |
       **Connexion :** utilisateur `admin` ; le mot de passe s'affiche à l'ouverture
       de l'app (menu de la tuile › Credentials).
 
       **Configuration dans Réglages de l'app › Env** : `NNTP_SERVER`, `NNTP_PORT`,
-      `NNTP_USERNAME`, `NNTP_PASSWORD` (fournisseur), `NNTMUX_GROUPS` (groupes),
-      `NNTMUX_SCAN=on`. Vérification :
-      `docker exec nntmux-scanner nntmux-setup status`.
+      `NNTP_USERNAME`, `NNTP_PASSWORD` (fournisseur), `NNTMUX_GROUPS` (groupes,
+      listés dans l'app sur `/admin/group-list`), `NNTMUX_SCAN=on`.
   # nntmux's own .env (trap #1: a COMPLETE file) is seed/nntmux-env/nntmux.env.tmpl,
   # create-if-absent. This step only adds the app settings to the app's .env, as empty
   # keys so they show up in App settings > Env (blank = not managed); the provider
@@ -627,6 +664,8 @@ x-compose-app:
         NNTMUX_MONITOR_DELAY=
         NNTMUX_REGISTRATION=closed
         NNTMUX_MIN_RELEASE_MB=20
+        TMDB_APIKEY=
+        TVDB_APIKEY=
         ENV
   # The scanner's scripts, re-written on every start so an app update reaches
   # existing installs (the seed tree is create-if-absent).
