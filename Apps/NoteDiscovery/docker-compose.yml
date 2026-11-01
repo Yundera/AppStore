@@ -19,6 +19,10 @@ services:
       - "80"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/app/data
+      # Plugin on/off state. Only this file: mapping /app/plugins whole would hide the
+      # plugins the image ships. seed/ creates it before the first start, or Docker
+      # would make a directory here. The app rewrites it in place, which a file mount allows.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/plugins/plugin_config.json:/app/plugins/plugin_config.json
     environment:
       TZ: $TZ
       PORT: 80
