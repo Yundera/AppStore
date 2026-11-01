@@ -18,5 +18,5 @@ The NoteDiscovery container image requires root to bind to port 80 and manage fi
 - `user: $PUID:$PGID` — causes permission errors when the application tries to write note files and indexes to `/app/data`
 
 ## Data protection
-- All persistent data stored under `/DATA/AppData/$AppID/data/`
+- All persistent data stored under `/DATA/AppData/$AppID/`: notes in `data/`, plugin on/off state in `plugins/plugin_config.json`
 - Notes are stored as plain markdown files, easily portable
