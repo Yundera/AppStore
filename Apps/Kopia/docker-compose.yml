@@ -4,16 +4,16 @@ name: kopia
 # its platform (the stock FOSS mesh stack). A Yundera PCS already runs a `kopia` stack
 # of its own, and Maison refuses to install this app over it.
 #
-# Three containers, the same shape the Yundera platform stack uses:
+# Three containers, the same shape the Yundera platform stack uses, and a small router:
 #
 #   kopia         AppShield gate. The only public entrypoint (kopia-${APP_DOMAIN}).
+#   kopia-router  nginx between the gate and the UI. See its config below.
 #   kopia-app     `kopia server --ui` — kopia's own web UI, to browse and restore.
 #   kopia-engine  `maison-engine serve` — the container Maison `docker exec`s into.
 #
-# Setup is two files in /DATA/AppData/kopia/engine/ (examples are seeded beside them):
-# connect.json (bucket, endpoint, region, prefix) and credentials.env (the storage key).
-# The engine connects the repository on its own once they are there, then Maison asks
-# the admin to enable it in Settings > Backups. See rationale.md.
+# Setup is kopia's own screen: with no repository yet, the UI opens on it. The repository
+# it creates lands in /DATA/AppData/kopia/engine/, the engine picks it up from there, and
+# Maison asks the admin to enable it in Settings > Backups. See rationale.md.
 
 # Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
 x-logging: &logging
@@ -34,8 +34,9 @@ services:
     hostname: kopia
     restart: unless-stopped
     environment:
-      BACKEND_HOST: "kopia-app"
-      BACKEND_PORT: "51515"
+      # The app's own router, not the UI (see kopia-router below).
+      BACKEND_HOST: "kopia-router"
+      BACKEND_PORT: "80"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
@@ -43,7 +44,7 @@ services:
     expose:
       - 80
     depends_on:
-      - kopia-app
+      - kopia-router
     networks:
       # On `pcs` because the router and auth-registrar must reach it, and on the app's
       # own network because that is where kopia's UI lives.
@@ -56,24 +57,55 @@ services:
         limits:
           memory: 128M
 
+  # Behind the gate, on the app's own network only: every request is gated anyway.
+  kopia-router:
+    image: nginx:1.31.8-alpine
+    container_name: kopia-router
+    restart: unless-stopped
+    expose:
+      - 80
+    configs:
+      - source: kopia-router
+        target: /etc/nginx/conf.d/default.conf
+    networks:
+      - kopia-internal
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
   kopia-app:
     image: ghcr.io/yundera/maison-kopia-engine:1.3.0
     container_name: kopia-app
+    # The identity a repository created from the UI is filed under: the engine's,
+    # because Maison only execs into a container whose hostname matches it.
+    hostname: kopia-pcs
     restart: unless-stopped
-    # The UI is kopia's own server over the repository the engine connected. Until
-    # the engine has connected one there is nothing to serve, so it waits for the
-    # files instead of crash-looping; the gate answers 502 meanwhile.
+    # The UI is kopia's own server. With no repository yet it opens on kopia's setup
+    # screen, which writes repository.config where the engine reads it. kopia keeps the
+    # password it was given in repository.config.kopia-password (base64), so the loop
+    # hands that to repository.password, the file the engine reads.
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
         set -euo pipefail
         E=/DATA/AppData/kopia/engine
-        until [ -f "$$E/repository.config" ] && [ -f "$$E/repository.password" ]; do
-          echo "waiting for the engine to connect a repository in $$E"
-          sleep 30
-        done
+        (
+          while sleep 5; do
+            if [ -s "$$E/repository.config.kopia-password" ]; then
+              base64 -d "$$E/repository.config.kopia-password" > "$$E/repository.password.tmp"
+              chmod 600 "$$E/repository.password.tmp"
+              mv "$$E/repository.password.tmp" "$$E/repository.password"
+              rm "$$E/repository.config.kopia-password"
+            fi
+          done
+        ) &
         if [ -f "$$E/credentials.env" ]; then set -a; . "$$E/credentials.env"; set +a; fi
-        export KOPIA_PASSWORD="$$(cat "$$E/repository.password")"
+        if [ -f "$$E/repository.config" ] && [ -f "$$E/repository.password" ]; then
+          export KOPIA_PASSWORD="$$(cat "$$E/repository.password")"
+        fi
         exec /bin/kopia server start \
           --config-file="$$E/repository.config" \
           --address=0.0.0.0:51515 \
@@ -98,6 +130,8 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
+      # The image turns this off, and the setup screen's password would then be lost.
+      KOPIA_PERSIST_CREDENTIALS_ON_CONNECT: "true"
       KOPIA_CACHE_DIRECTORY: "/DATA/AppData/kopia/engine/cache"
       KOPIA_LOG_DIR: "/DATA/AppData/kopia/engine/logs"
       TZ: $TZ
@@ -130,8 +164,8 @@ services:
     # hostname matches it — change it and every backup becomes a new source.
     hostname: kopia-pcs
     restart: unless-stopped
-    # Resident: connects the repository from connect.json + credentials.env when
-    # they appear, writes the adapter.json Maison discovers, then idles while Maison
+    # Resident: waits for the repository the setup screen creates, writes the
+    # adapter.json Maison discovers, then idles while Maison
     # runs `maison-engine <verb>` in it with `docker exec`.
     command: ["serve", "--repo-dir=/DATA/AppData/kopia/engine"]
     user: 0:0
@@ -181,6 +215,73 @@ networks:
   kopia-internal:
     name: kopia-internal
 
+configs:
+  kopia-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+
+        proxy_http_version 1.1;
+        # The gate already set these from the real client; pass them on as they are.
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$http_x_real_ip;
+        proxy_set_header X-Forwarded-For $$http_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $$http_x_forwarded_host;
+
+        # Browsers fetch a web manifest without cookies unless told otherwise, so the gate
+        # sent kopia's to the SSO and the page logged a CORS error. sub_filter needs the
+        # page uncompressed.
+        proxy_set_header Accept-Encoding "";
+        sub_filter '<link rel="manifest"' '<link rel="manifest" crossorigin="use-credentials"';
+
+        set $$kopia kopia-app:51515;
+
+        # While a path is typed in New Snapshot, kopia's UI asks for the policy of each
+        # partial path. Kopia answers 400 for "no policy here", which the UI expects and
+        # the browser logs as an error. An empty policy says the same without the error.
+        # Only that GET: a 400 on saving or deleting a policy is real and passes through.
+        location = /api/v1/policy {
+          error_page 418 = @kopia;
+          if ($$request_method != GET) { return 418; }
+          proxy_intercept_errors on;
+          error_page 400 = @no-policy;
+          proxy_pass http://$$kopia;
+        }
+        location @no-policy {
+          default_type application/json;
+          return 200 '{}';
+        }
+        location @kopia { proxy_pass http://$$kopia; }
+
+        # Before creating a repository kopia's UI asks whether one exists. Kopia answers 400
+        # NOT_INITIALIZED, which the UI expects and the browser logs as an error. The UI only
+        # needs a non-2xx status and the JSON body, and browsers log from 400 up, so the 400
+        # is asked again (nginx can't keep the first body) and sent on as a 300, body intact:
+        # storage errors still reach the setup screen. Only this read-only probe.
+        location = /api/v1/repo/exists {
+          proxy_request_buffering on;
+          proxy_intercept_errors on;
+          error_page 400 =300 @repo-exists;
+          proxy_pass http://$$kopia;
+        }
+        location @repo-exists {
+          proxy_request_buffering on;
+          proxy_pass http://$$kopia;
+        }
+
+        location / { proxy_pass http://$$kopia; }
+      }
+
 x-casaos:
   architectures:
     - amd64
@@ -203,8 +304,7 @@ x-casaos:
       • Restore an app or your files from the Backups page, like a local backup
       • Kopia's own web UI to browse snapshots and restore single files
 
-      🔑 **You hold the key.** The repository password is generated on this server and
-      never leaves it unless you save it. Without it, nobody — including you — can read
+      🔑 **You hold the key.** You choose the repository password at setup and it never leaves this server unless you save it. Without it, nobody — including you — can read
       the backups. Save it somewhere off the server.
 
       ⚠️ **For servers without a provided backup.** A Yundera PCS already includes
@@ -223,8 +323,7 @@ x-casaos:
       • La restauration d'une application ou de vos fichiers depuis la page Sauvegardes
       • L'interface web de Kopia pour parcourir les instantanés et restaurer un fichier
 
-      🔑 **Vous détenez la clé.** Le mot de passe du dépôt est généré sur ce serveur et
-      ne le quitte pas tant que vous ne l'avez pas sauvegardé. Sans lui, personne — vous
+      🔑 **Vous détenez la clé.** Vous choisissez le mot de passe du dépôt à la configuration et il ne quitte pas ce serveur tant que vous ne l'avez pas sauvegardé. Sans lui, personne — vous
       compris — ne peut lire les sauvegardes. Conservez-le hors du serveur.
 
       ⚠️ **Pour les serveurs sans sauvegarde fournie.** Un PCS Yundera inclut déjà
@@ -238,15 +337,18 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Setup takes three steps
+        Setup happens in your browser
 
         1. Create a private bucket and an application key limited to it (on Backblaze:
            Buckets › Create, then Application Keys › Add, restricted to that bucket).
-        2. In /DATA/AppData/kopia/engine/, copy connect.json.example to connect.json and
-           credentials.env.example to credentials.env, and fill both in. The engine
-           connects within a minute; check the kopia-engine logs if it does not.
-        3. Open Settings › Backups and click Enable on Kopia, then tick it for the
-           nightly backup.
+        2. Open Kopia. On its setup screen pick your storage type, enter the bucket and the
+           key, choose a repository password and create the repository. To try it without a
+           bucket, pick Local Directory or NAS and enter /DATA/AppData/kopia/repository. That
+           is for trying it only: the copy stays inside this app's folder on this server's
+           disk, even though Settings › Backups calls it off-site, and it goes when you
+           uninstall the app or lose the server.
+        3. Within a minute Kopia appears in Settings › Backups. Click Enable, then tick it
+           for the nightly backup.
 
         Save the repository password (Settings › Backups offers it by email or on
         screen). It is the only way to read these backups on another server.
@@ -258,15 +360,19 @@ x-casaos:
 
         Not for a Yundera PCS, which ships its own Kopia engine.
       fr_fr: |
-        La configuration tient en trois étapes
+        La configuration se fait dans votre navigateur
 
         1. Créez un bucket privé et une clé d'application limitée à ce bucket (chez
            Backblaze : Buckets › Create, puis Application Keys › Add).
-        2. Dans /DATA/AppData/kopia/engine/, copiez connect.json.example en connect.json
-           et credentials.env.example en credentials.env, puis remplissez-les. Le moteur
-           se connecte en moins d'une minute ; sinon, consultez les logs de kopia-engine.
-        3. Ouvrez Paramètres › Sauvegardes, cliquez sur Activer pour Kopia, puis
-           cochez-le pour la sauvegarde nocturne.
+        2. Ouvrez Kopia. Sur son écran de configuration, choisissez le type de stockage,
+           saisissez le bucket et la clé, choisissez un mot de passe de dépôt et créez le
+           dépôt. Pour essayer sans bucket, choisissez Local Directory or NAS et saisissez
+           /DATA/AppData/kopia/repository. C'est pour un essai seulement : la copie reste dans
+           le dossier de cette application sur le disque de ce serveur, même si Paramètres ›
+           Sauvegardes la dit externe, et disparaît si vous désinstallez l'application ou
+           perdez le serveur.
+        3. En moins d'une minute, Kopia apparaît dans Paramètres › Sauvegardes. Cliquez sur
+           Activer, puis cochez-le pour la sauvegarde nocturne.
 
         Conservez le mot de passe du dépôt (Paramètres › Sauvegardes le propose par
         e-mail ou à l'écran). C'est le seul moyen de lire ces sauvegardes ailleurs.
@@ -300,8 +406,8 @@ x-compose-app:
     en_us: Encrypted nightly backups of your server to your own Backblaze B2 or S3 bucket.
     fr_fr: Des sauvegardes nocturnes chiffrées de votre serveur vers votre propre bucket Backblaze B2 ou S3.
   description:
-    en_us: "\U0001F4BE **What is Kopia?**\n\n**Kopia** is a fast, encrypted, deduplicating backup tool. This app plugs it into\nyour server's **Backups** page as an off-site destination: your apps and your\nDocuments, Downloads and Media are backed up every night to a storage bucket you\nown — Backblaze B2, or any S3-compatible service.\n\n✅ **What you get**\n• Nightly, incremental, end-to-end encrypted backups to your own bucket\n• Restore an app or your files from the Backups page, like a local backup\n• Kopia's own web UI to browse snapshots and restore single files\n\n\U0001F511 **You hold the key.** The repository password is generated on this server and\nnever leaves it unless you save it. Without it, nobody — including you — can read\nthe backups. Save it somewhere off the server.\n\n⚠️ **For servers without a provided backup.** A Yundera PCS already includes\nYundera Backup; this app is for self-hosted servers that do not.\n"
-    fr_fr: "\U0001F4BE **Qu'est-ce que Kopia ?**\n\n**Kopia** est un outil de sauvegarde rapide, chiffré et dédupliqué. Cette\napplication le branche sur la page **Sauvegardes** de votre serveur comme\ndestination externe : vos applications ainsi que vos Documents, Téléchargements\net Médias sont sauvegardés chaque nuit vers un bucket qui vous appartient —\nBackblaze B2 ou tout service compatible S3.\n\n✅ **Ce que vous obtenez**\n• Des sauvegardes nocturnes, incrémentales et chiffrées de bout en bout\n• La restauration d'une application ou de vos fichiers depuis la page Sauvegardes\n• L'interface web de Kopia pour parcourir les instantanés et restaurer un fichier\n\n\U0001F511 **Vous détenez la clé.** Le mot de passe du dépôt est généré sur ce serveur et\nne le quitte pas tant que vous ne l'avez pas sauvegardé. Sans lui, personne — vous\ncompris — ne peut lire les sauvegardes. Conservez-le hors du serveur.\n\n⚠️ **Pour les serveurs sans sauvegarde fournie.** Un PCS Yundera inclut déjà\nYundera Backup ; cette application s'adresse aux serveurs auto-hébergés.\n"
+    en_us: "\U0001F4BE **What is Kopia?**\n\n**Kopia** is a fast, encrypted, deduplicating backup tool. This app plugs it into\nyour server's **Backups** page as an off-site destination: your apps and your\nDocuments, Downloads and Media are backed up every night to a storage bucket you\nown — Backblaze B2, or any S3-compatible service.\n\n✅ **What you get**\n• Nightly, incremental, end-to-end encrypted backups to your own bucket\n• Restore an app or your files from the Backups page, like a local backup\n• Kopia's own web UI to browse snapshots and restore single files\n\n\U0001F511 **You hold the key.** You choose the repository password at setup and it never leaves this server unless you save it. Without it, nobody — including you — can read\nthe backups. Save it somewhere off the server.\n\n⚠️ **For servers without a provided backup.** A Yundera PCS already includes\nYundera Backup; this app is for self-hosted servers that do not.\n"
+    fr_fr: "\U0001F4BE **Qu'est-ce que Kopia ?**\n\n**Kopia** est un outil de sauvegarde rapide, chiffré et dédupliqué. Cette\napplication le branche sur la page **Sauvegardes** de votre serveur comme\ndestination externe : vos applications ainsi que vos Documents, Téléchargements\net Médias sont sauvegardés chaque nuit vers un bucket qui vous appartient —\nBackblaze B2 ou tout service compatible S3.\n\n✅ **Ce que vous obtenez**\n• Des sauvegardes nocturnes, incrémentales et chiffrées de bout en bout\n• La restauration d'une application ou de vos fichiers depuis la page Sauvegardes\n• L'interface web de Kopia pour parcourir les instantanés et restaurer un fichier\n\n\U0001F511 **Vous détenez la clé.** Vous choisissez le mot de passe du dépôt à la configuration et il ne quitte pas ce serveur tant que vous ne l'avez pas sauvegardé. Sans lui, personne — vous\ncompris — ne peut lire les sauvegardes. Conservez-le hors du serveur.\n\n⚠️ **Pour les serveurs sans sauvegarde fournie.** Un PCS Yundera inclut déjà\nYundera Backup ; cette application s'adresse aux serveurs auto-hébergés.\n"
   developer: Kopia Authors
   category: Backup
   icon: icon.png
@@ -315,15 +421,18 @@ x-compose-app:
     recommended: { memory: 4G }
   tips:
     en_us: |
-      Setup takes three steps
+      Setup happens in your browser
 
       1. Create a private bucket and an application key limited to it (on Backblaze:
          Buckets › Create, then Application Keys › Add, restricted to that bucket).
-      2. In /DATA/AppData/kopia/engine/, copy connect.json.example to connect.json and
-         credentials.env.example to credentials.env, and fill both in. The engine
-         connects within a minute; check the kopia-engine logs if it does not.
-      3. Open Settings › Backups and click Enable on Kopia, then tick it for the
-         nightly backup.
+      2. Open Kopia. On its setup screen pick your storage type, enter the bucket and the
+         key, choose a repository password and create the repository. To try it without a
+         bucket, pick Local Directory or NAS and enter /DATA/AppData/kopia/repository. That
+         is for trying it only: the copy stays inside this app's folder on this server's
+         disk, even though Settings › Backups calls it off-site, and it goes when you
+         uninstall the app or lose the server.
+      3. Within a minute Kopia appears in Settings › Backups. Click Enable, then tick it
+         for the nightly backup.
 
       Save the repository password (Settings › Backups offers it by email or on
       screen). It is the only way to read these backups on another server.
@@ -335,15 +444,19 @@ x-compose-app:
 
       Not for a Yundera PCS, which ships its own Kopia engine.
     fr_fr: |
-      La configuration tient en trois étapes
+      La configuration se fait dans votre navigateur
 
       1. Créez un bucket privé et une clé d'application limitée à ce bucket (chez
          Backblaze : Buckets › Create, puis Application Keys › Add).
-      2. Dans /DATA/AppData/kopia/engine/, copiez connect.json.example en connect.json
-         et credentials.env.example en credentials.env, puis remplissez-les. Le moteur
-         se connecte en moins d'une minute ; sinon, consultez les logs de kopia-engine.
-      3. Ouvrez Paramètres › Sauvegardes, cliquez sur Activer pour Kopia, puis
-         cochez-le pour la sauvegarde nocturne.
+      2. Ouvrez Kopia. Sur son écran de configuration, choisissez le type de stockage,
+         saisissez le bucket et la clé, choisissez un mot de passe de dépôt et créez le
+         dépôt. Pour essayer sans bucket, choisissez Local Directory or NAS et saisissez
+         /DATA/AppData/kopia/repository. C'est pour un essai seulement : la copie reste dans
+         le dossier de cette application sur le disque de ce serveur, même si Paramètres ›
+         Sauvegardes la dit externe, et disparaît si vous désinstallez l'application ou
+         perdez le serveur.
+      3. En moins d'une minute, Kopia apparaît dans Paramètres › Sauvegardes. Cliquez sur
+         Activer, puis cochez-le pour la sauvegarde nocturne.
 
       Conservez le mot de passe du dépôt (Paramètres › Sauvegardes le propose par
       e-mail ou à l'écran). C'est le seul moyen de lire ces sauvegardes ailleurs.
@@ -363,6 +476,8 @@ x-compose-app:
       mode: "0700"
     - path: /DATA/AppData/$AppID/engine/cache
     - path: /DATA/AppData/$AppID/engine/logs
+    # The path the tips offer for trying the setup screen without a bucket.
+    - path: /DATA/AppData/$AppID/repository
   # The engine's own state is not app data: the repository config and password are
   # useless inside the very repository they open, and the cache is rebuilt on demand.
   backup:

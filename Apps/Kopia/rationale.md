@@ -45,8 +45,9 @@ already have.
 ## Security mitigations in place
 
 - **The gate is the only way in.** `kopia` (AppShield SSO) is the only service on
-  `pcs` and the only one with Caddy labels. `kopia-app` and `kopia-engine` sit alone
-  on `kopia-internal`, so no other app on the server can reach them.
+  `pcs` and the only one with Caddy labels. `kopia-router`, `kopia-app` and
+  `kopia-engine` sit alone on `kopia-internal`, so no other app on the server can reach
+  them.
 - **`cap_drop: ALL`**, then back only `DAC_READ_SEARCH`, `DAC_OVERRIDE`, `CHOWN`,
   `FOWNER`, `FSETID`. No `SETUID`, no `SYS_ADMIN`, no network capabilities.
 - **`no-new-privileges:true`** on both.
@@ -54,9 +55,28 @@ already have.
 - **Admin opt-in.** Maison ignores the engine until it is enabled in Settings, and
   binds that approval to the image the container actually runs.
 - **The engine folder is `0700`.** It holds the repository password and the storage
-  key. Example files ship as `*.example`; the real ones are written by the user.
+  key, both entered by the user on kopia's setup screen behind the gate.
 - **Resource limits** on all three services (128M gate, 1G UI, 2G engine; `cpu_shares`
   40/50/30 — background tier for the engine).
+
+## The router
+
+`kopia-router` (nginx, behind the gate) exists for three first-use console errors
+(`clean-boot`). It answers kopia's "no policy for this path" 400 on `GET /api/v1/policy`
+with an empty policy, which is what the UI substitutes for that 400. The one visible
+difference: a policy page opened for a path with no policy also shows Delete Policy,
+which does nothing there. It also marks the web manifest `crossorigin="use-credentials"`
+so the browser's fetch of it passes the gate.
+
+`POST /api/v1/repo/exists` answers 400 `NOT_INITIALIZED` each time the setup screen is
+about to create a new repository. The UI reaches its create form through that rejection
+and reads the code from the JSON body, so the router keeps the body and changes only a
+400's status, to 300 with no `Location`: still a rejection to the UI, and below the 400
+where browsers log an error. nginx can't change a status and keep the body of one
+response, so a 400 is asked again; the call only reads the storage. Every other status
+passes through: a storage failure such as a bad path is a 500, logged by the browser and
+shown on the setup screen. It is a workaround until kopia stops answering an expected
+state with an error status.
 
 ## Alternatives considered and rejected
 
@@ -66,16 +86,17 @@ already have.
 | `user: $PUID` + `cap_add: DAC_READ_SEARCH` | Does nothing. Docker has no ambient capabilities. |
 | Mount only the user folders | Drops `/DATA/AppData`, i.e. every app — the main thing a backup is for. |
 | Put `kopia-app` on `pcs` | Any other app could then reach a password-less kopia server over all of `/DATA`. |
-| A Maison form for bucket and key | Would make Maison write storage credentials and name what it runs; the deployment rule is that the image is named by an installed app, never typed into a form. |
+| A Maison form for bucket and key | Would make Maison write storage credentials and name what it runs; the deployment rule is that the image is named by an installed app, never typed into a form. Kopia's own setup screen, inside this app, needs neither. |
 | Same app on a Yundera PCS | Its platform already deploys `kopia` with Yundera-issued storage; two stacks under one id would overwrite each other. |
 
 ## Data protection
 
-- Backups are end-to-end encrypted with the repository password generated on the box.
+- Backups are end-to-end encrypted with the repository password chosen on kopia's setup
+  screen.
   **The password is the only key**: Maison offers it on screen and by email, and the
   install tips say to save it off the server.
-- The storage key lives in `engine/credentials.env`, inside the `0700` engine folder.
-  It is read per invocation and blanked out of kopia's own config after connect.
+- The storage key lives in `engine/repository.config`, kopia's own config, inside the
+  `0700` engine folder.
 - Uninstalling the app removes the engine's configuration with its folder; the backups
   stay in the bucket and are readable with the saved password. Maison warns before
   uninstalling an app that is a backup engine.
