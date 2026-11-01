@@ -3,3 +3,6 @@ adminAccountUserName=admin
 adminAccountBase64MD5=MD5:${YACY_ADMIN_HASH}
 adminAccountForLocalhost=false
 server.https=false
+# Result favicons off: YaCy's ViewFavicon servlet answers HTTP 500 (empty body)
+# whenever a remote result's icon cannot be fetched or decoded (clean-boot).
+search.result.show.favicon=false
