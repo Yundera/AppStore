@@ -432,6 +432,9 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # The yacy service is capped at 2048M (its Java heap lives inside that), plus the box's own needs.
+  resources:
+    recommended: { memory: 4G }
   tips:
     en_us: |
       **Default Admin Access**
@@ -595,3 +598,4 @@ x-compose-app:
         [ -e "$APP_DIR/data/SETTINGS/yacy.conf" ] && exit 0
         hash=$(printf 'admin:YaCy:%s' "$YACY_ADMIN_PASSWORD" | md5sum | cut -d' ' -f1)
         echo "YACY_ADMIN_HASH=$hash" >> "$MAISON_OUTPUT"
+
