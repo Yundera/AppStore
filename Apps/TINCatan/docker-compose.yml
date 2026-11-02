@@ -8,10 +8,9 @@ x-logging: &logging
 
 services:
   tincatan:
-    # AppShield sidecar — the only publicly reachable container. Basic-auth mode
-    # (no OIDC_REGISTRAR_URL): TINC is a 2-4 player game whose other players are
-    # guests on this PCS, so a shared credential the owner can hand out is the
-    # gate that keeps the app usable. See Apps/Stremio for the same pattern.
+    # AppShield sidecar — the only publicly reachable container. OIDC mode: it
+    # self-registers with the PCS auth-registrar and every request goes through
+    # the platform's single sign-on (requirement `appshield-wiring`).
     image: ghcr.io/yundera/appshield:3.2.0
     container_name: tincatan
     # OIDC identity / redirect attestation: hostname must equal container_name.
@@ -25,8 +24,9 @@ services:
       BACKEND_HOST: "tincatan-backend"
       BACKEND_PORT: "4567"
       LISTEN_PORT: "80"
-      USER: "admin"
-      PASSWORD: ${TINCATAN_PASSWORD}
+      # The presence of OIDC_REGISTRAR_URL puts AppShield in OIDC mode.
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
     depends_on:
       tincatan-backend:
         condition: service_started
@@ -197,9 +197,9 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Sign-in** — the game is protected by a shared login. Give it to the
-        friends you want to play with; anyone without it cannot reach the board.
-        The username and password are shown when you open the app (tile menu → Credentials).
+        **Sign-in** — the game is protected by the server's single sign-on: opening
+        it sends you to the usual login page, where your server account signs you in.
+        Everyone you play with needs an account on this server.
         -----------------------------
         **First start takes a few minutes.** TINC is compiled from source the first
         time it runs. The tile turns healthy on its own once the build finishes —
@@ -218,25 +218,25 @@ x-casaos:
         trading, development cards, Longest Road and Largest Army, and the robber
         on a roll of 7. Works on desktop, tablet and mobile browsers.
       fr_fr: |
-        **Connexion** — le jeu est protégé par un identifiant partagé, affiché à
-        l'ouverture de l'application (menu de la tuile → Identifiants). Communiquez-le à vos joueurs.
+        **Connexion** — le jeu est protégé par l'authentification unique du serveur :
+        chaque joueur se connecte avec un compte de ce serveur.
         -----------------------------
         Le premier démarrage prend quelques minutes : TINC est compilé depuis les
         sources. Attendez simplement — les démarrages suivants sont immédiats.
       ko_kr: |
-        **로그인** — 게임은 공유 계정으로 보호되며, 앱을 열면 표시됩니다
-        (타일 메뉴 → 자격 증명). 함께 플레이할 친구에게 알려주세요.
+        **로그인** — 게임은 서버의 통합 로그인(SSO)으로 보호됩니다.
+        함께 플레이하는 모든 사람은 이 서버의 계정이 필요합니다.
         -----------------------------
         첫 실행은 몇 분 걸립니다. TINC를 소스에서 컴파일하기 때문입니다.
         기다리기만 하면 되며, 이후 실행은 즉시 시작됩니다.
       zh_cn: |
-        **登录** — 游戏由共享账号保护，打开应用时会显示（磁贴菜单 → 凭据）。
-        请将其告知一起游戏的朋友。
+        **登录** — 游戏由服务器的单点登录保护，
+        每位玩家都需要使用本服务器的账号登录。
         -----------------------------
         首次启动需要几分钟：TINC 从源码编译。稍候即可，之后的启动会很快。
       es_es: |
-        **Acceso** — el juego está protegido por una credencial compartida, que se
-        muestra al abrir la aplicación (menú del icono → Credenciales). Compártela con tus jugadores.
+        **Acceso** — el juego está protegido por el inicio de sesión único del
+        servidor: cada jugador entra con una cuenta de este servidor.
         -----------------------------
         El primer arranque tarda unos minutos: TINC se compila desde el código
         fuente. Solo hay que esperar; los arranques posteriores son inmediatos.
@@ -311,9 +311,9 @@ x-compose-app:
     - arm64
   tips:
     en_us: |
-      **Sign-in** — the game is protected by a shared login. Give it to the
-      friends you want to play with; anyone without it cannot reach the board.
-      The username and password are shown when you open the app (tile menu → Credentials).
+      **Sign-in** — the game is protected by the server's single sign-on: opening
+      it sends you to the usual login page, where your server account signs you in.
+      Everyone you play with needs an account on this server.
       -----------------------------
       **First start takes a few minutes.** TINC is compiled from source the first
       time it runs. The tile turns healthy on its own once the build finishes —
@@ -332,25 +332,25 @@ x-compose-app:
       trading, development cards, Longest Road and Largest Army, and the robber
       on a roll of 7. Works on desktop, tablet and mobile browsers.
     fr_fr: |
-      **Connexion** — le jeu est protégé par un identifiant partagé, affiché à
-      l'ouverture de l'application (menu de la tuile → Identifiants). Communiquez-le à vos joueurs.
+      **Connexion** — le jeu est protégé par l'authentification unique du serveur :
+      chaque joueur se connecte avec un compte de ce serveur.
       -----------------------------
       Le premier démarrage prend quelques minutes : TINC est compilé depuis les
       sources. Attendez simplement — les démarrages suivants sont immédiats.
     ko_kr: |
-      **로그인** — 게임은 공유 계정으로 보호되며, 앱을 열면 표시됩니다
-      (타일 메뉴 → 자격 증명). 함께 플레이할 친구에게 알려주세요.
+      **로그인** — 게임은 서버의 통합 로그인(SSO)으로 보호됩니다.
+      함께 플레이하는 모든 사람은 이 서버의 계정이 필요합니다.
       -----------------------------
       첫 실행은 몇 분 걸립니다. TINC를 소스에서 컴파일하기 때문입니다.
       기다리기만 하면 되며, 이후 실행은 즉시 시작됩니다.
     zh_cn: |
-      **登录** — 游戏由共享账号保护，打开应用时会显示（磁贴菜单 → 凭据）。
-      请将其告知一起游戏的朋友。
+      **登录** — 游戏由服务器的单点登录保护，
+      每位玩家都需要使用本服务器的账号登录。
       -----------------------------
       首次启动需要几分钟：TINC 从源码编译。稍候即可，之后的启动会很快。
     es_es: |
-      **Acceso** — el juego está protegido por una credencial compartida, que se
-      muestra al abrir la aplicación (menú del icono → Credenciales). Compártela con tus jugadores.
+      **Acceso** — el juego está protegido por el inicio de sesión único del
+      servidor: cada jugador entra con una cuenta de este servidor.
       -----------------------------
       El primer arranque tarda unos minutos: TINC se compila desde el código
       fuente. Solo hay que esperar; los arranques posteriores son inmediatos.
@@ -364,20 +364,7 @@ x-compose-app:
     - path: /DATA/AppData/tincatan/m2
       user: $PUID
       group: $PGID
-  secrets:
-    # Seeded: an installed app keeps the login its players already have (the former
-    # shared password); a fresh install gets its own.
-    TINCATAN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
-  credentials:
-    - label:
-        en_us: Player login
-        fr_fr: Identifiant des joueurs
-      username: admin
-      password: ${TINCATAN_PASSWORD}
-      note:
-        en_us: Shared with everyone you play with.
-        fr_fr: Partagé avec tous vos joueurs.
-      # PASSWORD is read from the environment on every start, so a new value in .env
-      # plus a recreate is the whole change.
-      change:
-        apply: env
+  # The two services' memory limits add up to more than 2G (requirement
+  # `resources-declared`); the first start compiles TINC with Maven.
+  resources:
+    recommended: { memory: 3G }
