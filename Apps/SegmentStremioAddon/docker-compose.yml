@@ -8,6 +8,11 @@ x-logging: &logging
     max-file: "3"
 
 services:
+  # AppShield gates the setup page only. The app's own router (ssa-router, below)
+  # splits the single public hostname by path: /api/ - the addon protocol Stremio
+  # fetches, protected by the addon's own API key - straight to the backend, everything
+  # else (the setup page, plus AppShield's own /nhl-auth endpoints) through the SSO
+  # sidecar. See rationale.md.
   ssa-proxy:
     image: ghcr.io/yundera/appshield:3.2.0
     container_name: ssa
@@ -24,13 +29,8 @@ services:
       BACKEND_HOST: "ssa-backend"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
-      # Stremio itself is the API client here: the desktop/mobile/web player fetches the
-      # manifest, catalog, meta and stream URLs directly and cannot perform an OIDC or
-      # OAuth 2.1 flow. /api/ is therefore exempted from the SSO gate and is protected
-      # instead by the addon's own API key, embedded in the manifest URL path. This is a
-      # documented deviation from the "use OAUTH_RESOURCE, not ALLOWED_PATHS" rule - see
-      # rationale.md. The setup page at / stays behind the OIDC gate.
-      ALLOWED_PATHS: "/api/"
+      # No ALLOWED_PATHS: the router never sends /api/ to this sidecar, so everything it
+      # sees is gated.
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
     depends_on:
@@ -68,6 +68,30 @@ services:
     networks:
       - ssa-internal
 
+  ssa-router:
+    image: nginx:1.31.8-alpine
+    container_name: ssa-router
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    expose:
+      - "80"
+    configs:
+      - source: ssa-router
+        target: /etc/nginx/conf.d/default.conf
+    networks:
+      - ssa-internal
+      - pcs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 networks:
   ssa-internal:
     driver: bridge
@@ -75,13 +99,61 @@ networks:
     name: ${APP_NET:-pcs}
     external: true
 
+configs:
+  ssa-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      map $$http_upgrade $$connection_upgrade { default upgrade; "" close; }
+      map $$http_x_forwarded_proto $$fwd_proto { default $$http_x_forwarded_proto; "" $$scheme; }
+      # The client address is the LAST X-Forwarded-For entry: the one the proxy in
+      # front appended, which a client cannot forge.
+      map $$http_x_forwarded_for $$client_ip { "~([^,\s]+)\s*$$" $$1; default $$remote_addr; }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # Direct play and HLS segments stream through here: no buffering, long reads.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$client_ip;
+        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$fwd_proto;
+        proxy_set_header X-Forwarded-Host $$http_host;
+        proxy_set_header Upgrade $$http_upgrade;
+        proxy_set_header Connection $$connection_upgrade;
+
+        set $$gate ssa:80;
+        set $$addon ssa-backend:80;
+
+        location = /_router/health { access_log off; return 204; }
+
+        # The app ships no favicon; answer it here rather than send a browser's
+        # automatic request into the SSO gate.
+        location = /favicon.ico { access_log off; return 204; }
+
+        # The addon protocol Stremio fetches (manifest, catalog, meta, stream, direct,
+        # transcode). Stremio cannot do OIDC; the backend rejects any request without
+        # the per-install API key in the path.
+        location /api/ { proxy_pass http://$$addon; }
+
+        # The setup page and the gate's own login endpoints: through the SSO gate.
+        location / { proxy_pass http://$$gate; }
+      }
+
 x-casaos:
   index: /
   webui_port: 80
-  # The AppShield sidecar - the routed service and the only one on
-  # the shared pcs network. Never the backend.
-  main: ssa-proxy
-  access_domain: ssa-username.nsl.sh
+  # The app's router - the routed service. Never the backend.
+  main: ssa-router
 
   architectures:
     - amd64
@@ -135,12 +207,11 @@ x-casaos:
   tagline:
     en_us: Stremio addon to browse and stream your local media with built-in HLS transcoding
     fr_fr: Addon Stremio pour parcourir et diffuser vos médias locaux avec transcodage HLS intégré
-  thumbnail: thumbnail.png
   tips:
     before_install:
       en_us: |
         After installation:
-        1. Open the addon page at https://ssa-username.nsl.sh
+        1. Open the addon page at ${APP_URL:-https://ssa-${APP_DOMAIN}}/
         2. Copy the manifest URL or click "Install in Stremio"
         3. You can also install from Stremio Web at https://web.strem.io/
         4. Your media library will appear as "SSA" in Stremio's catalog
@@ -149,7 +220,7 @@ x-casaos:
         API key protection is enabled by default with a key generated for this app.
       fr_fr: |
         Après l'installation:
-        1. Ouvrez la page de l'addon à https://ssa-username.nsl.sh
+        1. Ouvrez la page de l'addon à ${APP_URL:-https://ssa-${APP_DOMAIN}}/
         2. Copiez l'URL du manifest ou cliquez sur "Installer dans Stremio"
         3. Vous pouvez aussi installer depuis Stremio Web à https://web.strem.io/
         4. Votre bibliothèque multimédia apparaîtra comme "SSA" dans le catalogue Stremio
@@ -167,7 +238,7 @@ x-compose-app:
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
   routes:
-    - { service: ssa-proxy, name: ssa, upstream-port: 80 }
+    - { service: ssa-router, name: ssa, upstream-port: 80 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -218,7 +289,6 @@ x-compose-app:
   developer: Worph
   category: Media
   icon: icon.png
-  thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
   architectures:
@@ -227,7 +297,7 @@ x-compose-app:
   tips:
     en_us: |
       After installation:
-      1. Open the addon page at https://ssa-username.nsl.sh
+      1. Open the addon page at ${APP_URL:-https://ssa-${APP_DOMAIN}}/
       2. Copy the manifest URL or click "Install in Stremio"
       3. You can also install from Stremio Web at https://web.strem.io/
       4. Your media library will appear as "SSA" in Stremio's catalog
@@ -236,7 +306,7 @@ x-compose-app:
       API key protection is enabled by default with a key generated for this app.
     fr_fr: |
       Après l'installation:
-      1. Ouvrez la page de l'addon à https://ssa-username.nsl.sh
+      1. Ouvrez la page de l'addon à ${APP_URL:-https://ssa-${APP_DOMAIN}}/
       2. Copiez l'URL du manifest ou cliquez sur "Installer dans Stremio"
       3. Vous pouvez aussi installer depuis Stremio Web à https://web.strem.io/
       4. Votre bibliothèque multimédia apparaîtra comme "SSA" dans le catalogue Stremio
