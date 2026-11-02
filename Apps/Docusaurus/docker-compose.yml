@@ -158,7 +158,7 @@ x-compose-app:
       run: always
       script: |
         [ -e "$APP_DIR/src/.initialized" ] && exit 0
-        docker run --rm -i --entrypoint sh --user 0:0 \
+        docker run --rm -i --entrypoint sh --user "$PUID:$PGID" -e HOME=/tmp \
           -v "$APP_DIR/src:/output" -v "$APP_DIR/build:/build-output" \
           node:20.19.2-alpine3.20 -s <<'SH'
         set -e
