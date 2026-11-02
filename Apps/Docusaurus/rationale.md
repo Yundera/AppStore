@@ -2,8 +2,9 @@
 
 ## What deviation / exception is being requested
 
-All three services run as root — `user: "root"` on the AppShield front door,
-`user: "0:0"` on the one-shot builder and on the Nginx backend.
+Both services run as root — `user: "root"` on the AppShield front door and
+`user: "0:0"` on the Nginx backend. The one-shot builder step runs as
+`$PUID:$PGID`.
 
 Authentication is **not** disabled: the app is fronted by the AppShield OIDC
 sidecar (`ghcr.io/yundera/appshield:2.0.6`) in OIDC-only mode, so every request
@@ -14,9 +15,9 @@ is authenticated against the PCS's built-in SSO before it reaches the site.
 - **`docusaurus` (AppShield sidecar)** — runs as root, the same as every other
   AppShield-fronted app in this store. The sidecar image expects it.
 - **`docusaurus-init` (node:20-alpine)** — runs `npx create-docusaurus` and
-  `npm run build`, then copies the generated project and its build output into
-  two bind mounts under `/DATA/AppData/$AppID/`. npm's install and build steps
-  need unrestricted write access to their own working tree and cache.
+  `npm run build` as `$PUID:$PGID` (with `HOME=/tmp`, so npm has a writable
+  cache), then copies the generated project and its build output into two bind
+  mounts under `/DATA/AppData/$AppID/`, which end up owned by the user.
 - **`docusaurus-backend` (nginx:1.27-alpine)** — the official Nginx image's
   entrypoint runs its template/permission setup as root and then drops the
   worker processes to the unprivileged `nginx` user itself.
@@ -37,16 +38,11 @@ is authenticated against the PCS's built-in SSO before it reaches the site.
   `/DATA/AppData/$AppID/` (`src/` and `build/`). No user directory
   (`/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`) is
   mounted, and nothing outside `/DATA/AppData/$AppID/` is touched.
-- **The builder is one-shot.** `docusaurus-init` has `restart: "no"` and exits as
-  soon as the first build finishes; it is not a long-lived root process.
+- **The builder is one-shot and unprivileged.** The `docusaurus-init` step runs
+  as `$PUID:$PGID` and exits as soon as the first build finishes.
 
 ## Alternatives considered and rejected
 
-- **Running the builder as `$PUID:$PGID`** — npm's install/build steps write into
-  their own working tree and cache inside the container as well as into the bind
-  mounts; the directories under `/DATA/AppData/$AppID/` are already created and
-  chowned to `$PUID:$PGID` by `x-compose-app.folders`, so the files that survive
-  the build land under the user's ownership regardless.
 - **Running Nginx as a non-root user** — the official image's entrypoint needs
   root for its own setup and drops privileges for the workers on its own; there
   is no gain in pre-empting it.
