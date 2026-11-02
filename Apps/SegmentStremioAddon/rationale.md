@@ -2,16 +2,17 @@
 
 ## What deviation / exception is being requested
 
-Two deviations:
+One deviation, and one design choice explained here:
 
 1. **Root with user-directory access.** `ssa-backend` runs as `user: 0:0` while mounting
    the user directories `/DATA/Downloads` and `/DATA/Media`. CONTRIBUTING requires
    `user: $PUID:$PGID` for containers that touch
    `/DATA/Documents|Downloads|Gallery|Media`. The AppShield sidecar `ssa-proxy` also runs
    as `user: "0:0"`, matching the AppShield reference deployment; it mounts no volumes.
-2. **`ALLOWED_PATHS` instead of `OAUTH_RESOURCE`.** The sidecar exempts `/api/` from the
-   OIDC gate. CONTRIBUTING says machine/API clients should be gated with `OAUTH_RESOURCE`
-   and that the `ALLOWED_PATHS` pattern should not be copied.
+2. **`/api/` is not behind the SSO gate.** The app's own router `ssa-router` (the
+   `Apps/Vaultwarden` partial-gate pattern of `in-app-router`) sends `/api/` straight
+   to the backend and everything else through the AppShield sidecar. The sidecar sets no
+   `ALLOWED_PATHS`: it only ever sees gated traffic.
 
 ## Why it is necessary
 
@@ -20,7 +21,7 @@ binds port 80, a privileged port, and whose transcoder writes its working files 
 root-owned paths inside the image. Dropping to a non-root uid fails the container at
 startup.
 
-**`ALLOWED_PATHS`.** The API client here is *Stremio itself* — the desktop, mobile, Android
+**`/api/` outside the gate.** The API client here is *Stremio itself* — the desktop, mobile, Android
 TV and web players. Stremio fetches the addon manifest and then every catalog, meta,
 stream, `/direct/:path` and `/transcode` URL directly, as a plain HTTP client with no
 browser session, no redirect handling and no token acquisition. It is not an OAuth client:
@@ -38,10 +39,11 @@ uses — stays fully behind the AppShield OIDC gate.
 - **Both user-directory mounts are read-only** (`:ro`). The container cannot create,
   modify or delete anything under `/DATA/Downloads` or `/DATA/Media`.
 - **The backend is not publicly reachable.** It sits only on the internal `ssa-internal`
-  bridge network and carries no Caddy labels; only the AppShield sidecar joins `pcs`, so
-  every request reaches the backend through AppShield.
-- **The human-facing surface is gated.** Only `/api/` is exempt; `/` and everything else
-  require the PCS's Authelia SSO login.
+  bridge network, is no route's service and publishes no port; every request reaches it
+  through `ssa-router`, which forwards only `/api/` to it directly.
+- **The human-facing surface is gated.** Only `/api/` bypasses the gate; `/` and
+  everything else go through AppShield and require the PCS SSO login. `/favicon.ico`
+  is answered by the router with an empty 204.
 - **`/api/` still requires a credential.** The per-installation API key is required in the
   URL path; the exemption is from the *platform* SSO, not from authentication as such.
 - The key is derived per installation from `SSA_HASH_API_SEED`, a secret Maison generates
@@ -68,7 +70,7 @@ uses — stays fully behind the AppShield OIDC gate.
   OAuth 2.1, but Stremio cannot. It would 401 every addon request and break the app
   completely. (It also requires AppShield >= 2.0.7; the sidecar is now pinned at 2.0.9, so
   the version is no longer the obstacle — the client is.)
-- **Removing `ALLOWED_PATHS` entirely** — the SSO redirect would be returned to Stremio in
+- **Sending `/api/` through the gate** — the SSO redirect would be returned to Stremio in
   place of the manifest, and no catalog, stream or subtitle would ever load.
 - **Narrowing the exemption below `/api/`** — every addon route lives under that prefix
   behind the API key, so there is no narrower prefix that leaves the addon working.
