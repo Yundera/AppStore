@@ -365,6 +365,11 @@ x-compose-app:
   thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  accounts:
+    - provider: Telegram
+      url: https://t.me/BotFather
+  audience: technical
   architectures:
     - amd64
   tips:

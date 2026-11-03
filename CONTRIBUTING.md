@@ -31,7 +31,10 @@ or `unverified`. Severity ranks how urgent the fix is. It never waives one.
 **Exceptions.** Only an item that says *"`rationale.md` can cover it"* accepts an exception, and
 only when `Apps/<AppName>/rationale.md` names that exact deviation and explains it (see
 [GUIDELINES › Rationale](GUIDELINES.md#rationale-rationalemd)). A rationale that does not
-describe the actual deviation covers nothing.
+describe the actual deviation covers nothing. Two items, `zero-config` and `works-immediately`,
+also accept an exception from what the app *declares* — `accounts` and `inputs` (see
+[GUIDELINES › What the user brings](GUIDELINES.md#what-the-user-brings)) — and need no rationale
+for it.
 
 **Check** says how each item is settled: **static** items are read from the app's files,
 **functional** items need the app installed on a PCS.
@@ -446,12 +449,28 @@ With an AppShield gate, the router goes where its job is:
   - the compose carries none of the keys Maison writes itself (`store-ref`, `store`,
     `store-app-id`, `generated-routes`).
 
+### `user-prerequisites` — what the user must bring is declared
+
+**Check:** static · **Severity:** Minor
+**n-a:** the app is free, needs no third-party account and no value only the user has.
+
+- **Pass:** an app that has to be paid for declares `cost` (`paid` or `freemium`); one that needs
+  an account on a service the user doesn't control declares it under `accounts`; one that cannot
+  work until the user supplies a value (credentials, a vendor key, a claim token) declares it under
+  `inputs`, with the compose reading it as `${KEY:-}` and keys/passwords marked `secret: true`. An
+  app for technical users (root- or host-level, developer or AI-agent tooling) declares
+  `audience: technical`; a broad `/DATA` mount alone does not make an app technical. See
+  [GUIDELINES › What the user brings](GUIDELINES.md#what-the-user-brings).
+- **Fail:** the description or tips say the app needs a purchase, an outside account or a value
+  typed into the Env tab, and the matching field is missing.
+
 ### `description` — the app is explained in English
 
 **Check:** static · **Severity:** Minor
 
 - **Pass:** every user-facing string — `title`, `tagline`, `description`, `tips`,
-  `credentials[].label` / `note`, `links[].name`, `migrations[].name` / `blocked` — is a
+  `credentials[].label` / `note`, `links[].name`, `inputs[].label` / `description`,
+  `migrations[].name` / `blocked` — is a
   locale map with a non-empty `en_us` entry (Maison drops a plain string), and the description
   says what the app does. `maison lint` checks the first half:
   `docker run --rm -v "$PWD:/s" -w /s ghcr.io/yundera/maison:<tag> maison lint Apps/<App>/docker-compose.yml`.
@@ -489,11 +508,19 @@ has nothing to open, so only `install` applies to it; its auth and data are judg
 
 ### `works-immediately` — no setup before use
 
-**Check:** functional · **Severity:** Major
+**Check:** functional · **Severity:** Major · declared `inputs` can cover it
 **n-a:** a service app.
 
 - **Pass:** the app shows a working UI right after install. Nobody has to read logs, open a shell
   or run a command first.
+- **Pass, with declared inputs:** an app that cannot work until the user supplies a value
+  declares it under `inputs`. Maison asks for it at install and, while a required one is empty,
+  its tile shows **Setup needed** and opens a form instead of the app. That form is the first
+  screen, and once it is filled the app shows a working UI. When the value is an account on a
+  service declared under `accounts` (a vendor licence the audit cannot hold), the app is checked
+  as far as that service's sign-in, and what lies behind it is not held against the app.
+- **Fail:** an error page or an endless spinner; a value only reachable through the Env tab, a
+  file or a command, with no `inputs` declaration.
 
 ### `auth-gate` — the login is really there
 
@@ -514,14 +541,15 @@ has nothing to open, so only `install` applies to it; its auth and data are judg
 
 ### `zero-config` — usable from the browser alone
 
-**Check:** functional · **Severity:** Major · `rationale.md` can cover a third-party sign-in
+**Check:** functional · **Severity:** Major · declared `accounts` can cover a third-party sign-in
 **n-a:** a service app.
 
 - **Pass:** the app reaches a usable state through its UI with the defaults it shipped with.
-  Following what the app documents (its `tips`, its description, its own first screen) counts;
-  reading logs, opening a shell or editing a file does not. An app whose setup needs an account
-  on an identity provider the user doesn't control (Plex against plex.tv) passes when
-  `rationale.md` names that provider.
+  Following what the app documents (its `tips`, its description, its own first screen, Maison's
+  setup form for its declared `inputs`) counts; reading logs, opening a shell or editing a file
+  does not. An app whose setup needs an account on an identity provider the user doesn't control
+  (Plex against plex.tv) passes when `x-compose-app.accounts` names that provider; it is checked
+  as far as that provider's sign-in.
 
 ### `data-persistence` — data survives uninstall and reinstall
 

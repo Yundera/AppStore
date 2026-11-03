@@ -310,6 +310,8 @@ x-compose-app:
     - screenshot-3.png
     - screenshot-4.png
     - screenshot-5.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  audience: technical
   architectures:
     - amd64
     - arm64

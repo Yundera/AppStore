@@ -271,6 +271,11 @@ x-compose-app:
   screenshots:
     - screenshot-1.png
     - screenshot-2.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  accounts:
+    - provider: Discord
+      url: https://discord.com/developers/applications
+  audience: technical
   architectures:
     - amd64
   tips:

@@ -49,7 +49,7 @@ services:
       PGID: $PGID
       PUID: $PUID
       TZ: $TZ
-      PLEX_CLAIM: ""
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
       VERSION: docker
     deploy:
       resources:
@@ -227,6 +227,16 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  cost: freemium
+  accounts:
+    - provider: plex.tv
+      url: https://www.plex.tv/
+  inputs:
+    - env: PLEX_CLAIM
+      label: { en_us: "Plex claim token (optional)" }
+      description: { en_us: "Links this server to your plex.tv account. Get it from plex.tv/claim; it expires after 4 minutes, so paste it right before installing. Without it you can still claim the server from its web page." }
+      secret: true
   architectures:
     - amd64
     - arm64

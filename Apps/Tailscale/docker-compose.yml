@@ -169,6 +169,18 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  cost: freemium
+  accounts:
+    - provider: Tailscale
+      url: https://login.tailscale.com/
+  audience: technical
+  inputs:
+    - env: TS_AUTHKEY
+      label: { en_us: "Tailscale auth key" }
+      description: { en_us: "Create one at login.tailscale.com › Settings › Keys." }
+      secret: true
+      required: true
   architectures:
     - amd64
     - arm64

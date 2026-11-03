@@ -286,6 +286,11 @@ x-compose-app:
   screenshots:
     - screenshot-1.png
     - screenshot-2.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  accounts:
+    - provider: Trello
+      url: https://trello.com/
+  audience: technical
   architectures:
     - amd64
     - arm64

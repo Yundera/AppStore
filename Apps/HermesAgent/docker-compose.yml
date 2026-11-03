@@ -411,6 +411,9 @@ x-compose-app:
   # Sum of the service limits (~3G) plus room for the OS and other apps.
   resources:
     recommended: { memory: 4G }
+  # What the user must bring (GUIDELINES › What the user brings).
+  cost: freemium
+  audience: technical
   architectures:
     - amd64
     - arm64

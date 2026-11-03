@@ -247,6 +247,8 @@ x-compose-app:
   thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  audience: technical
   architectures:
     - amd64
     - arm64
