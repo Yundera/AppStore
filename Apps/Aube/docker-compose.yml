@@ -1,0 +1,204 @@
+name: aube
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ── the app ───────────────────────────────────────────────────────────────────────────
+  # No route of its own: reachable from outside only through the AppShield gate below. On the
+  # shared network because it calls other apps there: the LLM backend (e.g. Claude Code's
+  # OpenAI-compatible API), Beacon, and the MCP servers of notification add-ons.
+  aube-backend:
+    image: ghcr.io/worph/aube:1.0.0
+    container_name: aube-backend
+    hostname: aube-backend
+    restart: unless-stopped
+    user: $PUID:$PGID
+    expose:
+      - 8080
+    environment:
+      TZ: $TZ
+      AUBE_DATA_DIR: /data
+      AUBE_PORT: "8080"
+      # Links in notifications. Settings → Schedule → Public URL overrides it.
+      AUBE_PUBLIC_URL: ${APP_URL:-https://aube-${APP_DOMAIN}}
+      # Aube's own MCP endpoint (memory and briefs), shared with the beaconify sidecar.
+      AUBE_MCP_TOKEN: ${AUBE_MCP_TOKEN}
+      # Optional. The LLM backend's bearer is normally entered in Settings → Secrets (stored in
+      # data/secrets.env); a value here wins over it.
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/aube/:/data
+    networks:
+      - pcs
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ── Aube's memory and brief tools, announced to this box's Beacon ─────────────────────
+  # Points at the backend directly, never at the AppShield gate: through the gate it would
+  # fetch a login page instead of a tool list. The bearer never travels in the announce
+  # manifest — Beacon calls the sidecar, the sidecar adds the header.
+  # Announces tools only once the endpoint is enabled in Settings (mcp_endpoint.enabled).
+  aube-mcp:
+    image: ghcr.io/worph/beaconify:1.0.2
+    container_name: aube-mcp
+    hostname: aube-mcp
+    restart: unless-stopped
+    expose:
+      - 9099
+    environment:
+      TZ: $TZ
+      BEACONIFY_NAME: aube
+      BEACONIFY_DESCRIPTION: "Aube — the morning brief's memory (markdown + images) and past briefs"
+      BEACONIFY_UPSTREAM_URL: http://aube-backend:8080/mcp
+      BEACONIFY_AUTH: "Bearer ${AUBE_MCP_TOKEN}"
+    depends_on:
+      - aube-backend
+    networks:
+      - pcs
+    cpu_shares: 30
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # ── the only public surface ───────────────────────────────────────────────────────────
+  aube:
+    image: ghcr.io/yundera/appshield:3.2.0
+    # OIDC identity: the auth-registrar attests the app name through this container's PTR
+    # record, so container_name, hostname and the compose name must all be `aube`.
+    container_name: aube
+    hostname: aube
+    restart: unless-stopped
+    user: 0:0
+    expose:
+      - 80
+    environment:
+      TZ: $TZ
+      BACKEND_HOST: "aube-backend"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+      # Static PWA files only (manifest and icons, no data): Chrome hands their URLs to Google's
+      # WebAPK minting server, which fetches them anonymously; behind the gate Android installs
+      # a plain shortcut instead of an app. Not a machine/API path. See rationale.md.
+      ALLOWED_PATHS: "pwa"
+    depends_on:
+      - aube-backend
+    networks:
+      - pcs
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-compose-app:
+  schema_version: 2
+  id: aube
+  version: "1.0.0"
+  routes:
+    - { service: aube, name: aube, upstream-port: 80, path: /briefs }
+  title:
+    en_us: Aube
+  tagline:
+    en_us: Your morning brief, prepared overnight by an LLM
+  description:
+    en_us: |
+      **Once a night, Aube hands your master prompt and its memory to an LLM, and has one brief waiting for you in the morning.**
+
+      The LLM gathers your day with the tools it is already connected to (mail, calendar, tasks, monitors…). Aube keeps the prompt, the memory, the schedule and the archive — and never a second copy of your tasks' state.
+
+      - One brief per day, beside a 00–24h day band: your events, and the proposed plan in a lighter lane
+      - A web push at the time you choose
+      - An administrator chat to connect things, write the master prompt and edit the memory
+      - Works with any OpenAI-compatible endpoint, such as the Claude Code app's API
+  developer: Worph
+  category: AI
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      Aube needs an **OpenAI-compatible LLM endpoint** that is up and allowed to use its tools — for example the Claude Code app with its OpenAI API turned on.
+
+      1. **Settings → LLM**: the endpoint's base URL and a model, then **Test**.
+      2. **Settings → Secrets**: the endpoint's bearer as `LLM_API_KEY` (stored write-only).
+      3. **Master prompt**: write what you want in the brief, then **Preview**.
+      4. **Briefs**: turn on notifications on your phone (install the app first on iOS).
+
+      Everything Aube keeps lives in `AppData/aube/`: `config.yaml`, `master-prompt.md`, the `memory/` folder and `aube.db`.
+  folders:
+    - path: /DATA/AppData/aube
+      user: $PUID
+      group: $PGID
+  secrets:
+    # Bearer of Aube's MCP endpoint, between the backend and its beaconify sidecar.
+    AUBE_MCP_TOKEN: hex:32
+
+x-casaos:
+  store_app_id: aube
+  main: aube
+  webui_port: 80
+  index: /briefs
+  architectures:
+    - amd64
+    - arm64
+  author: Worph
+  developer: Worph
+  category: AI
+  tags: ["productivity", "ai"]
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  title:
+    en_us: Aube
+  tagline:
+    en_us: Your morning brief, prepared overnight by an LLM
+  description:
+    en_us: |
+      **Once a night, Aube hands your master prompt and its memory to an LLM, and has one brief waiting for you in the morning.**
+
+      The LLM gathers your day with the tools it is already connected to (mail, calendar, tasks, monitors…). Aube keeps the prompt, the memory, the schedule and the archive — and never a second copy of your tasks' state.
+
+      - One brief per day, beside a 00–24h day band: your events, and the proposed plan in a lighter lane
+      - A web push at the time you choose
+      - An administrator chat to connect things, write the master prompt and edit the memory
+      - Works with any OpenAI-compatible endpoint, such as the Claude Code app's API
+  tips:
+    before_install:
+      en_us: |
+        Aube needs an **OpenAI-compatible LLM endpoint** that is up and allowed to use its tools — for example the Claude Code app with its OpenAI API turned on.
+
+        1. **Settings → LLM**: the endpoint's base URL and a model, then **Test**.
+        2. **Settings → Secrets**: the endpoint's bearer as `LLM_API_KEY` (stored write-only).
+        3. **Master prompt**: write what you want in the brief, then **Preview**.
+        4. **Briefs**: turn on notifications on your phone (install the app first on iOS).
+
+        Everything Aube keeps lives in `AppData/aube/`: `config.yaml`, `master-prompt.md`, the `memory/` folder and `aube.db`.
