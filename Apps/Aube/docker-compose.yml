@@ -13,7 +13,7 @@ services:
   # shared network because it calls other apps there: the LLM backend (e.g. Claude Code's
   # OpenAI-compatible API), Beacon, and the MCP servers of notification add-ons.
   aube-backend:
-    image: ghcr.io/worph/aube:1.1.0
+    image: ghcr.io/worph/aube:1.2.0
     container_name: aube-backend
     hostname: aube-backend
     restart: unless-stopped
@@ -60,7 +60,7 @@ services:
     environment:
       TZ: $TZ
       BEACONIFY_NAME: aube
-      BEACONIFY_DESCRIPTION: "Aube — the morning brief's memory (markdown + images) and past briefs"
+      BEACONIFY_DESCRIPTION: "Aube's memory (markdown + images) and past briefs: the nightly brief run's toolset. To set up or change Aube (master prompt, settings), use aube-admin."
       BEACONIFY_UPSTREAM_URL: http://aube-backend:8080/mcp
       BEACONIFY_AUTH: "Bearer ${AUBE_MCP_TOKEN}"
     depends_on:
@@ -90,7 +90,7 @@ services:
     environment:
       TZ: $TZ
       BEACONIFY_NAME: aube-admin
-      BEACONIFY_DESCRIPTION: "Aube administration — master prompt, settings, secrets, previews and run log of the morning brief"
+      BEACONIFY_DESCRIPTION: "Aube — self-hosted morning brief prepared overnight by an LLM. Administer it here: master prompt, settings, previews, memory. New to Aube, or asked what it does or how to start? Call aube-admin__aube_guide first; aube-admin__aube_status shows what is set up and the app's address."
       BEACONIFY_UPSTREAM_URL: http://aube-backend:8080/mcp/admin
       BEACONIFY_AUTH: "Bearer ${AUBE_ADMIN_MCP_TOKEN}"
     depends_on:
@@ -147,7 +147,7 @@ networks:
 x-compose-app:
   schema_version: 2
   id: aube
-  version: "1.1.0"
+  version: "1.2.0"
   routes:
     - { service: aube, name: aube, upstream-port: 80, path: /briefs }
   title:
