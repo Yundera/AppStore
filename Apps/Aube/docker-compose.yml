@@ -13,7 +13,7 @@ services:
   # shared network because it calls other apps there: the LLM backend (e.g. Claude Code's
   # OpenAI-compatible API), Beacon, and the MCP servers of notification add-ons.
   aube-backend:
-    image: ghcr.io/worph/aube:1.0.0
+    image: ghcr.io/worph/aube:1.1.0
     container_name: aube-backend
     hostname: aube-backend
     restart: unless-stopped
@@ -28,6 +28,8 @@ services:
       AUBE_PUBLIC_URL: ${APP_URL:-https://aube-${APP_DOMAIN}}
       # Aube's own MCP endpoint (memory and briefs), shared with the beaconify sidecar.
       AUBE_MCP_TOKEN: ${AUBE_MCP_TOKEN}
+      # Aube's admin MCP endpoint (/mcp/admin), shared with the aube-admin-mcp sidecar.
+      AUBE_ADMIN_MCP_TOKEN: ${AUBE_ADMIN_MCP_TOKEN}
       # Optional. The LLM backend's bearer is normally entered in Settings → Secrets (stored in
       # data/secrets.env); a value here wins over it.
       LLM_API_KEY: ${LLM_API_KEY:-}
@@ -61,6 +63,36 @@ services:
       BEACONIFY_DESCRIPTION: "Aube — the morning brief's memory (markdown + images) and past briefs"
       BEACONIFY_UPSTREAM_URL: http://aube-backend:8080/mcp
       BEACONIFY_AUTH: "Bearer ${AUBE_MCP_TOKEN}"
+    depends_on:
+      - aube-backend
+    networks:
+      - pcs
+    cpu_shares: 30
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # ── Aube's administration (master prompt, settings, previews), announced to Beacon ─────
+  # Same shape as aube-mcp, on /mcp/admin with its own token, as a separate Beacon server
+  # (`aube-admin`) so another assistant (Claude via Beacon) can drive what the chat does.
+  # Announces tools only once Settings → Admin MCP endpoint is enabled. Aube refuses its writes
+  # while a run is in progress: the nightly backend sees this Beacon too.
+  aube-admin-mcp:
+    image: ghcr.io/worph/beaconify:1.0.2
+    container_name: aube-admin-mcp
+    hostname: aube-admin-mcp
+    restart: unless-stopped
+    expose:
+      - 9099
+    environment:
+      TZ: $TZ
+      BEACONIFY_NAME: aube-admin
+      BEACONIFY_DESCRIPTION: "Aube administration — master prompt, settings, secrets, previews and run log of the morning brief"
+      BEACONIFY_UPSTREAM_URL: http://aube-backend:8080/mcp/admin
+      BEACONIFY_AUTH: "Bearer ${AUBE_ADMIN_MCP_TOKEN}"
     depends_on:
       - aube-backend
     networks:
@@ -115,7 +147,7 @@ networks:
 x-compose-app:
   schema_version: 2
   id: aube
-  version: "1.0.0"
+  version: "1.1.0"
   routes:
     - { service: aube, name: aube, upstream-port: 80, path: /briefs }
   title:
@@ -159,6 +191,8 @@ x-compose-app:
   secrets:
     # Bearer of Aube's MCP endpoint, between the backend and its beaconify sidecar.
     AUBE_MCP_TOKEN: hex:32
+    # Bearer of Aube's admin MCP endpoint, between the backend and the aube-admin-mcp sidecar.
+    AUBE_ADMIN_MCP_TOKEN: hex:32
 
 x-casaos:
   store_app_id: aube
