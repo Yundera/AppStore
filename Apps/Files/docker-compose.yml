@@ -54,7 +54,7 @@ services:
 
   files-backend:
     container_name: files-backend
-    image: ghcr.io/yundera/files:1.0.5
+    image: ghcr.io/yundera/files:1.0.6
     restart: unless-stopped
     environment:
       DATA_ROOT: "/DATA"
@@ -294,7 +294,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.2"
+  version: "1.0.6"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
