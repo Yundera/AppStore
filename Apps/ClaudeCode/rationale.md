@@ -2,15 +2,13 @@
 
 ## What deviation / exception is being requested
 
-Three things are recorded here:
+Two things are recorded here. (Anthropic as the required sign-in is declared
+in the compose under `x-compose-app.accounts`, not here.)
 
-1. **Anthropic is the required identity provider** — Claude Code itself only
-   becomes usable once it is signed in to an Anthropic account (see
-   "Third-party sign-in" below).
-2. **`MCP_ENABLED=false`** — the app ships with the image's MCP endpoint turned
+1. **`MCP_ENABLED=false`** — the app ships with the image's MCP endpoint turned
    off, even though this is the sandboxed variant and `ClaudeCodeRoot`'s own
    rationale describes this app as the one that carries MCP.
-3. **`user: 0:0`** — the container's supervisor starts ttyd and the auth/MCP
+2. **`user: 0:0`** — the container's supervisor starts ttyd and the auth/MCP
    process and must be root to do so; it is the image's only supported mode.
 
 No exception is requested on authentication: it is on by default (see below).
@@ -112,22 +110,6 @@ container is mounted, so root here is root of an empty sandbox.
   only. A box that enables MCP in its override takes that decision — and the
   network it needs, against the image's responder as it stands then — for
   itself.
-
-## Third-party sign-in: Anthropic
-
-Claude Code is Anthropic's CLI and cannot do anything until it is signed in to
-**Anthropic**. On first start its own wizard offers three login methods, all of
-them accounts on services the box owner does not control:
-
-1. a Claude subscription (Pro/Max) — an OAuth sign-in at `claude.com`;
-2. an Anthropic Console account (API billing, `console.anthropic.com`);
-3. Amazon Bedrock, Microsoft Foundry or Google Vertex AI.
-
-So the app's usable screen sits behind an account on Anthropic (or one of those
-clouds), the same shape as Plex against plex.tv. Everything before that is
-in-browser and needs no file edit or command: the terminal login (password in
-the tile's Credentials dialog), then Claude Code's own theme and login-method
-screens. The store description and Tips name the options.
 
 ## Routing: the app's own router
 

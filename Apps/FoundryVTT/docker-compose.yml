@@ -304,6 +304,24 @@ x-compose-app:
   icon: icon.png
   screenshots:
     - screenshot-1.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  cost: paid
+  accounts:
+    - provider: foundryvtt.com
+      url: https://foundryvtt.com/
+  inputs:
+    - env: FOUNDRY_USERNAME
+      label: { en_us: "foundryvtt.com username" }
+      description: { en_us: "The account your Foundry licence is registered to. Used only to download the release and fetch the licence." }
+      required: true
+    - env: FOUNDRY_PASSWORD
+      label: { en_us: "foundryvtt.com password" }
+      secret: true
+      required: true
+    - env: FOUNDRY_LICENSE_KEY
+      label: { en_us: "Licence key (optional)" }
+      description: { en_us: "Only needed when the account holds several licences." }
+      secret: true
   architectures:
     - amd64
     - arm64
@@ -314,12 +332,12 @@ x-compose-app:
 
       **1. Enter your foundryvtt.com account**
 
-      The app does not start until it knows your account. After install, open
-      the app's **settings → Env** tab, fill in `FOUNDRY_USERNAME` and
-      `FOUNDRY_PASSWORD` with your foundryvtt.com login, and save. The app
-      restarts, downloads Foundry and activates your license — allow a minute
-      or two. If your account owns several licenses, also set
-      `FOUNDRY_LICENSE_KEY` to the one this server should use.
+      The app does not start until it knows your account. The install dialog
+      asks for your foundryvtt.com login; if you skipped it, the tile shows
+      **Setup needed** — click it, fill in the form and save. The app then
+      downloads Foundry and activates your license — allow a minute or two. If
+      your account owns several licenses, also give the licence key this server
+      should use.
 
       **2. Open the app**
 

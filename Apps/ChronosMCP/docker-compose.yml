@@ -344,6 +344,8 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  audience: technical
   architectures:
     - amd64
   tips:

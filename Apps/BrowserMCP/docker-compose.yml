@@ -475,6 +475,8 @@ x-compose-app:
   # Sum of the service limits (~2.25G: Chromium + Xvfb, and the gate) plus headroom.
   resources:
     recommended: { memory: 3G }
+  # What the user must bring (GUIDELINES › What the user brings).
+  audience: technical
   architectures:
     - amd64
   tips:

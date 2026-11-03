@@ -529,6 +529,23 @@ x-compose-app:
   # Sum of the service limits (~2.25G) plus room for the OS and other apps.
   resources:
     recommended: { memory: 3G }
+  # What the user must bring (GUIDELINES › What the user brings).
+  cost: paid
+  accounts:
+    - provider: Anthropic
+      url: https://claude.com/
+    - provider: OpenAI
+      url: https://platform.openai.com/
+  audience: technical
+  inputs:
+    - env: ANTHROPIC_API_KEY
+      label: { en_us: "Anthropic API key" }
+      description: { en_us: "Provide this one or an OpenAI key." }
+      secret: true
+    - env: OPENAI_API_KEY
+      label: { en_us: "OpenAI API key" }
+      description: { en_us: "Provide this one or an Anthropic key." }
+      secret: true
   architectures:
     - amd64
     - arm64

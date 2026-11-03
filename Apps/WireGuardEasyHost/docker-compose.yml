@@ -236,6 +236,8 @@ x-compose-app:
     - screenshot-3.png
   # Raw TCP/UDP must be dialled from the internet: hidden on a box behind NAT or the tunnel.
   requires: [public-ip]
+  # What the user must bring (GUIDELINES › What the user brings).
+  audience: technical
   architectures:
     - amd64
     - arm64

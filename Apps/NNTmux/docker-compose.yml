@@ -563,6 +563,29 @@ x-compose-app:
   icon: icon.png
   screenshots:
     - screenshot-1.png
+  # What the user must bring (GUIDELINES › What the user brings).
+  cost: paid
+  accounts:
+    - provider: Usenet provider
+  inputs:
+    - env: NNTP_SERVER
+      label: { en_us: "Usenet server" }
+      description: { en_us: "Your provider's news server host name." }
+      required: true
+    - env: NNTP_PORT
+      label: { en_us: "Usenet server port" }
+      description: { en_us: "Usually 563 with SSL, 119 without." }
+      required: true
+    - env: NNTP_USERNAME
+      label: { en_us: "Usenet username" }
+      required: true
+    - env: NNTP_PASSWORD
+      label: { en_us: "Usenet password" }
+      secret: true
+      required: true
+    - env: NNTMUX_GROUPS
+      label: { en_us: "Groups to index (optional)" }
+      description: { en_us: "Comma-separated. Scanning starts once NNTMUX_SCAN=on is set in the Env tab." }
   architectures:
     - amd64
   # Sum of the service limits (~7.6G); indexing is CPU-bound.

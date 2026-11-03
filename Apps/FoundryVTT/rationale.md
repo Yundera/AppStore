@@ -4,8 +4,10 @@
 
 1. **No AppShield SSO sidecar.** Access control is Foundry's own: an administrator
    password on the setup screen and per-user passwords inside each world.
-2. **Does not work immediately after install.** The app needs the user's
-   foundryvtt.com account before it can start.
+
+The foundryvtt.com account and licence the app needs are declared in the compose
+(`x-compose-app` `cost: paid`, `accounts`, `inputs`), not here: Maison asks for them at
+install and shows *Setup needed* until they are given.
 
 ## Why it is necessary
 
@@ -15,15 +17,6 @@ would lock them out. Foundry enforces its own login on every route: the setup sc
 (worlds, systems, modules, server settings) requires the administrator key, which is
 set to the app's `FOUNDRYVTT_ADMIN_PASSWORD` secret on every start, and a world can only be joined as one of
 its users. The guide accepts the app's own login as the authentication method.
-
-**Account required.** Foundry VTT is commercial software and may not be redistributed,
-so no image ships it. The community image (`felddy/foundryvtt`) downloads the release
-and fetches the license on first start using the user's foundryvtt.com credentials. The
-store cannot supply those. The compose declares `FOUNDRY_USERNAME`, `FOUNDRY_PASSWORD`
-and `FOUNDRY_LICENSE_KEY` as empty `.env` variables so they show up in the app's
-**Env** tab, and `tips.before_install` walks the user through filling them in. Until
-then the container logs the missing credentials and retries with exponential back-off
-(up to 16 minutes between tries), so it does not spin.
 
 ## Security mitigations in place
 
@@ -45,7 +38,7 @@ then the container logs the missing credentials and retries with exponential bac
   separate them cleanly, and the admin key already guards setup.
 - **Pre-placing a downloaded zip in `container_cache/`:** supported by the image as a
   fallback, but it needs file access to `AppData` and an exact `foundryvtt-<version>.zip`
-  name. The Env tab is the simpler path for most users.
+  name. The install dialog (declared `inputs`) is the simpler path for most users.
 
 ## Data protection
 

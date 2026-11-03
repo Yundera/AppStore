@@ -133,6 +133,7 @@ two blocks equal:
 | — | `main` (the first route's service; CasaOS only, Maison does not read it) |
 | `requires: [public-ip]` | `tags: [..., "needs-public-ip"]` |
 | `resources` | — (`min_memory`, in MB, is the closest; prefer `resources`) |
+| `cost`, `accounts`, `inputs`, `audience` | — (no CasaOS equivalent; say it in `description` too) |
 | — | `tags` (topical tags have no `x-compose-app` key) |
 
 Rules:
@@ -144,6 +145,8 @@ Rules:
   `rationale.md`.
 - `requires` and `resources` are described in [Requirements](#requirements). `min_memory` (MB)
   is superseded by `resources.min.memory`.
+- `cost`, `accounts`, `inputs` and `audience` are described in
+  [What the user brings](#what-the-user-brings).
 
 Field reference: [Maison `x-compose-app.md` › Fields](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#fields).
 
@@ -448,6 +451,51 @@ x-compose-app:
     documents, such as Immich's 4G.
 - Keep the CasaOS mirror: `needs-public-ip` stays in `x-casaos.tags`. CasaOS shows it, and a
   Maison that reads only `x-casaos` translates it to `requires: [public-ip]`.
+
+## What the user brings
+
+*Requirements:* `user-prerequisites`
+
+[Requirements](#requirements) say what the **box** must have. These four fields say what the
+**user** must bring. They are independent: declare each one that applies.
+
+```yaml
+x-compose-app:
+  cost: paid                          # free (default) | freemium | paid
+  accounts:
+    - provider: foundryvtt.com        # as a user would recognise it
+      url: https://foundryvtt.com/
+  inputs:
+    - env: FOUNDRY_USERNAME
+      label: { en_us: "foundryvtt.com username" }
+      required: true
+    - env: FOUNDRY_PASSWORD
+      label: { en_us: "foundryvtt.com password" }
+      secret: true
+      required: true
+  audience: technical                 # everyone (default) | technical
+```
+
+- **`cost`**: `paid` when the app is not useful until something is bought (a licence, an AI
+  provider's subscription or API credit, a Usenet provider). `freemium` when it is useful for
+  free and sells extras (Plex Pass). Omit it for a free app. Maison shows a badge; it never hides
+  the app.
+- **`accounts`**: every third-party account the user needs, an identity provider the user
+  doesn't control: plex.tv, foundryvtt.com, Anthropic, Trello, a Discord or Telegram bot. Not an
+  account on another app of the same box. Maison shows it; it never hides the app. This is what
+  the audit's third-party exception reads (`zero-config`, `works-immediately`); no `rationale.md`
+  is needed for it.
+- **`inputs`**: values only the user can provide and the app cannot start usefully without: an
+  account's credentials, a key a vendor issued, a claim token. Maison asks for them in the install
+  dialog, writes them to the app's `.env` under `env`, and shows **Setup needed** on the tile while
+  a `required` one is empty. The compose reads them as `${KEY:-}`. Mark keys and passwords
+  `secret: true`. Anything Maison can generate is a `secrets` entry, never an input.
+  Don't send the user to the Env tab in `tips` for a value an input can ask for.
+- **`audience: technical`**: root- or host-level apps (a root shell, a host-root file browser, a
+  host-network VPN, anything given the Docker socket to administer the box) and developer or
+  AI-agent tooling (MCP servers, coding agents). It hides the app unless the owner turned on
+  *Show technical apps*. It is about who the app is for, not about risk: an app that mounts
+  `/DATA/Media` or `/DATA/Documents` — a file browser, a media player — is an everyday app.
 
 ## Authentication
 
