@@ -96,7 +96,7 @@ services:
       - pcs
 
   odysseus-backend:
-    image: ghcr.io/worph/odysseus:1.0.2-dev.7c8070f
+    image: ghcr.io/odysseus-dev/odysseus:1.0.3-9d0d372
     container_name: odysseus-backend
     restart: unless-stopped
     # must start as root: the image entrypoint repairs bind-mount ownership then
@@ -330,11 +330,6 @@ x-casaos:
         **Resource use:** this app runs four containers (AppShield, Odysseus,
         ChromaDB, SearXNG) and reserves up to ~4.6 GB of RAM in total. Running a model
         locally on the same machine needs considerably more on top of that.
-
-        **Note on the image:** the upstream project does not currently publish a
-        public container image, so this app uses a community rebuild of the
-        official source. See the project at
-        [odysseusai.dev](https://odysseusai.dev).
       ko_kr: |
         **별도 로그인 불필요.** Odysseus는 AppShield로 보호되므로 대시보드에서 앱을 열면
         PCS 계정으로 자동 로그인됩니다. 따로 기억할 사용자명과 비밀번호가 없습니다.
@@ -408,7 +403,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.0.2-dev.7c8070f"
+  version: "1.0.3-9d0d372"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -556,11 +551,6 @@ x-compose-app:
       **Resource use:** this app runs four containers (AppShield, Odysseus,
       ChromaDB, SearXNG) and reserves up to ~4.6 GB of RAM in total. Running a model
       locally on the same machine needs considerably more on top of that.
-
-      **Note on the image:** the upstream project does not currently publish a
-      public container image, so this app uses a community rebuild of the
-      official source. See the project at
-      [odysseusai.dev](https://odysseusai.dev).
     ko_kr: |
       **별도 로그인 불필요.** Odysseus는 AppShield로 보호되므로 대시보드에서 앱을 열면
       PCS 계정으로 자동 로그인됩니다. 따로 기억할 사용자명과 비밀번호가 없습니다.

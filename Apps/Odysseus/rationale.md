@@ -5,32 +5,24 @@ Notes on the choices in `docker-compose.yml` that deviate from the store default
 The app is also published in AppStoreLab; the two definitions are the same apart
 from the CDN base and the store-specific metadata fields.
 
-## Container image comes from a community fork
+## Container image: upstream's, pinned by commit
 
-`ghcr.io/worph/odysseus:1.0.2-dev.7c8070f`
+`ghcr.io/odysseus-dev/odysseus:1.0.3-9d0d372`
 
-Upstream does not currently publish a pullable image:
+Upstream's own package, public and multi-arch (`linux/amd64` + `linux/arm64`). Until
+October 2026 it was private, and the app ran a community rebuild of the same source
+(`ghcr.io/worph/odysseus`, see
+[odysseus-dev/odysseus#5728](https://github.com/odysseus-dev/odysseus/issues/5728));
+that fork is no longer used.
 
-- `ghcr.io/odysseus-dev/odysseus` — the current org's package is **private**; every
-  tag returns `unauthorized`.
-- `ghcr.io/pewdiepie-archdaemon/odysseus` — the pre-rename org's package is public
-  but **frozen since 2026-07-12**, with nothing indicating it is stale.
+Pin the `X.Y.Z-<sha>` form, as upstream's own compose recommends: `latest` and the bare
+`X.Y.Z` tags move on every push to their `main`, so only the commit-suffixed tag is a
+stable reference. Upstream also publishes `X.Y.Z-dev.<sha>` builds of its `dev` branch;
+do not use those here.
 
-See [odysseus-dev/odysseus#5728](https://github.com/odysseus-dev/odysseus/issues/5728).
-The image used here is built from unmodified upstream source with the upstream CI
-workflow. It is public, anonymous-pullable, and a proper multi-arch index
-(`linux/amd64` + `linux/arm64`).
-
-The tag embeds the source commit (`7c8070f`), so it behaves as an immutable
-reference even though upstream's own `1.0.2` tag is mutable and has been rebuilt
-several times.
-
-**This is the one thing to keep an eye on.** The app is only as available as that
-fork's CI: if the rebuild stops, new installs break even though existing ones keep
-running. Two ways out, in order of preference — swap the `image:` line the moment
-upstream makes its own package public, or mirror this image to
-`rg.fr-par.scw.cloud/aptero` so the store does not depend on a third party's
-GitHub account. Nothing else in this file changes in either case.
+The 1.0.3 image honours `AUTH_ENABLED=false` in its admin-gated configuration routes
+(upstream #6029). The 1.0.2 rebuild did not, so with AppShield as the only auth layer
+Settings › Integrations answered 403 and could not be used at all.
 
 ## Four containers, ~4.6 GB of memory limits
 
