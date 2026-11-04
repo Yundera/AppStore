@@ -7,10 +7,11 @@ name: nntmux
 # and writes an .nzb per release, then serves them like any Newznab indexer:
 # a web UI (its own login) and the Newznab API at `/api/v1/api` + `/getnzb`.
 #
-# First run: everything is set from the app settings (Maison: App settings >
-# Env) — NNTP_* for your provider, NNTMUX_* for what to scan — and applied by
-# the scanner on its own. Newznab clients (Prowlarr, Sonarr…) use the API key on
-# a user's profile page; `nntmux-setup api-user <name>` is a terminal shortcut.
+# First run: the provider, the groups and the scan switch are `inputs`, asked
+# at install (the rest are app settings in Maison: App settings > Env), and
+# applied by the scanner on its own. Newznab clients (Prowlarr, Sonarr…) use the
+# API key on a user's profile page; `nntmux-setup api-user <name>` is a
+# terminal shortcut.
 #
 # Layout: the web container `nntmux` is the only one on `pcs` and the only one
 # with a route; MariaDB, Redis, Manticore and the scanner sit on the
@@ -243,7 +244,7 @@ services:
       TEMP_UNRAR_PATH: /app/storage/tmp/unrar/
       TEMP_UNZIP_PATH: /app/storage/tmp/unzip/
       ELASTICSEARCH_ENABLED: "false"
-      # Optional metadata keys, entered in App settings > Env; blank means none.
+      # Optional metadata keys (inputs, asked at install); blank means none.
       TMDB_APIKEY: "${TMDB_APIKEY:-}"
       TVDB_APIKEY: "${TVDB_APIKEY:-}"
       # Behind the box's router (which terminates TLS) Laravel sees plain http and
@@ -472,23 +473,24 @@ x-casaos:
         **1. Log in:** user `admin`; the password is shown when you open the app
         (tile menu › Credentials). Change it afterwards.
 
-        **2. Set it up in App settings › Env** (Save applies it — no file editing,
+        **2. Set it up in the install dialog** (the tile shows **Setup needed**
+        until the provider is filled in): your Usenet provider (server, port,
+        SSL, username, password), the groups to index, comma-separated (e.g.
+        `alt.binaries.teevee`; names are listed in the app at
+        `/admin/group-list`), **Start scanning** = `on`, and optionally your own
+        TMDB / TVDB keys for covers and metadata.
+
+        **Advanced, in App settings › Env** (Save applies it — no file editing,
         no restart needed):
-        - `NNTP_SERVER`, `NNTP_PORT`, `NNTP_USERNAME`, `NNTP_PASSWORD` — your
-          Usenet provider. Optional: `NNTP_CONNECTIONS` (keep it at 1-2: the
-          scanner shares your provider's connection slots), `NNTP_SSLENABLED`.
-        - `NNTMUX_GROUPS` — the groups to index, comma-separated
-          (e.g. `alt.binaries.teevee`). Names are listed in the app at
-          `/admin/group-list`.
-        - `NNTMUX_SCAN=on` to start scanning. Optional: `NNTMUX_BACKFILL=on` +
-          `NNTMUX_BACKFILL_DAYS` (how far back — start small, a deep backfill is
-          hundreds of GB), `NNTMUX_MONITOR_DELAY` (seconds between passes).
+        - `NNTP_CONNECTIONS` — keep it at 1-2: the scanner shares your
+          provider's connection slots.
+        - `NNTMUX_BACKFILL=on` + `NNTMUX_BACKFILL_DAYS` (how far back — start
+          small, a deep backfill is hundreds of GB), `NNTMUX_MONITOR_DELAY`
+          (seconds between passes).
         - `NNTMUX_REGISTRATION` — `closed` (default), `invite` or `open`.
         - `NNTMUX_MIN_RELEASE_MB` — postings smaller than this never become
           releases (default 20). Busy groups carry tens of thousands of
           single-article posts under random names that no indexer can name.
-        - `TMDB_APIKEY`, `TVDB_APIKEY` — optional, your own keys for covers and
-          metadata.
 
         A blank setting is left to nntmux's own admin UI. Set ones are re-applied
         by the scanner before every pass, so they survive restarts (nntmux resets
@@ -583,9 +585,23 @@ x-compose-app:
       label: { en_us: "Usenet password" }
       secret: true
       required: true
+    - env: NNTP_SSLENABLED
+      label: { en_us: "Use SSL (optional)" }
+      description: { en_us: "true (the default when blank) or false for a plain port such as 119." }
     - env: NNTMUX_GROUPS
       label: { en_us: "Groups to index (optional)" }
-      description: { en_us: "Comma-separated. Scanning starts once NNTMUX_SCAN=on is set in the Env tab." }
+      description: { en_us: "Comma-separated, e.g. alt.binaries.teevee. Blank leaves them to the app's /admin/group-list." }
+    - env: NNTMUX_SCAN
+      label: { en_us: "Start scanning (optional)" }
+      description: { en_us: "on to index the groups above, off to pause. Blank leaves it to the app's admin UI; nothing is indexed until scanning is on." }
+    - env: TMDB_APIKEY
+      label: { en_us: "TMDB API key (optional)" }
+      description: { en_us: "Your own themoviedb.org key, for movie covers and metadata." }
+      secret: true
+    - env: TVDB_APIKEY
+      label: { en_us: "TVDB API key (optional)" }
+      description: { en_us: "Your own thetvdb.com key, for TV covers and metadata." }
+      secret: true
   architectures:
     - amd64
   # Sum of the service limits (~7.6G); indexing is CPU-bound.
@@ -632,18 +648,17 @@ x-compose-app:
       **Login:** user `admin`; the password is shown when you open the app (tile
       menu › Credentials). Change it after the first login.
 
-      **Set up in App settings › Env** (Save applies it):
-      - `NNTP_SERVER`, `NNTP_PORT`, `NNTP_USERNAME`, `NNTP_PASSWORD` — your Usenet
-        provider (`NNTP_CONNECTIONS` 1-2 recommended).
-      - `NNTMUX_GROUPS` — groups to index, comma-separated. Names are listed in
-        the app at `/admin/group-list`.
-      - `NNTMUX_SCAN=on` to scan; optional `NNTMUX_BACKFILL=on` +
-        `NNTMUX_BACKFILL_DAYS`, `NNTMUX_MONITOR_DELAY`.
+      **Setup:** your Usenet provider, the groups to index (names are listed in
+      the app at `/admin/group-list`), **Start scanning** = `on` and optional
+      TMDB / TVDB keys are asked for at install; the tile shows **Setup needed**
+      until the provider is filled in.
+
+      **Advanced, in App settings › Env** (Save applies it):
+      - `NNTP_CONNECTIONS` — 1-2 recommended.
+      - `NNTMUX_BACKFILL=on` + `NNTMUX_BACKFILL_DAYS`, `NNTMUX_MONITOR_DELAY`.
       - `NNTMUX_REGISTRATION`: `closed` (default) / `invite` / `open`.
       - `NNTMUX_MIN_RELEASE_MB` (default 20): smaller postings are dropped —
         random-named fragments that no indexer can name.
-      - `TMDB_APIKEY`, `TVDB_APIKEY` — optional, your own keys for covers and
-        metadata.
 
       **Check:** active groups show at `/admin/group-list`, and releases appear
       under Browse as the scan collates them.
@@ -659,9 +674,11 @@ x-compose-app:
       **Connexion :** utilisateur `admin` ; le mot de passe s'affiche à l'ouverture
       de l'app (menu de la tuile › Credentials).
 
-      **Configuration dans Réglages de l'app › Env** : `NNTP_SERVER`, `NNTP_PORT`,
-      `NNTP_USERNAME`, `NNTP_PASSWORD` (fournisseur), `NNTMUX_GROUPS` (groupes,
-      listés dans l'app sur `/admin/group-list`), `NNTMUX_SCAN=on`.
+      **Configuration** : le fournisseur Usenet, les groupes (listés dans l'app sur
+      `/admin/group-list`), **Start scanning** = `on` et les clés TMDB / TVDB
+      sont demandés à l'installation ; la tuile affiche **Setup needed** tant que
+      le fournisseur n'est pas renseigné. Réglages avancés dans Réglages de
+      l'app › Env.
   # nntmux's own .env (trap #1: a COMPLETE file) is seed/nntmux-env/nntmux.env.tmpl,
   # create-if-absent. This step only adds the app settings to the app's .env, as empty
   # keys so they show up in App settings > Env (blank = not managed); the provider
@@ -701,3 +718,4 @@ x-compose-app:
       from: scanner/nntmux-setup
       ensure: always
       mode: "0755"
+
