@@ -413,6 +413,17 @@ x-compose-app:
     recommended: { memory: 4G }
   # What the user must bring (GUIDELINES › What the user brings).
   cost: freemium
+  # Hermes brings no model: the user signs in to, or pastes a key from, one
+  # model provider on the app's own Keys page. Any one of these will do.
+  accounts:
+    - provider: Nous Portal
+      url: https://portal.nousresearch.com/
+    - provider: OpenRouter
+      url: https://openrouter.ai/
+    - provider: Anthropic
+      url: https://claude.com/
+    - provider: OpenAI
+      url: https://platform.openai.com/
   audience: technical
   architectures:
     - amd64
@@ -551,3 +562,4 @@ x-compose-app:
       run: once
       script: |
         compose exec hermes sh -c 'curl -fsS --retry 90 --retry-delay 2 --retry-connrefused -X POST http://auth-registrar:9092/register -H "content-type: application/json" -d "{\"callback_path\":\"/auth/callback\"}" -o /opt/data/.oidc.json' && compose exec hermes sh -c 'ISS=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"issuer_url\"])"); CID=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_id\"])"); SEC=$(python3 -c "import json;print(json.load(open(\"/opt/data/.oidc.json\"))[\"client_secret\"])"); hermes config set --force dashboard.oauth.self_hosted.issuer "$ISS"; hermes config set --force dashboard.oauth.self_hosted.client_id "$CID"; hermes config set --force dashboard.oauth.self_hosted.client_secret "$SEC"; rm -f /opt/data/.oidc.json' && compose restart hermes
+
