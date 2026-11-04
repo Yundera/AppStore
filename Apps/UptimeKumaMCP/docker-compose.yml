@@ -1,0 +1,352 @@
+name: uptimekumamcp
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # The stock upstream MCP server, unmodified. It holds one Socket.IO session to
+  # Uptime Kuma, logged in with the account the user entered at install (inputs
+  # below), and serves streamable HTTP on :3000/mcp. Reachable at
+  # uptimekumamcp-backend:3000 on the pcs network.
+  uptimekumamcp-backend:
+    image: davidfuchs/mcp-uptime-kuma:0.12.1
+    container_name: uptimekumamcp-backend
+    hostname: uptimekumamcp-backend
+    # The image defaults to `-t stdio`; the HTTP transport is opt-in.
+    command: ["-t", "streamable-http"]
+    # Stateless: it writes nothing to disk, so it needs no root and no volume.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    restart: unless-stopped
+    expose:
+      - 3000
+    environment:
+      TZ: $TZ
+      PORT: "3000"
+      # The store's Uptime Kuma app answers as `uptimekuma` on the shared network.
+      # Left blank, the input falls back to it.
+      UPTIME_KUMA_URL: ${UPTIME_KUMA_URL:-http://uptimekuma:80}
+      UPTIME_KUMA_USERNAME: ${UPTIME_KUMA_USERNAME:-}
+      UPTIME_KUMA_PASSWORD: ${UPTIME_KUMA_PASSWORD:-}
+      # Every caller reaches this server through beaconify, so without trusting
+      # the forwarded address all of them (Beacon and every public OAuth client)
+      # share the upstream's fixed 100-requests-per-15-minutes bucket. AppShield
+      # sets X-Forwarded-For and beaconify passes it on, so each public client is
+      # counted on its own. Spoofing the header only moves a caller between
+      # buckets: the limiter is a throttle, not an access control.
+      TRUST_PROXY: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pcs
+    # 50 — background API server (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Beaconify sidecar: answers Beacon's UDP discovery on 9099 and proxies /mcp
+  # to the backend, so a Beacon on the same server picks the tools up under the
+  # `uptime-kuma-mcp__*` namespace. It is also the AppShield backend: its
+  # /api/status page is what the tile opens, since the upstream serves no page.
+  uptimekumamcp-beacon:
+    # 1.0.3+ is required: this server's 35 tools with full schemas make a ~74 KB
+    # manifest, past the 64 KB UDP limit, and 1.0.2 sends it whole, so Beacon
+    # never gets it. 1.0.3 announces names and descriptions only when the full
+    # manifest is too big, and Beacon fetches the schemas over HTTP.
+    image: ghcr.io/worph/beaconify:1.0.3
+    container_name: uptimekumamcp-beacon
+    hostname: uptimekumamcp-beacon
+    restart: unless-stopped
+    expose:
+      - 9099
+    environment:
+      BEACONIFY_NAME: uptime-kuma-mcp
+      BEACONIFY_DESCRIPTION: "Uptime Kuma — monitor status, uptime and heartbeats; create, pause and edit monitors, notifications, maintenance windows and status pages"
+      BEACONIFY_UPSTREAM_URL: http://uptimekumamcp-backend:3000/mcp
+    depends_on:
+      - uptimekumamcp-backend
+    networks:
+      - pcs
+    # 20 — discovery responder / thin proxy.
+    cpu_shares: 20
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # AppShield gates the status page with SSO (people) and /mcp with its OAuth
+  # 2.1 broker (machine clients). Nothing on the public URL is reachable
+  # without a credential.
+  uptimekumamcp-proxy:
+    image: ghcr.io/yundera/appshield:3.2.0
+    container_name: uptimekumamcp
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar independently attests this app's name via the
+    # container's PTR record, rejecting any redirect URI that doesn't match. Must equal the
+    # app name, or Docker defaults the hostname to the random container ID and OIDC registration fails.
+    hostname: uptimekumamcp
+    restart: unless-stopped
+    expose:
+      - 80
+    user: "0:0"   # numeric: scratch image has no passwd; /data/oauth is chowned $PUID
+    environment:
+      BACKEND_HOST: uptimekumamcp-beacon
+      BACKEND_PORT: "9099"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+      # Machine/API auth for the MCP endpoint: AppShield gates exactly the path
+      # named by the resource URL (/mcp) on Bearer tokens; everything else stays
+      # behind the SSO gate.
+      OAUTH_RESOURCE: "${APP_URL:-https://uptimekumamcp-${APP_DOMAIN}}/mcp"
+      OAUTH_SCOPE: "mcp"
+      OAUTH_DATA_DIR: "/data/oauth"
+    volumes:
+      # Persist DCR/manual clients, signing keys and grants across redeploys.
+      - ${DATA_ROOT:-/DATA}/AppData/uptimekumamcp/oauth/:/data/oauth
+    depends_on:
+      - uptimekumamcp-beacon
+    networks:
+      - pcs
+    # 80 — reverse proxy / user-facing interactive (CONTRIBUTING "CPU Share Allocation").
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  # The upstream image is published for amd64 only.
+  architectures:
+    - amd64
+  # The AppShield sidecar: the container the route points at and the one users reach.
+  main: uptimekumamcp-proxy
+  webui_port: 80
+  store_app_id: uptimekumamcp
+  hostname: ${APP_HOST:-uptimekumamcp-${APP_DOMAIN}}
+  scheme: https
+  port_map: "443"
+  index: /api/status
+  developer: David Fuchs
+  category: Developer
+  tags: ["developer", "ai", "monitoring"]
+  description:
+    en_us: |
+      **Uptime Kuma monitoring for AI assistants via MCP**
+
+      Uptime Kuma MCP exposes your [Uptime Kuma](https://uptime.kuma.pet) instance as an MCP (Model Context Protocol) server. AI assistants can ask what is down, read uptime and response-time history, and set up or change monitoring for you. It runs the community [`mcp-uptime-kuma`](https://github.com/DavidFuchs/mcp-uptime-kuma) server unmodified, adds sign-in for the public endpoint, and registers with Beacon on its own.
+
+      **What you can do:**
+      - Get a one-shot summary of every monitor: up, down, paused, in maintenance
+      - Read heartbeats, response times and 24h / 30d / 1y uptime
+      - Create, edit, pause, resume and delete monitors (HTTP, TCP, ping, DNS, Docker and every other Uptime Kuma type)
+      - Manage notifications, tags, maintenance windows and status pages
+      - Passwords and tokens stored in Uptime Kuma are redacted from what the assistant sees
+
+      **Think of it like:** An on-call colleague who can read your status dashboard and add a check when you ask.
+
+      **Perfect if you:** Run Uptime Kuma and want Claude, Cursor or any MCP client to answer "is everything up?" or to "watch this new service" for you.
+
+      **You need:** the Uptime Kuma app on this server (or another Uptime Kuma 2 reachable from it) and its login. Accounts with two-factor authentication turned on are not supported.
+    fr_fr: |
+      **La supervision Uptime Kuma pour les assistants IA via MCP**
+
+      Uptime Kuma MCP expose votre instance [Uptime Kuma](https://uptime.kuma.pet) en tant que serveur MCP (Model Context Protocol). Les assistants IA peuvent demander ce qui est en panne, lire l'historique de disponibilite et de temps de reponse, et mettre en place ou modifier la supervision pour vous. Il fait tourner le serveur communautaire [`mcp-uptime-kuma`](https://github.com/DavidFuchs/mcp-uptime-kuma) sans modification, ajoute une connexion pour le point d'acces public et s'enregistre tout seul aupres de Beacon.
+
+      **Ce que vous pouvez faire:**
+      - Obtenir en une fois l'etat de toutes les sondes : en ligne, en panne, en pause, en maintenance
+      - Lire les pulsations, temps de reponse et disponibilite sur 24h / 30j / 1 an
+      - Creer, modifier, mettre en pause, reprendre et supprimer des sondes (HTTP, TCP, ping, DNS, Docker et tous les autres types d'Uptime Kuma)
+      - Gerer les notifications, etiquettes, fenetres de maintenance et pages de statut
+      - Les mots de passe et jetons stockes dans Uptime Kuma sont masques pour l'assistant
+
+      **Parfait si vous:** Utilisez Uptime Kuma et voulez que Claude, Cursor ou tout client MCP reponde a "tout est en ligne ?" ou "surveille ce nouveau service" a votre place.
+
+      **Il vous faut:** l'application Uptime Kuma sur ce serveur (ou un autre Uptime Kuma 2 joignable depuis celui-ci) et son identifiant. Les comptes avec la double authentification activee ne sont pas pris en charge.
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  tagline:
+    en_us: Let AI assistants read and manage your Uptime Kuma monitors
+    fr_fr: Laissez les assistants IA lire et gerer vos sondes Uptime Kuma
+  title:
+    en_us: Uptime Kuma MCP
+  chips:
+    - key: mcp
+      name:
+        en_us: MCP
+  tips:
+    before_install:
+      en_us: &tips_en |
+        **Getting Started**
+
+        1. Install the **Uptime Kuma** app and create its admin account (or have another Uptime Kuma 2 reachable from this server).
+        2. Install this app and enter that Uptime Kuma **username** and **password** when asked. Leave the address blank to use the Uptime Kuma app on this server.
+        3. Open the app: the status page shows `"upstreamHealthy": true` and the number of tools once the MCP server is answering.
+
+        Changed the Uptime Kuma password, or typed it wrong? Use **Set up…** in the tile menu; saving restarts the app with the new login. A wrong login, or an Uptime Kuma that is not up yet, shows up as *Failed to authenticate with Uptime Kuma* in the tool result, and the next call tries again.
+
+        Two-factor authentication on the Uptime Kuma account is not supported: the login would need a fresh code every time the app restarts.
+
+        **MCP Integration (for AI/LLMs):**
+
+        **Option 1: Public URL (OAuth)**
+
+        The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
+        URL below — clients that support OAuth discovery (claude.ai, Claude
+        Desktop) register themselves and open a browser for you to approve with
+        your server account (single sign-on).
+        ```json
+        {
+          "mcpServers": {
+            "uptime-kuma-mcp": {
+              "type": "http",
+              "url": "${APP_URL:-https://uptimekumamcp-${APP_DOMAIN}}/mcp"
+            }
+          }
+        }
+        ```
+        For clients that need a pre-created client_id/client_secret (n8n, custom
+        scripts), create it with a `POST` of its registration (JSON with `client_name` and `redirect_uris`) to **${APP_URL:-https://uptimekumamcp-${APP_DOMAIN}}/AppShield/oauth/clients**, sent from a browser signed in to this app; **${APP_URL:-https://uptimekumamcp-${APP_DOMAIN}}/AppShield/oauth** lists the clients that exist and revokes them.
+
+        **Option 2: Local Docker connection (no auth required)**
+
+        For AI assistants running on the same server, connect directly via the Docker network:
+        ```json
+        {
+          "mcpServers": {
+            "uptime-kuma-mcp": {
+              "type": "http",
+              "url": "http://uptimekumamcp-backend:3000/mcp"
+            }
+          }
+        }
+        ```
+        *Note: Requires the AI assistant to be on the `pcs` Docker network.*
+
+        **Option 3: Via Beacon (aggregated)**
+
+        If you have **Beacon** installed, this app registers there through its bundled `beaconify` sidecar and its tools show up under the `uptime-kuma-mcp__*` namespace — no extra config.
+
+        **Available MCP Tools (35):**
+        | Area | Tools |
+        |------|-------|
+        | Monitors | `getMonitorSummary`, `listMonitors`, `getMonitor`, `listMonitorTypes`, `createMonitor`, `updateMonitor`, `pauseMonitor`, `resumeMonitor`, `deleteMonitor` |
+        | History | `listHeartbeats`, `getHeartbeats` |
+        | Notifications | `listNotifications`, `addNotification`, `updateNotification`, `deleteNotification` |
+        | Tags | `listTags`, `addTag`, `deleteTag` |
+        | Maintenance | `getMaintenanceWindows`, `createMaintenance`, `updateMaintenance`, `pauseMaintenance`, `resumeMaintenance`, `deleteMaintenance` |
+        | Status pages | `listStatusPages`, `getStatusPage`, `createStatusPage`, `updateStatusPage`, `deleteStatusPage` |
+        | Docker hosts | `listDockerHosts`, `addDockerHost`, `updateDockerHost`, `testDockerHost`, `deleteDockerHost` |
+        | Settings | `getSettings` |
+
+        **Limits:**
+        - The server accepts 100 requests per 15 minutes from each client. A long monitoring sweep by an assistant can hit it; the client gets HTTP 429 and can retry after the window.
+        - The assistant acts with the full rights of the Uptime Kuma account you entered, deletions included.
+
+        **Security:**
+        - The Uptime Kuma login lives only in this app's environment on this server. Change it from **Set up…** or the **Env** tab.
+        - The status page sits behind the server's single sign-on and `/mcp` behind OAuth 2.1, so nothing on the public URL answers without a credential. Only the in-network address `http://uptimekumamcp-backend:3000/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network.
+
+x-compose-app:
+  schema_version: 2
+  version: "0.12.1"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others). `path` is
+  # only where the tile opens: the upstream serves no page, so it opens the
+  # sidecar's live status (tool count, last error).
+  routes:
+    - { service: uptimekumamcp-proxy, name: uptimekumamcp, upstream-port: 80, path: /api/status }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Uptime Kuma MCP
+  tagline:
+    en_us: Let AI assistants read and manage your Uptime Kuma monitors
+    fr_fr: Laissez les assistants IA lire et gerer vos sondes Uptime Kuma
+  description:
+    en_us: |
+      **Uptime Kuma monitoring for AI assistants via MCP**
+
+      Uptime Kuma MCP exposes your [Uptime Kuma](https://uptime.kuma.pet) instance as an MCP (Model Context Protocol) server. AI assistants can ask what is down, read uptime and response-time history, and set up or change monitoring for you. It runs the community [`mcp-uptime-kuma`](https://github.com/DavidFuchs/mcp-uptime-kuma) server unmodified, adds sign-in for the public endpoint, and registers with Beacon on its own.
+
+      **What you can do:**
+      - Get a one-shot summary of every monitor: up, down, paused, in maintenance
+      - Read heartbeats, response times and 24h / 30d / 1y uptime
+      - Create, edit, pause, resume and delete monitors (HTTP, TCP, ping, DNS, Docker and every other Uptime Kuma type)
+      - Manage notifications, tags, maintenance windows and status pages
+      - Passwords and tokens stored in Uptime Kuma are redacted from what the assistant sees
+
+      **Think of it like:** An on-call colleague who can read your status dashboard and add a check when you ask.
+
+      **Perfect if you:** Run Uptime Kuma and want Claude, Cursor or any MCP client to answer "is everything up?" or to "watch this new service" for you.
+
+      **You need:** the Uptime Kuma app on this server (or another Uptime Kuma 2 reachable from it) and its login. Accounts with two-factor authentication turned on are not supported.
+    fr_fr: |
+      **La supervision Uptime Kuma pour les assistants IA via MCP**
+
+      Uptime Kuma MCP expose votre instance [Uptime Kuma](https://uptime.kuma.pet) en tant que serveur MCP (Model Context Protocol). Les assistants IA peuvent demander ce qui est en panne, lire l'historique de disponibilite et de temps de reponse, et mettre en place ou modifier la supervision pour vous. Il fait tourner le serveur communautaire [`mcp-uptime-kuma`](https://github.com/DavidFuchs/mcp-uptime-kuma) sans modification, ajoute une connexion pour le point d'acces public et s'enregistre tout seul aupres de Beacon.
+
+      **Ce que vous pouvez faire:**
+      - Obtenir en une fois l'etat de toutes les sondes : en ligne, en panne, en pause, en maintenance
+      - Lire les pulsations, temps de reponse et disponibilite sur 24h / 30j / 1 an
+      - Creer, modifier, mettre en pause, reprendre et supprimer des sondes (HTTP, TCP, ping, DNS, Docker et tous les autres types d'Uptime Kuma)
+      - Gerer les notifications, etiquettes, fenetres de maintenance et pages de statut
+      - Les mots de passe et jetons stockes dans Uptime Kuma sont masques pour l'assistant
+
+      **Parfait si vous:** Utilisez Uptime Kuma et voulez que Claude, Cursor ou tout client MCP reponde a "tout est en ligne ?" ou "surveille ce nouveau service" a votre place.
+
+      **Il vous faut:** l'application Uptime Kuma sur ce serveur (ou un autre Uptime Kuma 2 joignable depuis celui-ci) et son identifiant. Les comptes avec la double authentification activee ne sont pas pris en charge.
+  developer: David Fuchs
+  category: Developer
+  icon: icon.png
+  thumbnail: thumbnail.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  # What the user must bring (GUIDELINES › What the user brings). The Uptime
+  # Kuma account is on another app of this box, so it is an input, not an
+  # `accounts` entry.
+  audience: technical
+  inputs:
+    - env: UPTIME_KUMA_USERNAME
+      label: { en_us: "Uptime Kuma username", fr_fr: "Identifiant Uptime Kuma" }
+      description: { en_us: "The account the assistant acts as. It gets that account's full rights, deletions included." }
+      required: true
+    - env: UPTIME_KUMA_PASSWORD
+      label: { en_us: "Uptime Kuma password", fr_fr: "Mot de passe Uptime Kuma" }
+      secret: true
+      required: true
+    - env: UPTIME_KUMA_URL
+      label: { en_us: "Uptime Kuma address (optional)", fr_fr: "Adresse d'Uptime Kuma (facultatif)" }
+      description: { en_us: "Leave blank for the Uptime Kuma app on this server (http://uptimekuma:80). Otherwise the full URL of an Uptime Kuma 2 this server can reach." }
+  architectures:
+    - amd64
+  tips:
+    en_us: *tips_en
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  # Generated by scripts/gen-folders.py from the trailing-slash bind mounts
+  # in `volumes:` above — re-run it instead of editing this block by hand.
+  folders:
+    - path: /DATA/AppData/uptimekumamcp/oauth
+      user: $PUID
+      group: $PGID
