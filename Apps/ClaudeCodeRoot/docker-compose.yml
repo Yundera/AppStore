@@ -204,7 +204,6 @@ x-casaos:
   tagline:
     en_us: Web terminal for Claude Code - Anthropic's AI coding assistant
     zh_cn: Claude Code 的 Web 终端 - Anthropic 的 AI 编程助手
-  thumbnail: thumbnail.png
   title:
     en_us: Claude Code (root)
     zh_cn: Claude Code (root)
@@ -284,7 +283,6 @@ x-compose-app:
   developer: Anthropic
   category: Developer
   icon: icon.png
-  thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
     - screenshot-2.png
@@ -298,6 +296,10 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # The two services' memory limits add up to more than 2G (requirement
+  # `resources-declared`): Claude Code runs agents, builds and Docker work.
+  resources:
+    recommended: { memory: 3G }
   tips:
     en_us: |
       Authentication options:
