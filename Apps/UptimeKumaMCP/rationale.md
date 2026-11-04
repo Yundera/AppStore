@@ -31,15 +31,19 @@ restarting it underneath a logged-in session).
 `UPTIME_KUMA_2FA_TOKEN` is not offered: it takes a TOTP code, which is stale by the next
 restart.
 
-## AppShield fronts the beaconify sidecar, and the tile opens `/api/status`
+## A service with a route: `view: service` is declared
 
-The upstream serves only `POST /mcp` and `GET /health`, and `/` is a 404. AppShield's
-backend is therefore `uptimekumamcp-beacon:9099` rather than the MCP server. Beaconify
-proxies `/mcp` to the backend unchanged, and its `/api/status` (tool count, last
-refresh, last error) is a useful page to open. The route's `path: /api/status` (and
-`x-casaos.index`) sends the tile there. The page shows JSON, which suits a
-`technical`-audience app. AppShield gates it with SSO like everything else on the
-host, and gates `/mcp` with its OAuth 2.1 broker.
+The app has no web UI. The upstream serves only `POST /mcp` and `GET /health`, and `/`
+is a 404. It still needs a route, for the public OAuth `/mcp` endpoint. A route counts
+as a web UI when Maison works out the grid, so `view: service` is declared to put the
+tile in **Services** beside Samba. GUIDELINES says to leave `view` alone except for
+platform pieces; this is the case that rule doesn't cover: a service that is reachable
+over HTTP but has no page.
+
+AppShield's backend is `uptimekumamcp-beacon:9099` rather than the MCP server. Beaconify
+proxies `/mcp` to the backend unchanged, and its `/api/status` (tool count, last refresh,
+last error) is linked from the tips as the way to check the app is answering. AppShield
+gates that page with SSO and `/mcp` with its OAuth 2.1 broker.
 
 ## beaconify 1.0.3, not the 1.0.2 the other MCP apps use
 

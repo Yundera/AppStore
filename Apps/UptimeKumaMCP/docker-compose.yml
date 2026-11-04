@@ -55,8 +55,9 @@ services:
 
   # Beaconify sidecar: answers Beacon's UDP discovery on 9099 and proxies /mcp
   # to the backend, so a Beacon on the same server picks the tools up under the
-  # `uptime-kuma-mcp__*` namespace. It is also the AppShield backend: its
-  # /api/status page is what the tile opens, since the upstream serves no page.
+  # `uptime-kuma-mcp__*` namespace. It is also the AppShield backend, so its
+  # /api/status page (tool count, last error) is reachable behind SSO; the tips
+  # link to it.
   uptimekumamcp-beacon:
     # 1.0.3+ is required: this server's 35 tools with full schemas make a ~74 KB
     # manifest, past the 64 KB UDP limit, and 1.0.2 sends it whole, so Beacon
@@ -142,7 +143,6 @@ x-casaos:
   hostname: ${APP_HOST:-uptimekumamcp-${APP_DOMAIN}}
   scheme: https
   port_map: "443"
-  index: /api/status
   developer: David Fuchs
   category: Developer
   tags: ["developer", "ai", "monitoring"]
@@ -200,7 +200,9 @@ x-casaos:
 
         1. Install the **Uptime Kuma** app and create its admin account (or have another Uptime Kuma 2 reachable from this server).
         2. Install this app and enter that Uptime Kuma **username** and **password** when asked. Leave the address blank to use the Uptime Kuma app on this server.
-        3. Open the app: the status page shows `"upstreamHealthy": true` and the number of tools once the MCP server is answering.
+        3. Check it is answering: **${APP_URL:-https://uptimekumamcp-${APP_DOMAIN}}/api/status** (single sign-on) shows `"upstreamHealthy": true` and the number of tools.
+
+        This app has no web interface: it sits in **Services**, and it is used from an AI assistant through the addresses below.
 
         Changed the Uptime Kuma password, or typed it wrong? Use **Set up…** in the tile menu; saving restarts the app with the new login. A wrong login, or an Uptime Kuma that is not up yet, shows up as *Failed to authenticate with Uptime Kuma* in the tool result, and the next call tries again.
 
@@ -271,11 +273,13 @@ x-compose-app:
   version: "0.12.1"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
-  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others). `path` is
-  # only where the tile opens: the upstream serves no page, so it opens the
-  # sidecar's live status (tool count, last error).
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others). The route
+  # exists for /mcp (public OAuth endpoint); there is no web UI behind it.
   routes:
-    - { service: uptimekumamcp-proxy, name: uptimekumamcp, upstream-port: 80, path: /api/status }
+    - { service: uptimekumamcp-proxy, name: uptimekumamcp, upstream-port: 80 }
+  # No web UI, so the Services grid, like Samba. Declared because the route
+  # above would otherwise sort it into the app grid.
+  view: service
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
