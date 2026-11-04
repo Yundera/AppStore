@@ -238,6 +238,12 @@ x-compose-app:
     - screenshot-3.png
   # Raw TCP/UDP must be dialled from the internet: hidden on a box behind NAT or the tunnel.
   requires: [public-ip]
+  # The server is free, but every player must own the game (and Space Age while it is on),
+  # and server-settings has require_user_verification: players sign in with factorio.com.
+  cost: paid
+  accounts:
+    - provider: factorio.com
+      url: https://www.factorio.com/
   architectures:
     - amd64
     - arm64
