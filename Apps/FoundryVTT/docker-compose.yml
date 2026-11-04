@@ -304,6 +304,9 @@ x-compose-app:
   icon: icon.png
   screenshots:
     - screenshot-1.png
+  resources:
+    recommended:
+      memory: 3G
   # What the user must bring (GUIDELINES › What the user brings).
   cost: paid
   accounts:
