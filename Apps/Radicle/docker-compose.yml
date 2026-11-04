@@ -119,8 +119,8 @@ services:
   # Seeds the owner's repositories without anyone touching the server. The node's
   # policy is `block`, so a repository is only stored once somebody runs
   # `rad seed <rid>` *on the server* — and most users have no shell there. This
-  # loop does it for them: given the owner's Node ID (RADICLE_OWNER, set in the
-  # app's .env), it follows them and seeds every repository their own node
+  # loop does it for them: given the owner's Node ID (RADICLE_OWNER, asked for at
+  # install — see `inputs`), it follows them and seeds every repository their own node
   # announces. Unset, it idles and the app behaves exactly as before. See
   # seed/autoseed/autoseed.sh and rationale.md.
   radicle-autoseed:
@@ -189,7 +189,7 @@ x-casaos:
 
       The web interface is for browsing. Creating repositories, opening issues and proposing patches happen with the `rad` command line on your own machine — the node here is what keeps them alive and reachable.
 
-      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow — or set your own Node ID as the owner in the app's settings, and every repository you publish from your machine is seeded here automatically.
+      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow — or give your own Node ID when you install it, and every repository you publish from your machine is seeded here automatically.
     fr_fr: |
       Radicle — votre forge pair-à-pair
 
@@ -204,7 +204,7 @@ x-casaos:
 
       L'interface web sert à consulter. Créer des dépôts, ouvrir des tickets et proposer des patches se fait avec la ligne de commande `rad` sur votre machine — le nœud installé ici est ce qui les maintient vivants et accessibles.
 
-      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué — ou indiquez votre propre Node ID comme propriétaire dans les réglages de l'application, et chaque dépôt que vous publiez depuis votre machine est suivi ici automatiquement.
+      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué — ou indiquez votre propre Node ID à l'installation, et chaque dépôt que vous publiez depuis votre machine est suivi ici automatiquement.
     zh_cn: |
       Radicle — 属于你自己的点对点代码托管
 
@@ -219,7 +219,7 @@ x-casaos:
 
       网页界面用于浏览。创建仓库、提交议题和提出补丁请在本机使用 `rad` 命令行完成——这里的节点负责让它们保持在线、可被获取。
 
-      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容——或者在应用设置中把你自己的 Node ID 设为所有者，此后你从本机发布的每个仓库都会自动在这里跟随。
+      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容——或者在安装时填入你自己的 Node ID，此后你从本机发布的每个仓库都会自动在这里跟随。
   icon: icon.png
   screenshot_link:
     - screenshot-1.png
@@ -264,8 +264,8 @@ x-casaos:
 
         Let this node seed your repositories
 
-        Open this app's settings, **Env** tab, and set `RADICLE_OWNER` to your own Node
-        ID — `rad self --nid` on your machine (add the variable if it isn't listed).
+        Give your own Node ID — `rad self --nid` on your machine — as **Your Node ID**
+        in the install dialog, or later from the tile menu's **Set up…**.
         From then on every repository your node announces is seeded here within a
         couple of minutes, with no command on the server. Left empty, nothing is
         seeded automatically; several IDs may be given, comma-separated.
@@ -322,9 +322,9 @@ x-casaos:
 
         Laisser ce nœud suivre vos dépôts
 
-        Ouvrez les réglages de l'application, onglet **Env**, et donnez à
-        `RADICLE_OWNER` votre propre Node ID — `rad self --nid` sur votre machine
-        (ajoutez la variable si elle n'apparaît pas). Dès lors, chaque dépôt annoncé par
+        Indiquez votre propre Node ID — `rad self --nid` sur votre machine — dans le
+        champ **Votre Node ID** de la fenêtre d'installation, ou plus tard depuis le menu
+        de la tuile, **Set up…**. Dès lors, chaque dépôt annoncé par
         votre nœud est suivi ici en quelques minutes, sans aucune commande sur le
         serveur. Vide, rien n'est suivi automatiquement ; plusieurs ID peuvent être
         séparés par des virgules.
@@ -378,8 +378,8 @@ x-casaos:
 
         让此节点跟随你的仓库
 
-        打开本应用的设置，**Env** 标签页，把 `RADICLE_OWNER` 设为你自己的 Node ID——
-        在本机运行 `rad self --nid` 获取（若未列出该变量，请自行添加）。此后你的节点
+        在安装对话框的 **你的 Node ID** 一栏填入你自己的 Node ID——在本机运行
+        `rad self --nid` 获取（之后也可通过磁贴菜单的 **Set up…** 填写）。此后你的节点
         宣告的每个仓库都会在几分钟内在这里被跟随，无需在服务器上执行任何命令。留空则
         不会自动跟随；可填写多个 ID，以逗号分隔。
 
@@ -438,7 +438,7 @@ x-compose-app:
 
       The web interface is for browsing. Creating repositories, opening issues and proposing patches happen with the `rad` command line on your own machine — the node here is what keeps them alive and reachable.
 
-      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow — or set your own Node ID as the owner in the app's settings, and every repository you publish from your machine is seeded here automatically.
+      Repositories are only replicated once you seed them. A fresh node starts empty and stores nothing until you tell it what to follow — or give your own Node ID when you install it, and every repository you publish from your machine is seeded here automatically.
     fr_fr: |
       Radicle — votre forge pair-à-pair
 
@@ -453,7 +453,7 @@ x-compose-app:
 
       L'interface web sert à consulter. Créer des dépôts, ouvrir des tickets et proposer des patches se fait avec la ligne de commande `rad` sur votre machine — le nœud installé ici est ce qui les maintient vivants et accessibles.
 
-      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué — ou indiquez votre propre Node ID comme propriétaire dans les réglages de l'application, et chaque dépôt que vous publiez depuis votre machine est suivi ici automatiquement.
+      Les dépôts ne sont répliqués qu'une fois que vous les suivez. Un nœud neuf démarre vide et ne stocke rien tant que vous ne lui avez rien indiqué — ou indiquez votre propre Node ID à l'installation, et chaque dépôt que vous publiez depuis votre machine est suivi ici automatiquement.
     zh_cn: |
       Radicle — 属于你自己的点对点代码托管
 
@@ -468,7 +468,7 @@ x-compose-app:
 
       网页界面用于浏览。创建仓库、提交议题和提出补丁请在本机使用 `rad` 命令行完成——这里的节点负责让它们保持在线、可被获取。
 
-      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容——或者在应用设置中把你自己的 Node ID 设为所有者，此后你从本机发布的每个仓库都会自动在这里跟随。
+      仓库只有在你选择跟随（seed）之后才会被复制。全新节点启动时是空的，在你指定之前不会存储任何内容——或者在安装时填入你自己的 Node ID，此后你从本机发布的每个仓库都会自动在这里跟随。
   developer: Radicle
   category: Developer
   icon: icon.png
@@ -481,6 +481,20 @@ x-compose-app:
   requires: [public-ip]
   architectures:
     - amd64
+  # A value only the user has: their own node's ID, read by radicle-autoseed.
+  # Optional — left empty, the app works and simply seeds nothing on its own.
+  # Maison asks for it at install and writes it to the app's .env.
+  inputs:
+    - env: RADICLE_OWNER
+      label:
+        en_us: Your Node ID (optional)
+        fr_fr: Votre Node ID (facultatif)
+        zh_cn: 你的 Node ID（可选）
+      description:
+        en_us: "`rad self --nid` on your machine. Every repository your node announces is then seeded here automatically. Several IDs may be given, comma-separated; empty turns auto-seeding off."
+        fr_fr: "`rad self --nid` sur votre machine. Chaque dépôt annoncé par votre nœud est alors suivi ici automatiquement. Plusieurs ID possibles, séparés par des virgules ; vide, rien n'est suivi automatiquement."
+        zh_cn: "在本机运行 `rad self --nid` 获取。此后你的节点宣告的每个仓库都会自动在这里跟随。可填写多个 ID，以逗号分隔；留空则关闭自动跟随。"
+      required: false
   tips:
     en_us: |
       This app is public on purpose
@@ -514,8 +528,8 @@ x-compose-app:
 
       Let this node seed your repositories
 
-      Open this app's settings, **Env** tab, and set `RADICLE_OWNER` to your own Node
-      ID — `rad self --nid` on your machine (add the variable if it isn't listed).
+      Give your own Node ID — `rad self --nid` on your machine — as **Your Node ID**
+      in the install dialog, or later from the tile menu's **Set up…**.
       From then on every repository your node announces is seeded here within a
       couple of minutes, with no command on the server. Left empty, nothing is
       seeded automatically; several IDs may be given, comma-separated.
@@ -572,9 +586,9 @@ x-compose-app:
 
       Laisser ce nœud suivre vos dépôts
 
-      Ouvrez les réglages de l'application, onglet **Env**, et donnez à
-      `RADICLE_OWNER` votre propre Node ID — `rad self --nid` sur votre machine
-      (ajoutez la variable si elle n'apparaît pas). Dès lors, chaque dépôt annoncé par
+      Indiquez votre propre Node ID — `rad self --nid` sur votre machine — dans le
+      champ **Votre Node ID** de la fenêtre d'installation, ou plus tard depuis le menu
+      de la tuile, **Set up…**. Dès lors, chaque dépôt annoncé par
       votre nœud est suivi ici en quelques minutes, sans aucune commande sur le
       serveur. Vide, rien n'est suivi automatiquement ; plusieurs ID peuvent être
       séparés par des virgules.
@@ -628,8 +642,8 @@ x-compose-app:
 
       让此节点跟随你的仓库
 
-      打开本应用的设置，**Env** 标签页，把 `RADICLE_OWNER` 设为你自己的 Node ID——
-      在本机运行 `rad self --nid` 获取（若未列出该变量，请自行添加）。此后你的节点
+      在安装对话框的 **你的 Node ID** 一栏填入你自己的 Node ID——在本机运行
+      `rad self --nid` 获取（之后也可通过磁贴菜单的 **Set up…** 填写）。此后你的节点
       宣告的每个仓库都会在几分钟内在这里被跟随，无需在服务器上执行任何命令。留空则
       不会自动跟随；可填写多个 ID，以逗号分隔。
 
@@ -675,15 +689,6 @@ x-compose-app:
           -e APP_PUBLIC_IP_DASH \
           dirk1980/radicle-seed-node@sha256:78ccee526ad4b4f4d7c79c2323b032a7209858a48e1dc9c077272ff1660050e2 \
           sh -c 'yes "" | rad auth --alias "radicle-$APP_PUBLIC_IP_DASH" --stdin'
-    # Puts an empty RADICLE_OWNER line in the app's .env so the setting shows up in
-    # the .env editor, where the user fills it in. Not a `variables:` entry: those are
-    # re-rendered on every up and would wipe what the user typed. $MAISON_ENV only adds
-    # a key the .env does not have yet, so a reinstall keeps the user's value.
-    - name: owner-setting
-      at: setup
-      run: once
-      script: |
-        echo "RADICLE_OWNER=" >> "$MAISON_ENV"
   files:
     # The node's config carries the deployment's own addresses, so it is re-rendered
     # on every up rather than frozen at install. `rad auth` above writes a default
@@ -715,3 +720,4 @@ x-compose-app:
       from: autoseed/autoseed.sh
       ensure: always
       mode: "0755"
+
