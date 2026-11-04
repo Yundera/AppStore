@@ -52,7 +52,7 @@ x-casaos:
         the password, use the app's settings in Maison (Security tab), so the
         Credentials dialog stays correct.
 
-        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent:80` when they run on the same server.
+        🔗 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent-backend:80` when they run on the same server.
 
         ❓ Questions? Contact us at help@yundera.com
   architectures:
@@ -113,7 +113,7 @@ x-compose-app:
     - amd64
     - arm64
   tips:
-    en_us: "\U0001F4FA **Sonarr** is a TV series collection manager — it monitors, downloads and organises your shows automatically as new episodes air.\n\n\U0001F4C2 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.\n\n\U0001F510 **Sign in as `admin`** — the password is shown when you open the app (tile\nmenu → Credentials). Sonarr ships with its login page already enabled and this\naccount already created, so it is never reachable without signing in. To change\nthe password, use the app's settings in Maison (Security tab), so the\nCredentials dialog stays correct.\n\n\U0001F517 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent:80` when they run on the same server.\n\n❓ Questions? Contact us at help@yundera.com\n"
+    en_us: "\U0001F4FA **Sonarr** is a TV series collection manager — it monitors, downloads and organises your shows automatically as new episodes air.\n\n\U0001F4C2 Config lives in `/DATA/AppData/sonarr/`, TV shows in `/DATA/Media/TV Shows`, downloads in `/DATA/Downloads` — the same media folders Jellyfin reads, so everything shares one library.\n\n\U0001F510 **Sign in as `admin`** — the password is shown when you open the app (tile\nmenu → Credentials). Sonarr ships with its login page already enabled and this\naccount already created, so it is never reachable without signing in. To change\nthe password, use the app's settings in Maison (Security tab), so the\nCredentials dialog stays correct.\n\n\U0001F517 Pair it with **Prowlarr** (indexers) and **qBittorrent** (download client) from the store — reach them by container name `prowlarr-backend:9696` and `qbittorrent-backend:80` when they run on the same server.\n\n❓ Questions? Contact us at help@yundera.com\n"
   # Admin password for the account seeded into config.xml on first boot.
   # Generated once into the app's .env and never regenerated, so it survives
   # restarts, updates and restores. `alnum` rather than `password` because the
