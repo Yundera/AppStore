@@ -14,7 +14,7 @@ services:
   # A host-networked container cannot be a router upstream, so the web UI is exposed
   # through the wgeasyhost-proxy sidecar below instead of a route here.
   wgeasyhost:
-    image: ghcr.io/wg-easy/wg-easy:15.3.0
+    image: ghcr.io/wg-easy/wg-easy:15.5.0
     container_name: wgeasyhost
     restart: unless-stopped
     user: "0:0"
@@ -59,7 +59,7 @@ services:
   # to the host-mode web UI via the docker host-gateway (host.docker.internal:51821).
   # nginx.conf ships in seed/ (create-if-absent on every up) and is bind-mounted read-only.
   wgeasyhost-proxy:
-    image: nginx:1.29.3-alpine
+    image: nginx:1.31.8-alpine
     container_name: wgeasyhost-proxy
     restart: unless-stopped
     # Must be root: the CasaOS installer injects `user: $PUID:$PGID` into any service
@@ -86,8 +86,8 @@ networks:
     external: true
 
 x-casaos:
-  # ghcr.io/wg-easy/wg-easy:15.3.0 publishes only linux/amd64 and linux/arm64
-  # (no 32-bit armv7); nginx:1.29.3-alpine is broader, so this is the intersection.
+  # ghcr.io/wg-easy/wg-easy:15.5.0 publishes only linux/amd64 and linux/arm64
+  # (no 32-bit armv7); nginx:1.31.8-alpine is broader, so this is the intersection.
   architectures:
     - amd64
     - arm64
@@ -193,7 +193,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "15.3.0"
+  version: "15.5.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).

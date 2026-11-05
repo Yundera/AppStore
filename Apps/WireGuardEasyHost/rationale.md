@@ -88,7 +88,7 @@ knowingly rather than inheriting it.
   `x-compose-app.folders` so Maison creates and chowns it. No user directory is mounted.
 - **Resource limits are enforced** on both services (`256m` / `cpu_shares: 50` for the
   VPN, `64m` / `cpu_shares: 80` for the proxy).
-- **The proxy image is pinned** to `nginx:1.29.3-alpine`, and its config ships in `seed/`
+- **The proxy image is pinned** to `nginx:1.31.8-alpine`, and its config ships in `seed/`
   (no CDN fetch at install time) and is bind-mounted read-only.
 - **The web UI is not published on the host.** wg-easy's plain-HTTP UI port `51821`
   is bound (`HOST`) to the Docker host-gateway address only — the address the proxy
