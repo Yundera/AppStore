@@ -10,7 +10,7 @@ x-logging: &logging
 
 services:
   mealie:
-    image: ghcr.io/mealie-recipes/mealie:v3.14.0
+    image: ghcr.io/mealie-recipes/mealie:v3.30.0
     container_name: mealie
     restart: unless-stopped
     user: "0:0"
@@ -234,7 +234,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "3.14.0"
+  version: "3.30.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -575,6 +575,13 @@ x-compose-app:
           exit 1
         fi
 
+        # Mealie revokes every token issued before a password change, the one
+        # that just made it included, so sign in again with the new password.
+        token=$(login "$MEALIE_NEW_PASSWORD")
+        if [ -z "$token" ]; then
+          echo "mealie: could not sign in with the rotated password" >&2
+          exit 1
+        fi
         update_email "$token"
         exit $?
         SH
