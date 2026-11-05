@@ -11,7 +11,7 @@ services:
   # /favicon.ico probe, which the image's nginx sends on to ntfy as a 404 (a
   # console error on the login page), and passes everything else on unchanged.
   ntfy-router:
-    image: nginx:1.28.0-alpine
+    image: nginx:1.31.8-alpine
     container_name: ntfy-router
     restart: unless-stopped
     cpu_shares: 80
