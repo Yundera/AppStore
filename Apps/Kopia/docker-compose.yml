@@ -419,6 +419,12 @@ x-compose-app:
   # kopia-app runs full repository maintenance under a 4G cap.
   resources:
     recommended: { memory: 4G }
+  # What the user must bring (GUIDELINES › What the user brings): the bucket the
+  # backups go to is storage the user buys from a third party.
+  cost: paid
+  accounts:
+    - provider: Backblaze B2 or another S3-compatible storage service
+      url: https://www.backblaze.com/cloud-storage
   tips:
     en_us: |
       Setup happens in your browser
