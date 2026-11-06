@@ -1,0 +1,593 @@
+name: mailhub
+# MailHub — one mailbox for the mail accounts you already have.
+# mailhub-mirror keeps a copy of every provider mailbox in Dovecot (Live/<address>/,
+# IMAP, pull only) and replays what is done there at the provider, which stays the
+# source of truth; Virtual/ combines them. Roundcube reads it and sends every
+# identity through its own provider's SMTP. Calendar and
+# contacts live in a built-in Baïkal (CalDAV/CardDAV only, no admin console), shown
+# in Roundcube by the Kolab plugins and synced to phones; Settings can point them at
+# another CalDAV/CardDAV server instead.
+#
+# The mailhub-roundcube / -mirror / -mcp images are built from github.com/worph/mailhub,
+# which also holds the spike's test kit and notes.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # SSO gate in front of the webmail.
+  mailhub-proxy:
+    image: ghcr.io/yundera/appshield:3.2.0
+    container_name: mailhub
+    hostname: mailhub
+    restart: unless-stopped
+    cpu_shares: 80
+    logging: *logging
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      BACKEND_HOST: mailhub-webmail
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+    # AppShield answers /health, but its image has no shell or HTTP client to
+    # probe it from inside; no healthcheck (as in the official store apps).
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      - mailhub-webmail
+    networks:
+      - pcs
+      - mailhub-internal
+
+  mailhub-webmail:
+    image: ghcr.io/worph/mailhub-roundcube:0.4.0
+    container_name: mailhub-webmail
+    restart: unless-stopped
+    cpu_shares: 80
+    logging: *logging
+    expose:
+      - 80
+    environment:
+      ROUNDCUBEMAIL_DEFAULT_HOST: mailhub-imap
+      ROUNDCUBEMAIL_DEFAULT_PORT: "31143"
+      # identity_smtp needs a global SMTP to exist. It points nowhere on purpose:
+      # an identity without its provider's SMTP must fail, not leave through a
+      # server whose SPF/DMARC don't cover the address.
+      ROUNDCUBEMAIL_SMTP_SERVER: "${MAILHUB_DEFAULT_SMTP:-localhost}"
+      ROUNDCUBEMAIL_SMTP_PORT: "${MAILHUB_DEFAULT_SMTP_PORT:-587}"
+      # mailhub_dav loads calendar + kolab_addressbook against the built-in Baïkal
+      # (or another server set in Settings → Calendar & contacts).
+      # mailhub_accounts: Settings → Mail accounts, writes the mirror's account
+      # files and each address's identity + SMTP.
+      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload,identity_smtp,mailhub_dav,mailhub_accounts
+      ROUNDCUBEMAIL_DES_KEY: "${MAILHUB_DES_KEY}"
+      ROUNDCUBEMAIL_SKIN: elastic2022
+      ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 25M
+      MAILHUB_DAV_DEBUG: "${MAILHUB_DAV_DEBUG:-}"
+      TZ: Etc/UTC
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/roundcube/db:/var/roundcube/db
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/roundcube/config:/var/roundcube/config:ro
+      # Settings → Mail accounts writes the mirrored accounts and reads their status.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mirror/accounts:/var/mailhub/accounts
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mirror/state:/var/mailhub/mirror:ro
+    # The login page: Apache + PHP + Roundcube answering. First start copies the
+    # app and runs composer, hence the long start period.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      - mailhub-imap
+      - mailhub-dav
+    networks:
+      - mailhub-internal
+
+  mailhub-imap:
+    image: dovecot/dovecot:2.4.5
+    container_name: mailhub-imap
+    restart: unless-stopped
+    cpu_shares: 70
+    logging: *logging
+    environment:
+      USER_PASSWORD: "${MAILHUB_PASSWORD}"
+      MAILHUB_TLS_CERT: /tls/cert.pem
+      MAILHUB_TLS_KEY: /tls/key.pem
+      TZ: Etc/UTC
+    ports:
+      # IMAPS for phones and desktop clients (Thunderbird, iOS Mail, K-9).
+      # Not HTTP, so the proxy cannot carry it.
+      - "993:31993"
+    expose:
+      - 31143
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mail:/srv/vmail
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/dovecot/mailhub.conf:/etc/dovecot/conf.d/zz-mailhub.conf:ro
+      # Records each IMAP action for mailhub-mirror's replay (push_notification lua).
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/dovecot/mailhub-replay.lua:/etc/dovecot/mailhub-replay.lua:ro
+      # IMAPS certificate, written by Maison (x-compose-app `certificates`) for the
+      # best host of the mailhub route that reaches this box directly; its name is
+      # APP_TLS_HOST. Self-signed until the box has one.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/tls:/tls:ro
+    # Dovecot's IMAP greeting on the internal port (no grep in the image: case).
+    healthcheck:
+      test: ["CMD-SHELL", "r=$$(printf 'a LOGOUT\\r\\n' | nc -w 3 127.0.0.1 31143); case \"$$r\" in '* OK'*) exit 0;; esac; exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - mailhub-internal
+
+  # Every provider mailbox as a local copy (mbsync, pull only: nothing in that
+  # direction writes to the provider), the IMAP actions done on it replayed at the
+  # provider as the same commands, and the Virtual/ views kept up to date.
+  # Root to read the webmail's private account files; mbsync runs as vmail (1000).
+  mailhub-mirror:
+    image: ghcr.io/worph/mailhub-mirror:0.4.0
+    container_name: mailhub-mirror
+    restart: unless-stopped
+    cpu_shares: 30
+    logging: *logging
+    user: "0:0"
+    environment:
+      MAILHUB_USER: admin
+      MAILHUB_PASSWORD: "${MAILHUB_PASSWORD}"   # to subscribe new folders over IMAP
+      MAILHUB_SYNC_INTERVAL: "${MAILHUB_SYNC_INTERVAL:-120}"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mail:/srv/vmail
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mirror/accounts:/accounts:ro
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mirror/state:/state
+    # The main loop is alive (it touches .alive every few seconds; a provider
+    # failing is per-account status in Settings → Mail accounts).
+    healthcheck:
+      test: ["CMD-SHELL", "find /state/.alive -mmin -2 | grep -q ."]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      - mailhub-imap
+    networks:
+      - mailhub-internal
+
+  # Calendar & contacts (CalDAV/CardDAV). Routed WITHOUT AppShield: phone and
+  # desktop DAV clients only speak Basic auth, so the mailbox login is the gate.
+  # The nginx config serves /dav.php only — no admin console, no welcome page.
+  mailhub-dav:
+    image: ckulka/baikal:0.10.1-nginx
+    container_name: mailhub-dav
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    expose:
+      - 80
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/baikal/config:/var/www/baikal/config
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/baikal/data:/var/www/baikal/Specific
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/baikal/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    # nginx + PHP + Baïkal: /dav.php without credentials must ask for them (401).
+    healthcheck:
+      test: ["CMD-SHELL", "[ \"$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/dav.php)\" = 401 ]"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - pcs
+      - mailhub-internal
+
+  # MCP server: mail, calendar and contacts for AI assistants. Read-only unless
+  # MAILHUB_MCP_WRITE=true; even then it only saves drafts, never sends.
+  # App-private network only — Beacon reaches it through mailhub-beacon.
+  mailhub-mcp:
+    image: ghcr.io/worph/mailhub-mcp:0.4.0
+    container_name: mailhub-mcp
+    restart: unless-stopped
+    cpu_shares: 30
+    logging: *logging
+    expose:
+      - 8080
+    environment:
+      MAILHUB_USER: admin
+      MAILHUB_PASSWORD: "${MAILHUB_PASSWORD}"
+      MAILHUB_MCP_WRITE: "${MAILHUB_MCP_WRITE:-false}"
+      MAILHUB_ROUNDCUBE_DB: /roundcube/sqlite.db
+    volumes:
+      # Identities (name + address) only; SMTP passwords stay in Roundcube.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/roundcube/db:/roundcube:ro
+    # The MCP endpoint answers HTTP (a bare GET gets 406/405, still a live server).
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as r, urllib.error as e, sys\ntry: r.urlopen('http://127.0.0.1:8080/mcp', timeout=5)\nexcept e.HTTPError as x: sys.exit(x.code >= 500)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+    depends_on:
+      - mailhub-imap
+      - mailhub-dav
+    networks:
+      - mailhub-internal
+
+  # Announces the MCP server to Beacon (UDP discovery on the shared network) and
+  # proxies /mcp to it. Tools appear in Beacon as mailhub__<tool>.
+  mailhub-beacon:
+    image: ghcr.io/worph/beaconify:1.0.2
+    container_name: mailhub-beacon
+    hostname: mailhub-beacon
+    restart: unless-stopped
+    cpu_shares: 20
+    logging: *logging
+    expose:
+      - 9099
+    environment:
+      BEACONIFY_NAME: mailhub
+      BEACONIFY_DESCRIPTION: "MailHub — the unified mailbox (search, read, drafts), calendar and contacts"
+      BEACONIFY_UPSTREAM_URL: http://mailhub-mcp:8080/mcp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9099/healthz"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      - mailhub-mcp
+    networks:
+      - pcs
+      - mailhub-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  mailhub-internal:
+    driver: bridge
+
+x-compose-app:
+  schema_version: 2
+  version: "0.4.0"
+  # The first route is the web UI (webmail, behind SSO). The second is the
+  # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
+  routes:
+    - { service: mailhub-proxy, name: mailhub, upstream-port: 80 }
+    - { service: mailhub-dav, name: mailhubdav, upstream-port: 80 }
+  id: mailhub
+  title:
+    en_us: MailHub
+  tagline:
+    en_us: All your mail accounts in one inbox, with calendar and contacts.
+    fr_fr: Tous vos comptes mail dans une seule boîte, avec agenda et contacts.
+  description:
+    en_us: |
+      MailHub gathers the mail accounts you already have — Gmail, your domain's mailbox,
+      any IMAP provider — into one inbox on your server, and answers from the right address.
+
+      **What it does**
+      • Keeps a copy of every mailbox on your server, all folders, over IMAP only: read,
+        move and delete as usual, and the same is done at the provider, which stays the
+        reference (nothing else is ever changed there)
+      • Combined views over every account: All inboxes, Unread, Flagged — fast, with
+        full-text search
+      • Webmail (Roundcube) on any device, behind your server's single sign-on
+      • Each address sends through its own provider's SMTP, so SPF and DMARC stay valid
+      • IMAPS for Thunderbird and phone mail apps
+      • Calendar and contacts built in: invitations get Accept / Maybe / Decline and land
+        in your calendar, and both sync to your phone (CalDAV / CardDAV)
+      • AI access (MCP) through Beacon: search and read mail, calendar, contacts —
+        read-only by default; drafts only, never sends
+
+      MailHub does not receive mail for a domain by itself (no MX): it works with the
+      providers you keep using. For a light single-mailbox webmail, see **SnappyMail**;
+      for a live web client without a local copy, **Cypht**.
+    fr_fr: |
+      MailHub rassemble les comptes mail que vous avez déjà — Gmail, la boîte de votre
+      domaine, tout fournisseur IMAP — dans une seule boîte sur votre serveur, et répond
+      depuis la bonne adresse.
+
+      **Ce qu'il fait**
+      • Garde une copie de chaque boîte sur votre serveur, tous les dossiers, uniquement en
+        IMAP : lisez, déplacez et supprimez comme d'habitude, la même chose est faite chez
+        le fournisseur, qui reste la référence (rien d'autre n'y est jamais modifié)
+      • Vues combinées sur tous les comptes : Toutes les boîtes, Non lus, Suivis — rapides,
+        avec recherche plein texte
+      • Webmail (Roundcube) sur tous vos appareils, derrière la connexion unique du serveur
+      • Chaque adresse envoie par le SMTP de son fournisseur : SPF et DMARC restent valides
+      • IMAPS pour Thunderbird et les applis mail du téléphone
+      • Agenda et contacts intégrés : les invitations ont Accepter / Peut-être / Refuser
+        et arrivent dans l'agenda, et tout se synchronise sur le téléphone (CalDAV / CardDAV)
+      • Accès IA (MCP) via Beacon : chercher et lire les mails, agenda, contacts —
+        lecture seule par défaut ; brouillons seulement, jamais d'envoi
+
+      MailHub ne reçoit pas de mail pour un domaine (pas de MX) : il travaille avec les
+      fournisseurs que vous gardez. Pour un webmail léger d'une boîte à la fois, voir
+      **SnappyMail** ; pour un webmail en direct sans copie locale, **Cypht**.
+  developer: Yundera
+  category: Email
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  accounts:
+    - provider: An email provider with IMAP (Gmail, Namecheap Private Email, your domain's host…)
+  architectures:
+    - amd64
+  # IMAPS (993) is published on the host's public address.
+  requires: [public-ip]
+  secrets:
+    MAILHUB_PASSWORD: password:24       # the mailbox login: webmail, IMAPS, CalDAV/CardDAV
+    MAILHUB_DAV_ADMIN_PASSWORD: hex:32  # Baïkal's admin hash only; its console is not served
+    MAILHUB_DES_KEY: alnum:24           # Roundcube's key for stored SMTP passwords
+  folders:
+    - path: /DATA/AppData/$AppID/mail
+      user: "1000"                      # dovecot image's vmail
+      group: "1000"
+      mode: "0700"
+    - path: /DATA/AppData/$AppID/roundcube/db
+      user: "33"                        # www-data
+      group: "33"
+    # The webmail (www-data, 33) writes the account files, which hold the
+    # providers' app passwords, hence 0700; mailhub-mirror reads them as root.
+    - path: /DATA/AppData/$AppID/mirror/accounts
+      user: "33"
+      group: "33"
+      mode: "0700"
+      recursive: true
+    # The mirror's generated config and the per-account status the page shows.
+    - path: /DATA/AppData/$AppID/mirror/state
+    - path: /DATA/AppData/$AppID/baikal/config
+      user: "101"                       # the Baïkal image's nginx (its entrypoint chowns to it)
+      group: "101"
+    - path: /DATA/AppData/$AppID/baikal/data
+      user: "101"
+      group: "101"
+  # Backups: Maison snapshots the whole app folder (stopping the app for the short
+  # second pass, so the SQLite DBs and Maildir are consistent). Nothing here is a
+  # regenerable cache, so nothing is excluded: mail/, baikal/data/, roundcube/db/,
+  # .env (the secrets, including the key Roundcube encrypts SMTP passwords with).
+  # mail/live/ is the providers' mail, copied: a restore without it simply copies
+  # it again (mbsync keeps its state inside each folder, so the two travel together).
+  # App-managed config, re-rendered on every up so an update reaches existing
+  # installs (seed/ alone is create-if-absent). Edit the store copy, not these.
+  # The IMAPS certificate (see mailhub-imap). Maison picks the host, keeps it while
+  # it works (phones are configured with it), and restarts Dovecot on renewal.
+  certificates:
+    - route: mailhub
+      path: /DATA/AppData/$AppID/tls
+      user: "1000"                      # dovecot's vmail
+      group: "1000"
+      restart: [mailhub-imap]
+  files:
+    - path: /DATA/AppData/$AppID/roundcube/config/mailhub.inc.php
+      from: roundcube/config/mailhub.inc.php
+      ensure: always
+      mode: "0644"
+    - path: /DATA/AppData/$AppID/dovecot/mailhub.conf
+      from: dovecot/mailhub.conf
+      ensure: always
+      mode: "0644"
+    - path: /DATA/AppData/$AppID/dovecot/mailhub-replay.lua
+      from: dovecot/mailhub-replay.lua
+      ensure: always
+      mode: "0644"
+    - path: /DATA/AppData/$AppID/baikal/nginx.conf
+      from: baikal/nginx.conf
+      ensure: always
+      mode: "0644"
+  steps:
+    # Baïkal's config and DB (the `admin` account with one calendar and one address
+    # book) are written on the first up; every later up re-syncs the account's
+    # password with the mailbox's, so a credential change reaches CalDAV/CardDAV.
+    - name: baikal-init
+      at: setup
+      run: always
+      images: [ckulka/baikal:0.10.1-nginx]
+      script: |
+        # Bare -e NAME: the values never appear on a command line.
+        export BAIKAL_USER_PASSWORD="$MAILHUB_PASSWORD" BAIKAL_ADMIN_PASSWORD="$MAILHUB_DAV_ADMIN_PASSWORD"
+        docker run --rm --network none --entrypoint php \
+          -e BAIKAL_USER=admin -e BAIKAL_USER_PASSWORD -e BAIKAL_ADMIN_PASSWORD \
+          -v "$APP_DIR/.scripts/baikal-init.php:/init/init.php:ro" \
+          -v "$APP_DIR/baikal/config:/var/www/baikal/config" \
+          -v "$APP_DIR/baikal/data:/var/www/baikal/Specific" \
+          ckulka/baikal:0.10.1-nginx /init/init.php
+    # Safety net for a Maison older than 1.1.92, which ignores `certificates` and
+    # would leave tls/ empty: Dovecot would not start, and the webmail with it. A
+    # self-signed pair keeps everything but trusted IMAPS working. On 1.1.92+ the
+    # certificate is already written before steps run, so this does nothing.
+    # dovecot/mailhub.conf is re-rendered on every up (files, ensure: always) but
+    # bind-mounted, so an update that changes it does not recreate the container:
+    # reload it so the running server applies it (open connections stay up).
+    - name: dovecot-reload
+      at: started
+      run: always
+      script: |
+        compose exec mailhub-imap doveadm reload
+    - name: tls-fallback
+      at: setup
+      run: always
+      images: [ghcr.io/worph/mailhub-roundcube:0.4.0]
+      script: |
+        docker run --rm --network none --entrypoint sh -v "$APP_DIR/tls:/tls" \
+          ghcr.io/worph/mailhub-roundcube:0.4.0 -c '
+            [ -s /tls/cert.pem ] && [ -s /tls/key.pem ] && exit 0
+            openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
+              -subj "/CN=mailhub (self-signed)" -keyout /tls/key.pem -out /tls/cert.pem 2>/dev/null
+            chown 1000:1000 /tls/cert.pem /tls/key.pem
+            chmod 600 /tls/key.pem && chmod 644 /tls/cert.pem'
+  credentials:
+    - label:
+        en_us: Mailbox (webmail, IMAPS, calendar & contacts)
+        fr_fr: Boîte mail (webmail, IMAPS, agenda et contacts)
+      username: admin
+      password: ${MAILHUB_PASSWORD}
+      note:
+        en_us: The same login opens the webmail (after your server sign-in), IMAPS on mailhub.${APP_DOMAIN}:993 and calendar & contacts sync on https://mailhubdav.${APP_DOMAIN}/dav.php.
+        fr_fr: Le même identifiant ouvre le webmail (après la connexion au serveur), l'IMAPS sur mailhub.${APP_DOMAIN}:993 et la synchro agenda et contacts sur https://mailhubdav.${APP_DOMAIN}/dav.php.
+      # Dovecot reads it from the environment on every start, and the baikal-init
+      # step re-syncs Baïkal's copy on every up; Roundcube stores none.
+      change:
+        apply: env
+  tips:
+    en_us: |
+      **Signing in**
+      Open the app, sign in with your server account, then log into the webmail with
+      the mailbox login shown under *Credentials*.
+
+      **Phone and desktop clients**
+
+      | | |
+      | --- | --- |
+      | IMAP server | `${APP_TLS_HOST}`, port 993, SSL/TLS |
+      | IMAP user | `admin` + the mailbox password |
+      | Calendar & contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL}/dav.php`, same login |
+      | Sending (SMTP) | your provider's own SMTP for each address |
+
+      If the IMAP server above is empty, the server has no trusted certificate for
+      it yet: wait a few minutes, then reopen these tips.
+
+      Android: DAVx⁵ → *Login with URL and user name*. iPhone: Settings → Calendar →
+      Accounts → Other → *Add CalDAV Account* (and CardDAV under Contacts), server
+      `${ROUTE_MAILHUBDAV_HOST}`.
+
+      **Adding your mail accounts**
+      Webmail → Settings → *Mail accounts*: pick the provider (Gmail, Namecheap
+      Private Email, or another one), enter the address and an app password. MailHub
+      tests the login and sets up the address so your replies leave through that
+      provider. Its folders appear under *Live › <address>* within a minute; a big
+      mailbox takes a while to copy the first time (the page shows the progress).
+      *Virtual › All inboxes*, *Unread* and *Flagged* combine every account.
+
+      What you do in the Live folders (read, flag, move, delete) is done the same way
+      at the provider, over IMAP; nothing else is ever changed there. Moving a message
+      out of Live into one of your own folders removes it from the provider: it is then
+      kept on this server only. Removing an account deletes only this server's copy.
+
+      **Calendar and contacts** are built in — nothing to set up. To keep them on
+      another CalDAV/CardDAV server (Nextcloud…), Webmail → Settings → *Calendar &
+      contacts*.
+
+      **AI assistants (MCP)**
+      With the **Beacon** app installed, MailHub's tools appear there on their own
+      (`mailhub__mail_search`, `mailhub__calendar_events`, …). They are read-only.
+      To let the assistant file mail, save drafts and add events or contacts, set
+      `MAILHUB_MCP_WRITE=true` in the app's settings (Env). It never sends mail:
+      drafts wait in *Drafts* for you to send from the webmail.
+    fr_fr: |
+      **Connexion**
+      Ouvrez l'app, connectez-vous avec votre compte serveur, puis au webmail avec
+      l'identifiant de la boîte affiché sous *Identifiants*.
+
+      **Téléphone et clients mail**
+
+      | | |
+      | --- | --- |
+      | Serveur IMAP | `${APP_TLS_HOST}`, port 993, SSL/TLS |
+      | Utilisateur IMAP | `admin` + le mot de passe de la boîte |
+      | Agenda et contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL}/dav.php`, même identifiant |
+      | Envoi (SMTP) | le SMTP de chaque fournisseur |
+
+      Si le serveur IMAP ci-dessus est vide, le serveur n'a pas encore de certificat
+      reconnu pour lui : attendez quelques minutes, puis rouvrez ces conseils.
+
+      Android : DAVx⁵ → *Connexion avec URL et nom d'utilisateur*. iPhone : Réglages →
+      Calendrier → Comptes → Autre → *Ajouter un compte CalDAV* (et CardDAV dans
+      Contacts), serveur `${ROUTE_MAILHUBDAV_HOST}`.
+
+      **Ajouter vos comptes mail**
+      Webmail → Paramètres → *Comptes mail* : choisissez le fournisseur (Gmail,
+      Namecheap Private Email ou un autre), saisissez l'adresse et un mot de passe
+      d'application. MailHub teste la connexion et configure l'adresse pour que vos
+      réponses partent via ce fournisseur. Ses dossiers apparaissent sous
+      *Live › <adresse>* dans la minute ; une grosse boîte met un moment à être copiée la
+      première fois (la page affiche l'avancement). *Virtual › All inboxes*, *Unread* et
+      *Flagged* combinent tous les comptes.
+
+      Ce que vous faites dans les dossiers Live (lire, marquer, déplacer, supprimer) est
+      fait de la même façon chez le fournisseur, en IMAP ; rien d'autre n'y est jamais
+      modifié. Déplacer un mail hors de Live vers un de vos dossiers le retire du
+      fournisseur : il n'est alors gardé que sur ce serveur. Retirer un compte supprime
+      seulement la copie de ce serveur.
+
+      **L'agenda et les contacts** sont intégrés — rien à configurer. Pour les garder
+      sur un autre serveur CalDAV/CardDAV (Nextcloud…), Webmail → Paramètres →
+      *Agenda et contacts*.
+
+      **Assistants IA (MCP)**
+      Avec l'app **Beacon** installée, les outils de MailHub y apparaissent tout seuls
+      (`mailhub__mail_search`, `mailhub__calendar_events`, …), en lecture seule. Pour
+      permettre de classer les mails, enregistrer des brouillons et ajouter des
+      événements ou contacts, mettez `MAILHUB_MCP_WRITE=true` dans les réglages de
+      l'app (Env). Rien n'est jamais envoyé : les brouillons attendent dans
+      *Brouillons* que vous les envoyiez depuis le webmail.
+
+x-casaos:
+  store_app_id: mailhub
+  architectures:
+    - amd64
+  main: mailhub-proxy
+  webui_port: 80
+  index: /
+  category: Email
+  tags: ["email", "productivity", "needs-public-ip"]
+  developer: Yundera
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  title:
+    en_us: MailHub
+  tagline:
+    en_us: All your mail accounts in one inbox, with calendar and contacts.
+    fr_fr: Tous vos comptes mail dans une seule boîte, avec agenda et contacts.
+  description:
+    en_us: |
+      MailHub gathers the mail accounts you already have — Gmail, your domain's mailbox,
+      any IMAP provider — on your server, and answers from the right address. A local
+      copy of every mailbox kept in step with the provider (IMAP only), combined views,
+      webmail behind single sign-on, per-address SMTP, IMAPS, and built-in calendar,
+      invitations and contacts synced to your phone. No MX.
+    fr_fr: |
+      MailHub rassemble les comptes mail que vous avez déjà dans une seule boîte sur votre
+      serveur, et répond depuis la bonne adresse. Webmail derrière la connexion unique,
+      SMTP par adresse, IMAPS, et agenda, invitations et contacts intégrés et
+      synchronisés sur le téléphone. Pas de MX.
+  tips:
+    before_install:
+      en_us: |
+        The mailbox login (webmail, IMAPS, calendar & contacts) is shown under Credentials.
+        Phones: the IMAP and CalDAV/CardDAV addresses are shown in the tips after install.
+        Add your mail accounts in the webmail: Settings → Mail accounts.
