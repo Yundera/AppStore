@@ -40,7 +40,7 @@ services:
       - convertx-internal
 
   convertx-backend:
-    image: ghcr.io/c4illin/convertx:v0.17.0
+    image: ghcr.io/c4illin/convertx:v0.20.0
     container_name: convertx-backend
     restart: unless-stopped
     user: "root"  # Root user required for SQLite access - see rationale.md
@@ -141,7 +141,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.17.0"
+  version: "0.20.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
