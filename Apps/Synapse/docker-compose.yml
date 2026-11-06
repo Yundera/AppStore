@@ -13,7 +13,7 @@ services:
   # user's @name:matrix-<domain> does not depend on which engine runs it.
   # Federation runs over 443 (serve_server_wellknown), no port 8448 needed.
   synapse:
-    image: ghcr.io/element-hq/synapse:v1.163.0
+    image: ghcr.io/element-hq/synapse:v1.164.2
     container_name: synapse
     hostname: synapse
     restart: unless-stopped
@@ -80,7 +80,7 @@ services:
 
   # Element Web, preconfigured for this homeserver. It is the app's WebUI.
   synapse-element:
-    image: vectorim/element-web:v1.12.32
+    image: vectorim/element-web:v1.12.33
     container_name: synapse-element
     restart: unless-stopped
     user: $PUID:$PGID
@@ -178,7 +178,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "1.163.0"
+  version: "1.164.2"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -244,7 +244,7 @@ x-compose-app:
         [ -e "$APP_DIR/data/signing.key" ] && exit 0
         docker run --rm --user "$PUID:$PGID" -v "$APP_DIR/data:/data" \
           --entrypoint generate_signing_key \
-          ghcr.io/element-hq/synapse:v1.163.0 -o /data/signing.key
+          ghcr.io/element-hq/synapse:v1.164.2 -o /data/signing.key
     # The admin account, through the shared-secret registration Synapse exposes on
     # localhost. Waits for the homeserver; --exists-ok makes reruns a no-op.
     - name: admin-account
