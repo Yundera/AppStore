@@ -60,7 +60,7 @@ services:
   # header buys nothing beyond the lock: no upload, no read. Every other
   # request keeps the headers the browser sent.
   psitransfer-router:
-    image: nginx:1.28.0-alpine
+    image: nginx:1.31.8-alpine
     container_name: psitransfer-router
     restart: unless-stopped
     cpu_shares: 50
