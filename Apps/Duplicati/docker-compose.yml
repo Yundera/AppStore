@@ -9,7 +9,7 @@ x-logging: &logging
 services:
   duplicati:
     container_name: duplicati
-    image: linuxserver/duplicati:version-v2.4.0.0_stable_2026-09-03
+    image: linuxserver/duplicati:version-v2.4.1.0_stable_2026-10-29
     user: 0:0
     environment:
       PGID: 0
@@ -101,7 +101,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.4.0.0"
+  version: "2.4.1.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
