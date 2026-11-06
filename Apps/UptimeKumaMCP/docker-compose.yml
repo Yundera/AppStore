@@ -139,7 +139,6 @@ x-casaos:
   # The AppShield sidecar: the container the route points at and the one users reach.
   main: uptimekumamcp-proxy
   webui_port: 80
-  index: /api/status
   store_app_id: uptimekumamcp
   hostname: ${APP_HOST:-uptimekumamcp-${APP_DOMAIN}}
   scheme: https
@@ -275,12 +274,14 @@ x-compose-app:
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others). The route
-  # exists for /mcp (public OAuth endpoint); `path` opens the tile on the
-  # status page, the only page behind it.
+  # exists for /mcp (public OAuth endpoint); there is no web UI behind it, so
+  # `webui: false`: the tile never opens it, and a click lands on the app's
+  # settings and tips, like Samba. A Maison build that predates `webui`
+  # ignores it and opens the route's / (a 404).
   routes:
-    - { service: uptimekumamcp-proxy, name: uptimekumamcp, upstream-port: 80, path: /api/status }
-  # No web UI, so the Services grid, like Samba. Declared because the route
-  # above would otherwise sort it into the app grid.
+    - { service: uptimekumamcp-proxy, name: uptimekumamcp, upstream-port: 80, webui: false }
+  # No web UI, so the Services grid. `webui: false` already implies it; declared
+  # anyway for Maison builds that predate `webui`.
   view: service
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
