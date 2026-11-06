@@ -1,0 +1,240 @@
+name: snappymail
+# SnappyMail — a fast, light webmail for the mail accounts you already have.
+# Each login is a mailbox's own IMAP login at its provider; other mailboxes are
+# added as extra accounts, one on screen at a time. Mail stays at the providers
+# (two-way IMAP, nothing copied to the server). No calendar, no AI access: see
+# MailHub or Cypht for those.
+#
+# Image: SnappyMail 3.0.0 built unchanged from the upstream tag (Docker Hub's newest,
+# v2.38.2.1, lacks 3.0.0's fixes for two unauthenticated SSRFs). Built by
+# github.com/worph/mailhub (.github/workflows/upstream.yml); switch back to
+# djmaze/snappymail once v3.0.0 is published there.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # SSO gate in front of the webmail and its admin panel (same address).
+  snappymail-proxy:
+    image: ghcr.io/yundera/appshield:3.2.0
+    container_name: snappymail
+    hostname: snappymail
+    restart: unless-stopped
+    cpu_shares: 80
+    logging: *logging
+    user: "0:0"
+    expose:
+      - 80
+    environment:
+      BACKEND_HOST: snappymail-web
+      BACKEND_PORT: "8888"
+      LISTEN_PORT: "80"
+      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+    # AppShield's image has no shell or HTTP client to probe itself: no healthcheck.
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      - snappymail-web
+    networks:
+      - pcs
+      - snappymail-internal
+
+  snappymail-web:
+    image: ghcr.io/worph/snappymail:3.0.0
+    container_name: snappymail-web
+    restart: unless-stopped
+    cpu_shares: 80
+    logging: *logging
+    expose:
+      - 8888
+    environment:
+      UPLOAD_MAX_SIZE: 25M
+      MEMORY_LIMIT: 128M
+      SECURE_COOKIES: "true"
+      TZ: Etc/UTC
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/var/lib/snappymail
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8888/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    # Reaches the providers' IMAP/SMTP; nothing else of the box.
+    networks:
+      - snappymail-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  snappymail-internal:
+    driver: bridge
+
+x-compose-app:
+  schema_version: 2
+  version: "3.0.0"
+  routes:
+    - { service: snappymail-proxy, name: snappymail, upstream-port: 80 }
+  id: snappymail
+  title:
+    en_us: SnappyMail
+  tagline:
+    en_us: A fast, light webmail for the mail accounts you already have.
+    fr_fr: Un webmail rapide et léger pour les comptes mail que vous avez déjà.
+  description:
+    en_us: |
+      SnappyMail is a modern webmail that reads your existing mailboxes live over IMAP —
+      Gmail, iCloud, your domain's mailbox, any IMAP provider. Nothing is copied to the server:
+      read, move and delete stay in sync with the provider.
+
+      **What it does**
+      • One container, about 45 MB of memory, very fast on desktop and phone
+      • Several mailboxes on one login, behind an account switcher (one on screen at a time)
+      • Sends through each provider's own SMTP
+      • Gmail, Yahoo, iCloud and Fastmail set up; any other provider in a few fields
+      • Contacts with autocomplete, synced with any CardDAV server
+      • Shows calendar invitations on the email (no Accept / Decline, no calendar)
+      • PGP, S/MIME and Sieve filters built in
+      • Behind your server's single sign-on, admin panel included
+
+      For one inbox over every account, a calendar or AI access, see **Cypht** or **MailHub**.
+    fr_fr: |
+      SnappyMail est un webmail moderne qui lit vos boîtes existantes en direct par IMAP —
+      Gmail, iCloud, la boîte de votre domaine, tout fournisseur IMAP. Rien n'est copié sur le
+      serveur : lecture, déplacement et suppression restent synchronisés avec le fournisseur.
+
+      **Ce qu'il fait**
+      • Un seul conteneur, environ 45 Mo de mémoire, très rapide sur ordinateur et téléphone
+      • Plusieurs boîtes sur un même identifiant, derrière un sélecteur (une à la fois à l'écran)
+      • Envoi par le SMTP de chaque fournisseur
+      • Gmail, Yahoo, iCloud et Fastmail prêts ; tout autre fournisseur en quelques champs
+      • Contacts avec autocomplétion, synchronisés avec tout serveur CardDAV
+      • Affiche les invitations d'agenda dans le mail (sans Accepter / Refuser, sans agenda)
+      • PGP, S/MIME et filtres Sieve intégrés
+      • Derrière la connexion unique de votre serveur, panneau d'administration compris
+
+      Pour une boîte unique sur tous vos comptes, un agenda ou un accès IA, voir **Cypht** ou **MailHub**.
+  developer: SnappyMail
+  category: Email
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  accounts:
+    - provider: An email provider with IMAP (Gmail, Namecheap Private Email, your domain's host…)
+  architectures:
+    - amd64
+    - arm64
+  secrets:
+    SNAPPYMAIL_ADMIN_PASSWORD: password:24   # the admin panel (/?admin)
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: "82"                             # the image's www-data (its entrypoint re-owns the tree)
+      group: "82"
+  # The config, re-applied on every up before SnappyMail starts: HTTPS left to the
+  # proxy, the admin password from the secret; first-up defaults (contacts, the
+  # view-ics invitation plugin from seed/, TLS checks on) — see the script.
+  steps:
+    - name: snappymail-config
+      at: setup
+      run: always
+      images: [ghcr.io/worph/snappymail:3.0.0]
+      script: |
+        export SNAPPYMAIL_ADMIN_PASSWORD
+        docker run --rm --network none --entrypoint sh -e SNAPPYMAIL_ADMIN_PASSWORD \
+          -v "$APP_DIR/.scripts/snappymail-setup.sh:/setup.sh:ro" \
+          -v "$APP_DIR/data:/var/lib/snappymail" \
+          ghcr.io/worph/snappymail:3.0.0 /setup.sh
+  # Backups: Maison snapshots the app folder. data/ holds the config, the domains,
+  # contacts (SQLite) and each user's settings and extra accounts, with their
+  # passwords encrypted. Mail itself stays at the providers.
+  credentials:
+    - label:
+        en_us: Admin panel
+        fr_fr: Panneau d'administration
+      username: admin
+      password: ${SNAPPYMAIL_ADMIN_PASSWORD}
+      note:
+        en_us: "The admin panel is at ${APP_URL}/?admin. The webmail itself has no account of its own: sign in with a mailbox's address and password."
+        fr_fr: "Le panneau d'administration est sur ${APP_URL}/?admin. Le webmail n'a pas de compte à lui : connectez-vous avec l'adresse et le mot de passe d'une boîte."
+      # The snappymail-config step re-applies the secret on every up.
+      change:
+        apply: env
+  tips:
+    en_us: |
+      **Signing in**
+      Open the app, sign in with your server account, then log into the webmail with
+      a mailbox's own address and password (an app password for Gmail).
+      Gmail, Yahoo, iCloud and Fastmail addresses work right away.
+
+      **Another provider** (your domain's mailbox…): an admin step first. Open
+      `${APP_URL}/?admin` (login under *Credentials*) → *Domains* → *Add*, enter the
+      domain and its IMAP / SMTP servers, then sign in.
+
+      **More mailboxes**: once signed in, the account menu (top right) → *Add account*.
+      They sit behind that menu, one on screen at a time.
+
+      **Contacts**: Settings → *Contacts* can sync with a CardDAV server (Nextcloud,
+      Baïkal…). Invitations show their details on the email; answering needs a calendar.
+    fr_fr: |
+      **Connexion**
+      Ouvrez l'app, connectez-vous avec votre compte serveur, puis au webmail avec
+      l'adresse et le mot de passe d'une boîte (un mot de passe d'application pour
+      Gmail). Les adresses Gmail, Yahoo, iCloud et Fastmail marchent tout de suite.
+
+      **Un autre fournisseur** (la boîte de votre domaine…) : d'abord une étape admin.
+      Ouvrez `${APP_URL}/?admin` (identifiant sous *Identifiants*) → *Domains* → *Add*,
+      saisissez le domaine et ses serveurs IMAP / SMTP, puis connectez-vous.
+
+      **D'autres boîtes** : une fois connecté, le menu du compte (en haut à droite) →
+      *Ajouter un compte*. Elles restent derrière ce menu, une à la fois à l'écran.
+
+      **Contacts** : Paramètres → *Contacts* peut se synchroniser avec un serveur CardDAV
+      (Nextcloud, Baïkal…). Les invitations affichent leurs détails dans le mail ; y
+      répondre demande un agenda.
+
+x-casaos:
+  store_app_id: snappymail
+  architectures:
+    - amd64
+    - arm64
+  main: snappymail-proxy
+  webui_port: 80
+  index: /
+  category: Email
+  tags: ["email", "productivity"]
+  developer: SnappyMail
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  title:
+    en_us: SnappyMail
+  tagline:
+    en_us: A fast, light webmail for the mail accounts you already have.
+    fr_fr: Un webmail rapide et léger pour les comptes mail que vous avez déjà.
+  description:
+    en_us: |
+      A modern webmail that reads your existing mailboxes live over IMAP: one container,
+      very fast, several mailboxes behind an account switcher, CardDAV contacts, PGP and
+      Sieve. Behind your server's single sign-on. No calendar, no AI access.
+    fr_fr: |
+      Un webmail moderne qui lit vos boîtes existantes en direct par IMAP : un seul
+      conteneur, très rapide, plusieurs boîtes derrière un sélecteur, contacts CardDAV,
+      PGP et Sieve. Derrière la connexion unique du serveur. Sans agenda ni accès IA.
+  tips:
+    before_install:
+      en_us: |
+        Sign in to the webmail with a mailbox's own address and password. The admin
+        panel login (for adding providers) is shown under Credentials.
