@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   lidarr:
-    image: lscr.io/linuxserver/lidarr:3.1.0
+    image: lscr.io/linuxserver/lidarr:3.1.6
     container_name: lidarr
     restart: unless-stopped
     user: $PUID:$PGID
@@ -19,6 +19,10 @@ services:
       - pcs
     environment:
       TZ: $TZ
+      # Since 3.1.5 Lidarr trusts X-Forwarded-* only from the networks named here
+      # (it used to trust the private ranges by default). Without it, it ignores
+      # the platform proxy's X-Forwarded-Proto and redirects to http://.
+      LIDARR__SERVER__TRUSTEDNETWORKS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7,fe80::/10
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/lidarr/config/:/config   # dedicated Lidarr config
       - ${DATA_ROOT:-/DATA}/Media/Music/:/music              # shared music library (same folder Jellyfin reads)
@@ -81,7 +85,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "3.1.0"
+  version: "3.1.6"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
