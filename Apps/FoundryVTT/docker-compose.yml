@@ -10,8 +10,8 @@ services:
   foundryvtt:
     # Community image (felddy/foundryvtt-docker). Foundry itself is not in the image:
     # the entrypoint downloads the release with the user's foundryvtt.com account on
-    # first start, so the image tag also selects the Foundry version (14.368).
-    image: felddy/foundryvtt:14.368.0
+    # first start, so the image tag also selects the Foundry version (14.369).
+    image: felddy/foundryvtt:14.369.1
     container_name: foundryvtt
     # Foundry binds its software license to the hostname. Without a fixed one Docker
     # uses the random container ID and the license fails verification after every
@@ -201,7 +201,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "14.368.0"
+  version: "14.369.1"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
