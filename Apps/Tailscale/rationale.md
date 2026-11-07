@@ -51,7 +51,7 @@ than framed as "privileged networking".
 - **Only one host path outside AppData is mounted**, `/dev/net/tun`, and it is the
   device the daemon needs. No user directory (`/DATA/Documents`, `/DATA/Downloads`,
   `/DATA/Media`, `/DATA/Gallery`) and no part of the host filesystem is bound in.
-- **The image tag is pinned** (`ghcr.io/tailscale/tailscale:v1.94.2`) to the upstream
+- **The image tag is pinned** (`ghcr.io/tailscale/tailscale:v1.104.4`) to the upstream
   official image, so the privileged surface is a reviewed, reproducible artifact.
 - **No install hook.** The app makes no host changes at install time; its one state
   directory is declared under `x-compose-app.folders` and created by Maison.
