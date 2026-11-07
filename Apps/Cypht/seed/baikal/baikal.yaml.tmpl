@@ -1,0 +1,18 @@
+# Baïkal's config, re-rendered on every up (x-compose-app `files`). The admin hash
+# is a random secret no password matches: the admin console is not served.
+system:
+    configured_version: '0.10.1'
+    timezone: 'Etc/UTC'
+    card_enabled: true
+    cal_enabled: true
+    invite_from: ''
+    # Basic, not Digest: what every DAV client and Cypht's DAV modules speak.
+    dav_auth_type: 'Basic'
+    admin_passwordhash: ${CYPHT_DAV_ADMIN_HASH}
+    failed_access_message: 'user %u authentication failure for Baikal'
+    auth_realm: BaikalDAV
+    base_uri: ''
+database:
+    encryption_key: ${CYPHT_DAV_ENCRYPTION_KEY}
+    backend: 'sqlite'
+    sqlite_file: '/var/www/baikal/Specific/db/db.sqlite'
