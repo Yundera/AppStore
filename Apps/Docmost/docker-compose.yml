@@ -39,7 +39,7 @@ services:
     logging: *logging
 
   docmost-redis:
-    image: redis:7.4.11-alpine
+    image: redis:7.4.12-alpine
     container_name: docmost-redis
     restart: unless-stopped
     # Not root: the image's entrypoint would drop to its own `redis` user (uid 999)
