@@ -40,7 +40,10 @@ own modules add what Cypht lacks (invitations, a CalDAV calendar page).
 
 - The app login is the local archive's IMAP login (`AUTH_TYPE: IMAP` against the app's Dovecot),
   so Cypht adds that mailbox as an account on its own; no setup script touches Cypht's database.
-- `baikal-init` (setup step) writes Baïkal's config and its one user, as in MailHub.
+- Baïkal's config is `seed/baikal/baikal.yaml.tmpl` under `files`; `baikal-init` (setup step)
+  creates its database and its one user, as in MailHub.
+- `cypht-router` (nginx, behind the gate) only adds `data:` to the `font-src` of Cypht's
+  Content-Security-Policy, which is fixed in Cypht's code, so the calendar's embedded icon font loads.
 - `bootstrap` (started step) logs into the gateway once and creates the MCP token, kept in `.env`.
   The gateway refuses accounts on private addresses, so it cannot add the local archive itself.
 

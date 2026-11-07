@@ -30,7 +30,7 @@ services:
     expose:
       - 80
     environment:
-      BACKEND_HOST: cypht-web
+      BACKEND_HOST: cypht-router
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
       OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
@@ -41,9 +41,39 @@ services:
         limits:
           memory: 128M
     depends_on:
-      - cypht-web
+      - cypht-router
     networks:
       - pcs
+      - cypht-internal
+
+  # The app's own router, between the gate and the webmail. Cypht's CSP is fixed
+  # in its code (font-src 'self' https://fonts.gstatic.com) and blocks the icon
+  # font the calendar page's FullCalendar embeds as a data: URI; this adds data:
+  # to font-src and passes everything else through. On the app's network only:
+  # the gate is the one way in.
+  cypht-router:
+    image: nginx:1.31.8-alpine
+    container_name: cypht-router
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    expose:
+      - 80
+    configs:
+      - source: cypht-router
+        target: /etc/nginx/conf.d/default.conf
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    depends_on:
+      - cypht-web
+    networks:
       - cypht-internal
 
   cypht-web:
@@ -265,6 +295,46 @@ networks:
   cypht-internal:
     driver: bridge
 
+configs:
+  cypht-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      # Cypht's own CSP with data: added to font-src; empty (no header) when
+      # Cypht sends none.
+      map $$upstream_http_content_security_policy $$cypht_csp {
+        "~^(?<csp_a>.*font-src 'self')(?<csp_b>.*)$$" "$$csp_a data:$$csp_b";
+        default $$upstream_http_content_security_policy;
+      }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # The gate caps uploads; nothing to add here.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+
+        proxy_http_version 1.1;
+        # The gate already set these from the real client; pass them on as they are.
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$http_x_real_ip;
+        proxy_set_header X-Forwarded-For $$http_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $$http_x_forwarded_host;
+
+        proxy_hide_header Content-Security-Policy;
+        add_header Content-Security-Policy $$cypht_csp always;
+
+        set $$webmail cypht-web:80;
+
+        location = /_router/health { access_log off; return 204; }
+        location / { proxy_pass http://$$webmail; }
+      }
+
 x-compose-app:
   schema_version: 2
   version: "2.13.1-mh.0.4.0"
@@ -280,7 +350,7 @@ x-compose-app:
     en_us: All your mail accounts in one web client, live, with calendar and contacts.
     fr_fr: Tous vos comptes mail dans un seul webmail, en direct, avec agenda et contacts.
   description:
-    en_us: |
+    en_us: &description_en |
       Cypht brings the mail accounts you already have — Gmail, your domain's mailbox, any
       IMAP provider — into one web client. It works on each provider's mailbox live, like
       Thunderbird: read, move and delete stay in sync, nothing is copied.
@@ -298,7 +368,7 @@ x-compose-app:
 
       Cypht does not receive mail for a domain by itself (no MX): it works with the
       providers you keep.
-    fr_fr: |
+    fr_fr: &description_fr |
       Cypht rassemble les comptes mail que vous avez déjà — Gmail, la boîte de votre
       domaine, tout fournisseur IMAP — dans un seul webmail. Il travaille en direct sur la
       boîte de chaque fournisseur, comme Thunderbird : lecture, déplacement et suppression
@@ -330,7 +400,10 @@ x-compose-app:
     - amd64
   secrets:
     CYPHT_PASSWORD: password:24             # the app login: Cypht, the Local archive, calendar & contacts
-    CYPHT_DAV_ADMIN_PASSWORD: hex:32        # Baïkal's admin hash only; its console is not served
+    # Baïkal's config (seed/baikal/baikal.yaml.tmpl). Its admin console is not served,
+    # so the admin hash is a random value no password matches.
+    CYPHT_DAV_ADMIN_HASH: hex:32            # sha256-sized
+    CYPHT_DAV_ENCRYPTION_KEY: hex:16        # as Baïkal's installer makes; nothing reads it
     CYPHT_API_LOGIN_KEY: hex:32             # gateway → Cypht login bridge
     CYPHT_BRIDGE_KEY: hex:32                # gateway → Cypht data bridge
     CYPHT_GATEWAY_MASTER_KEY: base64:32     # encrypts the gateway's stored Cypht credential
@@ -354,6 +427,9 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/baikal/data
       user: "101"
       group: "101"
+    - path: /DATA/AppData/$AppID/baikal/data/db
+      user: "101"
+      group: "101"
   # Backups: Maison snapshots the whole app folder. mail/ (the Local archive),
   # baikal/data/, cypht/db/, gateway/ and .env (the secrets: the Cypht login
   # decrypts the stored accounts) all matter; mail on the providers stays there.
@@ -362,19 +438,25 @@ x-compose-app:
       from: baikal/nginx.conf
       ensure: always
       mode: "0644"
+    - path: /DATA/AppData/$AppID/baikal/config/baikal.yaml
+      from: baikal/baikal.yaml.tmpl
+      ensure: always
+      user: "101"                           # the Baïkal image's nginx
+      group: "101"
+      mode: "0640"
   steps:
-    # Baïkal's config and DB (the `admin` account with one calendar and one
-    # address book) on the first up; every later up re-syncs its password.
+    # Baïkal's DB (the `admin` account with one calendar and one address book)
+    # on the first up; every later up re-syncs its password. Its config is
+    # baikal.yaml under `files`.
     - name: baikal-init
       at: setup
       run: always
       images: [ckulka/baikal:0.10.1-nginx]
       script: |
-        export BAIKAL_USER_PASSWORD="$CYPHT_PASSWORD" BAIKAL_ADMIN_PASSWORD="$CYPHT_DAV_ADMIN_PASSWORD"
+        export BAIKAL_USER_PASSWORD="$CYPHT_PASSWORD"
         docker run --rm --network none --entrypoint php \
-          -e BAIKAL_USER=admin -e BAIKAL_USER_PASSWORD -e BAIKAL_ADMIN_PASSWORD \
+          -e BAIKAL_USER=admin -e BAIKAL_USER_PASSWORD \
           -v "$APP_DIR/.scripts/baikal-init.php:/init/init.php:ro" \
-          -v "$APP_DIR/baikal/config:/var/www/baikal/config" \
           -v "$APP_DIR/baikal/data:/var/www/baikal/Specific" \
           ckulka/baikal:0.10.1-nginx /init/init.php
     # First start, once the stack runs: create the MCP server's read-only gateway
@@ -400,10 +482,10 @@ x-compose-app:
       username: admin
       password: ${CYPHT_PASSWORD}
       note:
-        en_us: The same login opens the webmail (after your server sign-in) and calendar & contacts sync on ${ROUTE_CYPHTDAV_URL}/dav.php. It also unlocks the mail accounts stored in Cypht, so it cannot be changed here.
-        fr_fr: Le même identifiant ouvre le webmail (après la connexion au serveur) et la synchro agenda et contacts sur ${ROUTE_CYPHTDAV_URL}/dav.php. Il déverrouille aussi les comptes mail enregistrés dans Cypht, il ne peut donc pas être changé ici.
+        en_us: The same login opens the webmail (after your server sign-in) and calendar & contacts sync on ${ROUTE_CYPHTDAV_URL:-https://cyphtdav-${APP_DOMAIN}}/dav.php. It also unlocks the mail accounts stored in Cypht, so it cannot be changed here.
+        fr_fr: Le même identifiant ouvre le webmail (après la connexion au serveur) et la synchro agenda et contacts sur ${ROUTE_CYPHTDAV_URL:-https://cyphtdav-${APP_DOMAIN}}/dav.php. Il déverrouille aussi les comptes mail enregistrés dans Cypht, il ne peut donc pas être changé ici.
   tips:
-    en_us: |
+    en_us: &tips_en |
       **Signing in**
       Open the app, sign in with your server account, then log into Cypht with the
       login shown under *Credentials*.
@@ -421,7 +503,7 @@ x-compose-app:
 
       | | |
       | --- | --- |
-      | CalDAV / CardDAV | `${ROUTE_CYPHTDAV_URL}/dav.php`, user `admin` + the app password |
+      | CalDAV / CardDAV | `${ROUTE_CYPHTDAV_URL:-https://cyphtdav-${APP_DOMAIN}}/dav.php`, user `admin` + the app password |
 
       Android: DAVx⁵ → *Login with URL and user name*. iPhone: Settings → Calendar →
       Accounts → Other → *Add CalDAV Account* (and CardDAV under Contacts).
@@ -431,7 +513,7 @@ x-compose-app:
       **AI assistants (MCP)**
       With the **Beacon** app installed, Cypht's tools appear there on their own
       (`cypht__…`): list accounts, search and read mail across all of them, read-only.
-    fr_fr: |
+    fr_fr: &tips_fr |
       **Connexion**
       Ouvrez l'app, connectez-vous avec votre compte serveur, puis à Cypht avec
       l'identifiant affiché sous *Identifiants*.
@@ -450,7 +532,7 @@ x-compose-app:
 
       | | |
       | --- | --- |
-      | CalDAV / CardDAV | `${ROUTE_CYPHTDAV_URL}/dav.php`, utilisateur `admin` + le mot de passe de l'app |
+      | CalDAV / CardDAV | `${ROUTE_CYPHTDAV_URL:-https://cyphtdav-${APP_DOMAIN}}/dav.php`, utilisateur `admin` + le mot de passe de l'app |
 
       Android : DAVx⁵ → *Connexion avec URL et nom d'utilisateur*. iPhone : Réglages →
       Calendrier → Comptes → Autre → *Ajouter un compte CalDAV* (et CardDAV dans Contacts).
@@ -481,18 +563,9 @@ x-casaos:
     en_us: All your mail accounts in one web client, live, with calendar and contacts.
     fr_fr: Tous vos comptes mail dans un seul webmail, en direct, avec agenda et contacts.
   description:
-    en_us: |
-      Every mail account you already have in one web client, live over IMAP: combined
-      views, per-account SMTP, a Local archive on your server, invitations with
-      Accept / Decline, a CalDAV calendar and contacts synced to your phone, and read-only
-      AI access through Beacon. Behind your server's single sign-on. No MX.
-    fr_fr: |
-      Tous vos comptes mail dans un seul webmail, en direct par IMAP : vues combinées,
-      SMTP par compte, archive locale sur le serveur, invitations avec Accepter / Refuser,
-      agenda CalDAV et contacts synchronisés sur le téléphone, et accès IA en lecture
-      seule via Beacon. Derrière la connexion unique du serveur. Pas de MX.
+    en_us: *description_en
+    fr_fr: *description_fr
   tips:
     before_install:
-      en_us: |
-        The app login (webmail, calendar & contacts) is shown under Credentials.
-        Add your mail accounts in Cypht: Settings → Servers, then Settings → Save.
+      en_us: *tips_en
+      fr_fr: *tips_fr
