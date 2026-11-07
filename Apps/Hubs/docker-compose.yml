@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   hubs-client:
-    image: hubsfoundation/hubs:stable-3111
+    image: hubsfoundation/hubs:stable-3121
     container_name: hubs-client
     restart: unless-stopped
     user: "0:0"
@@ -152,7 +152,7 @@ services:
       - hubs-net
 
   hubs-spoke:
-    image: hubsfoundation/spoke:stable-95
+    image: hubsfoundation/spoke:stable-107
     container_name: hubs-spoke
     restart: unless-stopped
     user: "0:0"
@@ -193,7 +193,7 @@ services:
       pcs: {}
 
   hubs-dialog:
-    image: hubsfoundation/dialog:stable-331
+    image: hubsfoundation/dialog:stable-339
     container_name: hubs-dialog
     restart: unless-stopped
     user: "0:0"
@@ -228,7 +228,7 @@ services:
       - pcs
 
   hubs-nearspark:
-    image: hubsfoundation/nearspark:stable-28
+    image: hubsfoundation/nearspark:stable-40
     container_name: hubs-nearspark
     restart: unless-stopped
     cpu_shares: 30
@@ -255,7 +255,7 @@ services:
       pcs: {}
 
   photomnemonic:
-    image: hubsfoundation/photomnemonic:stable-75
+    image: hubsfoundation/photomnemonic:stable-88
     container_name: hubs-photomnemonic
     restart: unless-stopped
     cpu_shares: 30
@@ -469,7 +469,7 @@ x-compose-app:
     turkeyCfg_POSTGREST_PASSWORD: hex:24
   # reticulum's config template: hubs-seed 2.0.0's templates/config.toml.template,
   # with one change. Its CSP script_src adds the hashes of the Google Analytics
-  # loader inline in the hubs-client stable-3111 pages; reticulum's built-in list
+  # loader inline in the hubs-client stable-3121 pages; reticulum's built-in list
   # holds only older builds' hashes, so the browser refused the script and logged an
   # error on every page. `always` so a template change in the store reaches
   # installed apps, as the former bootstrap step's rewrite on every run did.
