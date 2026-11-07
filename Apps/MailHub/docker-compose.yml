@@ -292,7 +292,7 @@ x-compose-app:
     en_us: All your mail accounts in one inbox, with calendar and contacts.
     fr_fr: Tous vos comptes mail dans une seule boîte, avec agenda et contacts.
   description:
-    en_us: |
+    en_us: &description_en |
       MailHub gathers the mail accounts you already have — Gmail, your domain's mailbox,
       any IMAP provider — into one inbox on your server, and answers from the right address.
 
@@ -313,7 +313,7 @@ x-compose-app:
       MailHub does not receive mail for a domain by itself (no MX): it works with the
       providers you keep using. For a light single-mailbox webmail, see **SnappyMail**;
       for a live web client without a local copy, **Cypht**.
-    fr_fr: |
+    fr_fr: &description_fr |
       MailHub rassemble les comptes mail que vous avez déjà — Gmail, la boîte de votre
       domaine, tout fournisseur IMAP — dans une seule boîte sur votre serveur, et répond
       depuis la bonne adresse.
@@ -349,7 +349,10 @@ x-compose-app:
   requires: [public-ip]
   secrets:
     MAILHUB_PASSWORD: password:24       # the mailbox login: webmail, IMAPS, CalDAV/CardDAV
-    MAILHUB_DAV_ADMIN_PASSWORD: hex:32  # Baïkal's admin hash only; its console is not served
+    # Baïkal's config (seed/baikal/baikal.yaml.tmpl). Its admin console is not served,
+    # so the admin hash is a random value no password matches.
+    MAILHUB_DAV_ADMIN_HASH: hex:32      # sha256-sized
+    MAILHUB_DAV_ENCRYPTION_KEY: hex:16  # as Baïkal's installer makes; nothing reads it
     MAILHUB_DES_KEY: alnum:24           # Roundcube's key for stored SMTP passwords
   folders:
     - path: /DATA/AppData/$AppID/mail
@@ -372,6 +375,9 @@ x-compose-app:
       user: "101"                       # the Baïkal image's nginx (its entrypoint chowns to it)
       group: "101"
     - path: /DATA/AppData/$AppID/baikal/data
+      user: "101"
+      group: "101"
+    - path: /DATA/AppData/$AppID/baikal/data/db
       user: "101"
       group: "101"
   # Backups: Maison snapshots the whole app folder (stopping the app for the short
@@ -407,21 +413,27 @@ x-compose-app:
       from: baikal/nginx.conf
       ensure: always
       mode: "0644"
+    - path: /DATA/AppData/$AppID/baikal/config/baikal.yaml
+      from: baikal/baikal.yaml.tmpl
+      ensure: always
+      user: "101"                       # the Baïkal image's nginx
+      group: "101"
+      mode: "0640"
   steps:
-    # Baïkal's config and DB (the `admin` account with one calendar and one address
-    # book) are written on the first up; every later up re-syncs the account's
-    # password with the mailbox's, so a credential change reaches CalDAV/CardDAV.
+    # Baïkal's DB (the `admin` account with one calendar and one address book) is
+    # created on the first up; every later up re-syncs the account's password with
+    # the mailbox's, so a credential change reaches CalDAV/CardDAV. Its config is
+    # baikal.yaml under `files`.
     - name: baikal-init
       at: setup
       run: always
       images: [ckulka/baikal:0.10.1-nginx]
       script: |
-        # Bare -e NAME: the values never appear on a command line.
-        export BAIKAL_USER_PASSWORD="$MAILHUB_PASSWORD" BAIKAL_ADMIN_PASSWORD="$MAILHUB_DAV_ADMIN_PASSWORD"
+        # Bare -e NAME: the value never appears on a command line.
+        export BAIKAL_USER_PASSWORD="$MAILHUB_PASSWORD"
         docker run --rm --network none --entrypoint php \
-          -e BAIKAL_USER=admin -e BAIKAL_USER_PASSWORD -e BAIKAL_ADMIN_PASSWORD \
+          -e BAIKAL_USER=admin -e BAIKAL_USER_PASSWORD \
           -v "$APP_DIR/.scripts/baikal-init.php:/init/init.php:ro" \
-          -v "$APP_DIR/baikal/config:/var/www/baikal/config" \
           -v "$APP_DIR/baikal/data:/var/www/baikal/Specific" \
           ckulka/baikal:0.10.1-nginx /init/init.php
     # Safety net for a Maison older than 1.1.92, which ignores `certificates` and
@@ -455,14 +467,14 @@ x-compose-app:
       username: admin
       password: ${MAILHUB_PASSWORD}
       note:
-        en_us: The same login opens the webmail (after your server sign-in), IMAPS on mailhub.${APP_DOMAIN}:993 and calendar & contacts sync on https://mailhubdav.${APP_DOMAIN}/dav.php.
-        fr_fr: Le même identifiant ouvre le webmail (après la connexion au serveur), l'IMAPS sur mailhub.${APP_DOMAIN}:993 et la synchro agenda et contacts sur https://mailhubdav.${APP_DOMAIN}/dav.php.
+        en_us: The same login opens the webmail (after your server sign-in), IMAPS on port 993 (the server is in the tips) and calendar & contacts sync on ${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php.
+        fr_fr: Le même identifiant ouvre le webmail (après la connexion au serveur), l'IMAPS sur le port 993 (le serveur est dans les conseils) et la synchro agenda et contacts sur ${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php.
       # Dovecot reads it from the environment on every start, and the baikal-init
       # step re-syncs Baïkal's copy on every up; Roundcube stores none.
       change:
         apply: env
   tips:
-    en_us: |
+    en_us: &tips_en |
       **Signing in**
       Open the app, sign in with your server account, then log into the webmail with
       the mailbox login shown under *Credentials*.
@@ -473,7 +485,7 @@ x-compose-app:
       | --- | --- |
       | IMAP server | `${APP_TLS_HOST}`, port 993, SSL/TLS |
       | IMAP user | `admin` + the mailbox password |
-      | Calendar & contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL}/dav.php`, same login |
+      | Calendar & contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, same login |
       | Sending (SMTP) | your provider's own SMTP for each address |
 
       If the IMAP server above is empty, the server has no trusted certificate for
@@ -481,7 +493,7 @@ x-compose-app:
 
       Android: DAVx⁵ → *Login with URL and user name*. iPhone: Settings → Calendar →
       Accounts → Other → *Add CalDAV Account* (and CardDAV under Contacts), server
-      `${ROUTE_MAILHUBDAV_HOST}`.
+      `${ROUTE_MAILHUBDAV_HOST:-mailhubdav-${APP_DOMAIN}}`.
 
       **Adding your mail accounts**
       Webmail → Settings → *Mail accounts*: pick the provider (Gmail, Namecheap
@@ -506,7 +518,7 @@ x-compose-app:
       To let the assistant file mail, save drafts and add events or contacts, set
       `MAILHUB_MCP_WRITE=true` in the app's settings (Env). It never sends mail:
       drafts wait in *Drafts* for you to send from the webmail.
-    fr_fr: |
+    fr_fr: &tips_fr |
       **Connexion**
       Ouvrez l'app, connectez-vous avec votre compte serveur, puis au webmail avec
       l'identifiant de la boîte affiché sous *Identifiants*.
@@ -517,7 +529,7 @@ x-compose-app:
       | --- | --- |
       | Serveur IMAP | `${APP_TLS_HOST}`, port 993, SSL/TLS |
       | Utilisateur IMAP | `admin` + le mot de passe de la boîte |
-      | Agenda et contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL}/dav.php`, même identifiant |
+      | Agenda et contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, même identifiant |
       | Envoi (SMTP) | le SMTP de chaque fournisseur |
 
       Si le serveur IMAP ci-dessus est vide, le serveur n'a pas encore de certificat
@@ -525,7 +537,7 @@ x-compose-app:
 
       Android : DAVx⁵ → *Connexion avec URL et nom d'utilisateur*. iPhone : Réglages →
       Calendrier → Comptes → Autre → *Ajouter un compte CalDAV* (et CardDAV dans
-      Contacts), serveur `${ROUTE_MAILHUBDAV_HOST}`.
+      Contacts), serveur `${ROUTE_MAILHUBDAV_HOST:-mailhubdav-${APP_DOMAIN}}`.
 
       **Ajouter vos comptes mail**
       Webmail → Paramètres → *Comptes mail* : choisissez le fournisseur (Gmail,
@@ -574,20 +586,9 @@ x-casaos:
     en_us: All your mail accounts in one inbox, with calendar and contacts.
     fr_fr: Tous vos comptes mail dans une seule boîte, avec agenda et contacts.
   description:
-    en_us: |
-      MailHub gathers the mail accounts you already have — Gmail, your domain's mailbox,
-      any IMAP provider — on your server, and answers from the right address. A local
-      copy of every mailbox kept in step with the provider (IMAP only), combined views,
-      webmail behind single sign-on, per-address SMTP, IMAPS, and built-in calendar,
-      invitations and contacts synced to your phone. No MX.
-    fr_fr: |
-      MailHub rassemble les comptes mail que vous avez déjà dans une seule boîte sur votre
-      serveur, et répond depuis la bonne adresse. Webmail derrière la connexion unique,
-      SMTP par adresse, IMAPS, et agenda, invitations et contacts intégrés et
-      synchronisés sur le téléphone. Pas de MX.
+    en_us: *description_en
+    fr_fr: *description_fr
   tips:
     before_install:
-      en_us: |
-        The mailbox login (webmail, IMAPS, calendar & contacts) is shown under Credentials.
-        Phones: the IMAP and CalDAV/CardDAV addresses are shown in the tips after install.
-        Add your mail accounts in the webmail: Settings → Mail accounts.
+      en_us: *tips_en
+      fr_fr: *tips_fr
