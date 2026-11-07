@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   n8n:
-    image: n8nio/n8n:2.45.4
+    image: n8nio/n8n:2.47.2
     container_name: n8n
     restart: unless-stopped
     user: $PUID:$PGID
@@ -307,7 +307,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.45.4"
+  version: "2.47.2"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
