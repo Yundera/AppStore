@@ -18,8 +18,9 @@
 - Both are gated by the mailbox login, a Maison-generated secret (`MAILHUB_PASSWORD`,
   `password:24`) shown under Credentials and changeable from the Security tab.
 - The DAV route serves `/dav.php` only (`seed/baikal/nginx.conf`): Baïkal's admin console and
-  welcome page return 404. The admin account's password is a separate random secret that is never
-  shown, and nothing needs it — the `baikal-init` step configures the server.
+  welcome page return 404. The admin account's hash is a separate random secret (`MAILHUB_DAV_ADMIN_HASH`)
+  that no password matches, and nothing needs it — `baikal.yaml` (`files`) and the
+  `baikal-init` step configure the server.
 - IMAPS only (TLS on 993, with a certificate Maison provides for the best host of the `mailhub` route — `certificates`, needs a Maison with that feature); plain IMAP (143) and LMTP
   are not published.
 
