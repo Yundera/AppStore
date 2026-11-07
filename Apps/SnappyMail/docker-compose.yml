@@ -93,7 +93,7 @@ x-compose-app:
     en_us: A fast, light webmail for the mail accounts you already have.
     fr_fr: Un webmail rapide et léger pour les comptes mail que vous avez déjà.
   description:
-    en_us: |
+    en_us: &description_en |
       SnappyMail is a modern webmail that reads your existing mailboxes live over IMAP —
       Gmail, iCloud, your domain's mailbox, any IMAP provider. Nothing is copied to the server:
       read, move and delete stay in sync with the provider.
@@ -109,7 +109,7 @@ x-compose-app:
       • Behind your server's single sign-on, admin panel included
 
       For one inbox over every account, a calendar or AI access, see **Cypht** or **MailHub**.
-    fr_fr: |
+    fr_fr: &description_fr |
       SnappyMail est un webmail moderne qui lit vos boîtes existantes en direct par IMAP —
       Gmail, iCloud, la boîte de votre domaine, tout fournisseur IMAP. Rien n'est copié sur le
       serveur : lecture, déplacement et suppression restent synchronisés avec le fournisseur.
@@ -142,9 +142,94 @@ x-compose-app:
     - path: /DATA/AppData/$AppID/data
       user: "82"                             # the image's www-data (its entrypoint re-owns the tree)
       group: "82"
+  # The mail domains of the big providers that still take an app password over IMAP,
+  # with TLS certificate checks on (SnappyMail checks none by default), and "*" off
+  # so any other domain is an explicit admin step. Written once (create-if-absent):
+  # edits made in the admin panel are kept.
+  files:
+    - path: /DATA/AppData/$AppID/data/_data_/_default_/domains/gmail.com.json
+      user: "82"
+      group: "82"
+      content: |
+        {
+          "IMAP": {"host": "imap.gmail.com", "port": 993, "type": 1, "timeout": 300, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "disabled_capabilities": ["METADATA", "OBJECTID", "PREVIEW", "STATUS=SIZE"],
+                   "use_expunge_all_on_delete": false, "fast_simple_search": true, "force_select": false,
+                   "message_all_headers": false, "message_list_limit": 10000, "search_filter": ""},
+          "SMTP": {"host": "smtp.gmail.com", "port": 465, "type": 1, "timeout": 60, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "useAuth": true, "setSender": false, "usePhpMail": false},
+          "Sieve": {"host": "imap.gmail.com", "port": 4190, "type": 0, "timeout": 10, "shortLogin": false, "lowerLogin": true,
+                    "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "enabled": false},
+          "whiteList": ""
+        }
+    - path: /DATA/AppData/$AppID/data/_data_/_default_/domains/googlemail.com.json
+      user: "82"
+      group: "82"
+      content: |
+        {
+          "IMAP": {"host": "imap.gmail.com", "port": 993, "type": 1, "timeout": 300, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "disabled_capabilities": ["METADATA", "OBJECTID", "PREVIEW", "STATUS=SIZE"],
+                   "use_expunge_all_on_delete": false, "fast_simple_search": true, "force_select": false,
+                   "message_all_headers": false, "message_list_limit": 10000, "search_filter": ""},
+          "SMTP": {"host": "smtp.gmail.com", "port": 465, "type": 1, "timeout": 60, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "useAuth": true, "setSender": false, "usePhpMail": false},
+          "Sieve": {"host": "imap.gmail.com", "port": 4190, "type": 0, "timeout": 10, "shortLogin": false, "lowerLogin": true,
+                    "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "enabled": false},
+          "whiteList": ""
+        }
+    - path: /DATA/AppData/$AppID/data/_data_/_default_/domains/yahoo.com.json
+      user: "82"
+      group: "82"
+      content: |
+        {
+          "IMAP": {"host": "imap.mail.yahoo.com", "port": 993, "type": 1, "timeout": 300, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "disabled_capabilities": ["METADATA", "OBJECTID", "PREVIEW", "STATUS=SIZE"],
+                   "use_expunge_all_on_delete": false, "fast_simple_search": true, "force_select": false,
+                   "message_all_headers": false, "message_list_limit": 10000, "search_filter": ""},
+          "SMTP": {"host": "smtp.mail.yahoo.com", "port": 465, "type": 1, "timeout": 60, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "useAuth": true, "setSender": false, "usePhpMail": false},
+          "Sieve": {"host": "imap.mail.yahoo.com", "port": 4190, "type": 0, "timeout": 10, "shortLogin": false, "lowerLogin": true,
+                    "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "enabled": false},
+          "whiteList": ""
+        }
+    - path: /DATA/AppData/$AppID/data/_data_/_default_/domains/icloud.com.json
+      user: "82"
+      group: "82"
+      content: |
+        {
+          "IMAP": {"host": "imap.mail.me.com", "port": 993, "type": 1, "timeout": 300, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "disabled_capabilities": ["METADATA", "OBJECTID", "PREVIEW", "STATUS=SIZE"],
+                   "use_expunge_all_on_delete": false, "fast_simple_search": true, "force_select": false,
+                   "message_all_headers": false, "message_list_limit": 10000, "search_filter": ""},
+          "SMTP": {"host": "smtp.mail.me.com", "port": 587, "type": 2, "timeout": 60, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "useAuth": true, "setSender": false, "usePhpMail": false},
+          "Sieve": {"host": "imap.mail.me.com", "port": 4190, "type": 0, "timeout": 10, "shortLogin": false, "lowerLogin": true,
+                    "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "enabled": false},
+          "whiteList": ""
+        }
+    - path: /DATA/AppData/$AppID/data/_data_/_default_/domains/fastmail.com.json
+      user: "82"
+      group: "82"
+      content: |
+        {
+          "IMAP": {"host": "imap.fastmail.com", "port": 993, "type": 1, "timeout": 300, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "disabled_capabilities": ["METADATA", "OBJECTID", "PREVIEW", "STATUS=SIZE"],
+                   "use_expunge_all_on_delete": false, "fast_simple_search": true, "force_select": false,
+                   "message_all_headers": false, "message_list_limit": 10000, "search_filter": ""},
+          "SMTP": {"host": "smtp.fastmail.com", "port": 465, "type": 1, "timeout": 60, "shortLogin": false, "lowerLogin": true,
+                   "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "useAuth": true, "setSender": false, "usePhpMail": false},
+          "Sieve": {"host": "imap.fastmail.com", "port": 4190, "type": 0, "timeout": 10, "shortLogin": false, "lowerLogin": true,
+                    "sasl": ["SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN", "LOGIN"], "ssl": {"verify_peer": true, "verify_peer_name": true, "allow_self_signed": false, "SNI_enabled": true, "disable_compression": true, "security_level": 1}, "enabled": false},
+          "whiteList": ""
+        }
+    - path: /DATA/AppData/$AppID/data/_data_/_default_/domains/disabled
+      user: "82"
+      group: "82"
+      content: |
+        *
   # The config, re-applied on every up before SnappyMail starts: HTTPS left to the
   # proxy, the admin password from the secret; first-up defaults (contacts, the
-  # view-ics invitation plugin from seed/, TLS checks on) — see the script.
+  # view-ics invitation plugin) — see the script.
   steps:
     - name: snappymail-config
       at: setup
@@ -166,20 +251,20 @@ x-compose-app:
       username: admin
       password: ${SNAPPYMAIL_ADMIN_PASSWORD}
       note:
-        en_us: "The admin panel is at ${APP_URL}/?admin. The webmail itself has no account of its own: sign in with a mailbox's address and password."
-        fr_fr: "Le panneau d'administration est sur ${APP_URL}/?admin. Le webmail n'a pas de compte à lui : connectez-vous avec l'adresse et le mot de passe d'une boîte."
+        en_us: "The admin panel is at ${APP_URL:-https://snappymail-${APP_DOMAIN}}/?admin. The webmail itself has no account of its own: sign in with a mailbox's address and password."
+        fr_fr: "Le panneau d'administration est sur ${APP_URL:-https://snappymail-${APP_DOMAIN}}/?admin. Le webmail n'a pas de compte à lui : connectez-vous avec l'adresse et le mot de passe d'une boîte."
       # The snappymail-config step re-applies the secret on every up.
       change:
         apply: env
   tips:
-    en_us: |
+    en_us: &tips_en |
       **Signing in**
       Open the app, sign in with your server account, then log into the webmail with
       a mailbox's own address and password (an app password for Gmail).
       Gmail, Yahoo, iCloud and Fastmail addresses work right away.
 
       **Another provider** (your domain's mailbox…): an admin step first. Open
-      `${APP_URL}/?admin` (login under *Credentials*) → *Domains* → *Add*, enter the
+      `${APP_URL:-https://snappymail-${APP_DOMAIN}}/?admin` (login under *Credentials*) → *Domains* → *Add*, enter the
       domain and its IMAP / SMTP servers, then sign in.
 
       **More mailboxes**: once signed in, the account menu (top right) → *Add account*.
@@ -187,14 +272,14 @@ x-compose-app:
 
       **Contacts**: Settings → *Contacts* can sync with a CardDAV server (Nextcloud,
       Baïkal…). Invitations show their details on the email; answering needs a calendar.
-    fr_fr: |
+    fr_fr: &tips_fr |
       **Connexion**
       Ouvrez l'app, connectez-vous avec votre compte serveur, puis au webmail avec
       l'adresse et le mot de passe d'une boîte (un mot de passe d'application pour
       Gmail). Les adresses Gmail, Yahoo, iCloud et Fastmail marchent tout de suite.
 
       **Un autre fournisseur** (la boîte de votre domaine…) : d'abord une étape admin.
-      Ouvrez `${APP_URL}/?admin` (identifiant sous *Identifiants*) → *Domains* → *Add*,
+      Ouvrez `${APP_URL:-https://snappymail-${APP_DOMAIN}}/?admin` (identifiant sous *Identifiants*) → *Domains* → *Add*,
       saisissez le domaine et ses serveurs IMAP / SMTP, puis connectez-vous.
 
       **D'autres boîtes** : une fois connecté, le menu du compte (en haut à droite) →
@@ -225,16 +310,9 @@ x-casaos:
     en_us: A fast, light webmail for the mail accounts you already have.
     fr_fr: Un webmail rapide et léger pour les comptes mail que vous avez déjà.
   description:
-    en_us: |
-      A modern webmail that reads your existing mailboxes live over IMAP: one container,
-      very fast, several mailboxes behind an account switcher, CardDAV contacts, PGP and
-      Sieve. Behind your server's single sign-on. No calendar, no AI access.
-    fr_fr: |
-      Un webmail moderne qui lit vos boîtes existantes en direct par IMAP : un seul
-      conteneur, très rapide, plusieurs boîtes derrière un sélecteur, contacts CardDAV,
-      PGP et Sieve. Derrière la connexion unique du serveur. Sans agenda ni accès IA.
+    en_us: *description_en
+    fr_fr: *description_fr
   tips:
     before_install:
-      en_us: |
-        Sign in to the webmail with a mailbox's own address and password. The admin
-        panel login (for adding providers) is shown under Credentials.
+      en_us: *tips_en
+      fr_fr: *tips_fr
