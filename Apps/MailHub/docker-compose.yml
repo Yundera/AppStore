@@ -8,8 +8,9 @@ name: mailhub
 # in Roundcube by the Kolab plugins and synced to phones; Settings can point them at
 # another CalDAV/CardDAV server instead.
 #
-# The mailhub-roundcube / -mirror / -mcp images are built from github.com/worph/mailhub,
-# which also holds the spike's test kit and notes.
+# The mailhub-roundcube image is built from github.com/worph/mailhub-roundcube; the
+# -mirror / -mcp images from github.com/worph/mailhub, which also holds the spike's
+# test kit and notes.
 
 x-logging: &logging
   driver: json-file
@@ -48,7 +49,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.4.0
+    image: ghcr.io/worph/mailhub-roundcube:0.4.1
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -279,7 +280,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.4.0"
+  version: "0.4.1"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
@@ -451,10 +452,10 @@ x-compose-app:
     - name: tls-fallback
       at: setup
       run: always
-      images: [ghcr.io/worph/mailhub-roundcube:0.4.0]
+      images: [ghcr.io/worph/mailhub-roundcube:0.4.1]
       script: |
         docker run --rm --network none --entrypoint sh -v "$APP_DIR/tls:/tls" \
-          ghcr.io/worph/mailhub-roundcube:0.4.0 -c '
+          ghcr.io/worph/mailhub-roundcube:0.4.1 -c '
             [ -s /tls/cert.pem ] && [ -s /tls/key.pem ] && exit 0
             openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
               -subj "/CN=mailhub (self-signed)" -keyout /tls/key.pem -out /tls/cert.pem 2>/dev/null
