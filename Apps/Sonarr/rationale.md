@@ -58,7 +58,7 @@ Jellyfin, qBittorrent and Sonarr all see one library rather than three private c
 - `no_new_privileges` is implied by the non-root user; no privileged mode, no extra
   capabilities, no Docker socket.
 - Memory capped at 512M and `cpu_shares: 50`, so a runaway import cannot starve the box.
-- Image pinned to `lscr.io/linuxserver/sonarr:4.0.17` — no `:latest`.
+- Image pinned to `lscr.io/linuxserver/sonarr:4.0.20` — no `:latest`.
 - No credential is hardcoded in the compose file; the password is generated per install.
 
 ## Alternatives considered and rejected
