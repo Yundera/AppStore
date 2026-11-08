@@ -209,7 +209,7 @@ services:
   # MAILHUB_MCP_WRITE=true; even then it only saves drafts, never sends.
   # App-private network only — Beacon reaches it through mailhub-beacon.
   mailhub-mcp:
-    image: ghcr.io/worph/mailhub-mcp:0.4.2
+    image: ghcr.io/worph/mailhub-mcp:1.0.0
     container_name: mailhub-mcp
     restart: unless-stopped
     cpu_shares: 30
@@ -281,7 +281,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.4.5"
+  version: "0.4.6"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
