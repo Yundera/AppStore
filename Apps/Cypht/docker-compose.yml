@@ -258,7 +258,7 @@ services:
   # proxies /mcp to it and adds the gateway token to each call, so the token never
   # leaves the app. Tools appear in Beacon as cypht__<tool>.
   cypht-beacon:
-    image: ghcr.io/worph/beaconify:1.0.2
+    image: ghcr.io/worph/beaconify:1.0.3
     container_name: cypht-beacon
     hostname: cypht-beacon
     restart: unless-stopped
