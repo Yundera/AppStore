@@ -160,7 +160,7 @@ services:
   # gateway core's Redis (different failure domain; losing this one is free).
   # ---------------------------------------------------------------------------
   nntmux-redis:
-    image: redis:7.4.11-alpine
+    image: redis:7.4.12-alpine
     cpu_shares: 70
     logging: *logging
     container_name: nntmux-redis
