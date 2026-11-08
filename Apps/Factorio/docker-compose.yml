@@ -8,7 +8,7 @@ x-logging: &logging
 
 services:
   factorio:
-    image: factoriotools/factorio:2.1.23
+    image: factoriotools/factorio:2.1.24
     container_name: factorio
     hostname: factorio
     # No user: the entrypoint starts as root, remaps its `factorio` user to PUID:PGID,
@@ -169,7 +169,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.1.23"
+  version: "2.1.24"
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -317,11 +317,11 @@ x-compose-app:
       change:
         apply: script
         images:
-          - factoriotools/factorio:2.1.23
+          - factoriotools/factorio:2.1.24
         script: |
           docker run --rm -i --user "$PUID:$PGID" --entrypoint sh \
             -e FACTORIO_GAME_PASSWORD -v "$APP_DIR/data/config:/config" \
-            factoriotools/factorio:2.1.23 -s <<'SH'
+            factoriotools/factorio:2.1.24 -s <<'SH'
           set -e
           f=/config/server-settings.json
           jq --arg p "$FACTORIO_GAME_PASSWORD" '.game_password = $p' "$f" > "$f.new"
