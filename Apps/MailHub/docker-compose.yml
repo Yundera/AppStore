@@ -49,7 +49,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.4.2
+    image: ghcr.io/worph/mailhub-roundcube:0.4.4
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -68,7 +68,8 @@ services:
       # (or another server set in Settings → Calendar & contacts).
       # mailhub_accounts: Settings → Mail accounts, writes the mirror's account
       # files and each address's identity + SMTP.
-      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload,identity_smtp,mailhub_dav,mailhub_accounts
+      # mailhub_folders: Merged/All inboxes, Trash and Junk are the Inbox, Trash and Junk.
+      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload,identity_smtp,mailhub_dav,mailhub_accounts,mailhub_folders
       ROUNDCUBEMAIL_DES_KEY: "${MAILHUB_DES_KEY}"
       ROUNDCUBEMAIL_SKIN: elastic2022
       ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 25M
@@ -143,7 +144,7 @@ services:
   # provider as the same commands, and the Merged/ views kept up to date.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.4.2
+    image: ghcr.io/worph/mailhub-mirror:0.4.3
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -280,7 +281,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.4.3"
+  version: "0.4.4"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
@@ -452,10 +453,10 @@ x-compose-app:
     - name: tls-fallback
       at: setup
       run: always
-      images: [ghcr.io/worph/mailhub-roundcube:0.4.2]
+      images: [ghcr.io/worph/mailhub-roundcube:0.4.4]
       script: |
         docker run --rm --network none --entrypoint sh -v "$APP_DIR/tls:/tls" \
-          ghcr.io/worph/mailhub-roundcube:0.4.2 -c '
+          ghcr.io/worph/mailhub-roundcube:0.4.4 -c '
             [ -s /tls/cert.pem ] && [ -s /tls/key.pem ] && exit 0
             openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
               -subj "/CN=mailhub (self-signed)" -keyout /tls/key.pem -out /tls/cert.pem 2>/dev/null
@@ -502,8 +503,9 @@ x-compose-app:
       tests the login and sets up the address so your replies leave through that
       provider. Its folders appear under *Live › <address>* within a minute; a big
       mailbox takes a while to copy the first time (the page shows the progress).
-      *Merged › All inboxes*, *Unread* and *Flagged* combine every account, except
-      the ones set to *Keep out of Merged* (an address that gets mostly spam, say).
+      The webmail's *Inbox*, *Junk* and *Trash* combine every account (*Merged ›
+      Unread* and *Flagged* too), except the ones set to *Keep out of Merged* (an
+      address that gets mostly spam, say): those are read in their own Live folders.
 
       What you do in the Live folders (read, flag, move, delete) is done the same way
       at the provider, over IMAP; nothing else is ever changed there. Moving a message
@@ -547,9 +549,10 @@ x-compose-app:
       d'application. MailHub teste la connexion et configure l'adresse pour que vos
       réponses partent via ce fournisseur. Ses dossiers apparaissent sous
       *Live › <adresse>* dans la minute ; une grosse boîte met un moment à être copiée la
-      première fois (la page affiche l'avancement). *Merged › All inboxes*, *Unread* et
-      *Flagged* combinent tous les comptes, sauf ceux réglés sur *Exclure de Merged*
-      (une adresse qui reçoit surtout du spam, par exemple).
+      première fois (la page affiche l'avancement). La *Boîte de réception*, le dossier
+      *Spam* et la *Corbeille* du webmail combinent tous les comptes (*Merged › Unread* et
+      *Flagged* aussi), sauf ceux réglés sur *Exclure de Merged* (une adresse qui reçoit
+      surtout du spam, par exemple) : ceux-là se lisent dans leurs propres dossiers Live.
 
       Ce que vous faites dans les dossiers Live (lire, marquer, déplacer, supprimer) est
       fait de la même façon chez le fournisseur, en IMAP ; rien d'autre n'y est jamais
