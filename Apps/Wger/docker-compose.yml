@@ -307,7 +307,7 @@ services:
   # config-powersync/, re-rendered on every up so an app update ships new sync
   # rules rather than leaving stale ones in place.
   wger-powersync:
-    image: docker.io/journeyapps/powersync-service:1.27.2
+    image: docker.io/journeyapps/powersync-service:1.28.1
     container_name: wger-powersync
     restart: unless-stopped
     # API server and replication worker in one process. Upstream splits them
