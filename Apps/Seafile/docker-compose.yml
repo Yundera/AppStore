@@ -43,7 +43,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:8.10.2-alpine
+    image: redis:8.10.3-alpine
     user: 0:0
     container_name: seafile-redis
     restart: unless-stopped
@@ -69,7 +69,7 @@ services:
       retries: 5
 
   seafile:
-    image: seafileltd/seafile-mc:13.0.28
+    image: seafileltd/seafile-mc:13.0.29
     container_name: seafile
     restart: unless-stopped
     user: 0:0
@@ -141,7 +141,7 @@ services:
       retries: 5
 
   seafile-notification-server:
-    image: seafileltd/notification-server:13.0.21
+    image: seafileltd/notification-server:13.0.29
     container_name: seafile-notification-server
     restart: unless-stopped
     user: 0:0
@@ -183,7 +183,7 @@ services:
       retries: 5
 
   seafile-seadoc:
-    image: seafileltd/sdoc-server:2.0.10
+    image: seafileltd/sdoc-server:2.0.11
     container_name: seafile-seadoc
     hostname: seafile-seadoc
     restart: unless-stopped
@@ -322,9 +322,10 @@ x-casaos:
     - screenshot-2.png
     - screenshot-3.png
     - screenshot-4.png
+  # amd64 only: seafileltd/sdoc-server publishes no arm64 image for 2.0.10 or 2.0.11
+  # (the last multi-arch 2.0.x was 2.0.9), so the stack cannot be pulled on arm64.
   architectures:
     - amd64
-    - arm64
   category: Cloud
   tags: ["files", "personal", "business"]
   description:
@@ -367,7 +368,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "13.0.28"
+  version: "13.0.29"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -399,9 +400,10 @@ x-compose-app:
     - screenshot-2.png
     - screenshot-3.png
     - screenshot-4.png
+  # amd64 only: seafileltd/sdoc-server publishes no arm64 image for 2.0.10 or 2.0.11
+  # (the last multi-arch 2.0.x was 2.0.9), so the stack cannot be pulled on arm64.
   architectures:
     - amd64
-    - arm64
   # Sum of the service limits (~4.1G).
   resources:
     recommended: { memory: 4G }
