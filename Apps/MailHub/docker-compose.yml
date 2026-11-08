@@ -8,9 +8,9 @@ name: mailhub
 # in Roundcube by the Kolab plugins and synced to phones; Settings can point them at
 # another CalDAV/CardDAV server instead.
 #
-# The mailhub-roundcube image is built from github.com/worph/mailhub-roundcube; the
-# -mirror / -mcp images from github.com/worph/mailhub, which also holds the spike's
-# test kit and notes.
+# The mailhub-roundcube, -mirror and -mcp images are each built from their own repo,
+# github.com/worph/mailhub-<image>; github.com/worph/mailhub holds the spike's test
+# kit and notes.
 
 x-logging: &logging
   driver: json-file
@@ -143,7 +143,7 @@ services:
   # provider as the same commands, and the Merged/ views kept up to date.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.4.1
+    image: ghcr.io/worph/mailhub-mirror:0.4.2
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -208,7 +208,7 @@ services:
   # MAILHUB_MCP_WRITE=true; even then it only saves drafts, never sends.
   # App-private network only — Beacon reaches it through mailhub-beacon.
   mailhub-mcp:
-    image: ghcr.io/worph/mailhub-mcp:0.4.0
+    image: ghcr.io/worph/mailhub-mcp:0.4.2
     container_name: mailhub-mcp
     restart: unless-stopped
     cpu_shares: 30
@@ -280,7 +280,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.4.2"
+  version: "0.4.3"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
