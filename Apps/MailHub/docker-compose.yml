@@ -242,7 +242,7 @@ services:
   # Announces the MCP server to Beacon (UDP discovery on the shared network) and
   # proxies /mcp to it. Tools appear in Beacon as mailhub__<tool>.
   mailhub-beacon:
-    image: ghcr.io/worph/beaconify:1.0.2
+    image: ghcr.io/worph/beaconify:1.0.3
     container_name: mailhub-beacon
     hostname: mailhub-beacon
     restart: unless-stopped
