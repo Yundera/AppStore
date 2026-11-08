@@ -252,7 +252,7 @@ services:
           memory: 512M
 
   wger-cache:
-    image: redis:8.10.2-alpine
+    image: redis:8.10.3-alpine
     container_name: wger-cache
     restart: unless-stopped
     # The image's entrypoint would drop to its own `redis` user (uid 999), but
