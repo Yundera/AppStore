@@ -146,6 +146,15 @@ services:
       # remote gateways (the kad `metamesh-gateway` provider namespace) and
       # dials them outbound. Announcing would publish this client's index to the
       # swarm for no benefit.
+      # Walk the gateway namespace every 60 s instead of meta-search's 10-min
+      # default. A single DHT walk often misses a gateway's provider record, and
+      # the boot-time walk runs before the DHT bootstrap has converged — so with
+      # no co-located (mDNS) gateway, a fresh install stayed blind for tens of
+      # minutes (demostaging2 2026-11-09: 27 min, empty wall; 60 s: gateway
+      # connected in under 2 min). It is one cheap kad query per minute.
+      # meta-search >= the release after 1.5.1 does this by itself while no
+      # gateway is known; drop this line once the pin passes that version.
+      KAD_GATEWAY_DISCOVERY_SECS: "60"
       # Includes mars.i.ipfs.io — the only surviving legacy *.i.ipfs.io
       # bootstrapper (neptune/pluto/uranus/earth/saturn/venus are all NXDOMAIN).
       # It is here for resilience: the four IPFS-Foundation bootstrappers can
