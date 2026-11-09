@@ -12,7 +12,7 @@ services:
     container_name: guacamole
     restart: unless-stopped
     user: 0:0
-    cpu_shares: 70
+    cpu_shares: 80
     logging: *logging
     deploy:
       resources:
@@ -39,7 +39,8 @@ services:
     image: guacamole/guacd:1.6.0
     restart: unless-stopped
     user: 0:0
-    cpu_shares: 70
+    # Encodes every frame of a live session: interactive, so the front-end tier.
+    cpu_shares: 80
     logging: *logging
     deploy:
       resources:
@@ -72,7 +73,7 @@ services:
       - ${DATA_ROOT:-/DATA}/AppData/guacamole/init/:/docker-entrypoint-initdb.d/
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U guacamole_user -d guacamole_db"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 12
       start_period: 60s
@@ -139,6 +140,11 @@ x-casaos:
 
         For better performance, open Guacamole on one of its direct addresses (not
         through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
+
+        For a smoother RDP session, edit the connection: Color depth 16-bit (Display)
+        and Disable audio if you don't need sound (Audio) cut what the server has to
+        encode and send; Resize method "Display update" sizes the remote desktop to
+        your window instead of scaling it.
       zh_cn: |
         默认账号
 
@@ -203,6 +209,11 @@ x-compose-app:
 
       For better performance, open Guacamole on one of its direct addresses (not
       through a gateway), with /guacamole/ appended: ${APP_URLS:-https://guacamole-${APP_DOMAIN},https://guacamole-${APP_PUBLIC_IP_DASH}.sslip.io}.
+
+      For a smoother RDP session, edit the connection: Color depth 16-bit (Display)
+      and Disable audio if you don't need sound (Audio) cut what the server has to
+      encode and send; Resize method "Display update" sizes the remote desktop to
+      your window instead of scaling it.
     zh_cn: |
       默认账号
 
