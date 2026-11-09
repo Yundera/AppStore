@@ -49,7 +49,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.4.5
+    image: ghcr.io/worph/mailhub-roundcube:0.4.6
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -68,8 +68,12 @@ services:
       # (or another server set in Settings → Calendar & contacts).
       # mailhub_accounts: Settings → Mail accounts, writes the mirror's account
       # files and each address's identity + SMTP.
-      # mailhub_folders: Merged/All inboxes, Trash and Junk are the Inbox, Trash and Junk.
-      ROUNDCUBEMAIL_PLUGINS: archive,zipdownload,identity_smtp,mailhub_dav,mailhub_accounts,mailhub_folders
+      # mailhub_folders: Merged/All inboxes, Trash, Junk and Archive are the Inbox, Trash,
+      # Junk and Archive. mailhub_archive: Archive (toolbar, and on each row in place of
+      # the flag) into the Archive folder of the message's own account. Not Roundcube's
+      # `archive` plugin: it archives everything into one folder, and would add a
+      # second Archive button now that an archive folder is set.
+      ROUNDCUBEMAIL_PLUGINS: zipdownload,identity_smtp,mailhub_dav,mailhub_accounts,mailhub_folders,mailhub_archive
       ROUNDCUBEMAIL_DES_KEY: "${MAILHUB_DES_KEY}"
       ROUNDCUBEMAIL_SKIN: elastic2022
       ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 25M
@@ -144,7 +148,7 @@ services:
   # provider as the same commands, and the Merged/ views kept up to date.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.4.4
+    image: ghcr.io/worph/mailhub-mirror:0.4.5
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -281,7 +285,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.4.7"
+  version: "0.4.8"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
@@ -302,8 +306,10 @@ x-compose-app:
       • Keeps a copy of every mailbox on your server, all folders, over IMAP only: read,
         move and delete as usual, and the same is done at the provider, which stays the
         reference (nothing else is ever changed there)
-      • Combined views over every account: All inboxes, Unread, Flagged — fast, with
-        full-text search
+      • Combined views over every account: All inboxes, Unread, Flagged, Archive — fast,
+        with full-text search
+      • Archive next to Delete, as on Gmail: the message goes into the Archive folder of
+        its own account, at the provider too
       • Webmail (Roundcube) on any device, behind your server's single sign-on
       • Each address sends through its own provider's SMTP, so SPF and DMARC stay valid
       • IMAPS for Thunderbird and phone mail apps
@@ -324,8 +330,10 @@ x-compose-app:
       • Garde une copie de chaque boîte sur votre serveur, tous les dossiers, uniquement en
         IMAP : lisez, déplacez et supprimez comme d'habitude, la même chose est faite chez
         le fournisseur, qui reste la référence (rien d'autre n'y est jamais modifié)
-      • Vues combinées sur tous les comptes : Toutes les boîtes, Non lus, Suivis — rapides,
-        avec recherche plein texte
+      • Vues combinées sur tous les comptes : Toutes les boîtes, Non lus, Suivis, Archive —
+        rapides, avec recherche plein texte
+      • Archiver à côté de Supprimer, comme sur Gmail : le mail va dans le dossier Archive
+        de son propre compte, chez le fournisseur aussi
       • Webmail (Roundcube) sur tous vos appareils, derrière la connexion unique du serveur
       • Chaque adresse envoie par le SMTP de son fournisseur : SPF et DMARC restent valides
       • IMAPS pour Thunderbird et les applis mail du téléphone
@@ -453,10 +461,10 @@ x-compose-app:
     - name: tls-fallback
       at: setup
       run: always
-      images: [ghcr.io/worph/mailhub-roundcube:0.4.5]
+      images: [ghcr.io/worph/mailhub-roundcube:0.4.6]
       script: |
         docker run --rm --network none --entrypoint sh -v "$APP_DIR/tls:/tls" \
-          ghcr.io/worph/mailhub-roundcube:0.4.5 -c '
+          ghcr.io/worph/mailhub-roundcube:0.4.6 -c '
             [ -s /tls/cert.pem ] && [ -s /tls/key.pem ] && exit 0
             openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
               -subj "/CN=mailhub (self-signed)" -keyout /tls/key.pem -out /tls/cert.pem 2>/dev/null
