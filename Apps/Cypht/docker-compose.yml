@@ -395,7 +395,7 @@ x-compose-app:
     - screenshot-2.png
   # cypht-gateway is built for amd64 only.
   accounts:
-    - provider: An email provider with IMAP (Gmail, Namecheap Private Email, your domain's host…)
+    - provider: Email (IMAP)
   architectures:
     - amd64
   secrets:
