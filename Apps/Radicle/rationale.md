@@ -98,3 +98,12 @@ Repository content in `storage/` is Git object data that the user chose to seed.
 public by definition, signed by its authors, and verified on fetch: a peer cannot alter
 what this node serves, because every ref is signed by the key of the delegate that
 published it.
+
+## Digest pins
+
+Upstream (`dirk1980/radicle-explorer-container`, `radicle-httpd`, `radicle-seed-node`)
+publishes no version tags: each repository carries a rolling `latest` and cosign `.sig`
+tags, nothing else. The images are therefore pinned by bare digest, which freezes the
+bytes but leaves nothing for an image-currency check to compare — Touchstone's currency
+reading is `unknown` for this app by construction, not because a registry failed. A bump
+means changing the digests.

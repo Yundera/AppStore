@@ -36,3 +36,11 @@ which defeats the point of running a search portal.
 The index and settings live in `/DATA/AppData/yacy/data`. The seeded `yacy.conf` is
 create-if-absent, so a reinstall keeps the existing configuration and any password the
 user changed in the admin UI.
+
+## Digest pin
+
+`yacy/yacy_search_server` has not published a version tag since `1.93` (2024-05); current
+builds ship only as rolling `latest`/`latest-ubuntu`/`latest-alpine` and per-commit
+`sha-…` tags. The image is pinned by digest instead, which freezes the bytes but leaves
+nothing for an image-currency check to compare, so Touchstone's currency reading is
+`unknown` for this app by construction. A bump means changing the digest.
