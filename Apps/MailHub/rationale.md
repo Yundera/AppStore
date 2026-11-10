@@ -16,10 +16,12 @@
 ## Mitigations
 
 - Both are gated by each mailbox's device login. The owner's (`admin`, the first account that
-  opened MailHub) is a Maison-generated secret (`MAILHUB_PASSWORD`, `password:24`) shown under
-  Credentials and changeable from the Security tab. Every other mailbox gets its own generated
-  password (24 random characters), shown and replaceable in the webmail under *Settings → Phones &
-  computers*; Dovecot and Baïkal only hold its hashes (`{SSHA512}`, Baïkal's digest).
+  opened MailHub) is a Maison-generated secret (`MAILHUB_PASSWORD`, `password:24`), shown in the
+  webmail under *Settings → Phones & computers* and not in the app's Credentials: MailHub is a
+  webmail first, and most users never set up a mail app. It is rotated by changing the secret in
+  the app's `.env`; the mirror and the `baikal-init` step re-apply it on the next up. Every other
+  mailbox gets its own generated password (24 random characters), shown and replaceable on the same
+  page; Dovecot and Baïkal only hold its hashes (`{SSHA512}`, Baïkal's digest).
 - Dovecot's master login (`MAILHUB_MASTER_PASSWORD`, `alnum:32`), through which the webmail, the
   mirror and the MCP server open a user's mailbox, is accepted from private addresses only
   (`allow_nets` in `seed/dovecot/auth.conf`), never as a user's own password, and never leaves the
