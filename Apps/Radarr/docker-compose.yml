@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   radarr:
-    image: lscr.io/linuxserver/radarr:6.2.1
+    image: lscr.io/linuxserver/radarr:6.4.4
     container_name: radarr
     restart: unless-stopped
     user: $PUID:$PGID
@@ -19,6 +19,11 @@ services:
       - pcs
     environment:
       TZ: $TZ
+      # Since 6.4.3 Radarr trusts X-Forwarded-* only from the networks listed here
+      # (it used to trust every private range by default). The platform's proxy
+      # reaches it over the shared network, so without this Radarr sees plain
+      # http and redirects the browser to an http:// login page.
+      RADARR__SERVER__TRUSTEDNETWORKS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7,fe80::/10"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/radarr/config/:/config   # dedicated Radarr config
       - ${DATA_ROOT:-/DATA}/Media/Movies/:/movies            # shared movie library
@@ -82,7 +87,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "6.2.1"
+  version: "6.4.4"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -166,3 +171,4 @@ x-compose-app:
     - path: /DATA/Downloads
       user: $PUID
       group: $PGID
+
