@@ -25,7 +25,8 @@ services:
       # password, which is both the /mcp bearer token and the terminal login, to
       # every other container on the shared pcs network. The image
       # offers no way to keep /mcp while suppressing that announcement, so MCP stays
-      # off until that is fixed upstream. See rationale.md.
+      # off until that is fixed upstream. See rationale.md — a box that turns it on
+      # in its override must also put claude on pcs there ("Enabling MCP on one box").
       # The 9090 auth layer (login/auth/logout) keeps running; only /mcp is turned off.
       - MCP_ENABLED=false
     # SANDBOXED variant: NO docker.sock, NO host /home/admin/.ssh mount, and NO
