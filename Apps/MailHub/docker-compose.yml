@@ -54,7 +54,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.6.0
+    image: ghcr.io/worph/mailhub-roundcube:0.6.1
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -343,7 +343,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.6.0"
+  version: "0.6.1"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
@@ -518,7 +518,7 @@ x-compose-app:
   steps:
     # Baïkal's DB (the owner's `admin` account with one calendar and one address
     # book) is created on the first up; every later up re-syncs the account's
-    # password with the owner's, so a credential change reaches CalDAV/CardDAV. The
+    # password with the owner's, so a changed MAILHUB_PASSWORD reaches CalDAV/CardDAV. The
     # other users' accounts are created by mailhub-mirror. Its config is baikal.yaml
     # under `files`.
     - name: baikal-init
@@ -557,38 +557,23 @@ x-compose-app:
               -subj "/CN=mailhub (self-signed)" -keyout /tls/key.pem -out /tls/cert.pem 2>/dev/null
             chown 1000:1000 /tls/cert.pem /tls/key.pem
             chmod 600 /tls/key.pem && chmod 644 /tls/cert.pem'
-  credentials:
-    - label:
-        en_us: Phones & computers (IMAPS, calendar & contacts)
-        fr_fr: Téléphones et ordinateurs (IMAPS, agenda et contacts)
-      username: admin
-      password: ${MAILHUB_PASSWORD}
-      note:
-        en_us: The webmail needs no password, your server sign-in opens it. This login is for mail apps (IMAPS on port 993, the server is in the tips) and calendar & contacts sync on ${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php. It is the mailbox of the first account that opened MailHub; the others find theirs in the webmail, Settings → Phones & computers.
-        fr_fr: Le webmail n'a pas besoin de mot de passe, la connexion au serveur l'ouvre. Cet identifiant sert aux applis mail (IMAPS sur le port 993, le serveur est dans les conseils) et à la synchro agenda et contacts sur ${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php. C'est la boîte du premier compte qui a ouvert MailHub ; les autres trouvent le leur dans le webmail, Paramètres → Téléphones et ordinateurs.
-      # The mirror renders Dovecot's passwd-file from it (read from the environment
-      # on every start), and the baikal-init step re-syncs Baïkal's copy on every
-      # up; Roundcube stores none.
-      change:
-        apply: env
   tips:
     en_us: &tips_en |
       **Signing in**
       Open the app and sign in with your server account: that is the only login.
-      Each account that signs in gets a mailbox of its own; the first one gets the
-      mailbox shown under *Credentials* (`admin`).
+      Each account that signs in gets a mailbox of its own.
 
-      **Phone and desktop clients**
+      **Phone and desktop clients (optional)**
+      MailHub is a webmail first. To also read your mail in a mail app, or sync the
+      calendar and contacts, each account finds its own login in the webmail,
+      Settings → *Phones & computers*.
 
       | | |
       | --- | --- |
       | IMAP server | `${APP_TLS_HOST}`, port 993, SSL/TLS |
-      | IMAP user | `admin` + the password under *Credentials* |
+      | IMAP user and password | in the webmail, Settings → *Phones & computers* |
       | Calendar & contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, same login |
       | Sending (SMTP) | your provider's own SMTP for each address |
-
-      Every other account finds its own login in the webmail, Settings → *Phones &
-      computers*.
 
       If the IMAP server above is empty, the server has no trusted certificate for
       it yet: wait a few minutes, then reopen these tips.
@@ -633,20 +618,19 @@ x-compose-app:
     fr_fr: &tips_fr |
       **Connexion**
       Ouvrez l'app et connectez-vous avec votre compte serveur : c'est la seule
-      connexion. Chaque compte qui se connecte a sa propre boîte ; le premier a celle
-      affichée sous *Identifiants* (`admin`).
+      connexion. Chaque compte qui se connecte a sa propre boîte.
 
-      **Téléphone et clients mail**
+      **Téléphone et clients mail (facultatif)**
+      MailHub est d'abord un webmail. Pour lire aussi vos mails dans une appli mail,
+      ou synchroniser l'agenda et les contacts, chaque compte trouve son identifiant
+      dans le webmail, Paramètres → *Téléphones et ordinateurs*.
 
       | | |
       | --- | --- |
       | Serveur IMAP | `${APP_TLS_HOST}`, port 993, SSL/TLS |
-      | Utilisateur IMAP | `admin` + le mot de passe sous *Identifiants* |
+      | Utilisateur et mot de passe IMAP | dans le webmail, Paramètres → *Téléphones et ordinateurs* |
       | Agenda et contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, même identifiant |
       | Envoi (SMTP) | le SMTP de chaque fournisseur |
-
-      Chaque autre compte trouve son identifiant dans le webmail, Paramètres →
-      *Téléphones et ordinateurs*.
 
       Si le serveur IMAP ci-dessus est vide, le serveur n'a pas encore de certificat
       reconnu pour lui : attendez quelques minutes, puis rouvrez ces conseils.
