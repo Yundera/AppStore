@@ -18,7 +18,7 @@ is authenticated against the PCS's built-in SSO before it reaches the site.
   `npm run build` as `$PUID:$PGID` (with `HOME=/tmp`, so npm has a writable
   cache), then copies the generated project and its build output into two bind
   mounts under `/DATA/AppData/$AppID/`, which end up owned by the user.
-- **`docusaurus-backend` (nginx:1.27-alpine)** — the official Nginx image's
+- **`docusaurus-backend` (nginx:1.31.8-alpine)** — the official Nginx image's
   entrypoint runs its template/permission setup as root and then drops the
   worker processes to the unprivileged `nginx` user itself.
 
