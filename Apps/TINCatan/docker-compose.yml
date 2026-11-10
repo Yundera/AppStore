@@ -41,7 +41,7 @@ services:
       - tincatan-internal
 
   tincatan-backend:
-    image: maven:3.8-openjdk-8
+    image: maven:3.8.6-openjdk-8
     container_name: tincatan-backend
     user: $PUID:$PGID
     cpu_shares: 50
@@ -114,7 +114,7 @@ networks:
 
 x-casaos:
   architectures:
-    # maven:3.8-openjdk-8 publishes linux/amd64 and linux/arm64 only —
+    # maven:3.8.6-openjdk-8 publishes linux/amd64 and linux/arm64 only —
     # there is no 32-bit arm variant.
     - amd64
     - arm64
