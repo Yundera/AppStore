@@ -7,9 +7,10 @@ $config['product_name'] = 'MailHub';
 // Elastic, Outlook, Air, Air Blue, Elastic Google, hellomail, Accessibility.
 $config['skin'] = 'elastic2022';
 
-// Single-user box: the IMAP login is the unified Dovecot mailbox.
+// No login form: mailhub_sso logs the identity AppShield signed into its own
+// Dovecot mailbox (a bare user name: admin, then one per identity). A session that
+// times out (session_lifetime, 10 idle minutes) is simply opened again.
 $config['username_domain'] = '';
-$config['login_autocomplete'] = 2;
 
 // Sent mail is kept in the unified mailbox; providers keep their own copy too.
 $config['sent_mbox'] = 'Sent';
