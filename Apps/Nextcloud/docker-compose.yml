@@ -2,7 +2,7 @@ name: nextcloud
 
 services:
   nextcloud:
-    image: nextcloud:33.0.3
+    image: nextcloud:33.0.10
     container_name: nextcloud
     restart: unless-stopped
     user: $PUID:$PGID
@@ -70,7 +70,7 @@ services:
       start_period: 180s
 
   db:
-    image: mariadb:12.2.2
+    image: mariadb:12.3.3
     container_name: nextcloud_db
     user: $PUID:$PGID
     cpu_shares: 70
@@ -108,7 +108,7 @@ services:
       start_period: 60s
 
   redis:
-    image: redis:8.6.2-alpine3.23
+    image: redis:8.10.3-alpine3.23
     container_name: nextcloud_redis
     cpu_shares: 70
     deploy:
@@ -139,7 +139,7 @@ services:
       start_period: 10s
 
   cron:
-    image: nextcloud:33.0.3
+    image: nextcloud:33.0.10
     container_name: nextcloud_cron
     restart: unless-stopped
     cpu_shares: 30
@@ -543,7 +543,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "33.0.3"
+  version: "33.0.10"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
