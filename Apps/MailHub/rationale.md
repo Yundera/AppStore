@@ -73,3 +73,11 @@ them from there), in a `0700` folder owned by the webmail's user, and encrypted 
 Roundcube's DB. mailhub-mirror runs as root to read them; mbsync itself runs as the mailbox's user. They are app passwords: each can be revoked at the provider without touching the
 account's main password. Each user's accounts are in their own folder and mirrored into their own
 mailbox only.
+
+New-mail notifications (Settings → Notifications, off until a user turns them on for a device) go
+out from mailhub-mirror to the browser vendor's push service (Google FCM, Mozilla, Apple): an outbound
+HTTPS request, no port published and nothing exempted from AppShield. The payload (sender and subject,
+or only a count if the user chooses so) is encrypted for that one device (RFC 8291), so the push service
+relays it without being able to read it. The subscriptions (`mirror/accounts/<user>/.push.json`) sit in
+the same `0700` folder as the accounts; the server key that signs the requests
+(`mirror/state/.push/vapid.json`, `0600`) never leaves the app folder.

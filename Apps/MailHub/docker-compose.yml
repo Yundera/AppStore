@@ -54,7 +54,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.5.1
+    image: ghcr.io/worph/mailhub-roundcube:0.6.0
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -83,7 +83,11 @@ services:
       # second Archive button now that an archive folder is set.
       # mailhub_mcp: Settings → AI assistant, turns the MCP server and its write
       # access on and off, tool by tool, and shows its calls.
-      ROUNDCUBEMAIL_PLUGINS: mailhub_sso,zipdownload,identity_smtp,mailhub_dav,mailhub_accounts,mailhub_folders,mailhub_archive,mailhub_collect,mailhub_mcp
+      # mailhub_branding: the MailHub icon as logo and favicon, and the web app manifest
+      # (Install app / Add to Home Screen gets the MailHub icon, not Roundcube's).
+      # mailhub_push: Settings → Notifications, push notifications for new mail on
+      # phones and computers (sent by mailhub-mirror), with a test button.
+      ROUNDCUBEMAIL_PLUGINS: mailhub_sso,zipdownload,identity_smtp,mailhub_dav,mailhub_accounts,mailhub_folders,mailhub_archive,mailhub_collect,mailhub_mcp,mailhub_branding,mailhub_push
       ROUNDCUBEMAIL_DES_KEY: "${MAILHUB_DES_KEY}"
       ROUNDCUBEMAIL_SKIN: elastic2022
       ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE: 25M
@@ -180,7 +184,7 @@ services:
   # creates their calendar & contacts accounts in Baïkal.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.5.0
+    image: ghcr.io/worph/mailhub-mirror:0.6.0
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -192,6 +196,12 @@ services:
       MAILHUB_MASTER_PASSWORD: "${MAILHUB_MASTER_PASSWORD}"
       MAILHUB_PASSWORD: "${MAILHUB_PASSWORD}"
       MAILHUB_SYNC_INTERVAL: "${MAILHUB_SYNC_INTERVAL:-120}"
+      # New mail in an account's INBOX is pulled at once (IMAP IDLE at the provider)
+      # and notified to the devices turned on in Settings → Notifications (Web Push,
+      # encrypted for each device). The subject is the push contact the browser
+      # vendors' push services ask for: the app's address.
+      MAILHUB_IDLE: "${MAILHUB_IDLE:-1}"
+      MAILHUB_PUSH_SUBJECT: "${ROUTE_MAILHUB_URL:-https://mailhub-${APP_DOMAIN}}"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/mail:/srv/vmail
       # Read-write only to move a 0.4 install's account files under admin/ once.
@@ -333,7 +343,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.5.1"
+  version: "0.6.0"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
@@ -361,6 +371,8 @@ x-compose-app:
       • Webmail (Roundcube) on any device, opened by your server's sign-in — no second
         login; every account on the server gets a mailbox of its own
       • Each address sends through its own provider's SMTP, so SPF and DMARC stay valid
+      • Notifications for new mail on your phone and computer, also with MailHub closed;
+        install it as an app from the browser
       • IMAPS for Thunderbird and phone mail apps
       • Calendar and contacts built in: invitations get Accept / Maybe / Decline and land
         in your calendar, and both sync to your phone (CalDAV / CardDAV)
@@ -386,6 +398,8 @@ x-compose-app:
       • Webmail (Roundcube) sur tous vos appareils, ouvert par la connexion du serveur —
         pas de seconde connexion ; chaque compte du serveur a sa propre boîte
       • Chaque adresse envoie par le SMTP de son fournisseur : SPF et DMARC restent valides
+      • Notifications des nouveaux mails sur le téléphone et l'ordinateur, même MailHub
+        fermé ; installable comme une appli depuis le navigateur
       • IMAPS pour Thunderbird et les applis mail du téléphone
       • Agenda et contacts intégrés : les invitations ont Accepter / Peut-être / Refuser
         et arrivent dans l'agenda, et tout se synchronise sur le téléphone (CalDAV / CardDAV)
@@ -598,6 +612,13 @@ x-compose-app:
       out of Live into one of your own folders removes it from the provider: it is then
       kept on this server only. Removing an account deletes only this server's copy.
 
+      **Notifications and the app**
+      In the browser, *Install app* (Android, computer) or Share → *Add to Home Screen*
+      (iPhone, iPad) puts MailHub on the home screen as an app. Then Webmail → Settings →
+      *Notifications* → *Turn on notifications here*, on each device; *Send test
+      notification* checks it works. On iPhone and iPad, notifications only work in the
+      app added to the Home Screen.
+
       **Calendar and contacts** are built in — nothing to set up. To keep them on
       another CalDAV/CardDAV server (Nextcloud…), Webmail → Settings → *Calendar &
       contacts*.
@@ -650,6 +671,14 @@ x-compose-app:
       modifié. Déplacer un mail hors de Live vers un de vos dossiers le retire du
       fournisseur : il n'est alors gardé que sur ce serveur. Retirer un compte supprime
       seulement la copie de ce serveur.
+
+      **Notifications et l'appli**
+      Dans le navigateur, *Installer l'application* (Android, ordinateur) ou Partager →
+      *Sur l'écran d'accueil* (iPhone, iPad) met MailHub sur l'écran d'accueil comme une
+      appli. Puis Webmail → Paramètres → *Notifications* → *Activer les notifications
+      ici*, sur chaque appareil ; *Envoyer une notification de test* vérifie que ça
+      marche. Sur iPhone et iPad, les notifications ne fonctionnent que dans l'appli
+      ajoutée à l'écran d'accueil.
 
       **L'agenda et les contacts** sont intégrés — rien à configurer. Pour les garder
       sur un autre serveur CalDAV/CardDAV (Nextcloud…), Webmail → Paramètres →
