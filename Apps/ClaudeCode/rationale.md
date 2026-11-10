@@ -111,6 +111,27 @@ container is mounted, so root here is root of an empty sandbox.
   network it needs, against the image's responder as it stands then — for
   itself.
 
+### Enabling MCP on one box
+
+`MCP_ENABLED=true` on its own does nothing useful: Beacon finds `claude-code` by UDP
+discovery on the shared network, and `claude` is not on it. The two lines go together, in
+that box's `docker-compose.override.yml` (Maison leaves it alone across store updates;
+`networks` merges with the listing's, so `claude-net` stays):
+
+```yaml
+services:
+  claude:
+    environment:
+      MCP_ENABLED: "true"
+    networks:
+      claude-net: null
+      pcs: null
+```
+
+Without the `networks` half the agent disappears from Beacon at the next recreate, with
+no error on the app itself — on 2026-11-10 that cut a Touchstone box off from its audit
+agent. Neither half belongs in this listing: it is the trade-off above, accepted per box.
+
 ## Routing: the app's own router
 
 The web terminal is two programs behind one address: ttyd on 8080 for the terminal and
