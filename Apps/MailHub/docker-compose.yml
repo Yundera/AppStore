@@ -572,8 +572,14 @@ x-compose-app:
       | --- | --- |
       | IMAP server | `${APP_TLS_HOST}`, port 993, SSL/TLS |
       | IMAP user and password | in the webmail, Settings → *Phones & computers* |
+      | Email address, if the app asks for one | `<IMAP user>@${APP_TLS_HOST}` (e.g. `admin@${APP_TLS_HOST}`) |
       | Calendar & contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, same login |
       | Sending (SMTP) | your provider's own SMTP for each address |
+
+      That address is not a real one: it only fills the form. With one of your own
+      addresses, Thunderbird and other apps look up your provider's servers and set
+      them instead of MailHub's. Choose the manual setup if offered, and send through
+      each provider's own SMTP.
 
       If the IMAP server above is empty, the server has no trusted certificate for
       it yet: wait a few minutes, then reopen these tips.
@@ -629,8 +635,15 @@ x-compose-app:
       | --- | --- |
       | Serveur IMAP | `${APP_TLS_HOST}`, port 993, SSL/TLS |
       | Utilisateur et mot de passe IMAP | dans le webmail, Paramètres → *Téléphones et ordinateurs* |
+      | Adresse mail, si l'appli en demande une | `<utilisateur IMAP>@${APP_TLS_HOST}` (ex. `admin@${APP_TLS_HOST}`) |
       | Agenda et contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, même identifiant |
       | Envoi (SMTP) | le SMTP de chaque fournisseur |
+
+      Cette adresse n'existe pas : elle ne sert qu'à remplir le formulaire. Avec une de
+      vos propres adresses, Thunderbird et d'autres applis cherchent les serveurs de
+      votre fournisseur et les mettent à la place de ceux de MailHub. Choisissez la
+      configuration manuelle si elle est proposée, et envoyez par le SMTP de chaque
+      fournisseur.
 
       Si le serveur IMAP ci-dessus est vide, le serveur n'a pas encore de certificat
       reconnu pour lui : attendez quelques minutes, puis rouvrez ces conseils.
