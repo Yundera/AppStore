@@ -31,6 +31,8 @@ $config['calendar_default_view'] = 'agendaWeek';
 $config['calendar_itip_send_option'] = 3;      // reply to organizer + allow comment
 $config['calendar_itip_after_action'] = 0;     // keep the invitation mail
 $config['kolab_cache'] = true;
-$config['autocomplete_addressbooks'] = ['sql', 'kolab'];
+// kolab_addressbook appends its CardDAV books to this list itself (config_get
+// hook); a literal 'kolab' id is not a source and makes autocomplete fail (700).
+$config['autocomplete_addressbooks'] = ['sql'];
 
 $config['dav_debug'] = (bool) getenv('MAILHUB_DAV_DEBUG');
