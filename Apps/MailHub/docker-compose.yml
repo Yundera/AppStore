@@ -54,7 +54,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.6.1
+    image: ghcr.io/worph/mailhub-roundcube:0.7.0
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -184,7 +184,7 @@ services:
   # creates their calendar & contacts accounts in Baïkal.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.6.0
+    image: ghcr.io/worph/mailhub-mirror:0.7.0
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -343,7 +343,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.6.1"
+  version: "0.7.0"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
