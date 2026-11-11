@@ -185,7 +185,7 @@ services:
   # creates their calendar & contacts accounts in Baïkal.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.8.1
+    image: ghcr.io/worph/mailhub-mirror:0.8.2
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -236,7 +236,7 @@ services:
   # Dovecot (whose master login is accepted from this private network).
   # Root to read the webmail's private account files; every mount read-only.
   mailhub-submit:
-    image: ghcr.io/worph/mailhub-mirror:0.8.1
+    image: ghcr.io/worph/mailhub-mirror:0.8.2
     container_name: mailhub-submit
     restart: unless-stopped
     cpu_shares: 20
@@ -390,7 +390,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.8.1"
+  version: "0.8.2"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
