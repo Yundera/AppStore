@@ -3,7 +3,8 @@ name: mailhub
 # mailhub-mirror keeps a copy of every provider mailbox in Dovecot (Live/<address>/,
 # IMAP, pull only) and replays what is done there at the provider, which stays the
 # source of truth; Merged/ combines them. Roundcube reads it and sends every
-# identity through its own provider's SMTP. Calendar and
+# identity through its own provider's SMTP; mailhub-submit does the same for mail
+# apps, behind one SMTP login. Calendar and
 # contacts live in a built-in Baïkal (CalDAV/CardDAV only, no admin console), shown
 # in Roundcube by the Kolab plugins and synced to phones; Settings can point them at
 # another CalDAV/CardDAV server instead.
@@ -54,7 +55,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.7.0
+    image: ghcr.io/worph/mailhub-roundcube:0.8.0
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -184,7 +185,7 @@ services:
   # creates their calendar & contacts accounts in Baïkal.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.7.0
+    image: ghcr.io/worph/mailhub-mirror:0.8.0
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -223,6 +224,52 @@ services:
           memory: 256M
     depends_on:
       - mailhub-imap
+    networks:
+      - mailhub-internal
+
+  # One SMTP login for mail apps (submit.py in the mirror's image): a phone or
+  # desktop client sends as every address the user connected, with the same device
+  # login as IMAPS, and each message goes out through that address's own provider
+  # (its SMTP and app password, from the account file), as the webmail does.
+  # Synchronous: nothing is queued or stored, the provider's answer is the app's.
+  # Logins are checked against the mirror's copy of the device logins, never through
+  # Dovecot (whose master login is accepted from this private network).
+  # Root to read the webmail's private account files; every mount read-only.
+  mailhub-submit:
+    image: ghcr.io/worph/mailhub-mirror:0.8.0
+    container_name: mailhub-submit
+    restart: unless-stopped
+    cpu_shares: 20
+    logging: *logging
+    user: "0:0"
+    entrypoint: ["/sbin/tini", "--", "python3", "-u", "/usr/local/bin/submit.py"]
+    environment:
+      APP_TLS_HOST: "${APP_TLS_HOST:-}"
+      MAILHUB_SUBMIT_DAILY_RCPT: "${MAILHUB_SUBMIT_DAILY_RCPT:-500}"
+    ports:
+      # SMTP submission for phones and desktop clients: 465 TLS, 587 STARTTLS.
+      # Outbound it only talks to the providers' submission ports, never port 25.
+      - "465:31465"
+      - "587:31587"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mirror/accounts:/accounts:ro
+      # The device logins (the mirror's copy of Dovecot's passwd-file).
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/mirror/state/.submit:/submit:ro
+      # The IMAPS certificate (see mailhub-imap); restarted by Maison on renewal.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/tls:/tls:ro
+    # The STARTTLS port's greeting.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket,sys; s=socket.create_connection(('127.0.0.1',31587),5); sys.exit(not s.recv(64).startswith(b'220'))"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    depends_on:
+      - mailhub-mirror
     networks:
       - mailhub-internal
 
@@ -343,7 +390,7 @@ networks:
 
 x-compose-app:
   schema_version: 2
-  version: "0.7.0"
+  version: "0.8.0"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
@@ -373,7 +420,8 @@ x-compose-app:
       • Each address sends through its own provider's SMTP, so SPF and DMARC stay valid
       • Notifications for new mail on your phone and computer, also with MailHub closed;
         install it as an app from the browser
-      • IMAPS for Thunderbird and phone mail apps
+      • Thunderbird and phone mail apps with one account: IMAPS, and one SMTP login that
+        sends every address through its own provider
       • Calendar and contacts built in: invitations get Accept / Maybe / Decline and land
         in your calendar, and both sync to your phone (CalDAV / CardDAV)
       • AI access (MCP) through Beacon: search and read mail, calendar, contacts —
@@ -400,7 +448,8 @@ x-compose-app:
       • Chaque adresse envoie par le SMTP de son fournisseur : SPF et DMARC restent valides
       • Notifications des nouveaux mails sur le téléphone et l'ordinateur, même MailHub
         fermé ; installable comme une appli depuis le navigateur
-      • IMAPS pour Thunderbird et les applis mail du téléphone
+      • Thunderbird et les applis mail du téléphone avec un seul compte : IMAPS, et un seul
+        identifiant SMTP qui envoie chaque adresse par son propre fournisseur
       • Agenda et contacts intégrés : les invitations ont Accepter / Peut-être / Refuser
         et arrivent dans l'agenda, et tout se synchronise sur le téléphone (CalDAV / CardDAV)
       • Accès IA (MCP) via Beacon : chercher et lire les mails, agenda, contacts —
@@ -419,7 +468,7 @@ x-compose-app:
     - provider: Email (IMAP)
   architectures:
     - amd64
-  # IMAPS (993) is published on the host's public address.
+  # IMAPS (993) and SMTP submission (465, 587) are published on the host's public address.
   requires: [public-ip]
   secrets:
     MAILHUB_PASSWORD: password:24       # the owner's (admin) device login: IMAPS, CalDAV/CardDAV
@@ -455,6 +504,9 @@ x-compose-app:
       mode: "0700"
     # The mirror's generated config and the per-account status the page shows.
     - path: /DATA/AppData/$AppID/mirror/state
+    # The device logins for mailhub-submit (written by the mirror, root, 0600).
+    - path: /DATA/AppData/$AppID/mirror/state/.submit
+      mode: "0700"
     # Each written by one side: the MCP settings by the webmail (www-data, 33), the
     # MCP tool list and call history by the MCP server (its image's user, 1000).
     - path: /DATA/AppData/$AppID/mcp/settings
@@ -481,13 +533,14 @@ x-compose-app:
   # App-managed config, re-rendered on every up so an update reaches existing
   # installs (seed/ alone is create-if-absent). Edit the store copy, not these.
   # The IMAPS certificate (see mailhub-imap). Maison picks the host, keeps it while
-  # it works (phones are configured with it), and restarts Dovecot on renewal.
+  # it works (phones are configured with it), and restarts Dovecot and the SMTP
+  # submission on renewal.
   certificates:
     - route: mailhub
       path: /DATA/AppData/$AppID/tls
       user: "1000"                      # dovecot's vmail
       group: "1000"
-      restart: [mailhub-imap]
+      restart: [mailhub-imap, mailhub-submit]
   files:
     - path: /DATA/AppData/$AppID/roundcube/config/mailhub.inc.php
       from: roundcube/config/mailhub.inc.php
@@ -574,14 +627,18 @@ x-compose-app:
       | IMAP user and password | in the webmail, Settings → *Phones & computers* |
       | Email address, if the app asks for one | `<IMAP user>@${APP_TLS_HOST}` (e.g. `admin@${APP_TLS_HOST}`) |
       | Calendar & contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, same login |
-      | Sending (SMTP) | your provider's own SMTP for each address |
+      | SMTP server | `${APP_TLS_HOST}`, port 465, SSL/TLS (or 587, STARTTLS), same login |
 
       That address is not a real one: it only fills the form. With one of your own
       addresses, Thunderbird and other apps look up your provider's servers and set
-      them instead of MailHub's. Choose the manual setup if offered, and send through
-      each provider's own SMTP.
+      them instead of MailHub's. Choose the manual setup if offered.
 
-      If the IMAP server above is empty, the server has no trusted certificate for
+      Then add each of your mail accounts' addresses as an identity of this one
+      account (Thunderbird: *Manage Identities*): each address sends through its own
+      provider, with the password saved in *Mail accounts*. Keep the app's default
+      Sent folder.
+
+      If the IMAP and SMTP servers above are empty, the server has no trusted certificate for
       it yet: wait a few minutes, then reopen these tips.
 
       Android: DAVx⁵ → *Login with URL and user name*. iPhone: Settings → Calendar →
@@ -637,15 +694,19 @@ x-compose-app:
       | Utilisateur et mot de passe IMAP | dans le webmail, Paramètres → *Téléphones et ordinateurs* |
       | Adresse mail, si l'appli en demande une | `<utilisateur IMAP>@${APP_TLS_HOST}` (ex. `admin@${APP_TLS_HOST}`) |
       | Agenda et contacts (CalDAV / CardDAV) | `${ROUTE_MAILHUBDAV_URL:-https://mailhubdav-${APP_DOMAIN}}/dav.php`, même identifiant |
-      | Envoi (SMTP) | le SMTP de chaque fournisseur |
+      | Serveur SMTP | `${APP_TLS_HOST}`, port 465, SSL/TLS (ou 587, STARTTLS), même identifiant |
 
       Cette adresse n'existe pas : elle ne sert qu'à remplir le formulaire. Avec une de
       vos propres adresses, Thunderbird et d'autres applis cherchent les serveurs de
       votre fournisseur et les mettent à la place de ceux de MailHub. Choisissez la
-      configuration manuelle si elle est proposée, et envoyez par le SMTP de chaque
-      fournisseur.
+      configuration manuelle si elle est proposée.
 
-      Si le serveur IMAP ci-dessus est vide, le serveur n'a pas encore de certificat
+      Ajoutez ensuite l'adresse de chacun de vos comptes mail comme identité de ce seul
+      compte (Thunderbird : *Gérer les identités*) : chaque adresse envoie par son propre
+      fournisseur, avec le mot de passe enregistré dans *Comptes mail*. Gardez le dossier
+      Envoyés par défaut de l'appli.
+
+      Si les serveurs IMAP et SMTP ci-dessus sont vides, le serveur n'a pas encore de certificat
       reconnu pour lui : attendez quelques minutes, puis rouvrez ces conseils.
 
       Android : DAVx⁵ → *Connexion avec URL et nom d'utilisateur*. iPhone : Réglages →

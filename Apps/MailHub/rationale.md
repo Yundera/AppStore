@@ -3,15 +3,17 @@
 ## What exception is requested
 
 1. The calendar & contacts route (`mailhubdav`, the built-in Baïkal) has no AppShield in front.
-2. A host port is published: IMAPS `993`.
+2. Host ports are published: IMAPS `993`, and SMTP submission `465` (TLS) and `587` (STARTTLS).
 
 ## Why it is necessary
 
 1. That route exists for phone and desktop CalDAV / CardDAV clients (DAVx⁵, iOS / macOS,
    Thunderbird). They authenticate with HTTP Basic auth on every request and cannot follow an
    OIDC login, so the SSO gate would lock them all out. The webmail itself stays behind AppShield.
-2. IMAP is not HTTP, so the proxy cannot carry it; phone and desktop mail apps need it to read
-   the unified mailbox (`requires: [public-ip]`, `needs-public-ip`).
+2. IMAP and SMTP are not HTTP, so the proxy cannot carry them. Phone and desktop mail apps need
+   IMAP to read the unified mailbox, and SMTP to send as every connected address with one login
+   (`mailhub-submit`) instead of one provider SMTP and password per address
+   (`requires: [public-ip]`, `needs-public-ip`).
 
 ## Mitigations
 
@@ -30,6 +32,20 @@
   welcome page return 404. The admin account's hash is a separate random secret (`MAILHUB_DAV_ADMIN_HASH`)
   that no password matches, and nothing needs it — `baikal.yaml` (`files`) and the
   `baikal-init` step configure the server.
+- SMTP submission (`mailhub-submit`) is not a mail server and not an open relay:
+  - **Who:** only the mailbox's device login, checked against the mirror's copy of the device
+    logins (`mirror/state/.submit/passwd`). Dovecot is never asked, so its master login can't be
+    reached from this port. Acting as another user (a SASL authorization id) and master-login
+    syntax are refused. Failed logins back off per client IP.
+  - **As whom:** only the logged-in user's own connected addresses. `MAIL FROM` and the `From:`
+    header must both be the same one of them, or the message is refused (`550 5.7.1`).
+  - **Where:** each message goes out through that address's own provider, on its submission port
+    (465/587) with the account's own app password. The provider signs (DKIM) and delivers, so
+    nothing leaves this box on port 25 and the box's IP reputation plays no part.
+  - **How much:** at most 500 recipients per user per 24 h, so a leaked device password has limited
+    reach. Nothing is queued or stored: the provider's answer is the client's.
+  - **Encryption:** TLS from the start on 465; STARTTLS required before AUTH on 587. Same
+    certificate as IMAPS, and every mount is read-only.
 - IMAPS only (TLS on 993, with a certificate Maison provides for the best host of the `mailhub` route — `certificates`, needs a Maison with that feature); plain IMAP (143) and LMTP
   are not published.
 
