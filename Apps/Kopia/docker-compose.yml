@@ -43,6 +43,7 @@ services:
       SESSION_DURATION_HOURS: "720"
     expose:
       - 80
+    # AppShield's image has no shell or HTTP client to probe itself: no healthcheck.
     depends_on:
       - kopia-router
     networks:
@@ -69,6 +70,12 @@ services:
         target: /etc/nginx/conf.d/default.conf
     networks:
       - kopia-internal
+    # The router's own answer, so a slow kopia (maintenance) does not mark it unhealthy.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
     cpu_shares: 50
     logging: *logging
     deploy:
@@ -147,6 +154,14 @@ services:
     # own, so the gate must be the only way in. DO NOT move this service onto `pcs`.
     networks:
       - kopia-internal
+    # The UI's static root: 200 with or without a repository (the API needs a CSRF
+    # token). start_period covers opening a remote repository at boot.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:51515/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     cpu_shares: 50
     logging: *logging
     # 4G: as the maintenance owner this server runs the daily full maintenance, whose
@@ -201,6 +216,9 @@ services:
     # Needs the internet to reach the bucket, but nothing needs to reach it.
     networks:
       - kopia-internal
+    # No healthcheck: serve listens on nothing and never exits, so the running state is
+    # all there is to report. A repository check (`status`) would hit the bucket every
+    # interval and fail, wrongly, on every box not set up yet.
     cpu_shares: 30
     logging: *logging
     deploy:
@@ -245,6 +263,8 @@ configs:
         sub_filter '<link rel="manifest"' '<link rel="manifest" crossorigin="use-credentials"';
 
         set $$kopia kopia-app:51515;
+
+        location = /_router/health { access_log off; return 204; }
 
         # While a path is typed in New Snapshot, kopia's UI asks for the policy of each
         # partial path. Kopia answers 400 for "no policy here", which the UI expects and
