@@ -40,7 +40,7 @@ services:
       - pcs
       - dokuwiki-internal
   dokuwiki-backend:
-    image: dokuwiki/dokuwiki:2025-05-14b
+    image: dokuwiki/dokuwiki:2026-07-14c
     container_name: dokuwiki-backend
     restart: unless-stopped
     # Non-root on purpose: the image entrypoint runs `chown -R www-data:www-data /storage`
@@ -230,7 +230,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2025-05-14b"
+  version: "2026-07-14c"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
