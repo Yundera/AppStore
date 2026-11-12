@@ -19,6 +19,12 @@ $config['sent_mbox'] = 'Sent';
 // show unread counts on every folder, not only the Inbox.
 $config['check_all_folders'] = true;
 
+// Conversations: the message list groups replies into threads (Dovecot answers
+// IMAP THREAD), with the threads holding unread mail opened. Only the default:
+// List options → List mode in a folder overrides it for that folder.
+$config['default_list_mode'] = 'threads';
+$config['autoexpand_threads'] = 2;
+
 // --- Per-identity SMTP (identity_smtp) ----------------------------------------
 // Each identity sends through its provider's SMTP. The global smtp_host is only
 // the fallback identity_smtp requires to exist.
