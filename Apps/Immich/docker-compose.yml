@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   immich:
-    image: ghcr.io/immich-app/immich-server:v3.0.3
+    image: ghcr.io/immich-app/immich-server:v3.4.1
     container_name: immich
     user: $PUID:$PGID
     cpu_shares: 70
@@ -43,7 +43,7 @@ services:
       - pcs
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v3.0.3
+    image: ghcr.io/immich-app/immich-machine-learning:v3.4.1
     container_name: immich_machine_learning
     cpu_shares: 20
     logging: *logging
@@ -57,6 +57,9 @@ services:
       TZ: Etc/UTC
       PGID: 0
       PUID: 0
+      # Immich v3.3.0's optimized re-export of the same models (upstream compose default since then);
+      # numerically equivalent outputs, so no job needs re-running. The model cache refills itself.
+      MACHINE_LEARNING_MODEL_REVISION: v2
     restart: unless-stopped
     healthcheck:
       disable: false
@@ -76,7 +79,7 @@ services:
           memory: 256M
     user: 0:0 # no volume mount so can run as root
     healthcheck:
-      test: redis-cli ping || exit 1
+      test: redis-cli ping | grep -q PONG || exit 1
     environment:
       TZ: Etc/UTC
     restart: unless-stopped
@@ -226,7 +229,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "3.0.3"
+  version: "3.4.1"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
