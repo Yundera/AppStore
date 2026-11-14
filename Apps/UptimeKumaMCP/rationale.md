@@ -3,11 +3,11 @@
 ## Stock third-party image, `architectures: [amd64]` only
 
 `davidfuchs/mcp-uptime-kuma` (MIT, <https://github.com/DavidFuchs/mcp-uptime-kuma>) runs
-unmodified. Every tag from 0.11.4 on is published for **linux/amd64** only (Docker Hub
-tag listing, checked 2026-11-04; the older `unknown` entries are attestations, not a
-runnable arch), so the listing declares amd64 alone and an arm64 box hides it instead of
-failing at pull. To add arm64, rebuild the npm package (`@davidfuchs/mcp-uptime-kuma`)
-multi-arch under `ghcr.io/yundera/` and widen `architectures`. It's pinned to an exact
+unmodified. Tags 0.11.4 to 0.13.0 were published for **linux/amd64** only; from 0.14.0
+on the image is also published for linux/arm64 (Docker Hub tag listing, checked
+2026-11-14). The listing still declares amd64 alone, the platform it has been tested
+on; widening `architectures` to arm64 is a separate change once it has been installed
+on an arm64 box. It's pinned to an exact
 version: the project is pre-1.0 and tool names may still change between releases.
 
 ## The Uptime Kuma login is a Maison `input`, not a generated secret
@@ -51,7 +51,8 @@ gates that page with SSO and `/mcp` with its OAuth 2.1 broker.
 ## beaconify 1.0.3, not the 1.0.2 the other MCP apps use
 
 Beacon's discovery manifest travels in one UDP datagram, which holds at most 65,507 bytes.
-This server's 35 tools with full input and output schemas come to about 74 KB. beaconify
+This server's 35 tools with full input and output schemas came to about 74 KB (36 tools,
+about 77 KB, on 0.15.0). beaconify
 1.0.2 sends that whole, the send fails, and Beacon logs `No manifest … after 3 attempts`
 every sweep (seen on holyhorse 2026-11-04). 1.0.3 falls back to `{name, description}`
 when the manifest is too big, and Beacon (≥ 1.0.20) then fetches the full tool
@@ -60,11 +61,13 @@ registered `uptime-kuma-mcp` with 35 tools, and `call` reached Uptime Kuma.
 
 ## `TRUST_PROXY: "true"` on the backend
 
-The upstream hard-codes a rate limit of 100 requests per 15 minutes per client IP. Every
+The upstream rate-limits each client IP: 100 requests per 15 minutes in 0.12.1, and
+`RATE_LIMIT_MAX` (default 1000) in 0.15.0. Every
 caller arrives from beaconify's address, so without trusting `X-Forwarded-For`, Beacon
 and every public OAuth client would share one bucket. AppShield sets the header and
-beaconify forwards it, so each public client gets its own bucket (verified: two
-different forwarded addresses each started at 99 remaining). A client can spoof the
+beaconify forwards it, so each public client gets its own bucket (verified on 0.12.1:
+two different forwarded addresses each started at 99 remaining; on 0.15.0 a public
+OAuth client had its own bucket of 1000). A client can spoof the
 header to move to another bucket, but that only gets around a throttle: access is
 decided by AppShield before the request ever reaches the backend.
 
