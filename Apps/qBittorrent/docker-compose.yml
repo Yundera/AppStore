@@ -10,12 +10,12 @@ x-logging: &logging
 services:
   # ── AppShield SSO gate ─────────────────────────────────────────────
   # The only publicly reachable service: it is the routed service, and the
-  # qBittorrent WebUI behind it has none. AppShield (ghcr.io/yundera/appshield)
+  # qBittorrent WebUI behind it has none. AppShield (ghcr.io/nsl-sh/appshield)
   # runs in OIDC mode — the presence of OIDC_REGISTRAR_URL makes it self-register
   # with the PCS auth-registrar on first login and send every request through the
   # built-in Authelia SSO before proxying to the backend.
   qbittorrent:
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: qbittorrent
     # OIDC identity: AppShield builds its OIDC redirect URIs from os.hostname(),
     # and the auth-registrar attests this app's name via the container's PTR

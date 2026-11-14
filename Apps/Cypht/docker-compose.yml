@@ -20,7 +20,7 @@ x-logging: &logging
 services:
   # SSO gate in front of the webmail.
   cypht-proxy:
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: cypht
     hostname: cypht
     restart: unless-stopped

@@ -12,7 +12,7 @@ services:
     # >= 3.1.0 keeps the OIDC back-channel on the box: auth-registrar hands the gate
     # `internal_issuer_url` and its discovery, token and JWKS calls go there instead of
     # out through the public route.
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: terminal
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

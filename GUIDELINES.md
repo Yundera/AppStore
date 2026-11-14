@@ -518,7 +518,7 @@ A public website with no login also needs a `rationale.md`.
 
 ### AppShield
 
-Put the `ghcr.io/yundera/appshield` container in front of the app. Make the sidecar the route's
+Put the `ghcr.io/nsl-sh/appshield` container in front of the app. Make the sidecar the route's
 service and keep the backend off the routes. The sidecar registers itself as an
 OIDC client with the PCS's `auth-registrar` on first login, so there are no client IDs,
 secrets or issuer URLs to configure.
@@ -530,7 +530,7 @@ with OAuth for machine clients).
 name: myapp
 services:
   myapp-proxy:
-    image: ghcr.io/yundera/appshield:3.2.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: myapp        # = the compose name; the OIDC client id derives from it
     hostname: myapp              # = container_name; the registrar names the app from it
     restart: unless-stopped

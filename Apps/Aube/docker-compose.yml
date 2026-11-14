@@ -107,7 +107,7 @@ services:
 
   # ── the only public surface ───────────────────────────────────────────────────────────
   aube:
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     # OIDC identity: the auth-registrar attests the app name through this container's PTR
     # record, so container_name, hostname and the compose name must all be `aube`.
     container_name: aube
