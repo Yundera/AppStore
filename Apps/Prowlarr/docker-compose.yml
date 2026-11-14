@@ -59,7 +59,7 @@ services:
           memory: 128M
 
   prowlarr-backend:
-    image: lscr.io/linuxserver/prowlarr:2.6.5
+    image: lscr.io/linuxserver/prowlarr:2.7.0
     container_name: prowlarr-backend
     restart: unless-stopped
     user: $PUID:$PGID
@@ -200,7 +200,7 @@ x-compose-app:
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:
         apply: env
-  version: "2.6.5"
+  version: "2.7.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -270,17 +270,19 @@ x-compose-app:
         set -u
 
         # First boot runs migrations and only then writes <ApiKey> into
-        # config.xml, well after the container appears.
+        # config.xml, well after the container appears. Prowlarr tests the
+        # proxy before it saves one, so FlareSolverr has to answer too.
         key=""
         n=0
         while :; do
           key=$(sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' /prowlarr/config.xml 2>/dev/null)
-          if [ -n "$key" ] && curl -fs -m 5 -o /dev/null "$PROWLARR_API/ping"; then
+          if [ -n "$key" ] && curl -fs -m 5 -o /dev/null "$PROWLARR_API/ping" &&
+            curl -fs -m 5 -o /dev/null "$SOLVER_URL"; then
             break
           fi
           n=$((n + 1))
           if [ "$n" -ge 150 ]; then
-            echo "prowlarr: no API key / no answer within 5 minutes" >&2
+            echo "prowlarr: no API key / no answer from Prowlarr or FlareSolverr within 5 minutes" >&2
             exit 1
           fi
           sleep 2
@@ -302,15 +304,22 @@ x-compose-app:
           echo "prowlarr: created tag flaresolverr (id $tag)"
         fi
 
-        if api "$PROWLARR_API/api/v1/indexerProxy" | tr -d '\n' |
-          grep -q '"implementation" *: *"FlareSolverr"'; then
+        has_proxy() {
+          api "$PROWLARR_API/api/v1/indexerProxy" | tr -d '\n' |
+            grep -q '"implementation" *: *"FlareSolverr"'
+        }
+        if has_proxy; then
           echo "prowlarr: a FlareSolverr proxy already exists, leaving it as configured"
           exit 0
         fi
 
-        # forceSave: keep the entry even if Prowlarr's connectivity test races
-        # the sidecar's first start; the proxy re-tests on use.
-        api -X POST "$PROWLARR_API/api/v1/indexerProxy?forceSave=true" -o /dev/null -d '{
+        # Prowlarr runs its connectivity test synchronously even with forceSave
+        # (only warnings are waived): FlareSolverr starts a whole Chromium for
+        # it, up to its 60 s timeout, and a cold sidecar can still fail it. So
+        # the call gets -m 150, a few tries, and counts as done when the proxy
+        # is there after it.
+        n=0
+        until api -m 150 -X POST "$PROWLARR_API/api/v1/indexerProxy?forceSave=true" -o /dev/null -d '{
           "name": "FlareSolverr",
           "implementation": "FlareSolverr",
           "configContract": "FlareSolverrSettings",
@@ -319,6 +328,13 @@ x-compose-app:
             {"name": "host", "value": "'"$SOLVER_URL"'"},
             {"name": "requestTimeout", "value": 60}
           ]
-        }' || { echo "prowlarr: could not register FlareSolverr" >&2; exit 1; }
+        }' || has_proxy; do
+          n=$((n + 1))
+          if [ "$n" -ge 5 ]; then
+            echo "prowlarr: could not register FlareSolverr" >&2
+            exit 1
+          fi
+          sleep 15
+        done
         echo "prowlarr: registered FlareSolverr at $SOLVER_URL for tag flaresolverr"
         SH
