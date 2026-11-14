@@ -25,7 +25,7 @@ ConvertX requires root user (`user: "root"`) for the following technical reasons
 While running as root, the following security measures are in place:
 
 1. **Authentication Required**
-   - The **AppShield** OIDC sidecar (`ghcr.io/yundera/appshield`) is the authentication
+   - The **AppShield** OIDC sidecar (`ghcr.io/nsl-sh/appshield`) is the authentication
      boundary: it fronts the app, authenticates every request against the PCS's built-in
      Authelia SSO, and is the only service carrying Caddy labels
    - The ConvertX backend is not published. It sits on the app-private

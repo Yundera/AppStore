@@ -81,7 +81,7 @@ Why each privilege is needed:
 ## Security mitigations in place
 
 - **Authentication is on by default and is the PCS's own.** The published
-  service is the AppShield gate (`ghcr.io/yundera/appshield`). It registers with
+  service is the AppShield gate (`ghcr.io/nsl-sh/appshield`). It registers with
   the PCS OIDC provider (`auth-registrar`) and refuses every request that does
   not carry a valid Yundera session. There is no app-local password.
 - **The shell is never published directly.** `terminal-ttyd` has no `ports:` and
@@ -107,7 +107,7 @@ Why each privilege is needed:
   `x-casaos.tips.before_install` state that sessions are `admin` with `sudo`,
   that everything on the server is reachable, and that the app adds its own key
   to `authorized_keys`.
-- **Pinned images**, `ghcr.io/yundera/appshield` and `tsl0922/ttyd:1.7.7`. The
+- **Pinned images**, `ghcr.io/nsl-sh/appshield` and `tsl0922/ttyd:1.7.7`. The
   ttyd image is upstream and unmodified: `nsenter` ships in it, and `ssh` is the
   host's own binary.
 - **Resource limits**: `cpu_shares` on both services, and `mem_limit: 128m` on

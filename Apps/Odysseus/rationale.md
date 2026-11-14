@@ -68,7 +68,7 @@ FastEmbed model, so memory and search are functional before a chat model exists.
 
 ## AppShield in front
 
-The published routes belong to an `ghcr.io/yundera/appshield` container
+The published routes belong to an `ghcr.io/nsl-sh/appshield` container
 (`odysseus-proxy`, `container_name: odysseus`), which proxies to `odysseus-backend:7000`.
 The app container keeps `expose: 7000` but has no Caddy labels, so nothing reaches it
 from the internet except through the shield. This is the same shape the other ~20

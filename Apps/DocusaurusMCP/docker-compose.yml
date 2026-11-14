@@ -69,7 +69,7 @@ services:
 
   # AppShield gates the admin panel with SSO and /mcp with OAuth 2.1.
   docusaurusmcp-proxy:
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: docusaurusmcp
     hostname: docusaurusmcp
     restart: unless-stopped

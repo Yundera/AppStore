@@ -32,7 +32,7 @@ services:
   # metawatch-app. This is the only routed service and the only one
   # a browser can reach.
   metawatch:
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: metawatch
     # OIDC identity: AppShield builds its redirect URIs from os.hostname(), and
     # the auth-registrar attests this app's name via the container's PTR record

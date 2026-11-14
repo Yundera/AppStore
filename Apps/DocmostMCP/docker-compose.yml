@@ -78,7 +78,7 @@ services:
     # fronting Dex) that protects whatever path OAUTH_RESOURCE names.
     # 2.0.9+ additionally advertises offline_access and adds prompt=consent, so
     # clients get a refresh token instead of needing re-authorization each hour.
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: docmostmcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

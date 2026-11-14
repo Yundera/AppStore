@@ -4,7 +4,7 @@
 
 Radarr is protected by **its own built-in Forms authentication**, seeded on so that it
 is enabled before the app is ever reachable, rather than by the recommended
-**AppShield OIDC sidecar** (`ghcr.io/yundera/appshield`).
+**AppShield OIDC sidecar** (`ghcr.io/nsl-sh/appshield`).
 
 Per CONTRIBUTING's Security checklist this is an "acceptable alternative — the app's own
 built-in auth … enabled by default", and this file records why that path was taken and

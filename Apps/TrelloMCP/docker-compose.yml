@@ -57,7 +57,7 @@ services:
     # configurable protected path; 2.0.9+ advertises offline_access and sends
     # prompt=consent, without which no refresh token is issued and every client has
     # to be re-authorized by hand once the 1h access token expires.
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: trellomcp
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the

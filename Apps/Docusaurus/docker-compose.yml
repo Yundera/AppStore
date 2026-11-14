@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   docusaurus:
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: docusaurus
     hostname: docusaurus
     restart: unless-stopped

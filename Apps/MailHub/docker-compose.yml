@@ -24,7 +24,7 @@ services:
   # identity on every request (X-AppShield-Assertion) and the webmail logs that
   # identity into its own mailbox (mailhub_sso).
   mailhub-proxy:
-    image: ghcr.io/yundera/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.1.0
     container_name: mailhub
     hostname: mailhub
     restart: unless-stopped
