@@ -51,7 +51,7 @@ services:
   # manifest — Beacon calls the sidecar, the sidecar adds the header.
   # Announces tools only once the endpoint is enabled in Settings (mcp_endpoint.enabled).
   aube-mcp:
-    image: ghcr.io/worph/beaconify:1.0.2
+    image: ghcr.io/worph/beaconify:1.0.3
     container_name: aube-mcp
     hostname: aube-mcp
     restart: unless-stopped
@@ -81,7 +81,7 @@ services:
   # Announces tools only once Settings → Admin MCP endpoint is enabled. Aube refuses its writes
   # while a run is in progress: the nightly backend sees this Beacon too.
   aube-admin-mcp:
-    image: ghcr.io/worph/beaconify:1.0.2
+    image: ghcr.io/worph/beaconify:1.0.3
     container_name: aube-admin-mcp
     hostname: aube-admin-mcp
     restart: unless-stopped
