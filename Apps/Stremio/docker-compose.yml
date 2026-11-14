@@ -18,9 +18,18 @@ services:
             # Auth gate: the presence of OIDC_REGISTRAR_URL puts AppShield in OIDC
             # mode, so it self-registers with the PCS auth-registrar and every human
             # request is sent through the built-in Authelia SSO. No client id/secret
-            # to configure, and no static credentials (USER/PASSWORD would be ignored
-            # in this mode anyway).
-            OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+            # to configure; PASSWORD below is only the fallback when SSO is unavailable.
+            # SSO comes from the platform (Maison's system env): the registrar on a
+            # Yundera box, or a provider the user configured. Where there is none (plain
+            # CasaOS) all four are empty and the gate protects the app with PASSWORD.
+            OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+            OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+            OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+            OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+            # Break-glass login while SSO is unavailable; the only login without SSO.
+            # Without a value (a platform that ignores x-compose-app) the gate generates
+            # one and prints it in its log.
+            PASSWORD: "${APPSHIELD_PASSWORD:-}"
             REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
             # Stremio streams torrent content from /<40-hex-chars>/... paths where the
             # hash itself is the capability; external players and casting devices cannot
@@ -29,7 +38,7 @@ services:
         expose:
             - "80"
         hostname: stremio
-        image: ghcr.io/yundera/appshield:3.2.0
+        image: ghcr.io/yundera/appshield:4.1.0
         logging:
             driver: json-file
             options:
@@ -143,6 +152,21 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in when single sign-on is unavailable. Day to day, use single sign-on.
+      # Behind SSO nobody needs it on the first click: tile menu only.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
   version: "1.3.14"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app

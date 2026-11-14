@@ -10,12 +10,12 @@ x-logging: &logging
 services:
   # AppShield gates ONLY the admin panel. The app's own router (vaultwarden-router,
   # below) splits the single public hostname by path: /admin (plus AppShield's own
-  # /nhl-auth endpoints) goes through the SSO sidecar, everything else -- the web vault
+  # /AppShield endpoints) goes through the SSO sidecar, everything else -- the web vault
   # and the whole Bitwarden client protocol -- straight to Vaultwarden. That is what
   # lets the admin token be dropped without adding a second login in front of the
   # vault. See rationale.md.
   vaultwarden:
-    image: ghcr.io/yundera/appshield:3.2.0
+    image: ghcr.io/yundera/appshield:4.1.0
     container_name: vaultwarden
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -30,9 +30,19 @@ services:
       BACKEND_HOST: "vaultwarden-backend"
       BACKEND_PORT: "80"
       LISTEN_PORT: "80"
-      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      # SSO comes from the platform (Maison's system env): the registrar on a
+      # Yundera box, or a provider the user configured. Where there is none (plain
+      # CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      # Without a value (a platform that ignores x-compose-app) the gate generates
+      # one and prints it in its log.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
-      # No ALLOWED_PATHS: this sidecar only ever sees /admin and /nhl-auth, because the
+      # No ALLOWED_PATHS: this sidecar only ever sees /admin and /AppShield, because the
       # router never sends anything else to it. Uncomment to restrict the admin panel to members
       # of the `admins` group instead of every PCS account that can sign in:
       # OIDC_REQUIRED_GROUPS: "admins"
@@ -168,9 +178,12 @@ configs:
 
         location = /_router/health { access_log off; return 204; }
 
-        # The admin panel and the gate's own login endpoints: through the SSO gate.
+        # The admin panel and the gate's own endpoints (/AppShield/: login, SSO
+        # callback, logout): through the SSO gate.
         location = /admin    { proxy_pass http://$$gate; }
         location /admin/     { proxy_pass http://$$gate; }
+        location /AppShield/ { proxy_pass http://$$gate; }
+        # The gate's pre-4.0 endpoints, still answered: logins started before an update.
         location /nhl-auth/  { proxy_pass http://$$gate; }
 
         # The web vault, the client API and the /notifications/hub websocket.
@@ -625,6 +638,21 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in when single sign-on is unavailable. Day to day, use single sign-on.
+      # Behind SSO nobody needs it on the first click: tile menu only.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
   version: "1.37.5"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app

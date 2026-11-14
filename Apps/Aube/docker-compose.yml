@@ -107,7 +107,7 @@ services:
 
   # ── the only public surface ───────────────────────────────────────────────────────────
   aube:
-    image: ghcr.io/yundera/appshield:3.2.0
+    image: ghcr.io/yundera/appshield:4.1.0
     # OIDC identity: the auth-registrar attests the app name through this container's PTR
     # record, so container_name, hostname and the compose name must all be `aube`.
     container_name: aube
@@ -121,7 +121,17 @@ services:
       BACKEND_HOST: "aube-backend"
       BACKEND_PORT: "8080"
       LISTEN_PORT: "80"
-      OIDC_REGISTRAR_URL: "http://auth-registrar:9092"
+      # SSO comes from the platform (Maison's system env): the registrar on a
+      # Yundera box, or a provider the user configured. Where there is none (plain
+      # CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      # Without a value (a platform that ignores x-compose-app) the gate generates
+      # one and prints it in its log.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
       # Static PWA files only (manifest and icons, no data): Chrome hands their URLs to Google's
       # WebAPK minting server, which fetches them anonymously; behind the gate Android installs
@@ -146,6 +156,18 @@ networks:
 
 x-compose-app:
   schema_version: 2
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in when single sign-on is unavailable. Day to day, use single sign-on.
+      # Behind SSO nobody needs it on the first click: tile menu only.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
   id: aube
   version: "1.2.0"
   routes:
@@ -189,6 +211,8 @@ x-compose-app:
       user: $PUID
       group: $PGID
   secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
     # Bearer of Aube's MCP endpoint, between the backend and its beaconify sidecar.
     AUBE_MCP_TOKEN: hex:32
     # Bearer of Aube's admin MCP endpoint, between the backend and the aube-admin-mcp sidecar.

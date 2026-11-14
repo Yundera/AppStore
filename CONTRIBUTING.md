@@ -381,11 +381,20 @@ With an AppShield gate, the router goes where its job is:
 - **Pass:** all of the following hold:
   - the route's service is the sidecar, and `x-casaos.main` names it — except when the gate
     covers only some paths: then the route and `x-casaos.main` are on the app's router
-    (`in-app-router`), which sends exactly those paths plus `/nhl-auth/` to the sidecar
-    (`Apps/Vaultwarden`);
+    (`in-app-router`), which sends exactly those paths plus `/AppShield/` (and the
+    legacy `/nhl-auth/`) to the sidecar (`Apps/Vaultwarden`);
   - the backend is no route's service and publishes no HTTP port;
   - the sidecar's `container_name` equals the compose `name`, and `hostname:` equals `container_name`;
-  - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `OIDC_REGISTRAR_URL` and
+  - SSO comes from the platform, never hardcoded: `OIDC_REGISTRAR_URL`, `OIDC_ISSUER_URL`,
+    `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are each set as `"${NAME:-}"`. A box with
+    SSO supplies one source through Maison's system env (`.env.app`); a platform with
+    none (plain CasaOS) leaves them empty, and the gate (AppShield 4.1 or later, which
+    never runs open) protects the app with its password instead;
+  - `PASSWORD: "${APPSHIELD_PASSWORD:-}"`, with `APPSHIELD_PASSWORD: password:24` in
+    `x-compose-app.secrets` and a `credentials` entry for it (`username: admin`,
+    `prompt: false` so it stays in the tile menu, `change: {apply: env}`). It is the
+    break-glass login while SSO is unavailable and the only login without SSO;
+  - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT` and
     `REDIRECT_HOST_SUFFIXES` are set, the last as `"${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"` —
     the primary domain only. The registrar decides every host the app is reached on; this
     names the canonical one, which the gate uses as its OAuth issuer and its fallback login
