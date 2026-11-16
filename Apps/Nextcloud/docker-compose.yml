@@ -673,6 +673,17 @@ x-compose-app:
       user: $PUID
       group: $PGID
   steps:
+    # The db healthcheck logs in through the credentials file the MariaDB image wrote at
+    # init. MariaDB ignores a world-writable option file, so a db folder that was ever
+    # chmod -R 777'd (older installs) leaves the healthcheck unable to log in: db never
+    # turns healthy and nextcloud, which waits on it, never starts.
+    - name: healthcheck-cnf-perms
+      at: setup
+      run: always
+      script: |
+        f="$APP_DIR/db/.my-healthcheck.cnf"
+        [ -f "$f" ] && chmod 600 "$f"
+        exit 0
     # IMPORTANT: Keep these commands idempotent - safe to run multiple times.
     # Variables meant for the nextcloud container ($REDIS_HOST_PASSWORD) stay inside
     # the single-quoted `compose exec … bash -c` block and are expanded there, not here.
