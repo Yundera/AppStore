@@ -46,8 +46,10 @@ services:
       - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
       # Install-time only; the trusted-domains step keeps the list current afterwards.
       - NEXTCLOUD_TRUSTED_DOMAINS=localhost $APP_DOMAIN ${APP_HOST:-nextcloud-${APP_DOMAIN}}
+      # No OVERWRITEHOST: it would pin every link and redirect to one host, sending
+      # visitors of the app's other addresses (dot name, sslip.io) back to it. The
+      # proxy passes the Host through and trusted-domains vouches for each address.
       - OVERWRITEPROTOCOL=https
-      - OVERWRITEHOST=${APP_HOST:-nextcloud-${APP_DOMAIN}}
       - TRUSTED_PROXIES=172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
       - NC_maintenance_window_start=4
     volumes:
@@ -716,6 +718,8 @@ x-compose-app:
       run: always
       script: |
         compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || exit 0
+        # Installs from before OVERWRITEHOST was dropped keep it in config.php.
+        compose exec nextcloud php occ config:system:delete overwritehost >/dev/null || true
         i=2
         for host in $(printf '%s' "${APP_HOSTS:-nextcloud-$APP_DOMAIN,nextcloud-$APP_PUBLIC_IP_DASH.sslip.io}" | tr ',' ' '); do
           compose exec nextcloud php occ config:system:set trusted_domains "$i" --value "$host" >/dev/null
