@@ -19,7 +19,7 @@ CasaOS automatically applies `PUID:PGID` (1000:1000) when no `user` field is spe
 
 - **Volume isolation**: All volumes map exclusively to `/DATA/AppData/odoo/` — no access to user directories (`/DATA/Documents/`, `/DATA/Media/`, etc.).
 - **Network isolation**: PostgreSQL is only reachable on the internal `odoo-internal` network. The app's route is `odoo-router`; Odoo itself stays on `pcs` only to send mail through `smtp` and for a root domain pointed at `odoo:80`. No port is published.
-- **Official images**: `postgres:18.3`, `odoo:19.0` and `nginx:1.31.8-alpine` from Docker Hub, regularly updated and security-audited.
+- **Official images**: `postgres:18.3`, `odoo:19.0` and `nginx:1.31.9-alpine` from Docker Hub, regularly updated and security-audited.
 - **Resource limits**: PostgreSQL capped at 1G memory, Odoo at 2G, the router at 64M.
 
 ## Multi-process mode and `odoo-router`
