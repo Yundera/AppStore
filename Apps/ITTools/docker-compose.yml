@@ -72,7 +72,7 @@ services:
   # /manifest.webmanifest, straight to the backend and everything else to the
   # AppShield gate. See rationale.md.
   ittools-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: ittools-router
     restart: unless-stopped
     depends_on:
