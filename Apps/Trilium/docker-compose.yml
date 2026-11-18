@@ -1,0 +1,196 @@
+name: trilium
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  trilium-proxy:
+    image: ghcr.io/nsl-sh/appshield:4.1.0
+    container_name: trilium
+    # OIDC identity: the auth-registrar attests this app's name via the container's PTR
+    # record, so the hostname must equal the app name.
+    hostname: trilium
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: "trilium-app"
+      BACKEND_PORT: "8080"
+      LISTEN_PORT: "80"
+      # SSO comes from the platform (Maison's system env). Where there is none (plain
+      # CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+    expose:
+      - 80
+    depends_on:
+      trilium-app:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    cpu_shares: 80
+    logging: *logging
+    networks:
+      # On `pcs` for the platform's router, and on the app's own network for its backend.
+      - pcs
+      - trilium-internal
+
+  trilium-app:
+    image: triliumnext/trilium:v0.107.0
+    container_name: trilium-app
+    restart: unless-stopped
+    # Runs straight as the box user: the image's entrypoint skips its root-only
+    # usermod/chown and starts the server as this user.
+    user: "$PUID:$PGID"
+    environment:
+      TRILIUM_DATA_DIR: /home/node/trilium-data
+      TZ: $TZ
+    expose:
+      - 8080
+    volumes:
+      # Everything Trilium keeps: document.db (all notes and attachments), config.ini,
+      # session secret, logs and backups.
+      - ${DATA_ROOT:-/DATA}/AppData/trilium/data:/home/node/trilium-data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    cpu_shares: 80
+    logging: *logging
+    networks:
+      # App-private only: reached solely by trilium-proxy.
+      - trilium-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  # App-private link between the gate and Trilium.
+  trilium-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: trilium-proxy
+  webui_port: 80
+  category: Documents
+  tags: ["productivity", "notes", "personal"]
+  developer: TriliumNext
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  index: /
+  store_app_id: trilium
+  title:
+    en_us: Trilium
+  tagline:
+    en_us: Hierarchical note-taking for building a personal knowledge base
+  description:
+    en_us: |
+      Trilium (TriliumNext Notes) is a hierarchical note-taking application for building a large personal knowledge base. Notes live in a tree of any depth, and one note can sit in several places of the tree at once.
+
+      **Key features:**
+      • Rich text editor with tables, images, math and code blocks
+      • Code, Mermaid diagrams, canvas, mind maps, maps and relation maps
+      • Note cloning, attributes, templates and saved searches
+      • Full revision history and per-note protection with encryption
+      • Scripting and a REST API (ETAPI) for automation
+      • Web clipper and import / export of Markdown, HTML and ENEX
+
+      All notes are stored on your server, in a single database under the app's own folder.
+  tips:
+    before_install:
+      en_us: |
+        **Sign-in:** Trilium is protected by your server's single sign-on.
+        -----------------------------
+        **First visit:** Trilium walks you through a short setup.
+        1. Pick your language, then **New knowledge base** (or **Connect to an existing server**
+           to sync from a Trilium server you already run, or **Restore from backup**).
+        2. Choose **Empty** or **With demo content**.
+        3. **Set password**: this is Trilium's own login, and it also unlocks protected notes.
+           Keep it - Trilium cannot recover it.
+        4. Log in with that password and start writing notes.
+        -----------------------------
+        Every request goes through the single sign-on gate, so a Trilium desktop app cannot
+        sync *to* this server. Use it from the browser.
+x-compose-app:
+  schema_version: 2
+  version: "0.107.0"
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in when single sign-on is unavailable. Day to day, use single sign-on. Trilium's own password is the one you set on first visit.
+      # Behind SSO nobody needs it on the first click: tile menu only.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
+  # How the app is reached; the box's routing setting decides the rest.
+  routes:
+    - { service: trilium-proxy, name: trilium, upstream-port: 80 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: trilium
+  title:
+    en_us: Trilium
+  tagline:
+    en_us: Hierarchical note-taking for building a personal knowledge base
+  description:
+    en_us: |
+      Trilium (TriliumNext Notes) is a hierarchical note-taking application for building a large personal knowledge base. Notes live in a tree of any depth, and one note can sit in several places of the tree at once.
+
+      **Key features:**
+      • Rich text editor with tables, images, math and code blocks
+      • Code, Mermaid diagrams, canvas, mind maps, maps and relation maps
+      • Note cloning, attributes, templates and saved searches
+      • Full revision history and per-note protection with encryption
+      • Scripting and a REST API (ETAPI) for automation
+      • Web clipper and import / export of Markdown, HTML and ENEX
+
+      All notes are stored on your server, in a single database under the app's own folder.
+  developer: TriliumNext
+  category: Documents
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **Sign-in:** Trilium is protected by your server's single sign-on.
+      -----------------------------
+      **First visit:** Trilium walks you through a short setup.
+      1. Pick your language, then **New knowledge base** (or **Connect to an existing server**
+         to sync from a Trilium server you already run, or **Restore from backup**).
+      2. Choose **Empty** or **With demo content**.
+      3. **Set password**: this is Trilium's own login, and it also unlocks protected notes.
+         Keep it - Trilium cannot recover it.
+      4. Log in with that password and start writing notes.
+      -----------------------------
+      Every request goes through the single sign-on gate, so a Trilium desktop app cannot
+      sync *to* this server. Use it from the browser.
+  # Trilium runs as $PUID:$PGID and writes its whole state here.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+      mode: "0700"
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
