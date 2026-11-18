@@ -19,7 +19,8 @@
 **Mitigation**:
 - Limited to specific security contexts with `apparmor:unconfined`
 - Volumes are specifically mapped and controlled
-- Container only exposes web UI port (80)
+- Container exposes only the GUI (5580) and RC API (5572) ports, to the app's own network;
+  `rclone-router` is the only service on the shared network
 
 ### Mount Configuration
 **Mount Point**: `/DATA/Rclone/:/data/:rshared,z`
@@ -38,23 +39,24 @@ All three are mounted `:ro` and are never written to.
 ## Configuration Requirements
 
 ### Authentication
-- Default authentication enabled via `--rc-user admin --rc-pass $default_pwd`
-- Web UI requires login with admin username and generated secure password
-- Remote access controlled via `--rc-allow-origin "*"` (necessary for NSL router integration)
+- `rclone gui --user admin --pass $RCLONE_ADMIN_PASSWORD`: every RC API call needs that login
+- The GUI itself is static files (no data); its first screen is the "Connect to rclone" login,
+  and nothing behind it loads without the credentials
+- GUI and API share one host through `rclone-router` (GET/HEAD → GUI, other methods → API), so
+  no cross-origin access is needed
 
-### Web GUI cache (`/DATA/AppData/rclone/cache/:/cache/`)
-**Rationale**: `rcd --rc-web-gui` downloads and unpacks the web interface bundle into
-`--cache-dir` on first start. The container runs as `$PUID:$PGID`, so that directory must be a
-bind mount owned by the app user — without it the image's root filesystem is not writable by
-the non-root user and rclone silently starts with no web interface (the API answers, but every
-UI request returns `404 page not found`).
+### Web GUI (rclone 1.76 and later)
+rclone 1.76 removed `rcd --rc-web-gui` (it now exits with "superseded by the `rclone gui`
+command"). `rclone gui` serves the GUI embedded in the binary, so nothing is downloaded at
+start. The GUI learns the API address only from `/login?url=…`; the router sends a browser
+that has never connected there, with this host's own address. The `rclone_gui` cookie that
+marks a browser as connected is set only on a successful authenticated API call, the moment
+the GUI itself stores the address.
 
-**The trailing slash on the source path is required**: CasaOS only pre-creates and chowns
-volume sources that end in `/`. Any other source is created by Docker as `root:root`, which the
-non-root app user still cannot write to.
-
-Mounting it also persists the bundle across restarts, so the app does not re-download it on
-every boot.
+### Cache (`/DATA/AppData/rclone/cache/:/cache/`)
+**Rationale**: `--cache-dir` holds the VFS cache of mounts. The container runs as
+`$PUID:$PGID`, so the directory must be a bind mount owned by the app user (declared under
+`folders`): the image's root filesystem is not writable by the non-root user.
 
 ### Resource Limits
 - `cpu_shares: 70` — interactive web UI with heavy background transfers, so it must stay
@@ -73,3 +75,4 @@ The FUSE mount setup requires specific Docker configuration:
 2. `devices: /dev/fuse:/dev/fuse:rwm` for FUSE access  
 3. Mount propagation `rshared,z` for host visibility
 4. Users mount remotes to `/data` which maps to `/DATA/Rclone/` on host
+
