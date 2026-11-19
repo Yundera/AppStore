@@ -1,0 +1,158 @@
+name: openwebui
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:0.13.4
+    # The image runs as root and only ever writes its own app folder.
+    user: 0:0
+    container_name: openwebui
+    restart: unless-stopped
+    expose:
+      - 8080
+    networks:
+      - pcs
+    environment:
+      WEBUI_URL: ${APP_URL:-https://openwebui-${APP_DOMAIN}}
+      # Session/JWT signing key; without it the image writes a random one outside the volume.
+      WEBUI_SECRET_KEY: ${OPENWEBUI_SECRET_KEY}
+      # The administrator is created at first start (only while no user exists), so the
+      # sign-in page is never an open sign-up. Further accounts are the admin's to allow.
+      WEBUI_ADMIN_EMAIL: admin@localhost
+      WEBUI_ADMIN_NAME: Admin
+      WEBUI_ADMIN_PASSWORD: ${OPENWEBUI_ADMIN_PASSWORD}
+      ENABLE_SIGNUP: "false"
+      # The store's Ollama app keeps its engine on its own network, so there is no plain
+      # platform address to point at: the user gives one at install, or adds connections
+      # later in Settings > Connections (the tips explain both). Empty: Open WebUI's default.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      # Off until the user adds a provider: the image's default is api.openai.com with no
+      # key, which the backend probes and answers with a 500. Used on the first start only.
+      ENABLE_OPENAI_API: "false"
+    volumes:
+      # Everything Open WebUI keeps: the SQLite database (users, chats, settings),
+      # uploads, the vector store and its model cache.
+      - ${DATA_ROOT:-/DATA}/AppData/openwebui/data:/app/backend/data
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  main: openwebui
+  webui_port: 8080
+  index: /
+  store_app_id: openwebui
+  architectures:
+    - amd64
+    - arm64
+  category: Chat
+  tags: ["ai", "chat"]
+  developer: Open WebUI
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  title:
+    en_us: Open WebUI
+  tagline: &tagline
+    en_us: A private chat interface for Ollama and OpenAI-compatible models
+    fr_fr: Une interface de discussion privée pour Ollama et les modèles compatibles OpenAI
+    es_es: Una interfaz de chat privada para Ollama y modelos compatibles con OpenAI
+    zh_cn: 适用于 Ollama 和 OpenAI 兼容模型的私有聊天界面
+    ko_kr: Ollama 및 OpenAI 호환 모델을 위한 비공개 채팅 인터페이스
+  description: &description
+    en_us: |
+      Open WebUI is a self-hosted, ChatGPT-style chat interface. It does not run models itself: connect it to an Ollama server or to any OpenAI-compatible API, and chat with their models from your browser. Your conversations stay on your server.
+
+      **Key features:**
+      • Chat with every model of the connections you add, and switch between them
+      • Full conversation history, search, folders and sharing
+      • Chat with your documents and images (built-in retrieval)
+      • Multi-user, with roles and an admin panel
+
+      **Connecting models:** give the address of an Ollama server at install, or add connections at any time in *Settings → Connections*, including the store's **Ollama (CPU)** app on this server (see Tips). An OpenAI-compatible provider needs an account and an API key of its own.
+    fr_fr: |
+      Open WebUI est une interface de discussion auto-hébergée, de type ChatGPT. Elle n'exécute pas de modèles elle-même : connectez-la à un serveur Ollama ou à toute API compatible OpenAI, et discutez avec leurs modèles depuis votre navigateur. Vos conversations restent sur votre serveur.
+
+      **Connecter des modèles :** indiquez l'adresse d'un serveur Ollama à l'installation, ou ajoutez des connexions dans *Settings → Connections*. Pour exécuter des modèles sur ce serveur, installez l'app **Ollama (CPU)** du store.
+    es_es: |
+      Open WebUI es una interfaz de chat autoalojada, al estilo de ChatGPT. No ejecuta modelos por sí misma: conéctala a un servidor Ollama o a cualquier API compatible con OpenAI y chatea con sus modelos desde el navegador. Tus conversaciones se quedan en tu servidor.
+
+      **Conectar modelos:** indica la dirección de un servidor Ollama al instalar, o añade conexiones en *Settings → Connections*. Para ejecutar modelos en este servidor, instala la app **Ollama (CPU)** de la tienda.
+    zh_cn: |
+      Open WebUI 是一个自托管的 ChatGPT 式聊天界面。它本身不运行模型：将其连接到 Ollama 服务器或任何 OpenAI 兼容 API，即可在浏览器中与这些模型聊天。您的对话保存在您自己的服务器上。
+
+      **连接模型：** 安装时填写 Ollama 服务器地址，或随时在 *Settings → Connections* 中添加连接。若要在本服务器上运行模型，请安装商店中的 **Ollama (CPU)** 应用。
+    ko_kr: |
+      Open WebUI는 자체 호스팅되는 ChatGPT 스타일의 채팅 인터페이스입니다. 직접 모델을 실행하지 않습니다. Ollama 서버나 OpenAI 호환 API에 연결하여 브라우저에서 해당 모델과 대화하세요. 대화 내용은 서버에 그대로 남습니다.
+
+      **모델 연결:** 설치 시 Ollama 서버 주소를 입력하거나, 언제든지 *Settings → Connections*에서 연결을 추가하세요. 이 서버에서 모델을 실행하려면 스토어의 **Ollama (CPU)** 앱을 설치하세요.
+  tips:
+    before_install: &tips
+      en_us: |
+        **Signing in**
+
+        The administrator account is created for you: email **`admin@localhost`** and the generated password in the *Credentials* dialog (tile menu → Credentials). Change the password in *Settings → Account*. Sign-up is off; to let others in, turn on *New Sign Ups* in *Settings → Authentication*. New users wait for your approval.
+
+        **Adding models**
+
+        Open WebUI chats with the models of the connections you give it, in *Settings → Connections*:
+        - **The store's Ollama (CPU) app**: in that app, turn on API keys (*Admin Panel → Settings → General*) and create a key in *Settings → Account*. Here, set the Ollama API connection to `http://ollama:8080/ollama` and paste the key.
+        - **Another Ollama server**: its address, e.g. `http://192.168.1.20:11434`.
+        - **An OpenAI-compatible provider**: turn on *OpenAI API* (off by default), then set its base URL and your API key.
+
+        An Ollama address given at install is used on the first start only; after that, change it on the Connections page.
+
+x-compose-app:
+  schema_version: 2
+  version: "0.13.4"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: openwebui, name: openwebui, upstream-port: 8080 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: openwebui
+  title:
+    en_us: Open WebUI
+  tagline: *tagline
+  description: *description
+  developer: Open WebUI
+  category: Chat
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  tips: *tips
+  secrets:
+    OPENWEBUI_SECRET_KEY: alnum:48
+    OPENWEBUI_ADMIN_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: Administrator
+      username: admin@localhost
+      password: ${OPENWEBUI_ADMIN_PASSWORD}
+      note:
+        en_us: Sign in with this email address. The password is set once, at first start; after a change in Open WebUI's own settings this one no longer applies.
+  inputs:
+    - env: OLLAMA_BASE_URL
+      label:
+        en_us: Ollama server URL (optional)
+      description:
+        en_us: The address of an Ollama server this box can reach, e.g. http://192.168.1.20:11434. Leave it empty to add connections later in Settings > Connections (see Tips).
+      required: false
