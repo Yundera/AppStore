@@ -66,7 +66,7 @@ both work.
 
 ## Technical Details
 
-- **Image**: `nginx:1.29.3-alpine`
+- **Image**: `nginx:1.31.9-alpine`
 - **Memory**: 64MB limit
 - **CPU**: 0.25 cores
 - **Port**: 80 (exposed via Caddy)
