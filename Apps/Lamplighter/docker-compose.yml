@@ -13,7 +13,7 @@ services:
   # shared network because it calls the box's Beacon (and through it the shared claude-code
   # container), and because that agent calls back into its workspace endpoint.
   lamplighter-backend:
-    image: ghcr.io/worph/lamplighter:0.2.0
+    image: ghcr.io/worph/lamplighter:0.2.1
     container_name: lamplighter-backend
     hostname: lamplighter-backend
     restart: unless-stopped
@@ -137,7 +137,7 @@ x-compose-app:
       change:
         apply: env
   id: lamplighter
-  version: "0.2.0"
+  version: "0.2.1"
   routes:
     - { service: lamplighter, name: lamplighter, upstream-port: 80 }
   title:
