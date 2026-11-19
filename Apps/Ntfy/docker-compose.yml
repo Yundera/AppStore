@@ -9,7 +9,8 @@ x-logging: &logging
 services:
   # The app's own router, the route's service. It answers the browser's implicit
   # /favicon.ico probe, which the image's nginx sends on to ntfy as a 404 (a
-  # console error on the login page), and passes everything else on unchanged.
+  # console error on the login page), adds a one-line guard to the web app's
+  # pages (see the config), and passes everything else on unchanged.
   ntfy-router:
     image: nginx:1.31.8-alpine
     container_name: ntfy-router
@@ -115,6 +116,8 @@ configs:
         proxy_set_header X-Forwarded-Host $$http_host;
         proxy_set_header Upgrade $$http_upgrade;
         proxy_set_header Connection $$connection_upgrade;
+        # Uncompressed from ntfy, so sub_filter below can read the HTML.
+        proxy_set_header Accept-Encoding "";
 
         set $$ntfy ntfy:80;
 
@@ -122,7 +125,21 @@ configs:
         # The login page links no icon, so the browser asks for /favicon.ico; the
         # real one is under /static/, behind the login.
         location = /favicon.ico { access_log off; return 204; }
-        location / { proxy_pass http://$$ntfy; }
+        # ntfy's web app shows a browser notification for every message that
+        # arrives over its websocket, checking only that the browser supports
+        # notifications, not that the user allowed them; until they do (its
+        # "Grant now" banner) showNotification rejects and every message logs
+        # "Uncaught (in promise)". The guard, loaded ahead of the app, skips the
+        # call while permission is not granted and changes nothing once it is.
+        location = /_router/notify-guard.js {
+          default_type application/javascript;
+          return 200 "(function(){var R=window.ServiceWorkerRegistration;if(!R||!R.prototype.showNotification)return;var show=R.prototype.showNotification;R.prototype.showNotification=function(){if(!window.Notification||Notification.permission!=='granted')return Promise.resolve();return show.apply(this,arguments);};})();";
+        }
+        location / {
+          proxy_pass http://$$ntfy;
+          sub_filter '<head>' '<head><script src="/_router/notify-guard.js"></script>';
+          sub_filter_once on;
+        }
       }
 
 x-casaos:
@@ -436,3 +453,4 @@ x-compose-app:
     - path: /DATA/AppData/ntfy/cache
       user: $PUID
       group: $PGID
+
