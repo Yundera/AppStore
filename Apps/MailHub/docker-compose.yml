@@ -10,8 +10,8 @@ name: mailhub
 # another CalDAV/CardDAV server instead.
 #
 # The mailhub-roundcube, -mirror and -mcp images are each built from their own repo,
-# github.com/worph/mailhub-<image>; github.com/worph/mailhub holds the spike's test
-# kit and notes.
+# github.com/worph/mailhub-<image> (bookmarked together in github.com/worph/mailhub);
+# github.com/worph/mail-tool holds the test kit and the spike's notes.
 
 x-logging: &logging
   driver: json-file
@@ -65,7 +65,7 @@ services:
       - mailhub-internal
 
   mailhub-webmail:
-    image: ghcr.io/worph/mailhub-roundcube:0.8.2
+    image: ghcr.io/worph/mailhub-roundcube:0.9.0
     container_name: mailhub-webmail
     restart: unless-stopped
     cpu_shares: 80
@@ -195,7 +195,7 @@ services:
   # creates their calendar & contacts accounts in Baïkal.
   # Root to read the webmail's private account files; mbsync runs as vmail (1000).
   mailhub-mirror:
-    image: ghcr.io/worph/mailhub-mirror:0.8.4
+    image: ghcr.io/worph/mailhub-mirror:0.9.0
     container_name: mailhub-mirror
     restart: unless-stopped
     cpu_shares: 30
@@ -246,7 +246,7 @@ services:
   # Dovecot (whose master login is accepted from this private network).
   # Root to read the webmail's private account files; every mount read-only.
   mailhub-submit:
-    image: ghcr.io/worph/mailhub-mirror:0.8.4
+    image: ghcr.io/worph/mailhub-mirror:0.9.0
     container_name: mailhub-submit
     restart: unless-stopped
     cpu_shares: 20
@@ -319,7 +319,7 @@ services:
   # drafts, never sends.
   # App-private network only — Beacon reaches it through mailhub-beacon.
   mailhub-mcp:
-    image: ghcr.io/worph/mailhub-mcp:1.0.1
+    image: ghcr.io/worph/mailhub-mcp:1.0.2
     container_name: mailhub-mcp
     restart: unless-stopped
     cpu_shares: 30
@@ -412,7 +412,7 @@ x-compose-app:
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:
         apply: env
-  version: "0.8.7"
+  version: "0.9.0"
   # The first route is the web UI (webmail, behind SSO). The second is the
   # CalDAV/CardDAV endpoint for phones. IMAPS is a published port, not a route.
   routes:
