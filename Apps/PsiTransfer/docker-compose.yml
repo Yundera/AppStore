@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   psitransfer:
-    image: psitrax/psitransfer:v2.4.5
+    image: psitrax/psitransfer:v2.4.6
     container_name: psitransfer
     restart: unless-stopped
     
@@ -52,7 +52,7 @@ services:
   # fetch with no `x-passwd` header (app/src/Upload/store/upload.js), while the
   # server gates every /files request behind the upload password. With
   # PSITRANSFER_UPLOAD_PASS set, the lock answers 401, the browser logs an
-  # error, and the bucket is never locked. Still so in v2.4.5.
+  # error, and the bucket is never locked. Still so in v2.4.6.
   #
   # Fix: add the upload password to exactly that request — PATCH of
   # /files/<sid>?lock=yes, matched on the raw URI — and to nothing else. The
@@ -60,7 +60,7 @@ services:
   # header buys nothing beyond the lock: no upload, no read. Every other
   # request keeps the headers the browser sent.
   psitransfer-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: psitransfer-router
     restart: unless-stopped
     cpu_shares: 50
@@ -303,7 +303,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "2.4.5"
+  version: "2.4.6"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
