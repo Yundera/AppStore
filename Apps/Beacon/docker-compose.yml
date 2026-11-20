@@ -190,9 +190,9 @@ x-casaos:
 
         **Authentication (on by default):**
         - **Humans** — the web dashboard is behind the server's single sign-on. Opening the
-          app redirects you to your server login; you sign in with your server account.
+          app redirects you to your server login; you sign in with your server account. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
         - **Machines** — the `/mcp` endpoint is behind OAuth 2.1. AI clients get a token by
-          logging in with the same server account (see Option 1 below).
+          logging in with the same server account, or with the app password on a server without single sign-on (see Option 1 below).
 
         Nothing is reachable unauthenticated from the public URL.
 
@@ -210,7 +210,7 @@ x-casaos:
 
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the URL below —
         clients that support OAuth discovery (claude.ai, Claude Desktop) register themselves
-        and open a browser for you to approve with your server login.
+        and open a browser for you to approve with your server login, or with the app password on a server without single sign-on.
         ```json
         {
           "mcpServers": {
@@ -263,9 +263,9 @@ x-casaos:
         **Authentification (active par defaut):**
         - **Humains** — le tableau de bord web est protege par l'authentification unique
           de votre serveur (SSO). Ouvrir l'application redirige vers la connexion de votre
-          serveur; vous vous connectez avec votre compte serveur.
+          serveur; vous vous connectez avec votre compte serveur. Sur un serveur sans authentification unique, utilisez le mot de passe de l'app que Maison affiche a la premiere ouverture (aussi dans le menu de la tuile, sous **Identifiants**).
         - **Machines** — l'endpoint `/mcp` est protege par OAuth 2.1. Les clients IA obtiennent
-          un jeton en se connectant avec le meme compte serveur (voir Option 1 ci-dessous).
+          un jeton en se connectant avec le meme compte serveur, ou avec le mot de passe de l'app sur un serveur sans authentification unique (voir Option 1 ci-dessous).
 
         Rien n'est accessible sans authentification depuis l'URL publique.
 
@@ -284,7 +284,7 @@ x-casaos:
         L'endpoint `/mcp` est protege par OAuth 2.1. Pointez votre client vers l'URL
         ci-dessous — les clients qui gerent la decouverte OAuth (claude.ai, Claude Desktop)
         s'enregistrent seuls et ouvrent un navigateur pour que vous approuviez avec la
-        connexion de votre serveur.
+        connexion de votre serveur, ou avec le mot de passe de l'app sur un serveur sans authentification unique.
         ```json
         {
           "mcpServers": {
@@ -401,9 +401,9 @@ x-compose-app:
 
       **Authentication (on by default):**
       - **Humans** — the web dashboard is behind the server's single sign-on. Opening the
-        app redirects you to your server login; you sign in with your server account.
+        app redirects you to your server login; you sign in with your server account. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
       - **Machines** — the `/mcp` endpoint is behind OAuth 2.1. AI clients get a token by
-        logging in with the same server account (see Option 1 below).
+        logging in with the same server account, or with the app password on a server without single sign-on (see Option 1 below).
 
       Nothing is reachable unauthenticated from the public URL.
 
@@ -421,7 +421,7 @@ x-compose-app:
 
       The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the URL below —
       clients that support OAuth discovery (claude.ai, Claude Desktop) register themselves
-      and open a browser for you to approve with your server login.
+      and open a browser for you to approve with your server login, or with the app password on a server without single sign-on.
       ```json
       {
         "mcpServers": {
@@ -474,9 +474,9 @@ x-compose-app:
       **Authentification (active par defaut):**
       - **Humains** — le tableau de bord web est protege par l'authentification unique
         de votre serveur (SSO). Ouvrir l'application redirige vers la connexion de votre
-        serveur; vous vous connectez avec votre compte serveur.
+        serveur; vous vous connectez avec votre compte serveur. Sur un serveur sans authentification unique, utilisez le mot de passe de l'app que Maison affiche a la premiere ouverture (aussi dans le menu de la tuile, sous **Identifiants**).
       - **Machines** — l'endpoint `/mcp` est protege par OAuth 2.1. Les clients IA obtiennent
-        un jeton en se connectant avec le meme compte serveur (voir Option 1 ci-dessous).
+        un jeton en se connectant avec le meme compte serveur, ou avec le mot de passe de l'app sur un serveur sans authentification unique (voir Option 1 ci-dessous).
 
       Rien n'est accessible sans authentification depuis l'URL publique.
 
@@ -495,7 +495,7 @@ x-compose-app:
       L'endpoint `/mcp` est protege par OAuth 2.1. Pointez votre client vers l'URL
       ci-dessous — les clients qui gerent la decouverte OAuth (claude.ai, Claude Desktop)
       s'enregistrent seuls et ouvrent un navigateur pour que vous approuviez avec la
-      connexion de votre serveur.
+      connexion de votre serveur, ou avec le mot de passe de l'app sur un serveur sans authentification unique.
       ```json
       {
         "mcpServers": {

@@ -166,9 +166,11 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Sign-in:** Spliit is protected by your server's single sign-on. Access is
+        **Sign-in:** Spliit is protected by your server account (single sign-on). Access is
         handled by that one login - everyone who opens the app, including guests you
         send a group link to, signs in with their server account (single sign-on).
+        On a server without single sign-on, use the app password Maison shows on first
+        open (also in the tile menu under **Credentials**), and give it to your guests.
         -----------------------------
         **How to use:**
         1. Click "Create a group"
@@ -177,10 +179,12 @@ x-casaos:
         4. Start adding expenses
         5. Check "Balances" to see who owes whom
         -----------------------------
-        Share the group link with friends - they sign in with their server account to open it.
+        Share the group link with friends - they sign in with their server account (or the app password) to open it.
       ko_kr: |
         **로그인:** Spliit은 서버 통합 로그인(SSO)으로 보호됩니다. 로그인은 이 하나로 통합되어,
         공유 링크로 접속하는 사람을 포함해 모든 사용자가 이 서버의 계정으로 로그인합니다.
+        통합 로그인이 없는 서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하고
+        (타일 메뉴의 **Credentials**에도 있음), 게스트에게도 알려 주세요.
         -----------------------------
         **사용 방법:**
         1. "그룹 만들기" 클릭
@@ -189,10 +193,12 @@ x-casaos:
         4. 비용 추가 시작
         5. "잔액"을 확인하여 누가 누구에게 빚졌는지 확인
         -----------------------------
-        그룹 링크를 친구와 공유하세요 - 친구는 서버 계정으로 로그인하여 접속합니다.
+        그룹 링크를 친구와 공유하세요 - 친구는 서버 계정(또는 앱 비밀번호)으로 로그인하여 접속합니다.
       zh_cn: |
         **登录：** Spliit 由您服务器的单点登录（SSO）保护。登录统一由它管理；
         包括通过共享链接访问的访客在内，所有人都使用本服务器上的账户登录。
+        在没有单点登录的服务器上，请使用 Maison 首次打开时显示的应用密码
+        （也在磁贴菜单的 **凭据** 中），并告知您的访客。
         -----------------------------
         **使用方法：**
         1. 点击"创建群组"
@@ -201,11 +207,14 @@ x-casaos:
         4. 开始添加费用
         5. 查看"余额"了解谁欠谁
         -----------------------------
-        与朋友分享群组链接 - 他们使用服务器账户登录即可访问。
+        与朋友分享群组链接 - 他们使用服务器账户（或应用密码）登录即可访问。
       es_es: |
         **Inicio de sesión:** Spliit está protegido por el inicio de sesión único (SSO) de
         tu servidor. Ese acceso único lo gestiona todo: todos, incluidos los invitados
         que abren un enlace compartido, inician sesión con una cuenta de este servidor.
+        En un servidor sin inicio de sesión único, usa la contraseña de la app que Maison
+        muestra al abrirla por primera vez (también en el menú del icono, en **Credentials**),
+        y compártela con tus invitados.
         -----------------------------
         **Cómo usar:**
         1. Haz clic en "Crear un grupo"
@@ -214,11 +223,14 @@ x-casaos:
         4. Empieza a añadir gastos
         5. Revisa "Saldos" para ver quién debe a quién
         -----------------------------
-        Comparte el enlace del grupo con amigos - iniciarán sesión con su cuenta del servidor.
+        Comparte el enlace del grupo con amigos - iniciarán sesión con su cuenta del servidor (o la contraseña de la app).
       fr_fr: |
         **Connexion :** Spliit est protégé par l'authentification unique (SSO) du serveur.
         Cet identifiant unique gère tous les accès : tout le monde, y compris les
         invités qui ouvrent un lien partagé, se connecte avec un compte de ce serveur.
+        Sur un serveur sans authentification unique, utilisez le mot de passe de l'app que
+        Maison affiche à la première ouverture (aussi dans le menu de la tuile, sous
+        **Identifiants**), et donnez-le à vos invités.
         -----------------------------
         **Comment utiliser:**
         1. Cliquez sur "Créer un groupe"
@@ -227,7 +239,7 @@ x-casaos:
         4. Commencez à ajouter des dépenses
         5. Vérifiez "Soldes" pour voir qui doit à qui
         -----------------------------
-        Partagez le lien du groupe avec vos amis - ils se connectent avec leur compte du serveur.
+        Partagez le lien du groupe avec vos amis - ils se connectent avec leur compte du serveur (ou le mot de passe de l'app).
 x-compose-app:
   schema_version: 2
   credentials:
@@ -297,9 +309,11 @@ x-compose-app:
     - arm64
   tips:
     en_us: |
-      **Sign-in:** Spliit is protected by your server's single sign-on. Access is
+      **Sign-in:** Spliit is protected by your server account (single sign-on). Access is
       handled by that one login - everyone who opens the app, including guests you
       send a group link to, signs in with their server account (single sign-on).
+      On a server without single sign-on, use the app password Maison shows on first
+      open (also in the tile menu under **Credentials**), and give it to your guests.
       -----------------------------
       **How to use:**
       1. Click "Create a group"
@@ -308,10 +322,12 @@ x-compose-app:
       4. Start adding expenses
       5. Check "Balances" to see who owes whom
       -----------------------------
-      Share the group link with friends - they sign in with their server account to open it.
+      Share the group link with friends - they sign in with their server account (or the app password) to open it.
     ko_kr: |
       **로그인:** Spliit은 서버 통합 로그인(SSO)으로 보호됩니다. 로그인은 이 하나로 통합되어,
       공유 링크로 접속하는 사람을 포함해 모든 사용자가 이 서버의 계정으로 로그인합니다.
+      통합 로그인이 없는 서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하고
+      (타일 메뉴의 **Credentials**에도 있음), 게스트에게도 알려 주세요.
       -----------------------------
       **사용 방법:**
       1. "그룹 만들기" 클릭
@@ -320,10 +336,12 @@ x-compose-app:
       4. 비용 추가 시작
       5. "잔액"을 확인하여 누가 누구에게 빚졌는지 확인
       -----------------------------
-      그룹 링크를 친구와 공유하세요 - 친구는 서버 계정으로 로그인하여 접속합니다.
+      그룹 링크를 친구와 공유하세요 - 친구는 서버 계정(또는 앱 비밀번호)으로 로그인하여 접속합니다.
     zh_cn: |
       **登录：** Spliit 由您服务器的单点登录（SSO）保护。登录统一由它管理；
       包括通过共享链接访问的访客在内，所有人都使用本服务器上的账户登录。
+      在没有单点登录的服务器上，请使用 Maison 首次打开时显示的应用密码
+      （也在磁贴菜单的 **凭据** 中），并告知您的访客。
       -----------------------------
       **使用方法：**
       1. 点击"创建群组"
@@ -332,11 +350,14 @@ x-compose-app:
       4. 开始添加费用
       5. 查看"余额"了解谁欠谁
       -----------------------------
-      与朋友分享群组链接 - 他们使用服务器账户登录即可访问。
+      与朋友分享群组链接 - 他们使用服务器账户（或应用密码）登录即可访问。
     es_es: |
       **Inicio de sesión:** Spliit está protegido por el inicio de sesión único (SSO) de
       tu servidor. Ese acceso único lo gestiona todo: todos, incluidos los invitados
       que abren un enlace compartido, inician sesión con una cuenta de este servidor.
+      En un servidor sin inicio de sesión único, usa la contraseña de la app que Maison
+      muestra al abrirla por primera vez (también en el menú del icono, en **Credentials**),
+      y compártela con tus invitados.
       -----------------------------
       **Cómo usar:**
       1. Haz clic en "Crear un grupo"
@@ -345,11 +366,14 @@ x-compose-app:
       4. Empieza a añadir gastos
       5. Revisa "Saldos" para ver quién debe a quién
       -----------------------------
-      Comparte el enlace del grupo con amigos - iniciarán sesión con su cuenta del servidor.
+      Comparte el enlace del grupo con amigos - iniciarán sesión con su cuenta del servidor (o la contraseña de la app).
     fr_fr: |
       **Connexion :** Spliit est protégé par l'authentification unique (SSO) du serveur.
       Cet identifiant unique gère tous les accès : tout le monde, y compris les
       invités qui ouvrent un lien partagé, se connecte avec un compte de ce serveur.
+      Sur un serveur sans authentification unique, utilisez le mot de passe de l'app que
+      Maison affiche à la première ouverture (aussi dans le menu de la tuile, sous
+      **Identifiants**), et donnez-le à vos invités.
       -----------------------------
       **Comment utiliser:**
       1. Cliquez sur "Créer un groupe"
@@ -358,7 +382,7 @@ x-compose-app:
       4. Commencez à ajouter des dépenses
       5. Vérifiez "Soldes" pour voir qui doit à qui
       -----------------------------
-      Partagez le lien du groupe avec vos amis - ils se connectent avec leur compte du serveur.
+      Partagez le lien du groupe avec vos amis - ils se connectent avec leur compte du serveur (ou le mot de passe de l'app).
   # No `folders:`. Its only candidate, /DATA/AppData/spliit/pgdata, belongs to
   # spliit-db, which starts as root and whose image hands that directory to its
   # own user; chowning it to $PUID would leave the running database unable to

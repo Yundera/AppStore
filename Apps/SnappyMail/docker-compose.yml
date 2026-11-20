@@ -119,7 +119,7 @@ x-compose-app:
       • Contacts with autocomplete, synced with any CardDAV server
       • Shows calendar invitations on the email (no Accept / Decline, no calendar)
       • PGP, S/MIME and Sieve filters built in
-      • Behind your server's single sign-on, admin panel included
+      • Behind your server's login gate, admin panel included
 
       For one inbox over every account, a calendar or AI access, see **Cypht** or **MailHub**.
     fr_fr: &description_fr |
@@ -135,7 +135,7 @@ x-compose-app:
       • Contacts avec autocomplétion, synchronisés avec tout serveur CardDAV
       • Affiche les invitations d'agenda dans le mail (sans Accepter / Refuser, sans agenda)
       • PGP, S/MIME et filtres Sieve intégrés
-      • Derrière la connexion unique de votre serveur, panneau d'administration compris
+      • Derrière la barrière de connexion de votre serveur, panneau d'administration compris
 
       Pour une boîte unique sur tous vos comptes, un agenda ou un accès IA, voir **Cypht** ou **MailHub**.
   developer: SnappyMail
@@ -285,7 +285,8 @@ x-compose-app:
   tips:
     en_us: &tips_en |
       **Signing in**
-      Open the app, sign in with your server account, then log into the webmail with
+      Open the app, sign in with your server account (on a server without single
+      sign-on, with the *App password*), then log into the webmail with
       a mailbox's own address and password (an app password for Gmail).
       Gmail, Yahoo, iCloud and Fastmail addresses work right away.
 
@@ -300,7 +301,8 @@ x-compose-app:
       Baïkal…). Invitations show their details on the email; answering needs a calendar.
     fr_fr: &tips_fr |
       **Connexion**
-      Ouvrez l'app, connectez-vous avec votre compte serveur, puis au webmail avec
+      Ouvrez l'app, connectez-vous avec votre compte serveur (sur un serveur sans
+      connexion unique, avec le mot de passe de l'app), puis au webmail avec
       l'adresse et le mot de passe d'une boîte (un mot de passe d'application pour
       Gmail). Les adresses Gmail, Yahoo, iCloud et Fastmail marchent tout de suite.
 

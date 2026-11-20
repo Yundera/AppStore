@@ -208,7 +208,7 @@ x-casaos:
 
       On start, the app creates its own SSH key in `/DATA/AppData/terminal/ssh/` and adds it to `admin`'s `authorized_keys`, restricted to connections from the server itself.
 
-      Access is protected by the server's single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in server account reaches the shell. You sign in with that same account instead of setting a separate app password.
+      Access is protected by the server's single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in server account reaches the shell. You sign in with that same account instead of setting a separate app password. On a server without single sign-on, the gate asks for the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
       Install it only on a PCS you administer yourself. See rationale.md for the full privilege and mitigation write-up.
   title:
@@ -220,7 +220,7 @@ x-casaos:
 
         - Each session is an SSH login as `admin`, who has passwordless `sudo`, so it can read and change **every** file on the PCS — all of `/DATA` (Documents, Downloads, Media, Gallery, and every other app's data) as well as system files outside `/DATA`.
         - To open that session, the app adds its own key to `admin`'s `authorized_keys` (usable only from the server itself), and its container runs `privileged` in the host's process namespace.
-        - Access is gated by the server's single sign-on (AppShield OIDC) — sign in with your server account, the same login you already use for the server.
+        - Access is gated by the server's single sign-on (AppShield OIDC) — sign in with your server account, the same login you already use for the server. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
         Treat access to this app as equivalent to root SSH access to the server. If you only need to browse or edit files, install **FileBrowser** instead.
   store_app_id: terminal
@@ -266,7 +266,7 @@ x-compose-app:
 
       On start, the app creates its own SSH key in `/DATA/AppData/terminal/ssh/` and adds it to `admin`'s `authorized_keys`, restricted to connections from the server itself.
 
-      Access is protected by the server's single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in server account reaches the shell. You sign in with that same account instead of setting a separate app password.
+      Access is protected by the server's single sign-on: the terminal sits behind the AppShield gate, which registers with the PCS OIDC provider, so only your logged-in server account reaches the shell. You sign in with that same account instead of setting a separate app password. On a server without single sign-on, the gate asks for the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
       Install it only on a PCS you administer yourself. See rationale.md for the full privilege and mitigation write-up.
   developer: tsl0922
@@ -286,7 +286,7 @@ x-compose-app:
 
       - Each session is an SSH login as `admin`, who has passwordless `sudo`, so it can read and change **every** file on the PCS — all of `/DATA` (Documents, Downloads, Media, Gallery, and every other app's data) as well as system files outside `/DATA`.
       - To open that session, the app adds its own key to `admin`'s `authorized_keys` (usable only from the server itself), and its container runs `privileged` in the host's process namespace.
-      - Access is gated by the server's single sign-on (AppShield OIDC) — sign in with your server account, the same login you already use for the server.
+      - Access is gated by the server's single sign-on (AppShield OIDC) — sign in with your server account, the same login you already use for the server. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
       Treat access to this app as equivalent to root SSH access to the server. If you only need to browse or edit files, install **FileBrowser** instead.
   # Tiles in Maison's System grid: a PCS ships with it preinstalled. The grid only —

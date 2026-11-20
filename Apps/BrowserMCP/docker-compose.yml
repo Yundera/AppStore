@@ -215,7 +215,7 @@ x-casaos:
 
         Chromium starts on demand, on the first MCP tool call or browser action, inside a virtual display.
         It is shut down after 2 hours idle and starts again on the next use.
-        The Web UI is protected by your server's single sign-on — you sign in with your existing server account.
+        The Web UI is protected by your server's single sign-on — you sign in with your existing server account. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
         **Web Interface:**
         - **Main UI** — Dashboard with live noVNC browser view, status, and tool information
@@ -233,7 +233,7 @@ x-casaos:
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
         URL below — clients that support OAuth discovery (claude.ai, Claude
         Desktop) register themselves and open a browser for you to approve with
-        your server account (single sign-on).
+        your server account (single sign-on), or with the app password on a server without it.
         ```json
         {
           "mcpServers": {
@@ -279,7 +279,7 @@ x-casaos:
 
         **Security:**
         - The Web UI, live noVNC viewer, and `/api` endpoints sit behind your server's
-          single sign-on.
+          single sign-on (or the app password on a server without it).
         - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
           public URL is reachable without a credential. Only the in-network address
           `http://browsermcp-backend:9746/mcp` (Option 2) is unauthenticated, and it
@@ -287,7 +287,7 @@ x-casaos:
       zh_cn: |
         **快速开始**
 
-        Chromium 在虚拟显示中按需启动：第一次 MCP 工具调用或浏览器操作时启动，空闲 2 小时后关闭，下次使用时再次启动。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。
+        Chromium 在虚拟显示中按需启动：第一次 MCP 工具调用或浏览器操作时启动，空闲 2 小时后关闭，下次使用时再次启动。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。未启用单点登录的服务器上，请使用 Maison 首次打开时显示的应用密码（也可在磁贴菜单的 **凭据** 中找到）。
 
         **Web 界面：**
         - **主 UI** — 带有实时 noVNC 浏览器视图、状态和工具信息的仪表板
@@ -299,7 +299,7 @@ x-casaos:
         **选项 1：公共 URL（OAuth 2.1）**
 
         `/mcp` 端点受 OAuth 2.1 保护。将客户端指向下面的 URL——支持 OAuth 发现的客户端
-        （claude.ai、Claude Desktop）会自动注册并打开浏览器，使用您服务器的账号（单点登录）授权。
+        （claude.ai、Claude Desktop）会自动注册并打开浏览器，使用您服务器的账号（单点登录）授权；未启用单点登录的服务器上则使用应用密码授权。
         ```json
         {
           "mcpServers": {
@@ -343,7 +343,7 @@ x-casaos:
 
         Chromium은 가상 디스플레이 안에서 필요할 때 시작됩니다. 첫 MCP 도구 호출이나 브라우저 동작 때 실행되고,
         2시간 동안 사용하지 않으면 종료되며, 다음에 사용할 때 다시 시작됩니다.
-        Web UI는 서버의 싱글 사인온(SSO)으로 보호됩니다 — 기존 서버 계정으로 로그인하세요.
+        Web UI는 서버의 싱글 사인온(SSO)으로 보호됩니다 — 기존 서버 계정으로 로그인하세요. 싱글 사인온이 없는 서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의 **Credentials**에도 있습니다).
 
         **웹 인터페이스:**
         - **메인 UI** — 실시간 noVNC 브라우저 뷰, 상태, 도구 정보가 포함된 대시보드
@@ -359,7 +359,7 @@ x-casaos:
 
         `/mcp` 엔드포인트는 OAuth 2.1로 보호됩니다. 아래 URL을 클라이언트에 설정하세요.
         OAuth 디스커버리를 지원하는 클라이언트(claude.ai, Claude Desktop)는 스스로 등록한 뒤
-        브라우저를 열어 서버 계정(싱글 사인온)으로 승인하게 합니다.
+        브라우저를 열어 서버 계정(싱글 사인온)으로, 싱글 사인온이 없는 서버에서는 앱 비밀번호로 승인하게 합니다.
         ```json
         {
           "mcpServers": {
@@ -402,7 +402,7 @@ x-casaos:
         | 에뮬레이션 | `emulate` |
 
         **보안:**
-        - Web UI, 실시간 noVNC 뷰어, `/api` 엔드포인트는 서버의 싱글 사인온 뒤에 있습니다.
+        - Web UI, 실시간 noVNC 뷰어, `/api` 엔드포인트는 서버의 싱글 사인온(싱글 사인온이 없는 서버에서는 앱 비밀번호) 뒤에 있습니다.
         - `/mcp`는 OAuth 2.1 Bearer 토큰으로 따로 보호되므로, 공개 URL의 어떤 것도 자격 증명 없이는
           접근할 수 없습니다. 인증이 없는 주소는 네트워크 내부 주소
           `http://browsermcp-backend:9746/mcp`(옵션 2)뿐이며, `pcs` Docker 네트워크 밖으로는 공개되지 않습니다.
@@ -513,7 +513,7 @@ x-compose-app:
 
       Chromium starts on demand, on the first MCP tool call or browser action, inside a virtual display.
       It is shut down after 2 hours idle and starts again on the next use.
-      The Web UI is protected by your server's single sign-on — you sign in with your existing server account.
+      The Web UI is protected by your server's single sign-on — you sign in with your existing server account. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
       **Web Interface:**
       - **Main UI** — Dashboard with live noVNC browser view, status, and tool information
@@ -531,7 +531,7 @@ x-compose-app:
       The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
       URL below — clients that support OAuth discovery (claude.ai, Claude
       Desktop) register themselves and open a browser for you to approve with
-      your server account (single sign-on).
+      your server account (single sign-on), or with the app password on a server without it.
       ```json
       {
         "mcpServers": {
@@ -577,7 +577,7 @@ x-compose-app:
 
       **Security:**
       - The Web UI, live noVNC viewer, and `/api` endpoints sit behind your server's
-        single sign-on.
+        single sign-on (or the app password on a server without it).
       - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
         public URL is reachable without a credential. Only the in-network address
         `http://browsermcp-backend:9746/mcp` (Option 2) is unauthenticated, and it
@@ -585,7 +585,7 @@ x-compose-app:
     zh_cn: |
       **快速开始**
 
-      Chromium 在虚拟显示中按需启动：第一次 MCP 工具调用或浏览器操作时启动，空闲 2 小时后关闭，下次使用时再次启动。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。
+      Chromium 在虚拟显示中按需启动：第一次 MCP 工具调用或浏览器操作时启动，空闲 2 小时后关闭，下次使用时再次启动。Web 界面受您服务器的单点登录 (SSO) 保护——使用您现有的服务器账号登录即可。未启用单点登录的服务器上，请使用 Maison 首次打开时显示的应用密码（也可在磁贴菜单的 **凭据** 中找到）。
 
       **Web 界面：**
       - **主 UI** — 带有实时 noVNC 浏览器视图、状态和工具信息的仪表板
@@ -597,7 +597,7 @@ x-compose-app:
       **选项 1：公共 URL（OAuth 2.1）**
 
       `/mcp` 端点受 OAuth 2.1 保护。将客户端指向下面的 URL——支持 OAuth 发现的客户端
-      （claude.ai、Claude Desktop）会自动注册并打开浏览器，使用您服务器的账号（单点登录）授权。
+      （claude.ai、Claude Desktop）会自动注册并打开浏览器，使用您服务器的账号（单点登录）授权；未启用单点登录的服务器上则使用应用密码授权。
       ```json
       {
         "mcpServers": {
@@ -641,7 +641,7 @@ x-compose-app:
 
       Chromium은 가상 디스플레이 안에서 필요할 때 시작됩니다. 첫 MCP 도구 호출이나 브라우저 동작 때 실행되고,
       2시간 동안 사용하지 않으면 종료되며, 다음에 사용할 때 다시 시작됩니다.
-      Web UI는 서버의 싱글 사인온(SSO)으로 보호됩니다 — 기존 서버 계정으로 로그인하세요.
+      Web UI는 서버의 싱글 사인온(SSO)으로 보호됩니다 — 기존 서버 계정으로 로그인하세요. 싱글 사인온이 없는 서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의 **Credentials**에도 있습니다).
 
       **웹 인터페이스:**
       - **메인 UI** — 실시간 noVNC 브라우저 뷰, 상태, 도구 정보가 포함된 대시보드
@@ -657,7 +657,7 @@ x-compose-app:
 
       `/mcp` 엔드포인트는 OAuth 2.1로 보호됩니다. 아래 URL을 클라이언트에 설정하세요.
       OAuth 디스커버리를 지원하는 클라이언트(claude.ai, Claude Desktop)는 스스로 등록한 뒤
-      브라우저를 열어 서버 계정(싱글 사인온)으로 승인하게 합니다.
+      브라우저를 열어 서버 계정(싱글 사인온)으로, 싱글 사인온이 없는 서버에서는 앱 비밀번호로 승인하게 합니다.
       ```json
       {
         "mcpServers": {
@@ -700,7 +700,7 @@ x-compose-app:
       | 에뮬레이션 | `emulate` |
 
       **보안:**
-      - Web UI, 실시간 noVNC 뷰어, `/api` 엔드포인트는 서버의 싱글 사인온 뒤에 있습니다.
+      - Web UI, 실시간 noVNC 뷰어, `/api` 엔드포인트는 서버의 싱글 사인온(싱글 사인온이 없는 서버에서는 앱 비밀번호) 뒤에 있습니다.
       - `/mcp`는 OAuth 2.1 Bearer 토큰으로 따로 보호되므로, 공개 URL의 어떤 것도 자격 증명 없이는
         접근할 수 없습니다. 인증이 없는 주소는 네트워크 내부 주소
         `http://browsermcp-backend:9746/mcp`(옵션 2)뿐이며, `pcs` Docker 네트워크 밖으로는 공개되지 않습니다.

@@ -165,8 +165,10 @@ x-casaos:
       see, restore from, and empty yourself. They are cleared automatically after
       30 days.
 
-      🔒 **Signed in already.** Files has no separate login — it uses your server
-      account, like the rest of your PCS. There is no sharing and no second set of
+      🔒 **No separate login.** Files has no login of its own — it uses your server
+      account (single sign-on), like the rest of your PCS. On a server without
+      single sign-on, use the app password Maison shows on first open (also in the
+      tile menu under **Credentials**). There is no sharing and no second set of
       users to manage.
 
       ⚠️ **It can see everything.** That includes the data folders of your other
@@ -192,9 +194,12 @@ x-casaos:
       corbeille que vous pouvez consulter, restaurer et vider vous-même. Ils sont
       effacés automatiquement au bout de 30 jours.
 
-      🔒 **Déjà connecté.** Files n'a pas de connexion séparée : il utilise le
-      compte de votre serveur, comme le reste de votre PCS. Il n'y a ni partage ni
-      second jeu d'utilisateurs à gérer.
+      🔒 **Pas de connexion séparée.** Files n'a pas de connexion propre : il utilise
+      le compte de votre serveur (authentification unique), comme le reste de votre
+      PCS. Sur un serveur sans authentification unique, utilisez le mot de passe de
+      l'app que Maison affiche à la première ouverture (aussi dans le menu de la
+      tuile, sous **Credentials**). Il n'y a ni partage ni second jeu d'utilisateurs
+      à gérer.
 
       ⚠️ **Il voit tout.** Y compris les dossiers de données de vos autres
       applications. Supprimer ici la base de données d'une application la cassera,
@@ -217,8 +222,9 @@ x-casaos:
       🗑️ **删除不是永久的。** 删除的文件会进入回收站，你可以查看、还原，也可以自己
       清空。它们会在 30 天后自动清除。
 
-      🔒 **已经登录。** Files 没有单独的登录页，它使用你的服务器账户，和 PCS 的其余
-      部分一样。没有分享功能，也不需要管理第二套用户。
+      🔒 **没有单独的登录。** Files 没有单独的登录页，它使用你的服务器账户（统一登录），
+      和 PCS 的其余部分一样。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的
+      应用密码（也可在磁贴菜单的 **Credentials** 中找到）。没有分享功能，也不需要管理第二套用户。
 
       ⚠️ **它能看到一切。** 包括其他应用的数据目录。在这里删除某个应用的数据库会让
       那个应用无法运行，请像在终端里一样小心。
@@ -240,13 +246,16 @@ x-casaos:
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
         `/DATA/AppData` — the last one holding the databases, configuration and
         secrets of every other app installed on this server. Anyone who can sign in
-        to your server account can browse, edit and delete all of it.
+        to your server account, or with the app password on a server without single
+        sign-on, can browse, edit and delete all of it.
 
         Sign-in
 
-        Files is protected by your server's single sign-on — the same account you
-        use for the dashboard. Open the app and you are already in. It has no
-        login of its own, no second password and no sharing.
+        Files is protected by your server account (single sign-on) — the same
+        account you use for the dashboard. Open the app and you are already in. On a
+        server without single sign-on, use the app password Maison shows on first
+        open (also in the tile menu under **Credentials**). It has no login of its
+        own and no sharing; with single sign-on, no second password is needed.
 
         Replacing FileBrowser
 
@@ -262,15 +271,18 @@ x-casaos:
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
         `/DATA/AppData`, qui contient les bases de données, configurations et
         secrets de toutes les autres applications du serveur. Toute personne
-        pouvant se connecter à votre compte serveur peut parcourir, modifier et
+        pouvant se connecter à votre compte serveur, ou avec le mot de passe de l'app
+        sur un serveur sans authentification unique, peut parcourir, modifier et
         supprimer l'ensemble.
 
         Connexion
 
-        Files est protégé par l'authentification unique de votre serveur — le même
-        compte que pour le tableau de bord. Vous ouvrez l'application et vous y
-        êtes déjà. Elle n'a ni connexion propre, ni second mot de passe, ni
-        partage.
+        Files est protégé par votre compte serveur (authentification unique) — le
+        même compte que pour le tableau de bord. Vous ouvrez l'application et vous y
+        êtes déjà. Sur un serveur sans authentification unique, utilisez le mot de
+        passe de l'app que Maison affiche à la première ouverture (aussi dans le menu
+        de la tuile, sous **Credentials**). Elle n'a ni connexion propre, ni partage ;
+        avec l'authentification unique, aucun second mot de passe n'est nécessaire.
 
         Remplacement de FileBrowser
 
@@ -285,13 +297,15 @@ x-casaos:
 
         Files 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
         `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
-        数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户的人都可以浏览、
-        编辑和删除这些内容。
+        数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户的人（在没有统一登录
+        的服务器上则是持有应用密码的人）都可以浏览、编辑和删除这些内容。
 
         登录方式
 
-        Files 由服务器的统一登录保护，与你登录控制面板所用的是同一个账户。打开应用
-        即已登录。它没有自己的登录页、没有第二个密码，也没有分享功能。
+        Files 由你的服务器账户（统一登录）保护，与你登录控制面板所用的是同一个账户。
+        打开应用即已登录。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的应用
+        密码（也可在磁贴菜单的 **Credentials** 中找到）。它没有自己的登录页，也没有分享
+        功能；启用统一登录时无需第二个密码。
 
         替代 FileBrowser
 
@@ -338,9 +352,9 @@ x-compose-app:
     fr_fr: Vos fichiers, dans votre navigateur. Parcourir, éditer et téléverser sans quitter la page.
     zh_cn: 在浏览器里管理你的文件：浏览、编辑、上传，无需离开页面。
   description:
-    en_us: "\U0001F4C1 **What is Files?**\n\n**Files** is the file manager for your Personal Cloud Server. It gives you\neverything under `/DATA` — Documents, Downloads, Media and your app data —\nin one browser window that looks and works like the rest of your server.\n\n✅ **What you can do**\n• Browse in a grid or a list, with image thumbnails\n• Upload files *and whole folders* by dragging them in — uploads resume if your connection drops\n• Create, rename, copy, move and delete\n• Edit text, YAML and Markdown in place, with a live Markdown preview\n• Preview images, video, audio and PDFs without downloading them\n• Search by name inside any folder\n\n\U0001F5D1️ **Deleting is not permanent.** Files you delete move to a Trash you can\nsee, restore from, and empty yourself. They are cleared automatically after\n30 days.\n\n\U0001F512 **Signed in already.** Files has no separate login — it uses your server\naccount, like the rest of your PCS. There is no sharing and no second set of\nusers to manage.\n\n⚠️ **It can see everything.** That includes the data folders of your other\napps. Deleting an app's database here will break that app, so take the same\ncare you would in a terminal.\n"
-    fr_fr: "\U0001F4C1 **Qu'est-ce que Files ?**\n\n**Files** est le gestionnaire de fichiers de votre serveur cloud personnel.\nIl vous donne accès à tout ce qui se trouve sous `/DATA` — Documents,\nTéléchargements, Médias et les données de vos applications — dans une seule\nfenêtre de navigateur, dans le même style que le reste de votre serveur.\n\n✅ **Ce que vous pouvez faire**\n• Naviguer en grille ou en liste, avec des vignettes d'images\n• Téléverser des fichiers *et des dossiers entiers* par glisser-déposer — les envois reprennent si la connexion est coupée\n• Créer, renommer, copier, déplacer et supprimer\n• Éditer du texte, du YAML et du Markdown sur place, avec un aperçu Markdown en direct\n• Prévisualiser images, vidéos, audio et PDF sans les télécharger\n• Rechercher par nom dans n'importe quel dossier\n\n\U0001F5D1️ **Supprimer n'est pas définitif.** Les fichiers supprimés vont dans une\ncorbeille que vous pouvez consulter, restaurer et vider vous-même. Ils sont\neffacés automatiquement au bout de 30 jours.\n\n\U0001F512 **Déjà connecté.** Files n'a pas de connexion séparée : il utilise le\ncompte de votre serveur, comme le reste de votre PCS. Il n'y a ni partage ni\nsecond jeu d'utilisateurs à gérer.\n\n⚠️ **Il voit tout.** Y compris les dossiers de données de vos autres\napplications. Supprimer ici la base de données d'une application la cassera,\nalors soyez aussi prudent que dans un terminal.\n"
-    zh_cn: "\U0001F4C1 **Files 是什么？**\n\n**Files** 是你的个人云服务器的文件管理器。它把 `/DATA` 下的一切——Documents、\nDownloads、Media 以及你的应用数据——集中在一个浏览器窗口里，外观和操作都与\n服务器的其他部分一致。\n\n✅ **你可以做什么**\n• 以网格或列表浏览，图片带缩略图\n• 拖入文件*或整个文件夹*上传——连接中断后可续传\n• 新建、重命名、复制、移动和删除\n• 就地编辑文本、YAML 和 Markdown，并实时预览 Markdown\n• 无需下载即可预览图片、视频、音频和 PDF\n• 在任意文件夹内按名称搜索\n\n\U0001F5D1️ **删除不是永久的。** 删除的文件会进入回收站，你可以查看、还原，也可以自己\n清空。它们会在 30 天后自动清除。\n\n\U0001F512 **已经登录。** Files 没有单独的登录页，它使用你的服务器账户，和 PCS 的其余\n部分一样。没有分享功能，也不需要管理第二套用户。\n\n⚠️ **它能看到一切。** 包括其他应用的数据目录。在这里删除某个应用的数据库会让\n那个应用无法运行，请像在终端里一样小心。\n"
+    en_us: "\U0001F4C1 **What is Files?**\n\n**Files** is the file manager for your Personal Cloud Server. It gives you\neverything under `/DATA` — Documents, Downloads, Media and your app data —\nin one browser window that looks and works like the rest of your server.\n\n✅ **What you can do**\n• Browse in a grid or a list, with image thumbnails\n• Upload files *and whole folders* by dragging them in — uploads resume if your connection drops\n• Create, rename, copy, move and delete\n• Edit text, YAML and Markdown in place, with a live Markdown preview\n• Preview images, video, audio and PDFs without downloading them\n• Search by name inside any folder\n\n\U0001F5D1️ **Deleting is not permanent.** Files you delete move to a Trash you can\nsee, restore from, and empty yourself. They are cleared automatically after\n30 days.\n\n\U0001F512 **No separate login.** Files has no login of its own — it uses your server\naccount (single sign-on), like the rest of your PCS. On a server without\nsingle sign-on, use the app password Maison shows on first open (also in the\ntile menu under **Credentials**). There is no sharing and no second set of\nusers to manage.\n\n⚠️ **It can see everything.** That includes the data folders of your other\napps. Deleting an app's database here will break that app, so take the same\ncare you would in a terminal.\n"
+    fr_fr: "\U0001F4C1 **Qu'est-ce que Files ?**\n\n**Files** est le gestionnaire de fichiers de votre serveur cloud personnel.\nIl vous donne accès à tout ce qui se trouve sous `/DATA` — Documents,\nTéléchargements, Médias et les données de vos applications — dans une seule\nfenêtre de navigateur, dans le même style que le reste de votre serveur.\n\n✅ **Ce que vous pouvez faire**\n• Naviguer en grille ou en liste, avec des vignettes d'images\n• Téléverser des fichiers *et des dossiers entiers* par glisser-déposer — les envois reprennent si la connexion est coupée\n• Créer, renommer, copier, déplacer et supprimer\n• Éditer du texte, du YAML et du Markdown sur place, avec un aperçu Markdown en direct\n• Prévisualiser images, vidéos, audio et PDF sans les télécharger\n• Rechercher par nom dans n'importe quel dossier\n\n\U0001F5D1️ **Supprimer n'est pas définitif.** Les fichiers supprimés vont dans une\ncorbeille que vous pouvez consulter, restaurer et vider vous-même. Ils sont\neffacés automatiquement au bout de 30 jours.\n\n\U0001F512 **Pas de connexion séparée.** Files n'a pas de connexion propre : il utilise\nle compte de votre serveur (authentification unique), comme le reste de votre\nPCS. Sur un serveur sans authentification unique, utilisez le mot de passe de\nl'app que Maison affiche à la première ouverture (aussi dans le menu de la\ntuile, sous **Credentials**). Il n'y a ni partage ni second jeu d'utilisateurs\nà gérer.\n\n⚠️ **Il voit tout.** Y compris les dossiers de données de vos autres\napplications. Supprimer ici la base de données d'une application la cassera,\nalors soyez aussi prudent que dans un terminal.\n"
+    zh_cn: "\U0001F4C1 **Files 是什么？**\n\n**Files** 是你的个人云服务器的文件管理器。它把 `/DATA` 下的一切——Documents、\nDownloads、Media 以及你的应用数据——集中在一个浏览器窗口里，外观和操作都与\n服务器的其他部分一致。\n\n✅ **你可以做什么**\n• 以网格或列表浏览，图片带缩略图\n• 拖入文件*或整个文件夹*上传——连接中断后可续传\n• 新建、重命名、复制、移动和删除\n• 就地编辑文本、YAML 和 Markdown，并实时预览 Markdown\n• 无需下载即可预览图片、视频、音频和 PDF\n• 在任意文件夹内按名称搜索\n\n\U0001F5D1️ **删除不是永久的。** 删除的文件会进入回收站，你可以查看、还原，也可以自己\n清空。它们会在 30 天后自动清除。\n\n\U0001F512 **没有单独的登录。** Files 没有单独的登录页，它使用你的服务器账户（统一登录），\n和 PCS 的其余部分一样。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的\n应用密码（也可在磁贴菜单的 **Credentials** 中找到）。没有分享功能，也不需要管理第二套用户。\n\n⚠️ **它能看到一切。** 包括其他应用的数据目录。在这里删除某个应用的数据库会让\n那个应用无法运行，请像在终端里一样小心。\n"
   developer: Yundera
   category: Cloud
   icon: icon.png
@@ -359,13 +373,16 @@ x-compose-app:
       `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
       `/DATA/AppData` — the last one holding the databases, configuration and
       secrets of every other app installed on this server. Anyone who can sign in
-      to your server account can browse, edit and delete all of it.
+      to your server account, or with the app password on a server without single
+      sign-on, can browse, edit and delete all of it.
 
       Sign-in
 
-      Files is protected by your server's single sign-on — the same account you
-      use for the dashboard. Open the app and you are already in. It has no
-      login of its own, no second password and no sharing.
+      Files is protected by your server account (single sign-on) — the same
+      account you use for the dashboard. Open the app and you are already in. On a
+      server without single sign-on, use the app password Maison shows on first
+      open (also in the tile menu under **Credentials**). It has no login of its
+      own and no sharing; with single sign-on, no second password is needed.
 
       Replacing FileBrowser
 
@@ -381,15 +398,18 @@ x-compose-app:
       `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
       `/DATA/AppData`, qui contient les bases de données, configurations et
       secrets de toutes les autres applications du serveur. Toute personne
-      pouvant se connecter à votre compte serveur peut parcourir, modifier et
+      pouvant se connecter à votre compte serveur, ou avec le mot de passe de l'app
+      sur un serveur sans authentification unique, peut parcourir, modifier et
       supprimer l'ensemble.
 
       Connexion
 
-      Files est protégé par l'authentification unique de votre serveur — le même
-      compte que pour le tableau de bord. Vous ouvrez l'application et vous y
-      êtes déjà. Elle n'a ni connexion propre, ni second mot de passe, ni
-      partage.
+      Files est protégé par votre compte serveur (authentification unique) — le
+      même compte que pour le tableau de bord. Vous ouvrez l'application et vous y
+      êtes déjà. Sur un serveur sans authentification unique, utilisez le mot de
+      passe de l'app que Maison affiche à la première ouverture (aussi dans le menu
+      de la tuile, sous **Credentials**). Elle n'a ni connexion propre, ni partage ;
+      avec l'authentification unique, aucun second mot de passe n'est nécessaire.
 
       Remplacement de FileBrowser
 
@@ -404,13 +424,15 @@ x-compose-app:
 
       Files 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
       `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
-      数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户的人都可以浏览、
-      编辑和删除这些内容。
+      数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户的人（在没有统一登录
+      的服务器上则是持有应用密码的人）都可以浏览、编辑和删除这些内容。
 
       登录方式
 
-      Files 由服务器的统一登录保护，与你登录控制面板所用的是同一个账户。打开应用
-      即已登录。它没有自己的登录页、没有第二个密码，也没有分享功能。
+      Files 由你的服务器账户（统一登录）保护，与你登录控制面板所用的是同一个账户。
+      打开应用即已登录。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的应用
+      密码（也可在磁贴菜单的 **Credentials** 中找到）。它没有自己的登录页，也没有分享
+      功能；启用统一登录时无需第二个密码。
 
       替代 FileBrowser
 

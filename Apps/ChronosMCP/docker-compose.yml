@@ -195,7 +195,7 @@ x-casaos:
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
         URL below — clients that support OAuth discovery (claude.ai, Claude
         Desktop) register themselves and open a browser for you to approve with
-        your server account (single sign-on).
+        your server account (single sign-on), or with the app password on a server without it.
         ```json
         {
           "mcpServers": {
@@ -266,7 +266,7 @@ x-casaos:
         **选项 1：公共 URL（OAuth）**
 
         `/mcp` 端点受 OAuth 2.1 保护。将客户端指向以下 URL — 支持 OAuth 发现的客户端
-        （claude.ai、Claude Desktop）会自动注册并打开浏览器，让您使用服务器账号（单点登录）授权。
+        （claude.ai、Claude Desktop）会自动注册并打开浏览器，让您使用服务器账号（单点登录）授权；未启用单点登录的服务器上则使用应用密码授权。
         ```json
         {
           "mcpServers": {
@@ -405,7 +405,7 @@ x-compose-app:
       The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
       URL below — clients that support OAuth discovery (claude.ai, Claude
       Desktop) register themselves and open a browser for you to approve with
-      your server account (single sign-on).
+      your server account (single sign-on), or with the app password on a server without it.
       ```json
       {
         "mcpServers": {
@@ -476,7 +476,7 @@ x-compose-app:
       **选项 1：公共 URL（OAuth）**
 
       `/mcp` 端点受 OAuth 2.1 保护。将客户端指向以下 URL — 支持 OAuth 发现的客户端
-      （claude.ai、Claude Desktop）会自动注册并打开浏览器，让您使用服务器账号（单点登录）授权。
+      （claude.ai、Claude Desktop）会自动注册并打开浏览器，让您使用服务器账号（单点登录）授权；未启用单点登录的服务器上则使用应用密码授权。
       ```json
       {
         "mcpServers": {

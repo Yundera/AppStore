@@ -108,11 +108,11 @@ x-casaos:
       • Multi-device sync, with optional end-to-end encryption
       • Your data stays on your server
 
-      Access is protected by your server's single sign-on. On first open, Actual also asks you to set a server password of its own.
+      Access is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**). On first open, Actual also asks you to set a server password of its own.
   tips:
     before_install:
       en_us: |
-        **Sign-in:** Actual Budget is protected by your server's single sign-on.
+        **Sign-in:** Actual Budget is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
         **First open:** Actual asks you to **set a server password**. Choose one and keep it
         safe - Actual asks for it again when you open the budget from a new browser or device.
@@ -146,7 +146,7 @@ x-compose-app:
       • Multi-device sync, with optional end-to-end encryption
       • Your data stays on your server
 
-      Access is protected by your server's single sign-on. On first open, Actual also asks you to set a server password of its own.
+      Access is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**). On first open, Actual also asks you to set a server password of its own.
   developer: Actual Budget
   category: Finance
   icon: icon.png
@@ -158,7 +158,7 @@ x-compose-app:
     - arm64
   tips:
     en_us: |
-      **Sign-in:** Actual Budget is protected by your server's single sign-on.
+      **Sign-in:** Actual Budget is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
       **First open:** Actual asks you to **set a server password**. Choose one and keep it
       safe - Actual asks for it again when you open the budget from a new browser or device.

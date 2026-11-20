@@ -202,7 +202,7 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Sign-in:** Readeck is protected by your server's single sign-on.
+        **Sign-in:** Readeck is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
         -----------------------------
         **First visit:** Readeck asks you to create its first user - choose a username,
         an email address and a password. That user is Readeck's administrator, and you
@@ -259,7 +259,7 @@ x-compose-app:
     - arm64
   tips:
     en_us: |
-      **Sign-in:** Readeck is protected by your server's single sign-on.
+      **Sign-in:** Readeck is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
       -----------------------------
       **First visit:** Readeck asks you to create its first user - choose a username,
       an email address and a password. That user is Readeck's administrator, and you
