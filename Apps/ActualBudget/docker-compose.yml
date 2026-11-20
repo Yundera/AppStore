@@ -8,7 +8,7 @@ x-logging: &logging
 
 services:
   actualbudget-proxy:
-    image: ghcr.io/nsl-sh/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.2.0
     container_name: actualbudget
     # OIDC identity: the auth-registrar attests this app's name via the container's
     # PTR record, so the hostname must equal the app name.
@@ -26,6 +26,9 @@ services:
       OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
       # Break-glass login while SSO is unavailable; the only login without SSO.
       PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      # Empty elsewhere, where the gate falls back to REDIRECT_HOST_SUFFIXES.
+      PUBLIC_URL: "${APP_URLS:-}"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
     expose:
       - 80
@@ -175,8 +178,8 @@ x-compose-app:
       username: admin
       password: ${APPSHIELD_PASSWORD}
       note:
-        en_us: Signs in when single sign-on is unavailable. Day to day, use single sign-on. Actual's own server password is the one you set on first open.
-      # Behind SSO nobody needs it on the first click: tile menu only.
+        en_us: Signs in to this app. On a server with single sign-on, use that instead: this password then works only while single sign-on is unavailable. Actual's own server password is the one you set on first open.
+      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
       prompt: false
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:

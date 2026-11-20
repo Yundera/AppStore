@@ -77,7 +77,7 @@ services:
 
   # ── the only public surface ───────────────────────────────────────────────────────────
   lamplighter:
-    image: ghcr.io/nsl-sh/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.2.0
     # OIDC identity: the auth-registrar attests the app name through this container's PTR
     # record, so container_name, hostname and the compose name must all be `lamplighter`.
     container_name: lamplighter
@@ -102,6 +102,9 @@ services:
       # Without a value (a platform that ignores x-compose-app) the gate generates
       # one and prints it in its log.
       PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      # Empty elsewhere, where the gate falls back to REDIRECT_HOST_SUFFIXES.
+      PUBLIC_URL: "${APP_URLS:-}"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
       # No ALLOWED_PATHS: forge push webhooks would be a machine path, and the store opens
       # none through the gate. Lamplighter polls each remote instead (Settings → Schedule).
@@ -130,8 +133,8 @@ x-compose-app:
       username: admin
       password: ${APPSHIELD_PASSWORD}
       note:
-        en_us: Signs in when single sign-on is unavailable. Day to day, use single sign-on.
-      # Behind SSO nobody needs it on the first click: tile menu only.
+        en_us: Signs in to this app. On a server with single sign-on, use that instead: this password then works only while single sign-on is unavailable.
+      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
       prompt: false
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:

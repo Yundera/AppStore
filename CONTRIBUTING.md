@@ -392,16 +392,22 @@ With an AppShield gate, the router goes where its job is:
     never runs open) protects the app with its password instead;
   - `PASSWORD: "${APPSHIELD_PASSWORD:-}"`, with `APPSHIELD_PASSWORD: password:24` in
     `x-compose-app.secrets` and a `credentials` entry for it (`username: admin`,
-    `prompt: false` so it stays in the tile menu, `change: {apply: env}`). It is the
+    `prompt: false`: tile menu only where the box has SSO, shown on first open where it
+    has none (Maison 1.1.104+), `change: {apply: env}`). It is the
     break-glass login while SSO is unavailable and the only login without SSO;
-  - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT` and
-    `REDIRECT_HOST_SUFFIXES` are set, the last as `"${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"` —
-    the primary domain only. The registrar decides every host the app is reached on; this
-    names the canonical one, which the gate uses as its OAuth issuer and its fallback login
-    host. Listing the platform's other zones (`nip.io`, `sslip.io`) is a guess that goes
-    stale: a gate older than 2.0.10 registers exactly that list, and one host the registrar
-    no longer allows fails the whole login;
-  - the AppShield image is pinned;
+  - `BACKEND_HOST`, `BACKEND_PORT`, `LISTEN_PORT`, `PUBLIC_URL` and
+    `REDIRECT_HOST_SUFFIXES` are set, as `PUBLIC_URL: "${APP_URLS:-}"` and
+    `REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"`. `APP_URLS` is every
+    address Maison serves the app at, primary first: dot and dash names, aliases, and the
+    `http://<ip>:<port>` of a box without a domain. With it, the gate keeps a user on the
+    address they opened, and with the box's own provider (`OIDC_ISSUER_URL`) it builds callbacks
+    the provider can match. Its first entry is the canonical one: the fallback login host, and
+    on a gate's first boot its OAuth issuer (AppShield 4.2 keeps an issuer it has recorded as
+    long as it is still listed). `REDIRECT_HOST_SUFFIXES` is the fallback where `APP_URLS` is
+    unset (CasaOS). Never list the platform's zones by hand (`nip.io`, `sslip.io`): the list
+    goes stale, and one host the registrar no longer allows fails the whole login;
+  - the AppShield image is pinned, at 4.2.0 or later (4.1 gates on one host and different
+    ports sign each other out);
   - no `AUTH_HASH`, `?hash=`, or `CREDENTIAL_VALIDATE_URL` appears;
   - a machine/API path is gated by `OAUTH_RESOURCE`, never opened by `ALLOWED_PATHS`.
 
