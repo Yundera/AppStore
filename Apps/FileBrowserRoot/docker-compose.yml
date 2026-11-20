@@ -364,7 +364,7 @@ x-compose-app:
       username: admin
       password: ${APPSHIELD_PASSWORD}
       note:
-        en_us: Signs in to this app. On a server with single sign-on, use that instead: this password then works only while single sign-on is unavailable.
+        en_us: Signs in to this app. On a server with single sign-on, use that instead. This password then works only while single sign-on is unavailable.
       # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
       prompt: false
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
