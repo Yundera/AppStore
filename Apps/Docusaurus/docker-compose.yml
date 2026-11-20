@@ -106,7 +106,7 @@ x-casaos:
     before_install:
       en_us: |
         A new Docusaurus site is generated and built on first install, then
-        served read-only by Nginx behind the app's SSO gate.
+        served read-only by Nginx behind the app's login gate (single sign-on, or the app password on a server without it).
 
         Your content lives on the server at /DATA/AppData/docusaurus/src/
         (Markdown pages under docs/); the published HTML lives at
@@ -167,7 +167,7 @@ x-compose-app:
   tips:
     en_us: |
       A new Docusaurus site is generated and built on first install, then
-      served read-only by Nginx behind the app's SSO gate.
+      served read-only by Nginx behind the app's login gate (single sign-on, or the app password on a server without it).
 
       Your content lives on the server at /DATA/AppData/docusaurus/src/
       (Markdown pages under docs/); the published HTML lives at

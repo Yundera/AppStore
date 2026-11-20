@@ -203,10 +203,11 @@ x-casaos:
       en_us: |
         Sign-in
 
-        FileBrowser (root) is protected by your server's single sign-on (SSO) - the
+        FileBrowser (root) is protected by your server account (single sign-on) - the
         same account you use for the dashboard. It reuses that account instead of a
         password or login form of its own: open the app and you are already in, as
-        its administrator.
+        its administrator. On a server without single sign-on, use the app password
+        Maison shows on first open (also in the tile menu under **Credentials**).
 
         What this app can reach
 
@@ -235,9 +236,11 @@ x-casaos:
       ko_kr: |
         로그인
 
-        FileBrowser (root)는 서버의 통합 로그인(SSO)으로 보호됩니다. 대시보드에서 사용하는
+        FileBrowser (root)는 서버 계정(통합 로그인)으로 보호됩니다. 대시보드에서 사용하는
         것과 같은 계정이며, 별도의 비밀번호나 자체 로그인 화면 대신 그 계정을 그대로
-        사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다.
+        사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다. 통합 로그인이 없는 서버에서는
+        Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의 **Credentials**에서도
+        확인할 수 있습니다).
 
         이 앱이 접근할 수 있는 범위
 
@@ -263,9 +266,10 @@ x-casaos:
       zh_cn: |
         登录方式
 
-        FileBrowser（root）由服务器的统一登录（SSO）保护，与你登录控制面板所用的是同一个
+        FileBrowser（root）由你的服务器账户（统一登录）保护，与你登录控制面板所用的是同一个
         账户。它直接沿用该账户，而不是单独的密码或自己的登录页面：打开应用即已以管理员
-        身份登录。
+        身份登录。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的应用密码（也可在
+        磁贴菜单的 **Credentials** 中找到）。
 
         此应用可以访问的范围
 
@@ -288,10 +292,12 @@ x-casaos:
       fr_fr: |
         Connexion
 
-        FileBrowser (root) est protégé par l'authentification unique (SSO) de votre
-        serveur — le même compte que pour le tableau de bord. L'application réutilise ce
+        FileBrowser (root) est protégé par votre compte serveur (authentification unique)
+        — le même compte que pour le tableau de bord. L'application réutilise ce
         compte plutôt qu'un mot de passe ou un formulaire de connexion qui lui seraient
-        propres : vous l'ouvrez et vous y êtes déjà, en tant qu'administrateur.
+        propres : vous l'ouvrez et vous y êtes déjà, en tant qu'administrateur. Sur un
+        serveur sans authentification unique, utilisez le mot de passe de l'app que Maison
+        affiche à la première ouverture (aussi dans le menu de la tuile, sous **Credentials**).
 
         Ce à quoi cette application a accès
 
@@ -321,10 +327,12 @@ x-casaos:
       es_es: |
         Inicio de sesión
 
-        FileBrowser (root) está protegido por el inicio de sesión único (SSO) de tu
-        servidor, la misma cuenta que usas para el panel. La aplicación reutiliza esa
+        FileBrowser (root) está protegido por tu cuenta del servidor (inicio de sesión
+        único), la misma cuenta que usas para el panel. La aplicación reutiliza esa
         cuenta en lugar de una contraseña o un formulario de acceso propios: abres la
-        aplicación y ya estás dentro, como administrador.
+        aplicación y ya estás dentro, como administrador. En un servidor sin inicio de
+        sesión único, usa la contraseña de la app que Maison muestra al abrirla por
+        primera vez (también en el menú del icono, en **Credentials**).
 
         A qué puede acceder esta aplicación
 
@@ -462,10 +470,11 @@ x-compose-app:
     en_us: |
       Sign-in
 
-      FileBrowser (root) is protected by your server's single sign-on (SSO) - the
+      FileBrowser (root) is protected by your server account (single sign-on) - the
       same account you use for the dashboard. It reuses that account instead of a
       password or login form of its own: open the app and you are already in, as
-      its administrator.
+      its administrator. On a server without single sign-on, use the app password
+      Maison shows on first open (also in the tile menu under **Credentials**).
 
       What this app can reach
 
@@ -494,9 +503,11 @@ x-compose-app:
     ko_kr: |
       로그인
 
-      FileBrowser (root)는 서버의 통합 로그인(SSO)으로 보호됩니다. 대시보드에서 사용하는
+      FileBrowser (root)는 서버 계정(통합 로그인)으로 보호됩니다. 대시보드에서 사용하는
       것과 같은 계정이며, 별도의 비밀번호나 자체 로그인 화면 대신 그 계정을 그대로
-      사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다.
+      사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다. 통합 로그인이 없는 서버에서는
+      Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의 **Credentials**에서도
+      확인할 수 있습니다).
 
       이 앱이 접근할 수 있는 범위
 
@@ -522,9 +533,10 @@ x-compose-app:
     zh_cn: |
       登录方式
 
-      FileBrowser（root）由服务器的统一登录（SSO）保护，与你登录控制面板所用的是同一个
+      FileBrowser（root）由你的服务器账户（统一登录）保护，与你登录控制面板所用的是同一个
       账户。它直接沿用该账户，而不是单独的密码或自己的登录页面：打开应用即已以管理员
-      身份登录。
+      身份登录。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的应用密码（也可在
+      磁贴菜单的 **Credentials** 中找到）。
 
       此应用可以访问的范围
 
@@ -547,10 +559,12 @@ x-compose-app:
     fr_fr: |
       Connexion
 
-      FileBrowser (root) est protégé par l'authentification unique (SSO) de votre
-      serveur — le même compte que pour le tableau de bord. L'application réutilise ce
+      FileBrowser (root) est protégé par votre compte serveur (authentification unique)
+      — le même compte que pour le tableau de bord. L'application réutilise ce
       compte plutôt qu'un mot de passe ou un formulaire de connexion qui lui seraient
-      propres : vous l'ouvrez et vous y êtes déjà, en tant qu'administrateur.
+      propres : vous l'ouvrez et vous y êtes déjà, en tant qu'administrateur. Sur un
+      serveur sans authentification unique, utilisez le mot de passe de l'app que Maison
+      affiche à la première ouverture (aussi dans le menu de la tuile, sous **Credentials**).
 
       Ce à quoi cette application a accès
 
@@ -580,10 +594,12 @@ x-compose-app:
     es_es: |
       Inicio de sesión
 
-      FileBrowser (root) está protegido por el inicio de sesión único (SSO) de tu
-      servidor, la misma cuenta que usas para el panel. La aplicación reutiliza esa
+      FileBrowser (root) está protegido por tu cuenta del servidor (inicio de sesión
+      único), la misma cuenta que usas para el panel. La aplicación reutiliza esa
       cuenta en lugar de una contraseña o un formulario de acceso propios: abres la
-      aplicación y ya estás dentro, como administrador.
+      aplicación y ya estás dentro, como administrador. En un servidor sin inicio de
+      sesión único, usa la contraseña de la app que Maison muestra al abrirla por
+      primera vez (también en el menú del icono, en **Credentials**).
 
       A qué puede acceder esta aplicación
 

@@ -132,8 +132,8 @@ x-casaos:
   title:
     en_us: Anna's Torrents
   tagline:
-    en_us: Seed Anna's Archive and watch your live contribution — behind SSO.
-    fr_fr: Partagez Anna's Archive et suivez votre contribution en direct — derrière le SSO.
+    en_us: Seed Anna's Archive and watch your live contribution — behind your server's login gate.
+    fr_fr: Partagez Anna's Archive et suivez votre contribution en direct — derrière la barrière de connexion du serveur.
   description:
     en_us: |
       **A dashboard for seeding Anna's Archive — the largest open library in human history.**
@@ -148,13 +148,15 @@ x-casaos:
       - Set a target size (TB/GB) and start seeding with one click
       - Watch live **coverage** — how much of Anna's Archive your seeded torrents represent
       - Track **disk used**, **upload/download bandwidth**, and **swarm health** (seeders/leechers) in near real time
-      - Review your impact on a read-only `/view` vantage page (SSO-gated like the
-        rest of the app, so it is visible to accounts on this server, not to the public)
+      - Review your impact on a read-only `/view` vantage page (behind the login gate
+        like the rest of the app, so it is visible to this server's users, not to the public)
       - Donate to Anna's Archive directly from the UI
 
-      **Protected by AppShield:** every route, including `/view`, is fronted by the
-      built-in Authelia SSO, so only you can reach it — no login page to configure.
-      Share links therefore do not open for anyone without an account on this server.
+      **Protected by AppShield:** every route, including `/view`, is fronted by your
+      server's single sign-on, so only you can reach it — no login page to configure.
+      On a server without single sign-on, use the app password Maison shows on first
+      open (also in the tile menu under **Credentials**).
+      Share links therefore do not open for anyone without access to this server.
 
       **Note on safety:** this app downloads and seeds real content. Distributing
       certain materials may not be legal in all jurisdictions; seed at your own risk.
@@ -171,20 +173,24 @@ x-casaos:
       - Définir une taille cible (To/Go) et démarrer le partage en un clic
       - Suivre la **couverture** en direct de la portion d'Anna's Archive que vous préservez
       - Suivre l'**espace disque**, la **bande passante** et la **santé du swarm** en temps quasi réel
-      - Consulter votre impact sur une page `/view` en lecture seule (protégée par le
-        SSO comme le reste de l'app : accessible aux comptes de ce serveur, pas au public)
+      - Consulter votre impact sur une page `/view` en lecture seule (derrière la barrière de
+        connexion comme le reste de l'app : accessible aux utilisateurs de ce serveur, pas au public)
       - Faire un don à Anna's Archive directement depuis l'interface
 
       **Protégé par AppShield :** toutes les routes, y compris `/view`, sont protégées
-      par le SSO Authelia intégré — aucune page de connexion à configurer. Les liens de
-      partage ne s'ouvrent donc pas pour qui n'a pas de compte sur ce serveur.
+      par l'authentification unique de votre serveur — aucune page de connexion à configurer.
+      Sur un serveur sans authentification unique, utilisez le mot de passe de l'app que
+      Maison affiche à la première ouverture (aussi dans le menu de la tuile, sous
+      **Identifiants**). Les liens de partage ne s'ouvrent donc pas pour qui n'a pas
+      d'accès à ce serveur.
   tips:
     before_install:
       en_us: |
         **Access & login**
         - Open the app URL and sign in with your server account (single sign-on) —
-          AppShield (Authelia) gates the dashboard, so you reuse the credentials you
-          already have.
+          AppShield gates the dashboard, so you reuse the credentials you already
+          have. On a server without single sign-on, use the app password Maison
+          shows on first open (also in the tile menu under **Credentials**).
 
         **BitTorrent connectivity**
         - Peer traffic uses port **6881 (TCP + UDP)**, published directly to the
@@ -236,8 +242,8 @@ x-compose-app:
   title:
     en_us: Anna's Torrents
   tagline:
-    en_us: Seed Anna's Archive and watch your live contribution — behind SSO.
-    fr_fr: Partagez Anna's Archive et suivez votre contribution en direct — derrière le SSO.
+    en_us: Seed Anna's Archive and watch your live contribution — behind your server's login gate.
+    fr_fr: Partagez Anna's Archive et suivez votre contribution en direct — derrière la barrière de connexion du serveur.
   description:
     en_us: |
       **A dashboard for seeding Anna's Archive — the largest open library in human history.**
@@ -252,13 +258,15 @@ x-compose-app:
       - Set a target size (TB/GB) and start seeding with one click
       - Watch live **coverage** — how much of Anna's Archive your seeded torrents represent
       - Track **disk used**, **upload/download bandwidth**, and **swarm health** (seeders/leechers) in near real time
-      - Review your impact on a read-only `/view` vantage page (SSO-gated like the
-        rest of the app, so it is visible to accounts on this server, not to the public)
+      - Review your impact on a read-only `/view` vantage page (behind the login gate
+        like the rest of the app, so it is visible to this server's users, not to the public)
       - Donate to Anna's Archive directly from the UI
 
-      **Protected by AppShield:** every route, including `/view`, is fronted by the
-      built-in Authelia SSO, so only you can reach it — no login page to configure.
-      Share links therefore do not open for anyone without an account on this server.
+      **Protected by AppShield:** every route, including `/view`, is fronted by your
+      server's single sign-on, so only you can reach it — no login page to configure.
+      On a server without single sign-on, use the app password Maison shows on first
+      open (also in the tile menu under **Credentials**).
+      Share links therefore do not open for anyone without access to this server.
 
       **Note on safety:** this app downloads and seeds real content. Distributing
       certain materials may not be legal in all jurisdictions; seed at your own risk.
@@ -275,13 +283,16 @@ x-compose-app:
       - Définir une taille cible (To/Go) et démarrer le partage en un clic
       - Suivre la **couverture** en direct de la portion d'Anna's Archive que vous préservez
       - Suivre l'**espace disque**, la **bande passante** et la **santé du swarm** en temps quasi réel
-      - Consulter votre impact sur une page `/view` en lecture seule (protégée par le
-        SSO comme le reste de l'app : accessible aux comptes de ce serveur, pas au public)
+      - Consulter votre impact sur une page `/view` en lecture seule (derrière la barrière de
+        connexion comme le reste de l'app : accessible aux utilisateurs de ce serveur, pas au public)
       - Faire un don à Anna's Archive directement depuis l'interface
 
       **Protégé par AppShield :** toutes les routes, y compris `/view`, sont protégées
-      par le SSO Authelia intégré — aucune page de connexion à configurer. Les liens de
-      partage ne s'ouvrent donc pas pour qui n'a pas de compte sur ce serveur.
+      par l'authentification unique de votre serveur — aucune page de connexion à configurer.
+      Sur un serveur sans authentification unique, utilisez le mot de passe de l'app que
+      Maison affiche à la première ouverture (aussi dans le menu de la tuile, sous
+      **Identifiants**). Les liens de partage ne s'ouvrent donc pas pour qui n'a pas
+      d'accès à ce serveur.
   developer: cparthiv
   category: Downloader
   icon: icon.png
@@ -300,8 +311,9 @@ x-compose-app:
     en_us: |
       **Access & login**
       - Open the app URL and sign in with your server account (single sign-on) —
-        AppShield (Authelia) gates the dashboard, so you reuse the credentials you
-        already have.
+        AppShield gates the dashboard, so you reuse the credentials you already
+        have. On a server without single sign-on, use the app password Maison
+        shows on first open (also in the tile menu under **Credentials**).
 
       **BitTorrent connectivity**
       - Peer traffic uses port **6881 (TCP + UDP)**, published directly to the

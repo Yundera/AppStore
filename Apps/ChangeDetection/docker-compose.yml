@@ -194,8 +194,10 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Sign-in:** ChangeDetection is protected by your server's single sign-on. It has no
-        login of its own, so leave its own password setting off.
+        **Sign-in:** ChangeDetection is protected by your server account (single sign-on). On a
+        server without single sign-on, use the app password Maison shows on first open (also in
+        the tile menu under **Credentials**). It has no login of its own, so leave its own
+        password setting off.
         -----------------------------
         **First visit:** paste a URL into **Web page URL** at the top and press **Watch**.
         Two example watches are already there to show how it works. The first check runs
@@ -253,8 +255,10 @@ x-compose-app:
     - arm64
   tips:
     en_us: |
-      **Sign-in:** ChangeDetection is protected by your server's single sign-on. It has no
-      login of its own, so leave its own password setting off.
+      **Sign-in:** ChangeDetection is protected by your server account (single sign-on). On a
+      server without single sign-on, use the app password Maison shows on first open (also in
+      the tile menu under **Credentials**). It has no login of its own, so leave its own
+      password setting off.
       -----------------------------
       **First visit:** paste a URL into **Web page URL** at the top and press **Watch**.
       Two example watches are already there to show how it works. The first check runs

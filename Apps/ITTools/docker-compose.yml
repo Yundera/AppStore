@@ -175,12 +175,12 @@ x-casaos:
 
       Everything runs in your browser: nothing you paste is sent anywhere, and the server keeps no data. Favourites and tool settings are stored in your browser.
 
-      The app is protected by your server's single sign-on.
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
   tips:
     before_install:
       en_us: |
-        **Sign-in:** IT Tools is protected by your server's single sign-on.
-        When single sign-on is unavailable, sign in with the app password from the tile menu (**Credentials**).
+        **Sign-in:** IT Tools is protected by your server account (single sign-on).
+        On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
         **No server data:** the tools run in your browser. Favourites are kept in your browser, not on the server.
 
@@ -219,7 +219,7 @@ x-compose-app:
 
       Everything runs in your browser: nothing you paste is sent anywhere, and the server keeps no data. Favourites and tool settings are stored in your browser.
 
-      The app is protected by your server's single sign-on.
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
   developer: Corentin Thomasset
   category: Developer
   icon: icon.png
@@ -231,8 +231,8 @@ x-compose-app:
   audience: technical
   tips:
     en_us: |
-      **Sign-in:** IT Tools is protected by your server's single sign-on.
-      When single sign-on is unavailable, sign in with the app password from the tile menu (**Credentials**).
+      **Sign-in:** IT Tools is protected by your server account (single sign-on).
+      On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
       **No server data:** the tools run in your browser. Favourites are kept in your browser, not on the server.
 

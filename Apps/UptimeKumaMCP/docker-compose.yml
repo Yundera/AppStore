@@ -215,7 +215,7 @@ x-casaos:
 
         1. Install the **Uptime Kuma** app and create its admin account (or have another Uptime Kuma 2 reachable from this server).
         2. Install this app and enter that Uptime Kuma **username** and **password** when asked. Leave the address blank to use the Uptime Kuma app on this server.
-        3. Check it is answering: **${APP_URL:-https://uptimekumamcp-${APP_DOMAIN}}/api/status** (single sign-on) shows `"upstreamHealthy": true` and the number of tools.
+        3. Check it is answering: **${APP_URL:-https://uptimekumamcp-${APP_DOMAIN}}/api/status** (single sign-on, or the app password on a server without it) shows `"upstreamHealthy": true` and the number of tools.
 
         This app has no web interface: it sits in **Services**, and it is used from an AI assistant through the addresses below.
 
@@ -230,7 +230,7 @@ x-casaos:
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
         URL below — clients that support OAuth discovery (claude.ai, Claude
         Desktop) register themselves and open a browser for you to approve with
-        your server account (single sign-on).
+        your server account (single sign-on), or with the app password on a server without it.
         ```json
         {
           "mcpServers": {
@@ -281,7 +281,7 @@ x-casaos:
 
         **Security:**
         - The Uptime Kuma login lives only in this app's environment on this server. Change it from **Set up…** or the **Env** tab.
-        - The status page sits behind the server's single sign-on and `/mcp` behind OAuth 2.1, so nothing on the public URL answers without a credential. Only the in-network address `http://uptimekumamcp-backend:3000/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network.
+        - The status page sits behind the server's single sign-on (or the app password on a server without it) and `/mcp` behind OAuth 2.1, so nothing on the public URL answers without a credential. Only the in-network address `http://uptimekumamcp-backend:3000/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network.
 
 x-compose-app:
   schema_version: 2

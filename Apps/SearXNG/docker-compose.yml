@@ -235,7 +235,7 @@ x-casaos:
 
         SearXNG itself has no accounts, so access is guarded by AppShield: open the app from your
         dashboard and you are signed in automatically. Anyone without that link — or without your
-        SSO session — cannot reach the search page. Search preferences (theme, language, enabled
+        sign-in session — cannot reach the search page. Search preferences (theme, language, enabled
         engines) are stored in your browser, per device.
 
         **Make it your browser's search engine:** open the app once from your dashboard and sign in —
@@ -256,7 +256,7 @@ x-casaos:
         ## 나만의 비공개 인스턴스
 
         SearXNG 자체에는 계정이 없으므로 AppShield가 접근을 보호합니다. 대시보드에서 앱을 열면
-        자동으로 인증됩니다. 이 링크나 SSO 세션이 없는 사람은 검색 페이지에 접근할 수 없습니다.
+        자동으로 인증됩니다. 이 링크나 로그인 세션이 없는 사람은 검색 페이지에 접근할 수 없습니다.
         검색 환경설정(테마, 언어, 사용 엔진)은 기기별로 브라우저에 저장됩니다.
 
         **브라우저 기본 검색 엔진으로 설정:** 대시보드에서 앱을 한 번 열어 로그인한 뒤(세션은 30일 유지)
@@ -276,7 +276,7 @@ x-casaos:
         ## 仅您可访问
 
         SearXNG 本身没有账户体系，因此由 AppShield 守护访问权限：从仪表板打开应用即自动完成认证。
-        没有该链接、也没有您的 SSO 会话的人无法访问搜索页面。
+        没有该链接、也没有您的登录会话的人无法访问搜索页面。
         搜索偏好（主题、语言、启用的引擎）按设备保存在浏览器中。
 
         **设为浏览器默认搜索引擎：** 先从仪表板打开一次应用并登录（会话保持 30 天），然后将
@@ -297,7 +297,7 @@ x-casaos:
 
         SearXNG n'a pas de comptes : l'accès est donc gardé par AppShield. Ouvrez l'application
         depuis votre tableau de bord et vous êtes authentifié automatiquement. Sans ce lien — ou sans
-        votre session SSO — personne n'atteint la page de recherche. Les préférences de recherche
+        votre session de connexion — personne n'atteint la page de recherche. Les préférences de recherche
         (thème, langue, moteurs activés) sont stockées dans votre navigateur, par appareil.
 
         **En faire le moteur de recherche du navigateur :** ouvrez l'application une fois depuis votre
@@ -319,7 +319,7 @@ x-casaos:
         ## Privado, solo para ti
 
         SearXNG no tiene cuentas, así que AppShield protege el acceso: abre la aplicación desde tu
-        panel y quedas autenticado automáticamente. Quien no tenga ese enlace — ni tu sesión SSO — no
+        panel y quedas autenticado automáticamente. Quien no tenga ese enlace — ni tu sesión iniciada — no
         puede llegar a la página de búsqueda. Las preferencias de búsqueda (tema, idioma, motores
         activos) se guardan en tu navegador, por dispositivo.
 
@@ -464,7 +464,7 @@ x-compose-app:
 
       SearXNG itself has no accounts, so access is guarded by AppShield: open the app from your
       dashboard and you are signed in automatically. Anyone without that link — or without your
-      SSO session — cannot reach the search page. Search preferences (theme, language, enabled
+      sign-in session — cannot reach the search page. Search preferences (theme, language, enabled
       engines) are stored in your browser, per device.
 
       **Make it your browser's search engine:** open the app once from your dashboard and sign in —
@@ -485,7 +485,7 @@ x-compose-app:
       ## 나만의 비공개 인스턴스
 
       SearXNG 자체에는 계정이 없으므로 AppShield가 접근을 보호합니다. 대시보드에서 앱을 열면
-      자동으로 인증됩니다. 이 링크나 SSO 세션이 없는 사람은 검색 페이지에 접근할 수 없습니다.
+      자동으로 인증됩니다. 이 링크나 로그인 세션이 없는 사람은 검색 페이지에 접근할 수 없습니다.
       검색 환경설정(테마, 언어, 사용 엔진)은 기기별로 브라우저에 저장됩니다.
 
       **브라우저 기본 검색 엔진으로 설정:** 대시보드에서 앱을 한 번 열어 로그인한 뒤(세션은 30일 유지)
@@ -505,7 +505,7 @@ x-compose-app:
       ## 仅您可访问
 
       SearXNG 本身没有账户体系，因此由 AppShield 守护访问权限：从仪表板打开应用即自动完成认证。
-      没有该链接、也没有您的 SSO 会话的人无法访问搜索页面。
+      没有该链接、也没有您的登录会话的人无法访问搜索页面。
       搜索偏好（主题、语言、启用的引擎）按设备保存在浏览器中。
 
       **设为浏览器默认搜索引擎：** 先从仪表板打开一次应用并登录（会话保持 30 天），然后将
@@ -526,7 +526,7 @@ x-compose-app:
 
       SearXNG n'a pas de comptes : l'accès est donc gardé par AppShield. Ouvrez l'application
       depuis votre tableau de bord et vous êtes authentifié automatiquement. Sans ce lien — ou sans
-      votre session SSO — personne n'atteint la page de recherche. Les préférences de recherche
+      votre session de connexion — personne n'atteint la page de recherche. Les préférences de recherche
       (thème, langue, moteurs activés) sont stockées dans votre navigateur, par appareil.
 
       **En faire le moteur de recherche du navigateur :** ouvrez l'application une fois depuis votre
@@ -548,7 +548,7 @@ x-compose-app:
       ## Privado, solo para ti
 
       SearXNG no tiene cuentas, así que AppShield protege el acceso: abre la aplicación desde tu
-      panel y quedas autenticado automáticamente. Quien no tenga ese enlace — ni tu sesión SSO — no
+      panel y quedas autenticado automáticamente. Quien no tenga ese enlace — ni tu sesión iniciada — no
       puede llegar a la página de búsqueda. Las preferencias de búsqueda (tema, idioma, motores
       activos) se guardan en tu navegador, por dispositivo.
 

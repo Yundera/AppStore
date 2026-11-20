@@ -183,7 +183,7 @@ x-casaos:
         Trello MCP needs a Trello API key and token. You connect your account from the app's Web UI after install — the MCP server starts right away, but every Trello tool answers "credentials not configured" until you do.
 
         **Setup (2 steps):**
-        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `${APP_URL:-https://trellomcp-${APP_DOMAIN}}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
+        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server — or, on a server without single sign-on, with the app password Maison shows on first open). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `${APP_URL:-https://trellomcp-${APP_DOMAIN}}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
         2. Click **Authorize with Trello** and approve — the token is captured automatically and saved
 
         **MCP Integration (for AI/LLMs):**
@@ -193,7 +193,7 @@ x-casaos:
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
         URL below — clients that support OAuth discovery (claude.ai, Claude
         Desktop) register themselves and open a browser for you to approve with
-        your server account (single sign-on).
+        your server account (single sign-on), or with the app password on a server without it.
         ```json
         {
           "mcpServers": {
@@ -243,7 +243,7 @@ x-casaos:
         **Security:**
         - The Trello API key and token are stored only in `/DATA/AppData/trellomcp/data/config.json` on this server; the config API reports whether a token is set but never returns it
         - The token is requested with `read,write` scope and no expiry — revoke it any time from your Trello account settings under **Applications**
-        - Authentication is on by default: the Web UI is behind the server's single sign-on, and `/mcp` is behind OAuth 2.1. Only the in-network address `http://trellomcp-backend:9100/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network
+        - Authentication is on by default: the Web UI is behind the server's single sign-on (or the app password on a server without it), and `/mcp` is behind OAuth 2.1. Only the in-network address `http://trellomcp-backend:9100/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network
 
 x-compose-app:
   schema_version: 2
@@ -329,7 +329,7 @@ x-compose-app:
       Trello MCP needs a Trello API key and token. You connect your account from the app's Web UI after install — the MCP server starts right away, but every Trello tool answers "credentials not configured" until you do.
 
       **Setup (2 steps):**
-      1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `${APP_URL:-https://trellomcp-${APP_DOMAIN}}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
+      1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server — or, on a server without single sign-on, with the app password Maison shows on first open). Go to [Trello Power-Ups Admin](https://trello.com/power-ups/admin), create a Power-Up with **Iframe connector URL** `${APP_URL:-https://trellomcp-${APP_DOMAIN}}`, add the same URL as an **allowed origin** in its API key section, then copy the **API Key** into the Web UI
       2. Click **Authorize with Trello** and approve — the token is captured automatically and saved
 
       **MCP Integration (for AI/LLMs):**
@@ -339,7 +339,7 @@ x-compose-app:
       The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
       URL below — clients that support OAuth discovery (claude.ai, Claude
       Desktop) register themselves and open a browser for you to approve with
-      your server account (single sign-on).
+      your server account (single sign-on), or with the app password on a server without it.
       ```json
       {
         "mcpServers": {
@@ -389,7 +389,7 @@ x-compose-app:
       **Security:**
       - The Trello API key and token are stored only in `/DATA/AppData/trellomcp/data/config.json` on this server; the config API reports whether a token is set but never returns it
       - The token is requested with `read,write` scope and no expiry — revoke it any time from your Trello account settings under **Applications**
-      - Authentication is on by default: the Web UI is behind the server's single sign-on, and `/mcp` is behind OAuth 2.1. Only the in-network address `http://trellomcp-backend:9100/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network
+      - Authentication is on by default: the Web UI is behind the server's single sign-on (or the app password on a server without it), and `/mcp` is behind OAuth 2.1. Only the in-network address `http://trellomcp-backend:9100/mcp` (Option 2) is unauthenticated, and it is not published outside the `pcs` Docker network
   # Directories Maison creates and chowns to $PUID:$PGID before every `up`,
   # one per trailing-slash bind mount in `volumes:` above.
   folders:

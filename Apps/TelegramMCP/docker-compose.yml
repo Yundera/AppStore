@@ -263,7 +263,7 @@ x-casaos:
         2. (Optional) An MCP-compatible LLM server to forward incoming messages to — only needed if you want the bot to auto-reply
 
         **Setup (2 steps):**
-        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server)
+        1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server — or, on a server without single sign-on, with the app password Maison shows on first open)
         2. Paste your **bot token**, pick **polling** or **webhook** mode, and click **Save**. In webhook mode the bot registers `${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/webhook` with Telegram automatically.
 
         **MCP Integration (for AI/LLMs):**
@@ -273,7 +273,7 @@ x-casaos:
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
         URL below — clients that support OAuth discovery (claude.ai, Claude
         Desktop) register themselves and open a browser for you to approve with
-        your server account (single sign-on).
+        your server account (single sign-on), or with the app password on a server without it.
         ```json
         {
           "mcpServers": {
@@ -317,7 +317,7 @@ x-casaos:
 
         **Security:**
         - The bot token is stored only in `/DATA/AppData/telegrammcp/config.json` on this server and is never logged or returned via the API
-        - The Web UI is protected by the server's single sign-on — the session you already have covers it
+        - The Web UI is protected by the server's single sign-on, where the session you already have covers it. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
         - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
           public URL is reachable without a credential. Only the in-network address
           `http://telegrammcp-backend:9634/mcp` (Option 2) is unauthenticated, and it
@@ -411,7 +411,7 @@ x-compose-app:
       2. (Optional) An MCP-compatible LLM server to forward incoming messages to — only needed if you want the bot to auto-reply
 
       **Setup (2 steps):**
-      1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server)
+      1. Open this app's Web UI (you'll sign in with your server account — the same single sign-on you use for the rest of the server — or, on a server without single sign-on, with the app password Maison shows on first open)
       2. Paste your **bot token**, pick **polling** or **webhook** mode, and click **Save**. In webhook mode the bot registers `${APP_URL:-https://telegrammcp-${APP_DOMAIN}}/webhook` with Telegram automatically.
 
       **MCP Integration (for AI/LLMs):**
@@ -421,7 +421,7 @@ x-compose-app:
       The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
       URL below — clients that support OAuth discovery (claude.ai, Claude
       Desktop) register themselves and open a browser for you to approve with
-      your server account (single sign-on).
+      your server account (single sign-on), or with the app password on a server without it.
       ```json
       {
         "mcpServers": {
@@ -465,7 +465,7 @@ x-compose-app:
 
       **Security:**
       - The bot token is stored only in `/DATA/AppData/telegrammcp/config.json` on this server and is never logged or returned via the API
-      - The Web UI is protected by the server's single sign-on — the session you already have covers it
+      - The Web UI is protected by the server's single sign-on, where the session you already have covers it. On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
       - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
         public URL is reachable without a credential. Only the in-network address
         `http://telegrammcp-backend:9634/mcp` (Option 2) is unauthenticated, and it

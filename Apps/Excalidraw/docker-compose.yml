@@ -182,12 +182,12 @@ x-casaos:
 
       The upstream build loads its fonts from Excalidraw's CDN and sends an anonymous, cookie-free page view to Simple Analytics; your drawings are not sent anywhere.
 
-      The app is protected by your server's single sign-on.
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
   tips:
     before_install:
       en_us: |
-        **Sign-in:** Excalidraw is protected by your server's single sign-on.
-        When single sign-on is unavailable, sign in with the app password from the tile menu (**Credentials**).
+        **Sign-in:** Excalidraw is protected by your server account (single sign-on).
+        On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
         **Where drawings live:** in your browser's local storage, not on the server. Clearing your browser data deletes them; use **Save to...** to keep a file.
 
@@ -232,7 +232,7 @@ x-compose-app:
 
       The upstream build loads its fonts from Excalidraw's CDN and sends an anonymous, cookie-free page view to Simple Analytics; your drawings are not sent anywhere.
 
-      The app is protected by your server's single sign-on.
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
   developer: Excalidraw
   category: Documents
   icon: icon.png
@@ -243,8 +243,8 @@ x-compose-app:
     - arm64
   tips:
     en_us: |
-      **Sign-in:** Excalidraw is protected by your server's single sign-on.
-      When single sign-on is unavailable, sign in with the app password from the tile menu (**Credentials**).
+      **Sign-in:** Excalidraw is protected by your server account (single sign-on).
+      On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
 
       **Where drawings live:** in your browser's local storage, not on the server. Clearing your browser data deletes them; use **Save to...** to keep a file.
 

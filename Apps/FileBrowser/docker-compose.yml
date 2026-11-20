@@ -213,10 +213,12 @@ x-casaos:
       en_us: |
         Sign-in
 
-        FileBrowser is protected by your server's single sign-on (SSO) - the same
+        FileBrowser is protected by your server account (single sign-on) - the same
         account you use for the dashboard. It reuses that account instead of a
         password or login form of its own: open the app and you are already in,
-        as its administrator.
+        as its administrator. On a server without single sign-on, use the app
+        password Maison shows on first open (also in the tile menu under
+        **Credentials**).
 
         Share links keep working. A link you create from the Share menu stays
         reachable without signing in to the server, exactly as before - the code in
@@ -228,14 +230,17 @@ x-casaos:
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
         `/DATA/AppData` - the last one holding the databases, configuration and
         secrets of every other app installed on this server. Anyone who can sign in
-        to your server account (single sign-on) can browse, edit, delete and share
+        to your server account (single sign-on), or with the app password on a server
+        without it, can browse, edit, delete and share
         all of it, and so can anyone you hand a share link to for a file inside it.
       ko_kr: |
         로그인
 
-        FileBrowser는 서버의 통합 로그인(SSO)으로 보호됩니다. 대시보드에서 사용하는 것과
+        FileBrowser는 서버 계정(통합 로그인)으로 보호됩니다. 대시보드에서 사용하는 것과
         같은 계정이며, 별도의 FileBrowser 비밀번호나 자체 로그인 화면 대신 그 계정을
-        그대로 사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다.
+        그대로 사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다. 통합 로그인이 없는
+        서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의
+        **Credentials**에서도 확인할 수 있습니다).
 
         공유 링크는 그대로 작동합니다. 공유 메뉴에서 만든 링크는 이전과 똑같이
         서버에 로그인하지 않아도 접근할 수 있습니다. 링크에 포함된 코드가 접근 권한을
@@ -246,15 +251,17 @@ x-casaos:
         FileBrowser는 `/DATA` 전체를 읽기/쓰기로 마운트합니다. 여기에는
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`,
         그리고 다른 모든 앱의 데이터베이스, 설정, 비밀 정보가 들어 있는
-        `/DATA/AppData`가 포함됩니다. 서버 계정(통합 로그인)에 로그인할 수 있는 사람은 누구나
+        `/DATA/AppData`가 포함됩니다. 서버 계정(통합 로그인)에 로그인할 수 있는 사람, 또는 통합
+        로그인이 없는 서버에서 앱 비밀번호를 가진 사람은 누구나
         이 모든 것을 탐색, 편집, 삭제, 공유할 수 있으며, 그 안의 파일에 대한 공유
         링크를 받은 사람도 마찬가지입니다.
       zh_cn: |
         登录方式
 
-        FileBrowser 由服务器的统一登录（SSO）保护，与你登录控制面板所用的是同一个
+        FileBrowser 由你的服务器账户（统一登录）保护，与你登录控制面板所用的是同一个
         账户。它直接沿用该账户，而不是单独的 FileBrowser 密码或自己的登录页面：打开应用
-        即已以管理员身份登录。
+        即已以管理员身份登录。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的应用
+        密码（也可在磁贴菜单的 **Credentials** 中找到）。
 
         分享链接照常可用。你在「分享」菜单中创建的链接无需登录服务器即可访问，
         与以往一致——链接中的代码就是访问凭证，你还可以为其另外设置密码。
@@ -263,15 +270,18 @@ x-casaos:
 
         FileBrowser 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
         `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
-        数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户（统一登录）的人都可以
+        数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户（统一登录）的人，或在
+        没有统一登录的服务器上持有应用密码的人，都可以
         浏览、编辑、删除和分享这些内容，你分享出去的链接的接收者同样可以访问对应文件。
       fr_fr: |
         Connexion
 
-        FileBrowser est protégé par l'authentification unique (SSO) de votre serveur — le
+        FileBrowser est protégé par votre compte serveur (authentification unique) — le
         même compte que pour le tableau de bord. L'application réutilise ce compte plutôt
         qu'un mot de passe ou un formulaire de connexion qui lui seraient propres : vous
-        l'ouvrez et vous y êtes déjà, en tant qu'administrateur.
+        l'ouvrez et vous y êtes déjà, en tant qu'administrateur. Sur un serveur sans
+        authentification unique, utilisez le mot de passe de l'app que Maison affiche à
+        la première ouverture (aussi dans le menu de la tuile, sous **Credentials**).
 
         Les liens de partage continuent de fonctionner. Un lien créé depuis le menu
         Partager reste accessible sans se connecter au serveur, exactement comme avant : c'est
@@ -284,16 +294,19 @@ x-casaos:
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
         `/DATA/AppData`, qui contient les bases de données, configurations et secrets
         de toutes les autres applications du serveur. Toute personne pouvant se connecter
-        à votre compte serveur (authentification unique) peut parcourir, modifier,
+        à votre compte serveur (authentification unique), ou avec le mot de passe de
+        l'app sur un serveur qui n'en a pas, peut parcourir, modifier,
         supprimer et partager l'ensemble, de même que toute personne à qui vous
         transmettez un lien de partage.
       es_es: |
         Inicio de sesión
 
-        FileBrowser está protegido por el inicio de sesión único (SSO) de tu servidor, la
+        FileBrowser está protegido por tu cuenta del servidor (inicio de sesión único), la
         misma cuenta que usas para el panel. La aplicación reutiliza esa cuenta en lugar
         de una contraseña o un formulario de acceso propios: abres la aplicación y
-        ya estás dentro, como administrador.
+        ya estás dentro, como administrador. En un servidor sin inicio de sesión único,
+        usa la contraseña de la app que Maison muestra al abrirla por primera vez
+        (también en el menú del icono, en **Credentials**).
 
         Los enlaces para compartir siguen funcionando. Un enlace creado desde el menú
         Compartir sigue siendo accesible sin iniciar sesión en el servidor, igual que antes:
@@ -306,7 +319,8 @@ x-casaos:
         `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` y
         `/DATA/AppData`, que contiene las bases de datos, la configuración y los
         secretos de todas las demás aplicaciones del servidor. Cualquiera que pueda
-        iniciar sesión en tu cuenta del servidor (inicio de sesión único) puede
+        iniciar sesión en tu cuenta del servidor (inicio de sesión único), o con la
+        contraseña de la app en un servidor sin él, puede
         explorar, editar, eliminar y compartir todo ello, igual que cualquiera a
         quien le pases un enlace.
   title:
@@ -419,10 +433,12 @@ x-compose-app:
     en_us: |
       Sign-in
 
-      FileBrowser is protected by your server's single sign-on (SSO) - the same
+      FileBrowser is protected by your server account (single sign-on) - the same
       account you use for the dashboard. It reuses that account instead of a
       password or login form of its own: open the app and you are already in,
-      as its administrator.
+      as its administrator. On a server without single sign-on, use the app
+      password Maison shows on first open (also in the tile menu under
+      **Credentials**).
 
       Share links keep working. A link you create from the Share menu stays
       reachable without signing in to the server, exactly as before - the code in
@@ -434,14 +450,17 @@ x-compose-app:
       `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` and
       `/DATA/AppData` - the last one holding the databases, configuration and
       secrets of every other app installed on this server. Anyone who can sign in
-      to your server account (single sign-on) can browse, edit, delete and share
+      to your server account (single sign-on), or with the app password on a server
+      without it, can browse, edit, delete and share
       all of it, and so can anyone you hand a share link to for a file inside it.
     ko_kr: |
       로그인
 
-      FileBrowser는 서버의 통합 로그인(SSO)으로 보호됩니다. 대시보드에서 사용하는 것과
+      FileBrowser는 서버 계정(통합 로그인)으로 보호됩니다. 대시보드에서 사용하는 것과
       같은 계정이며, 별도의 FileBrowser 비밀번호나 자체 로그인 화면 대신 그 계정을
-      그대로 사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다.
+      그대로 사용합니다. 앱을 열면 이미 관리자로 로그인된 상태입니다. 통합 로그인이 없는
+      서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의
+      **Credentials**에서도 확인할 수 있습니다).
 
       공유 링크는 그대로 작동합니다. 공유 메뉴에서 만든 링크는 이전과 똑같이
       서버에 로그인하지 않아도 접근할 수 있습니다. 링크에 포함된 코드가 접근 권한을
@@ -452,15 +471,17 @@ x-compose-app:
       FileBrowser는 `/DATA` 전체를 읽기/쓰기로 마운트합니다. 여기에는
       `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`,
       그리고 다른 모든 앱의 데이터베이스, 설정, 비밀 정보가 들어 있는
-      `/DATA/AppData`가 포함됩니다. 서버 계정(통합 로그인)에 로그인할 수 있는 사람은 누구나
+      `/DATA/AppData`가 포함됩니다. 서버 계정(통합 로그인)에 로그인할 수 있는 사람, 또는 통합
+      로그인이 없는 서버에서 앱 비밀번호를 가진 사람은 누구나
       이 모든 것을 탐색, 편집, 삭제, 공유할 수 있으며, 그 안의 파일에 대한 공유
       링크를 받은 사람도 마찬가지입니다.
     zh_cn: |
       登录方式
 
-      FileBrowser 由服务器的统一登录（SSO）保护，与你登录控制面板所用的是同一个
+      FileBrowser 由你的服务器账户（统一登录）保护，与你登录控制面板所用的是同一个
       账户。它直接沿用该账户，而不是单独的 FileBrowser 密码或自己的登录页面：打开应用
-      即已以管理员身份登录。
+      即已以管理员身份登录。在没有统一登录的服务器上，请使用 Maison 首次打开时显示的应用
+      密码（也可在磁贴菜单的 **Credentials** 中找到）。
 
       分享链接照常可用。你在「分享」菜单中创建的链接无需登录服务器即可访问，
       与以往一致——链接中的代码就是访问凭证，你还可以为其另外设置密码。
@@ -469,15 +490,18 @@ x-compose-app:
 
       FileBrowser 以读写方式挂载整个 `/DATA`，其中包括 `/DATA/Documents`、
       `/DATA/Downloads`、`/DATA/Media`、`/DATA/Gallery`，以及保存着其他所有应用
-      数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户（统一登录）的人都可以
+      数据库、配置和密钥的 `/DATA/AppData`。任何能登录你服务器账户（统一登录）的人，或在
+      没有统一登录的服务器上持有应用密码的人，都可以
       浏览、编辑、删除和分享这些内容，你分享出去的链接的接收者同样可以访问对应文件。
     fr_fr: |
       Connexion
 
-      FileBrowser est protégé par l'authentification unique (SSO) de votre serveur — le
+      FileBrowser est protégé par votre compte serveur (authentification unique) — le
       même compte que pour le tableau de bord. L'application réutilise ce compte plutôt
       qu'un mot de passe ou un formulaire de connexion qui lui seraient propres : vous
-      l'ouvrez et vous y êtes déjà, en tant qu'administrateur.
+      l'ouvrez et vous y êtes déjà, en tant qu'administrateur. Sur un serveur sans
+      authentification unique, utilisez le mot de passe de l'app que Maison affiche à
+      la première ouverture (aussi dans le menu de la tuile, sous **Credentials**).
 
       Les liens de partage continuent de fonctionner. Un lien créé depuis le menu
       Partager reste accessible sans se connecter au serveur, exactement comme avant : c'est
@@ -490,16 +514,19 @@ x-compose-app:
       `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` et
       `/DATA/AppData`, qui contient les bases de données, configurations et secrets
       de toutes les autres applications du serveur. Toute personne pouvant se connecter
-      à votre compte serveur (authentification unique) peut parcourir, modifier,
+      à votre compte serveur (authentification unique), ou avec le mot de passe de
+      l'app sur un serveur qui n'en a pas, peut parcourir, modifier,
       supprimer et partager l'ensemble, de même que toute personne à qui vous
       transmettez un lien de partage.
     es_es: |
       Inicio de sesión
 
-      FileBrowser está protegido por el inicio de sesión único (SSO) de tu servidor, la
+      FileBrowser está protegido por tu cuenta del servidor (inicio de sesión único), la
       misma cuenta que usas para el panel. La aplicación reutiliza esa cuenta en lugar
       de una contraseña o un formulario de acceso propios: abres la aplicación y
-      ya estás dentro, como administrador.
+      ya estás dentro, como administrador. En un servidor sin inicio de sesión único,
+      usa la contraseña de la app que Maison muestra al abrirla por primera vez
+      (también en el menú del icono, en **Credentials**).
 
       Los enlaces para compartir siguen funcionando. Un enlace creado desde el menú
       Compartir sigue siendo accesible sin iniciar sesión en el servidor, igual que antes:
@@ -512,7 +539,8 @@ x-compose-app:
       `/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery` y
       `/DATA/AppData`, que contiene las bases de datos, la configuración y los
       secretos de todas las demás aplicaciones del servidor. Cualquiera que pueda
-      iniciar sesión en tu cuenta del servidor (inicio de sesión único) puede
+      iniciar sesión en tu cuenta del servidor (inicio de sesión único), o con la
+      contraseña de la app en un servidor sin él, puede
       explorar, editar, eliminar y compartir todo ello, igual que cualquiera a
       quien le pases un enlace.
   # Password of the `admin` account the add-admin step creates. With

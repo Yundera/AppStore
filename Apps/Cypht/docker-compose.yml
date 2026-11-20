@@ -377,7 +377,7 @@ x-compose-app:
       • Calendar page (month, week, day, agenda) and contacts, synced to your phone
         (CalDAV / CardDAV)
       • AI access (MCP) through Beacon: list, search and read every account — read-only
-      • Sieve filters, PGP, 2FA, themes; behind your server's single sign-on
+      • Sieve filters, PGP, 2FA, themes; behind your server's login gate
 
       Cypht does not receive mail for a domain by itself (no MX): it works with the
       providers you keep.
@@ -396,7 +396,7 @@ x-compose-app:
       • Page agenda (mois, semaine, jour, liste) et contacts, synchronisés sur le
         téléphone (CalDAV / CardDAV)
       • Accès IA (MCP) via Beacon : lister, chercher et lire tous les comptes — lecture seule
-      • Filtres Sieve, PGP, 2FA, thèmes ; derrière la connexion unique du serveur
+      • Filtres Sieve, PGP, 2FA, thèmes ; derrière la barrière de connexion du serveur
 
       Cypht ne reçoit pas de mail pour un domaine (pas de MX) : il travaille avec les
       fournisseurs que vous gardez.
@@ -513,8 +513,9 @@ x-compose-app:
   tips:
     en_us: &tips_en |
       **Signing in**
-      Open the app, sign in with your server account, then log into Cypht with the
-      login shown under *Credentials*.
+      Open the app, sign in with your server account (on a server without single
+      sign-on, with the *App password*), then log into Cypht with the login shown
+      under *Credentials*.
 
       **Adding your mail accounts**
       Settings → *Servers* → *Add an E-mail Account*: address, password (an app
@@ -541,7 +542,8 @@ x-compose-app:
       (`cypht__…`): list accounts, search and read mail across all of them, read-only.
     fr_fr: &tips_fr |
       **Connexion**
-      Ouvrez l'app, connectez-vous avec votre compte serveur, puis à Cypht avec
+      Ouvrez l'app, connectez-vous avec votre compte serveur (sur un serveur sans
+      connexion unique, avec le mot de passe de l'app), puis à Cypht avec
       l'identifiant affiché sous *Identifiants*.
 
       **Ajouter vos comptes mail**

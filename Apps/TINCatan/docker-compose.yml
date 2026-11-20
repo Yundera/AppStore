@@ -211,7 +211,9 @@ x-casaos:
       en_us: |
         **Sign-in** — the game is protected by the server's single sign-on: opening
         it sends you to the usual login page, where your server account signs you in.
-        Everyone you play with needs an account on this server.
+        On a server without single sign-on, use the app password Maison shows on first
+        open (also in the tile menu under **Credentials**).
+        Everyone you play with needs an account on this server, or that password.
         -----------------------------
         **First start takes a few minutes.** TINC is compiled from source the first
         time it runs. The tile turns healthy on its own once the build finishes —
@@ -231,24 +233,30 @@ x-casaos:
         on a roll of 7. Works on desktop, tablet and mobile browsers.
       fr_fr: |
         **Connexion** — le jeu est protégé par l'authentification unique du serveur :
-        chaque joueur se connecte avec un compte de ce serveur.
+        chaque joueur se connecte avec un compte de ce serveur. Sur un serveur sans
+        authentification unique, utilisez le mot de passe de l'app que Maison affiche à
+        la première ouverture (aussi dans le menu de la tuile, sous **Identifiants**).
         -----------------------------
         Le premier démarrage prend quelques minutes : TINC est compilé depuis les
         sources. Attendez simplement — les démarrages suivants sont immédiats.
       ko_kr: |
         **로그인** — 게임은 서버의 통합 로그인(SSO)으로 보호됩니다.
-        함께 플레이하는 모든 사람은 이 서버의 계정이 필요합니다.
+        함께 플레이하는 모든 사람은 이 서버의 계정이 필요합니다. 통합 로그인이 없는
+        서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의 **Credentials**에도 있음).
         -----------------------------
         첫 실행은 몇 분 걸립니다. TINC를 소스에서 컴파일하기 때문입니다.
         기다리기만 하면 되며, 이후 실행은 즉시 시작됩니다.
       zh_cn: |
         **登录** — 游戏由服务器的单点登录保护，
-        每位玩家都需要使用本服务器的账号登录。
+        每位玩家都需要使用本服务器的账号登录。在没有单点登录的服务器上，
+        请使用 Maison 首次打开时显示的应用密码（也在磁贴菜单的 **凭据** 中）。
         -----------------------------
         首次启动需要几分钟：TINC 从源码编译。稍候即可，之后的启动会很快。
       es_es: |
         **Acceso** — el juego está protegido por el inicio de sesión único del
-        servidor: cada jugador entra con una cuenta de este servidor.
+        servidor: cada jugador entra con una cuenta de este servidor. En un servidor sin
+        inicio de sesión único, usa la contraseña de la app que Maison muestra al abrirla
+        por primera vez (también en el menú del icono, en **Credentials**).
         -----------------------------
         El primer arranque tarda unos minutos: TINC se compila desde el código
         fuente. Solo hay que esperar; los arranques posteriores son inmediatos.
@@ -340,7 +348,9 @@ x-compose-app:
     en_us: |
       **Sign-in** — the game is protected by the server's single sign-on: opening
       it sends you to the usual login page, where your server account signs you in.
-      Everyone you play with needs an account on this server.
+      On a server without single sign-on, use the app password Maison shows on first
+      open (also in the tile menu under **Credentials**).
+      Everyone you play with needs an account on this server, or that password.
       -----------------------------
       **First start takes a few minutes.** TINC is compiled from source the first
       time it runs. The tile turns healthy on its own once the build finishes —
@@ -360,24 +370,30 @@ x-compose-app:
       on a roll of 7. Works on desktop, tablet and mobile browsers.
     fr_fr: |
       **Connexion** — le jeu est protégé par l'authentification unique du serveur :
-      chaque joueur se connecte avec un compte de ce serveur.
+      chaque joueur se connecte avec un compte de ce serveur. Sur un serveur sans
+      authentification unique, utilisez le mot de passe de l'app que Maison affiche à
+      la première ouverture (aussi dans le menu de la tuile, sous **Identifiants**).
       -----------------------------
       Le premier démarrage prend quelques minutes : TINC est compilé depuis les
       sources. Attendez simplement — les démarrages suivants sont immédiats.
     ko_kr: |
       **로그인** — 게임은 서버의 통합 로그인(SSO)으로 보호됩니다.
-      함께 플레이하는 모든 사람은 이 서버의 계정이 필요합니다.
+      함께 플레이하는 모든 사람은 이 서버의 계정이 필요합니다. 통합 로그인이 없는
+      서버에서는 Maison이 처음 열 때 보여 주는 앱 비밀번호를 사용하세요(타일 메뉴의 **Credentials**에도 있음).
       -----------------------------
       첫 실행은 몇 분 걸립니다. TINC를 소스에서 컴파일하기 때문입니다.
       기다리기만 하면 되며, 이후 실행은 즉시 시작됩니다.
     zh_cn: |
       **登录** — 游戏由服务器的单点登录保护，
-      每位玩家都需要使用本服务器的账号登录。
+      每位玩家都需要使用本服务器的账号登录。在没有单点登录的服务器上，
+      请使用 Maison 首次打开时显示的应用密码（也在磁贴菜单的 **凭据** 中）。
       -----------------------------
       首次启动需要几分钟：TINC 从源码编译。稍候即可，之后的启动会很快。
     es_es: |
       **Acceso** — el juego está protegido por el inicio de sesión único del
-      servidor: cada jugador entra con una cuenta de este servidor.
+      servidor: cada jugador entra con una cuenta de este servidor. En un servidor sin
+      inicio de sesión único, usa la contraseña de la app que Maison muestra al abrirla
+      por primera vez (también en el menú del icono, en **Credentials**).
       -----------------------------
       El primer arranque tarda unos minutos: TINC se compila desde el código
       fuente. Solo hay que esperar; los arranques posteriores son inmediatos.

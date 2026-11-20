@@ -273,7 +273,7 @@ x-casaos:
 
         **First-Time Setup**
 
-        1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your server account (single sign-on)
+        1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your server account (single sign-on), or with the app password on a server without it
         2. **Unlock the gateway**: if the Control UI asks for a gateway token or password, paste the gateway token shown when you open the app (tile menu → Credentials)
         3. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
         4. **Start chatting**: Use the built-in WebChat or connect messaging platforms
@@ -301,7 +301,7 @@ x-casaos:
 
         **Configuration initiale**
 
-        1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte serveur (authentification unique)
+        1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte serveur (authentification unique), ou avec le mot de passe de l'app sur un serveur qui n'en a pas
         2. **Deverrouiller la passerelle** : si l'interface demande un token ou un mot de passe, collez le token de passerelle affiche a l'ouverture de l'app (menu de la tuile → Credentials)
         3. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
 
@@ -322,7 +322,7 @@ x-casaos:
 
         **Ersteinrichtung**
 
-        1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Server-Konto an (Single Sign-on)
+        1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Server-Konto an (Single Sign-on), auf einem Server ohne Single Sign-on mit dem App-Passwort
         2. **Gateway entsperren**: Fragt die Control UI nach einem Token oder Passwort, fugen Sie das Gateway-Token ein, das beim Offnen der App angezeigt wird (Kachelmenu → Credentials)
         3. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
 
@@ -343,7 +343,7 @@ x-casaos:
 
         **Configuracion inicial**
 
-        1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta del servidor (inicio de sesion unico)
+        1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta del servidor (inicio de sesion unico), o con la contrasena de la app en un servidor sin el
         2. **Desbloquear el gateway**: si la interfaz pide un token o contrasena, pega el token del gateway que se muestra al abrir la app (menu del icono → Credentials)
         3. **Configurar clave API**: Agrega tu clave API en la seccion Config
 
@@ -364,7 +364,7 @@ x-casaos:
 
         **首次设置**
 
-        1. **访问Web界面**：点击应用图标，使用您的服务器账户登录（单点登录）
+        1. **访问Web界面**：点击应用图标，使用您的服务器账户登录（单点登录）；在没有单点登录的服务器上，使用应用密码
         2. **解锁网关**：如果控制界面要求输入网关令牌或密码，请粘贴打开应用时显示的网关令牌（磁贴菜单 → Credentials）
         3. **配置API密钥**：在Config部分添加您的API密钥
 
@@ -385,7 +385,7 @@ x-casaos:
 
         **최초 설정**
 
-        1. **웹 UI 접속**: 앱 아이콘을 클릭하고 서버 계정으로 로그인 (통합 인증)
+        1. **웹 UI 접속**: 앱 아이콘을 클릭하고 서버 계정으로 로그인 (통합 인증), 통합 인증이 없는 서버에서는 앱 비밀번호로 로그인
         2. **게이트웨이 잠금 해제**: 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구하면 앱을 열 때 표시되는 게이트웨이 토큰(타일 메뉴 → Credentials)을 붙여넣으세요
         3. **API 키 구성**: Config 섹션에서 API 키 추가
 
@@ -575,7 +575,7 @@ x-compose-app:
 
       **First-Time Setup**
 
-      1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your server account (single sign-on)
+      1. **Access the Web UI**: Click the app icon on your dashboard and sign in with your server account (single sign-on), or with the app password on a server without it
       2. **Unlock the gateway**: if the Control UI asks for a gateway token or password, paste the gateway token shown when you open the app (tile menu → Credentials)
       3. **Configure API Key**: Add your Anthropic or OpenAI API key in the Config section
       4. **Start chatting**: Use the built-in WebChat or connect messaging platforms
@@ -603,7 +603,7 @@ x-compose-app:
 
       **Configuration initiale**
 
-      1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte serveur (authentification unique)
+      1. **Acceder a l'interface Web** : Cliquez sur l'icone de l'app et connectez-vous avec votre compte serveur (authentification unique), ou avec le mot de passe de l'app sur un serveur qui n'en a pas
       2. **Deverrouiller la passerelle** : si l'interface demande un token ou un mot de passe, collez le token de passerelle affiche a l'ouverture de l'app (menu de la tuile → Credentials)
       3. **Configurer la cle API** : Ajoutez votre cle API dans la section Config
 
@@ -624,7 +624,7 @@ x-compose-app:
 
       **Ersteinrichtung**
 
-      1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Server-Konto an (Single Sign-on)
+      1. **Web-UI aufrufen**: Klicken Sie auf das App-Symbol und melden Sie sich mit Ihrem Server-Konto an (Single Sign-on), auf einem Server ohne Single Sign-on mit dem App-Passwort
       2. **Gateway entsperren**: Fragt die Control UI nach einem Token oder Passwort, fugen Sie das Gateway-Token ein, das beim Offnen der App angezeigt wird (Kachelmenu → Credentials)
       3. **API-Schlussel konfigurieren**: Fugen Sie Ihren API-Schlussel im Config-Bereich hinzu
 
@@ -645,7 +645,7 @@ x-compose-app:
 
       **Configuracion inicial**
 
-      1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta del servidor (inicio de sesion unico)
+      1. **Acceder a la interfaz Web**: Haz clic en el icono de la app e inicia sesion con tu cuenta del servidor (inicio de sesion unico), o con la contrasena de la app en un servidor sin el
       2. **Desbloquear el gateway**: si la interfaz pide un token o contrasena, pega el token del gateway que se muestra al abrir la app (menu del icono → Credentials)
       3. **Configurar clave API**: Agrega tu clave API en la seccion Config
 
@@ -666,7 +666,7 @@ x-compose-app:
 
       **首次设置**
 
-      1. **访问Web界面**：点击应用图标，使用您的服务器账户登录（单点登录）
+      1. **访问Web界面**：点击应用图标，使用您的服务器账户登录（单点登录）；在没有单点登录的服务器上，使用应用密码
       2. **解锁网关**：如果控制界面要求输入网关令牌或密码，请粘贴打开应用时显示的网关令牌（磁贴菜单 → Credentials）
       3. **配置API密钥**：在Config部分添加您的API密钥
 
@@ -687,7 +687,7 @@ x-compose-app:
 
       **최초 설정**
 
-      1. **웹 UI 접속**: 앱 아이콘을 클릭하고 서버 계정으로 로그인 (통합 인증)
+      1. **웹 UI 접속**: 앱 아이콘을 클릭하고 서버 계정으로 로그인 (통합 인증), 통합 인증이 없는 서버에서는 앱 비밀번호로 로그인
       2. **게이트웨이 잠금 해제**: 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구하면 앱을 열 때 표시되는 게이트웨이 토큰(타일 메뉴 → Credentials)을 붙여넣으세요
       3. **API 키 구성**: Config 섹션에서 API 키 추가
 
@@ -713,12 +713,12 @@ x-compose-app:
         ko_kr: 게이트웨이 토큰
       password: ${OPENCLAW_GATEWAY_TOKEN}
       note:
-        en_us: Sign-in is your server account (single sign-on). Paste this only if the Control UI asks for a gateway token or password. After a change, a Control UI that had the token pasted must have the new one pasted again.
-        fr_fr: La connexion se fait avec votre compte serveur (authentification unique). Collez ceci uniquement si l'interface demande un token ou un mot de passe de passerelle. Après un changement, une interface où le token avait été collé doit recevoir le nouveau.
-        de_de: Die Anmeldung erfolgt mit Ihrem Server-Konto (Single Sign-on). Nur einfugen, wenn die Control UI nach einem Gateway-Token oder Passwort fragt. Nach einer Anderung muss in einer Control UI, in die das Token eingefugt wurde, das neue erneut eingefugt werden.
-        es_es: El inicio de sesion usa tu cuenta del servidor (inicio de sesion unico). Pegalo solo si la interfaz pide un token o contrasena del gateway. Tras un cambio, una interfaz en la que se pego el token debe recibir el nuevo.
-        zh_cn: 登录使用您的服务器账户（单点登录）。仅当控制界面要求输入网关令牌或密码时才粘贴此值。更改后，曾粘贴过令牌的控制界面需要重新粘贴新令牌。
-        ko_kr: 로그인은 서버 계정(통합 인증)으로 합니다. 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구할 때만 붙여넣으세요. 변경 후에는 토큰을 붙여넣었던 컨트롤 UI에 새 토큰을 다시 붙여넣어야 합니다.
+        en_us: On a server with single sign-on, sign-in is your server account, otherwise the app password. Paste this only if the Control UI asks for a gateway token or password. After a change, a Control UI that had the token pasted must have the new one pasted again.
+        fr_fr: Sur un serveur avec authentification unique, la connexion se fait avec votre compte serveur, sinon avec le mot de passe de l'app. Collez ceci uniquement si l'interface demande un token ou un mot de passe de passerelle. Après un changement, une interface où le token avait été collé doit recevoir le nouveau.
+        de_de: Auf einem Server mit Single Sign-on erfolgt die Anmeldung mit Ihrem Server-Konto, sonst mit dem App-Passwort. Nur einfugen, wenn die Control UI nach einem Gateway-Token oder Passwort fragt. Nach einer Anderung muss in einer Control UI, in die das Token eingefugt wurde, das neue erneut eingefugt werden.
+        es_es: En un servidor con inicio de sesion unico, el inicio de sesion usa tu cuenta del servidor, si no, la contrasena de la app. Pegalo solo si la interfaz pide un token o contrasena del gateway. Tras un cambio, una interfaz en la que se pego el token debe recibir el nuevo.
+        zh_cn: 在启用单点登录的服务器上，登录使用您的服务器账户；否则使用应用密码。仅当控制界面要求输入网关令牌或密码时才粘贴此值。更改后，曾粘贴过令牌的控制界面需要重新粘贴新令牌。
+        ko_kr: 통합 인증이 있는 서버에서는 서버 계정으로, 없으면 앱 비밀번호로 로그인합니다. 컨트롤 UI가 게이트웨이 토큰이나 비밀번호를 요구할 때만 붙여넣으세요. 변경 후에는 토큰을 붙여넣었던 컨트롤 UI에 새 토큰을 다시 붙여넣어야 합니다.
       # OPENCLAW_GATEWAY_TOKEN is read from the environment on every start (the seeded
       # openclaw.json does not carry it), so a new value in .env plus a recreate is
       # the whole change.

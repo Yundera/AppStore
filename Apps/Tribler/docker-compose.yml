@@ -131,8 +131,9 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        Tribler is protected by your server's single sign-on (Authelia) — you sign in once with
-        your server account.
+        Tribler is protected by your server account (single sign-on, Authelia) — you sign in
+        once with it. On a server without single sign-on, use the app password Maison shows
+        on first open (also in the tile menu under **Credentials**).
         Downloads are saved to `/DATA/Downloads`.
         By default downloads are anonymized through Tribler's onion network (1 hop); you can
         change the number of hops or disable anonymity per-download in the UI.
@@ -209,8 +210,9 @@ x-compose-app:
     - amd64
   tips:
     en_us: |
-      Tribler is protected by your server's single sign-on (Authelia) — you sign in once with
-      your server account.
+      Tribler is protected by your server account (single sign-on, Authelia) — you sign in
+      once with it. On a server without single sign-on, use the app password Maison shows
+      on first open (also in the tile menu under **Credentials**).
       Downloads are saved to `/DATA/Downloads`.
       By default downloads are anonymized through Tribler's onion network (1 hop); you can
       change the number of hops or disable anonymity per-download in the UI.

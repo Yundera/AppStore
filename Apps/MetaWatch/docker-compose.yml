@@ -364,7 +364,7 @@ x-casaos:
       - **TV remote navigation** — D-pad spatial navigation for the 10-foot UI
       - **Profiles** — multiple profiles per box, each signing in with its own key
 
-      **Two gates, not one.** AppShield (Authelia SSO) fronts the whole app, and
+      **Two gates, not one.** AppShield (your server's login gate) fronts the whole app, and
       MetaWatch keeps its own profile sign-in behind it — so a shared box can
       hold several people's lists without them seeing each other's.
 
@@ -394,7 +394,7 @@ x-casaos:
       - **Navigation télécommande** — navigation spatiale D-pad pour l'interface salon
       - **Profils** — plusieurs profils par machine, chacun avec sa propre clé
 
-      **Deux barrières, pas une.** AppShield (SSO Authelia) protège toute l'app,
+      **Deux barrières, pas une.** AppShield (la barrière de connexion du serveur) protège toute l'app,
       et MetaWatch conserve sa propre connexion par profil derrière — une
       machine partagée peut donc héberger plusieurs listes sans que chacun voie
       celle des autres.
@@ -408,7 +408,7 @@ x-casaos:
     before_install:
       en_us: |
         **Access & sign-in**
-        - Open the app URL and sign in with your server account (single sign-on, via AppShield).
+        - Open the app URL and sign in with your server account (single sign-on, via AppShield), or with the app password on a server without it.
         - Then create a MetaWatch profile. You are shown a **secret key — save
           it**. It is the only way back in: sign-out is real, and the key is
           never recoverable from the server without an existing session.
@@ -485,7 +485,7 @@ x-compose-app:
       - **TV remote navigation** — D-pad spatial navigation for the 10-foot UI
       - **Profiles** — multiple profiles per box, each signing in with its own key
 
-      **Two gates, not one.** AppShield (Authelia SSO) fronts the whole app, and
+      **Two gates, not one.** AppShield (your server's login gate) fronts the whole app, and
       MetaWatch keeps its own profile sign-in behind it — so a shared box can
       hold several people's lists without them seeing each other's.
 
@@ -515,7 +515,7 @@ x-compose-app:
       - **Navigation télécommande** — navigation spatiale D-pad pour l'interface salon
       - **Profils** — plusieurs profils par machine, chacun avec sa propre clé
 
-      **Deux barrières, pas une.** AppShield (SSO Authelia) protège toute l'app,
+      **Deux barrières, pas une.** AppShield (la barrière de connexion du serveur) protège toute l'app,
       et MetaWatch conserve sa propre connexion par profil derrière — une
       machine partagée peut donc héberger plusieurs listes sans que chacun voie
       celle des autres.
@@ -543,7 +543,7 @@ x-compose-app:
   tips:
     en_us: |
       **Access & sign-in**
-      - Open the app URL and sign in with your server account (single sign-on, via AppShield).
+      - Open the app URL and sign in with your server account (single sign-on, via AppShield), or with the app password on a server without it.
       - Then create a MetaWatch profile. You are shown a **secret key — save
         it**. It is the only way back in: sign-out is real, and the key is
         never recoverable from the server without an existing session.

@@ -180,7 +180,7 @@ x-casaos:
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
         URL below — clients that support OAuth discovery (claude.ai, Claude
         Desktop) register themselves and open a browser for you to approve with
-        your server account (single sign-on).
+        your server account (single sign-on), or with the app password on a server without it.
         ```json
         {
           "mcpServers": {
@@ -313,7 +313,7 @@ x-compose-app:
       The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
       URL below — clients that support OAuth discovery (claude.ai, Claude
       Desktop) register themselves and open a browser for you to approve with
-      your server account (single sign-on).
+      your server account (single sign-on), or with the app password on a server without it.
       ```json
       {
         "mcpServers": {

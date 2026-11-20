@@ -203,7 +203,7 @@ x-casaos:
         2. In n8n: **Settings → n8n API → Create an API key**
 
         **Setup (2 steps):**
-        1. Open this app's Web UI (you'll sign in with your server account — single sign-on, using the session you already have)
+        1. Open this app's Web UI (you'll sign in with your server account — single sign-on, using the session you already have — or, on a server without single sign-on, with the app password Maison shows on first open)
         2. Paste the **n8n Base URL** (`http://n8n:80` is pre-filled for the companion app) and the **API key**, click **Test connection** → **Save**
 
         **MCP Integration (for AI/LLMs):**
@@ -213,7 +213,7 @@ x-casaos:
         The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
         URL below — clients that support OAuth discovery (claude.ai, Claude
         Desktop) register themselves and open a browser for you to approve with
-        your server account (single sign-on).
+        your server account (single sign-on), or with the app password on a server without it.
         ```json
         {
           "mcpServers": {
@@ -263,7 +263,7 @@ x-casaos:
 
         **Security:**
         - The API key is stored only in `/DATA/AppData/n8nmcp/config.json` and is never logged or returned via the API
-        - The Web UI and `/api` endpoints sit behind the server's single sign-on — you reuse the session you already have
+        - The Web UI and `/api` endpoints sit behind the server's single sign-on, where you reuse the session you already have. On a server without single sign-on, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**)
         - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
           public URL is reachable without a credential. Only the in-network address
           `http://n8nmcp-backend:9640/mcp` (Option 2) is unauthenticated, and it is
@@ -354,7 +354,7 @@ x-compose-app:
       2. In n8n: **Settings → n8n API → Create an API key**
 
       **Setup (2 steps):**
-      1. Open this app's Web UI (you'll sign in with your server account — single sign-on, using the session you already have)
+      1. Open this app's Web UI (you'll sign in with your server account — single sign-on, using the session you already have — or, on a server without single sign-on, with the app password Maison shows on first open)
       2. Paste the **n8n Base URL** (`http://n8n:80` is pre-filled for the companion app) and the **API key**, click **Test connection** → **Save**
 
       **MCP Integration (for AI/LLMs):**
@@ -364,7 +364,7 @@ x-compose-app:
       The `/mcp` endpoint is protected by OAuth 2.1. Point your client at the
       URL below — clients that support OAuth discovery (claude.ai, Claude
       Desktop) register themselves and open a browser for you to approve with
-      your server account (single sign-on).
+      your server account (single sign-on), or with the app password on a server without it.
       ```json
       {
         "mcpServers": {
@@ -414,7 +414,7 @@ x-compose-app:
 
       **Security:**
       - The API key is stored only in `/DATA/AppData/n8nmcp/config.json` and is never logged or returned via the API
-      - The Web UI and `/api` endpoints sit behind the server's single sign-on — you reuse the session you already have
+      - The Web UI and `/api` endpoints sit behind the server's single sign-on, where you reuse the session you already have. On a server without single sign-on, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**)
       - `/mcp` is gated separately on OAuth 2.1 Bearer tokens, so nothing on the
         public URL is reachable without a credential. Only the in-network address
         `http://n8nmcp-backend:9640/mcp` (Option 2) is unauthenticated, and it is
