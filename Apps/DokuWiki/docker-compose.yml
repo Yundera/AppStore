@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   dokuwiki-proxy:
-    image: ghcr.io/nsl-sh/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.2.0
     container_name: dokuwiki
     # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
     # os.hostname(), and the auth-registrar independently attests this app's name via the
@@ -33,6 +33,9 @@ services:
       # Without a value (a platform that ignores x-compose-app) the gate generates
       # one and prints it in its log.
       PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      # Empty elsewhere, where the gate falls back to REDIRECT_HOST_SUFFIXES.
+      PUBLIC_URL: "${APP_URLS:-}"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
     expose:
       - 80
@@ -249,8 +252,8 @@ x-compose-app:
       username: admin
       password: ${APPSHIELD_PASSWORD}
       note:
-        en_us: Signs in when single sign-on is unavailable. Day to day, use single sign-on.
-      # Behind SSO nobody needs it on the first click: tile menu only.
+        en_us: Signs in to this app. On a server with single sign-on, use that instead: this password then works only while single sign-on is unavailable.
+      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
       prompt: false
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:
