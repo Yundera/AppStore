@@ -73,7 +73,7 @@ services:
 
   # Behind the gate, on the app's own network only: every request is gated anyway.
   kopia-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: kopia-router
     restart: unless-stopped
     expose:
@@ -97,7 +97,7 @@ services:
           memory: 64M
 
   kopia-app:
-    image: ghcr.io/yundera/maison-kopia-engine:1.4.0
+    image: ghcr.io/yundera/maison-kopia-engine:1.6.0
     container_name: kopia-app
     # The identity a repository created from the UI is filed under: the engine's,
     # because Maison only execs into a container whose hostname matches it.
@@ -185,7 +185,7 @@ services:
           memory: 4G
 
   kopia-engine:
-    image: ghcr.io/yundera/maison-kopia-engine:1.4.0
+    image: ghcr.io/yundera/maison-kopia-engine:1.6.0
     container_name: kopia-engine
     # The identity snapshots are filed under (pcs@kopia-pcs). It is written once into
     # repository.config at connect, and Maison only execs into a container whose
@@ -211,7 +211,7 @@ services:
       # What serve writes into adapter.json. MAISON_ENGINE_IMAGE must be the exact
       # string of `image:` above: Maison only enables an engine whose container
       # runs the image its descriptor names.
-      MAISON_ENGINE_IMAGE: "ghcr.io/yundera/maison-kopia-engine:1.4.0"
+      MAISON_ENGINE_IMAGE: "ghcr.io/yundera/maison-kopia-engine:1.6.0"
       MAISON_ENGINE_CONTAINER: "kopia-engine"
       KOPIA_CACHE_DIRECTORY: "/DATA/AppData/kopia/engine/cache"
       KOPIA_LOG_DIR: "/DATA/AppData/kopia/engine/logs"
@@ -439,7 +439,7 @@ x-compose-app:
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:
         apply: env
-  version: "1.4.0"
+  version: "1.6.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
