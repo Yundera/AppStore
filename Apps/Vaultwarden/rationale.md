@@ -153,7 +153,8 @@ then checked in a browser.
 - Neither the backend nor the sidecar carries Caddy labels — the routing decision exists in
   exactly one place, the router.
 - Resource limits on both services; AppShield runs with Docker's default capability set.
-- **`DOMAIN` is pinned** to `https://vaultwarden-$APP_DOMAIN`, so Vaultwarden issues its
+- **`DOMAIN` is pinned** to the app's address as Maison gives it (`${APP_URL}`, falling back
+  to `https://vaultwarden-$APP_DOMAIN`), so Vaultwarden issues its
   own links and WebAuthn origins against the gateway hostname rather than an
   attacker-supplied `Host` header.
 - `OIDC_REQUIRED_GROUPS: "admins"` is present as a commented-out one-liner on the sidecar
