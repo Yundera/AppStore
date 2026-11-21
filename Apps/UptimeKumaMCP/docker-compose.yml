@@ -12,7 +12,7 @@ services:
   # below), and serves streamable HTTP on :3000/mcp. Reachable at
   # uptimekumamcp-backend:3000 on the pcs network.
   uptimekumamcp-backend:
-    image: davidfuchs/mcp-uptime-kuma:0.15.0
+    image: davidfuchs/mcp-uptime-kuma:0.17.0
     container_name: uptimekumamcp-backend
     hostname: uptimekumamcp-backend
     # The image defaults to `-t stdio`; the HTTP transport is opt-in.
@@ -60,8 +60,8 @@ services:
   # /api/status page (tool count, last error) is reachable behind SSO; the tips
   # link to it.
   uptimekumamcp-beacon:
-    # 1.0.3+ is required: this server's 36 tools with full schemas make a ~77 KB
-    # manifest, past the 64 KB UDP limit, and 1.0.2 sends it whole, so Beacon
+    # 1.0.3+ is required: this server's 67 tools with full schemas make a manifest
+    # well past the 64 KB UDP limit, and 1.0.2 sends it whole, so Beacon
     # never gets it. 1.0.3 announces names and descriptions only when the full
     # manifest is too big, and Beacon fetches the schemas over HTTP.
     image: ghcr.io/worph/beaconify:1.0.3
@@ -263,17 +263,21 @@ x-casaos:
 
         If you have **Beacon** installed, this app registers there through its bundled `beaconify` sidecar and its tools show up under the `uptime-kuma-mcp__*` namespace — no extra config.
 
-        **Available MCP Tools (36):**
+        **Available MCP Tools (67):**
         | Area | Tools |
         |------|-------|
-        | Monitors | `getMonitorSummary`, `listMonitors`, `getMonitor`, `listMonitorTypes`, `getMonitorTypeFields`, `createMonitor`, `updateMonitor`, `pauseMonitor`, `resumeMonitor`, `deleteMonitor` |
-        | History | `listHeartbeats`, `getHeartbeats` |
-        | Notifications | `listNotifications`, `addNotification`, `updateNotification`, `deleteNotification` |
-        | Tags | `listTags`, `addTag`, `deleteTag` |
-        | Maintenance | `getMaintenanceWindows`, `createMaintenance`, `updateMaintenance`, `pauseMaintenance`, `resumeMaintenance`, `deleteMaintenance` |
-        | Status pages | `listStatusPages`, `getStatusPage`, `createStatusPage`, `updateStatusPage`, `deleteStatusPage` |
-        | Docker hosts | `listDockerHosts`, `addDockerHost`, `updateDockerHost`, `testDockerHost`, `deleteDockerHost` |
-        | Settings | `getSettings` |
+        | Monitors | `getMonitorSummary`, `getMonitor`, `listMonitors`, `listMonitorTypes`, `getMonitorTypeFields`, `createMonitor`, `updateMonitor`, `deleteMonitor`, `setMonitorActive`, `listGames`, `listPM2Processes`, `testChrome`, `getPushExample`, `checkDomainExpirySupport` |
+        | History | `listHeartbeats`, `getMonitorUptime`, `clearMonitorEvents`, `clearMonitorHeartbeats`, `clearAllStatistics` |
+        | Notifications | `listNotifications`, `listNotificationTypes`, `getNotificationTypeFields`, `createNotification`, `updateNotification`, `deleteNotification`, `testNotification` |
+        | Tags | `listTags`, `createTag`, `updateTag`, `deleteTag` |
+        | Maintenance | `listMaintenanceWindows`, `createMaintenanceWindow`, `updateMaintenanceWindow`, `deleteMaintenanceWindow`, `setMaintenanceWindowActive` |
+        | Status pages | `listStatusPages`, `getStatusPage`, `createStatusPage`, `updateStatusPage`, `deleteStatusPage`, `listIncidents`, `createIncident`, `updateIncident`, `resolveIncident`, `deleteIncident` |
+        | Docker hosts | `listDockerHosts`, `createDockerHost`, `updateDockerHost`, `deleteDockerHost`, `testDockerHost` |
+        | Proxies | `listProxies`, `createProxy`, `updateProxy`, `deleteProxy` |
+        | Remote browsers | `listRemoteBrowsers`, `testRemoteBrowser`, `createRemoteBrowser`, `updateRemoteBrowser`, `deleteRemoteBrowser` |
+        | API keys | `listAPIKeys`, `createAPIKey`, `setAPIKeyActive`, `deleteAPIKey` |
+        | Database | `getDatabaseInfo`, `shrinkDatabase` |
+        | Settings | `getSettings`, `updateSettings` |
 
         **Limits:**
         - The server accepts 1000 requests per 15 minutes from each client. A long monitoring sweep by an assistant can hit it; the client gets HTTP 429 and can retry after the window.
@@ -300,7 +304,7 @@ x-compose-app:
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:
         apply: env
-  version: "0.15.0"
+  version: "0.17.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others). The route
@@ -387,3 +391,4 @@ x-compose-app:
     - path: /DATA/AppData/uptimekumamcp/oauth
       user: $PUID
       group: $PGID
+

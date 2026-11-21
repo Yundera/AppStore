@@ -8,7 +8,9 @@ on the image is also published for linux/arm64 (Docker Hub tag listing, checked
 2026-11-14). The listing still declares amd64 alone, the platform it has been tested
 on; widening `architectures` to arm64 is a separate change once it has been installed
 on an arm64 box. It's pinned to an exact
-version: the project is pre-1.0 and tool names may still change between releases.
+version: the project is pre-1.0 and tool names do change between releases (0.16.0
+renamed and merged tools, 0.17.0 renamed the maintenance tools), so a bump updates the
+tool table in the tips with it.
 
 ## The Uptime Kuma login is a Maison `input`, not a generated secret
 
@@ -52,7 +54,7 @@ gates that page with SSO and `/mcp` with its OAuth 2.1 broker.
 
 Beacon's discovery manifest travels in one UDP datagram, which holds at most 65,507 bytes.
 This server's 35 tools with full input and output schemas came to about 74 KB (36 tools,
-about 77 KB, on 0.15.0). beaconify
+about 77 KB, on 0.15.0; 67 tools, about 127 KB, on 0.17.0). beaconify
 1.0.2 sends that whole, the send fails, and Beacon logs `No manifest … after 3 attempts`
 every sweep (seen on holyhorse 2026-11-04). 1.0.3 falls back to `{name, description}`
 when the manifest is too big, and Beacon (≥ 1.0.20) then fetches the full tool
@@ -84,3 +86,4 @@ warning about this at startup, which is expected.
 The server keeps all state in memory: its Socket.IO session and a monitor cache. It
 writes nothing to disk. The only persistent data is AppShield's OAuth store in
 `/DATA/AppData/uptimekumamcp/oauth/`.
+
