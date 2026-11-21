@@ -52,7 +52,7 @@ services:
       - pcs
       - netdata-internal
   netdata-backend:
-    image: netdata/netdata:v2.12.3
+    image: netdata/netdata:v2.13.0
     container_name: netdata-backend
     hostname: netdata-backend
     user: 0:0
@@ -225,7 +225,7 @@ x-compose-app:
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:
         apply: env
-  version: "2.12.3"
+  version: "2.13.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
