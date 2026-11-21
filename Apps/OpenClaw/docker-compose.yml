@@ -44,6 +44,13 @@ services:
       # Empty elsewhere, where the gate falls back to REDIRECT_HOST_SUFFIXES.
       PUBLIC_URL: "${APP_URLS:-}"
       REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+      # The web app manifest only (static JSON, no data). The Control UI links it
+      # without crossorigin="use-credentials", so Chrome fetches it with no cookie;
+      # behind the gate that 302s to the SSO login, which the UI's own CSP
+      # (default-src 'self') then blocks as a cross-origin manifest load: a console
+      # error on first boot and no manifest. Matching is per-segment, so this exempts
+      # /manifest.webmanifest and nothing else. Not a machine/API path.
+      ALLOWED_PATHS: "manifest.webmanifest"
     depends_on:
       - openclaw-backend
     deploy:
