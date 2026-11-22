@@ -579,3 +579,12 @@ x-compose-app:
         # confirmed to fail on some install, the fix is a guard that checks whether admin@$APP_DOMAIN already
         # authenticates before calling reset-admin.sh -- not an unconditional call.
         echo "Post-install complete"
+    # After a power cut or a forced reset: finds the libraries the lost writes left
+    # pointing at empty objects (the mestio incident), rolls them back to their last
+    # intact version and moves the empty objects aside. Silent when nothing is damaged;
+    # what it repaired reaches the owner as an incident. A large damaged library takes
+    # long to re-check (~16 min per 175 GB), hence the timeout. See the script.
+    - name: repair-after-crash
+      at: unclean-boot
+      timeout: 3h
+      file: scripts/repair-after-crash.sh
