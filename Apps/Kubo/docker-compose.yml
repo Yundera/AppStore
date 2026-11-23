@@ -140,12 +140,17 @@ services:
         limits:
           memory: 1024M
 
-  # ── The public read side: the kubo-gateway route ──────────────────────────
-  # The route's service for the share-link hostname, so the node itself is no route's
-  # service. It proxies to the gateway port (8080) and to nothing else: port 5001 is
-  # not in its config, so the RPC API has no way out through this hostname.
+  # ── The app's router: both routes ─────────────────────────────────────────
+  # Port 8080, the kubo-gateway route (the public read side): proxies to the node's
+  # gateway port (8080) and to nothing else -- port 5001 is not in its config, so the
+  # RPC API has no way out through this hostname.
+  # Port 80, the kubo route: everything goes to the AppShield gate, except the
+  # WebUI's PWA manifest. Browsers fetch <link rel=manifest> without cookies, so
+  # through the gate it is a redirect to the SSO and a CORS error on every load.
+  # It is answered from the gateway port, which serves only what the node already
+  # holds -- the same content the kubo-gateway host shows anyone.
   kubo-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: kubo-router
     restart: unless-stopped
     cpu_shares: 50
@@ -155,6 +160,7 @@ services:
         limits:
           memory: 64M
     expose:
+      - 80
       - 8080
     configs:
       - source: kubo-router
@@ -207,8 +213,53 @@ configs:
         location / { proxy_pass http://$$gateway; }
       }
 
+      map $$http_upgrade $$connection_upgrade { default upgrade; "" close; }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # Adding a file is a POST of the whole file to /api/v0/add: no cap, streamed.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$fwd_proto;
+        proxy_set_header X-Forwarded-Host $$http_host;
+        proxy_set_header Upgrade $$http_upgrade;
+        proxy_set_header Connection $$connection_upgrade;
+
+        set $$gate kubo:80;
+        set $$gateway kubo-backend:8080;
+
+        location = /_router/health { access_log off; return 204; }
+
+        # The WebUI's manifest, matched on nginx's normalised URI and sent on as a
+        # fixed URI, so no other path can ride this exemption. Whatever the file
+        # holds, it goes out as a manifest that cannot render or run on this origin
+        # (see rationale.md).
+        location ~ "^/ipfs/([A-Za-z0-9]+)/manifest\.json$$" {
+          limit_except GET { deny all; }
+          proxy_hide_header Content-Type;
+          proxy_hide_header Content-Security-Policy;
+          add_header Content-Type "application/manifest+json" always;
+          add_header X-Content-Type-Options "nosniff" always;
+          add_header Content-Security-Policy "sandbox; default-src 'none'" always;
+          proxy_pass http://$$gateway/ipfs/$$1/manifest.json;
+        }
+
+        # Everything else -- the WebUI, the RPC API, the gate's own /AppShield/ and
+        # /nhl-auth/ endpoints -- through the SSO gate.
+        location / { proxy_pass http://$$gate; }
+      }
+
 x-casaos:
-  main: kubo
+  main: kubo-router
   webui_port: 80
   tips:
     before_install:
@@ -344,7 +395,7 @@ x-compose-app:
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
   routes:
-    - { service: kubo, name: kubo, upstream-port: 80, path: /webui/ }
+    - { service: kubo-router, name: kubo, upstream-port: 80, path: /webui/ }
     # The public read side, on its own host on purpose: a path gateway serves every
     # shared file from the origin it is reached on, so an HTML page shared from the
     # WebUI's origin would run next to the RPC API with the user's session attached.
@@ -506,3 +557,4 @@ x-compose-app:
           exit 0
         fi
         SH
+

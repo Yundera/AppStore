@@ -7,6 +7,8 @@
 2. **A second route that does not go through the AppShield sidecar**: `kubo-gateway` is
    served by the app's own router, `kubo-router`, which proxies to the node's gateway port.
 3. **A host port is published**: `4001/tcp` and `4001/udp`, the libp2p swarm.
+4. **One path on the main hostname skips the gate**: the WebUI's PWA manifest,
+   `/ipfs/<cid>/manifest.json`, answered by `kubo-router` from the gateway port.
 
 ## Why it is necessary
 
@@ -31,6 +33,17 @@ origin 403.
 `kubo-backend:8080` and nothing else, so port 5001 — the RPC API and the WebUI — has no way
 out on any hostname except through the AppShield sidecar. The node itself is no route's
 service and sits on the app's own network (`kubo-internal`) only.
+
+**4. Browsers fetch a manifest without cookies.** `<link rel="manifest">` is requested
+with no credentials, so through the gate it was a redirect to the SSO and a CORS error in
+the console on every WebUI load. `kubo-router` sits in front of the gate on the main
+hostname and answers exactly `/ipfs/<cid>/manifest.json` (a regex on nginx's normalised URI,
+passed on as a fixed URI, GET only) from the node's gateway port; everything else goes to the
+gate. The gateway serves only what the node already holds (`Gateway.NoFetch`), which the
+`kubo-gateway` hostname shows anyone anyway, and the response is forced to
+`application/manifest+json` with `nosniff` and a `sandbox` CSP, so a pinned file of that name
+cannot render or run as script on the WebUI's origin. Port 5001 is still reached only
+through the gate.
 
 **3. libp2p is not HTTP.** An HTTP reverse proxy cannot carry the swarm protocol, so a node
 that is to be dialable has to publish the port. It is shipped enabled rather than commented
@@ -108,3 +121,4 @@ Everything — identity key, config, pins and blocks — lives in
 folder is mounted. The init script edits only the config keys it documents and is
 idempotent, so reinstalling or upgrading re-applies them and leaves the node's identity,
 pin set and every other preference untouched. Garbage collection never collects a pin.
+
