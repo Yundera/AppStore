@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   guide:
-    image: ghcr.io/yundera/guideapp:1.0.3
+    image: ghcr.io/yundera/guideapp:1.0.4
     container_name: guide
     user: 0:0  # nginx needs root to bind port 80; no volumes (see rationale.md)
     cpu_shares: 80
