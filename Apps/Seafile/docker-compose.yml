@@ -69,7 +69,7 @@ services:
       retries: 5
 
   seafile:
-    image: seafileltd/seafile-mc:13.0.29
+    image: seafileltd/seafile-mc:13.0.30
     container_name: seafile
     restart: unless-stopped
     user: 0:0
@@ -183,7 +183,7 @@ services:
       retries: 5
 
   seafile-seadoc:
-    image: seafileltd/sdoc-server:2.0.11
+    image: seafileltd/sdoc-server:2.0.14
     container_name: seafile-seadoc
     hostname: seafile-seadoc
     restart: unless-stopped
@@ -212,6 +212,10 @@ services:
       - SEAHUB_SERVICE_URL=${APP_URL:-https://seafile-${APP_DOMAIN}}
       - SEAFILE_SERVER_HOSTNAME=${APP_HOST:-seafile-${APP_DOMAIN}}
       - SEAFILE_SERVER_PROTOCOL=https
+      # sdoc-server 2.0.13+ rate-limits HTTP per client IP. Requests reach it through
+      # the platform proxy, seafile-router and its own internal nginx, so trust the
+      # private hops and key on the client the platform proxy saw.
+      - TRUST_PROXY=loopback,uniquelocal
     depends_on:
       db:
         condition: service_healthy
@@ -224,7 +228,7 @@ services:
   # Caddy handle_path tree lives here instead. The platform only ever routes a
   # host to this container's port 80.
   seafile-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: seafile-router
     restart: unless-stopped
     cpu_shares: 50
@@ -322,10 +326,9 @@ x-casaos:
     - screenshot-2.png
     - screenshot-3.png
     - screenshot-4.png
-  # amd64 only: seafileltd/sdoc-server publishes no arm64 image for 2.0.10 or 2.0.11
-  # (the last multi-arch 2.0.x was 2.0.9), so the stack cannot be pulled on arm64.
   architectures:
     - amd64
+    - arm64
   category: Cloud
   tags: ["files", "personal", "business"]
   description:
@@ -368,7 +371,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "13.0.29"
+  version: "13.0.30"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -400,10 +403,9 @@ x-compose-app:
     - screenshot-2.png
     - screenshot-3.png
     - screenshot-4.png
-  # amd64 only: seafileltd/sdoc-server publishes no arm64 image for 2.0.10 or 2.0.11
-  # (the last multi-arch 2.0.x was 2.0.9), so the stack cannot be pulled on arm64.
   architectures:
     - amd64
+    - arm64
   # Sum of the service limits (~4.1G).
   resources:
     recommended: { memory: 4G }
