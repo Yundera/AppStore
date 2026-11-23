@@ -64,7 +64,7 @@ services:
     logging: *logging
 
   docmost:
-    image: docmost/docmost:0.97.0
+    image: docmost/docmost:0.98.0
     container_name: docmost
     restart: unless-stopped
     user: "0:0"
@@ -305,7 +305,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.97.0"
+  version: "0.98.0"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -527,3 +527,4 @@ x-compose-app:
     - path: /DATA/AppData/docmost/storage
       user: $PUID
       group: $PGID
+
