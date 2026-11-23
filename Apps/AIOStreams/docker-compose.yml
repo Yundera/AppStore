@@ -200,6 +200,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  parent: stremio
   version: "2.38.1"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app

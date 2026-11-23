@@ -946,6 +946,16 @@ x-compose-app:
 - `parent` is for apps that only make sense beside another one, such as a companion indexer or
   a request front end. It is presentation only. If the parent is not installed, the app shows
   as an ordinary tile.
+  - Name the parent by its Compose project name (its top-level `name:`, e.g. `uptimekuma`), not
+    its folder name.
+  - Set it when the app drives one specific app: an MCP server for a self-hosted app
+    (NextcloudMCP → `nextcloud`), a mount of it (SeafileDrive → `seafile`), an add-on for it
+    (SegmentStremioAddon → `stremio`). An MCP server for an outside service (Telegram, Trello)
+    has no parent.
+  - Leave it unset for a hub that serves many apps (Beacon, Prowlarr), and for a variant of
+    an app (FileBrowserRoot, WireGuardEasyHost): those are alternatives, not extensions.
+  - Nesting is one level. An app that is itself a parent's extension cannot be a parent.
+  - It goes in `x-compose-app` only. CasaOS has no equivalent, so there is nothing to mirror.
 
 Reference: [`x-compose-app.md` › Views](https://github.com/Yundera/Maison/blob/main/docs/x-compose-app.md#views).
 

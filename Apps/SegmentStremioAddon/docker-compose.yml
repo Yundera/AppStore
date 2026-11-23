@@ -246,6 +246,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  parent: stremio
   credentials:
     - label:
         en_us: App password

@@ -272,6 +272,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
+  parent: docmost
   secrets:
     # The AppShield gate's fallback password (see its PASSWORD).
     APPSHIELD_PASSWORD: password:24
