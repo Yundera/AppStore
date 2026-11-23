@@ -116,7 +116,7 @@ services:
   # to the AppShield gate, everything else straight to the backend. This was a Caddy
   # handle tree in the labels; the platform now only routes the host to port 80 here.
   vaultwarden-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: vaultwarden-router
     restart: unless-stopped
     cpu_shares: 50
