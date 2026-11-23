@@ -65,7 +65,7 @@ services:
   # to font-src and passes everything else through. On the app's network only:
   # the gate is the one way in.
   cypht-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: cypht-router
     restart: unless-stopped
     cpu_shares: 50
