@@ -49,7 +49,7 @@ services:
       - docusaurus-internal
 
   docusaurus-backend:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: docusaurus-backend
     restart: unless-stopped
     user: "0:0"
