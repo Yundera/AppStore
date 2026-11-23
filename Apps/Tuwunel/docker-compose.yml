@@ -30,9 +30,12 @@ services:
     environment:
       TZ: $TZ
       # --- Identity (permanent — see the `matrix` route note in x-compose-app) ---
-      # The matrix route's host, as Maison reports it (own-address); a server_name
-      # must never move once the database exists, so never rename that route.
-      TUWUNEL_SERVER_NAME: ${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}
+      # Spelled out, not ${ROUTE_MATRIX_HOST}: that follows the box's primary name
+      # form (dash or dot), and a server_name must never move once the database
+      # exists: Tuwunel refuses to start on a database made under another name.
+      # Before Nov 2026 the identity was matrix-<domain>: a server installed then
+      # keeps it by setting TUWUNEL_SERVER_NAME: matrix-${APP_DOMAIN} in its override.
+      TUWUNEL_SERVER_NAME: matrix.${APP_DOMAIN}
       # Federation runs over 443 (the gateway); no port 8448 needed.
       # Tuwunel serves /.well-known/matrix/{client,server} itself with these values.
       TUWUNEL_WELL_KNOWN: '{client="${ROUTE_MATRIX_URL:-https://matrix-${APP_DOMAIN}}",server="${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}:443"}'
@@ -126,7 +129,7 @@ x-casaos:
 
       Running your own homeserver means your chat identity is truly **yours**:
 
-      • Your ID is `@you:matrix-<your-domain>` — issued by **your** server, not a company
+      • Your ID is `@you:matrix.<your-domain>` — issued by **your** server, not a company
       • Chat with anyone on the Matrix network (matrix.org, mozilla.org, and thousands more)
       • End-to-end encrypted rooms, voice/video calls, file sharing
       • Your message history and media stay **on your server**
@@ -142,17 +145,17 @@ x-casaos:
       1. Install the app and open it — Element loads, already pointed at your server
       2. **Create an account** — use the *registration token* shown when you open the app (tile menu → Credentials)
       3. The **first account created becomes the server admin**
-      4. On mobile, install the Element app and enter `matrix-<your-domain>` as the homeserver
+      4. On mobile, install the Element app and enter `matrix.<your-domain>` as the homeserver
 
       🪪 **Your identity is engine-independent**
 
-      Your Matrix ID lives on the neutral `matrix-<your-domain>` address — not on a software-specific one. If your server ships an alternative Matrix server engine in the future, it will use the **same identity domain**, so your `@you:matrix-…` handle survives an engine switch.
+      Your Matrix ID lives on the neutral `matrix.<your-domain>` address — not on a software-specific one. If your server ships an alternative Matrix server engine in the future, it will use the **same identity domain**, so your `@you:matrix.…` handle survives an engine switch.
   tips:
     before_install:
       en_us: |
         **⚠️ Your Matrix identity is permanent**
 
-        Your server name will be `matrix-<your-domain>` and your user ID `@name:matrix-<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.
+        Your server name will be `matrix.<your-domain>` and your user ID `@name:matrix.<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.
 
         **🔑 Registration**
 
@@ -161,13 +164,13 @@ x-casaos:
         | Setting | Value |
         |---------|-------|
         | Web Client (Element) | [🔗 Open Element](${APP_URL:-https://tuwunel-${APP_DOMAIN}}/) |
-        | Homeserver (for mobile apps) | `${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}` |
+        | Homeserver (for mobile apps) | `matrix.${APP_DOMAIN}` |
 
         Keep the token private — anyone who has it can create accounts on your server.
 
         **📱 Connecting a client**
 
-        The app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix-<your-domain>`.
+        The app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix.<your-domain>`.
 
 x-compose-app:
   schema_version: 2
@@ -177,8 +180,8 @@ x-compose-app:
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
   routes:
     - { service: tuwunel-element, name: tuwunel, upstream-port: 8080 }
-    # matrix-* is the CANONICAL Matrix identity domain: the server_name, in every user
-    # id (@user:matrix-<domain>). Engine-neutral on purpose: a future homeserver app
+    # matrix.<domain> is the CANONICAL Matrix identity domain: the server_name, in every
+    # user id (@user:matrix.<domain>). Engine-neutral on purpose: a future homeserver app
     # must keep this name to preserve identities. NEVER rename or drop this route.
     - { service: tuwunel, name: matrix, upstream-port: 8008 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
@@ -189,7 +192,7 @@ x-compose-app:
   tagline:
     en_us: Your own identity on the Matrix network — federated, private chat under your domain
   description:
-    en_us: "\U0001F4AC **What is Tuwunel?**\n\n**Tuwunel** is a fast, lightweight **Matrix homeserver** — the official successor to conduwuit, written in Rust. Matrix is an open, federated chat network (like email, but for messaging): thousands of servers world-wide all talk to each other, and **nobody owns the network**.\n\nRunning your own homeserver means your chat identity is truly **yours**:\n\n• Your ID is `@you:matrix-<your-domain>` — issued by **your** server, not a company\n• Chat with anyone on the Matrix network (matrix.org, mozilla.org, and thousands more)\n• End-to-end encrypted rooms, voice/video calls, file sharing\n• Your message history and media stay **on your server**\n\n✅ Use it with **Element** (web, desktop, iOS, Android) or any Matrix client — just point the client at your server.\n\n\U0001F4BB **Element Web included**\n\nThe app bundles the **Element** web client, preconfigured for your server — open the app and you're on your own Matrix server, no setup needed.\n\n\U0001F680 **Getting started**\n\n1. Install the app and open it — Element loads, already pointed at your server\n2. **Create an account** — use the *registration token* shown when you open the app (tile menu → Credentials)\n3. The **first account created becomes the server admin**\n4. On mobile, install the Element app and enter `matrix-<your-domain>` as the homeserver\n\n\U0001FAAA **Your identity is engine-independent**\n\nYour Matrix ID lives on the neutral `matrix-<your-domain>` address — not on a software-specific one. If your server ships an alternative Matrix server engine in the future, it will use the **same identity domain**, so your `@you:matrix-…` handle survives an engine switch.\n"
+    en_us: "\U0001F4AC **What is Tuwunel?**\n\n**Tuwunel** is a fast, lightweight **Matrix homeserver** — the official successor to conduwuit, written in Rust. Matrix is an open, federated chat network (like email, but for messaging): thousands of servers world-wide all talk to each other, and **nobody owns the network**.\n\nRunning your own homeserver means your chat identity is truly **yours**:\n\n• Your ID is `@you:matrix.<your-domain>` — issued by **your** server, not a company\n• Chat with anyone on the Matrix network (matrix.org, mozilla.org, and thousands more)\n• End-to-end encrypted rooms, voice/video calls, file sharing\n• Your message history and media stay **on your server**\n\n✅ Use it with **Element** (web, desktop, iOS, Android) or any Matrix client — just point the client at your server.\n\n\U0001F4BB **Element Web included**\n\nThe app bundles the **Element** web client, preconfigured for your server — open the app and you're on your own Matrix server, no setup needed.\n\n\U0001F680 **Getting started**\n\n1. Install the app and open it — Element loads, already pointed at your server\n2. **Create an account** — use the *registration token* shown when you open the app (tile menu → Credentials)\n3. The **first account created becomes the server admin**\n4. On mobile, install the Element app and enter `matrix.<your-domain>` as the homeserver\n\n\U0001FAAA **Your identity is engine-independent**\n\nYour Matrix ID lives on the neutral `matrix.<your-domain>` address — not on a software-specific one. If your server ships an alternative Matrix server engine in the future, it will use the **same identity domain**, so your `@you:matrix.…` handle survives an engine switch.\n"
   developer: Matrix Construct
   category: Chat
   icon: icon.png
@@ -202,7 +205,7 @@ x-compose-app:
     - amd64
     - arm64
   tips:
-    en_us: "**⚠️ Your Matrix identity is permanent**\n\nYour server name will be `matrix-<your-domain>` and your user ID `@name:matrix-<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.\n\n**\U0001F511 Registration**\n\nAccount creation requires a **registration token**. The **first account registered becomes the admin**. The token is shown when you open the app (tile menu → Credentials).\n\n| Setting | Value |\n|---------|-------|\n| Web Client (Element) | [\U0001F517 Open Element](${APP_URL:-https://tuwunel-${APP_DOMAIN}}/) |\n| Homeserver (for mobile apps) | `${ROUTE_MATRIX_HOST:-matrix-${APP_DOMAIN}}` |\n\nKeep the token private — anyone who has it can create accounts on your server.\n\n**\U0001F4F1 Connecting a client**\n\nThe app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix-<your-domain>`.\n"
+    en_us: "**⚠️ Your Matrix identity is permanent**\n\nYour server name will be `matrix.<your-domain>` and your user ID `@name:matrix.<your-domain>`. This identity **cannot be renamed later** — Matrix federation ties all your rooms and contacts to it.\n\n**\U0001F511 Registration**\n\nAccount creation requires a **registration token**. The **first account registered becomes the admin**. The token is shown when you open the app (tile menu → Credentials).\n\n| Setting | Value |\n|---------|-------|\n| Web Client (Element) | [\U0001F517 Open Element](${APP_URL:-https://tuwunel-${APP_DOMAIN}}/) |\n| Homeserver (for mobile apps) | `matrix.${APP_DOMAIN}` |\n\nKeep the token private — anyone who has it can create accounts on your server.\n\n**\U0001F4F1 Connecting a client**\n\nThe app's WebUI is the bundled **Element** client, already configured for your server. On mobile, install **Element** and set the homeserver to `matrix.<your-domain>`.\n"
   # Element's config carries the deployment's domain, so it is re-rendered on
   # every up rather than written once at install. The hook this replaces ran
   # exactly once: change the PCS domain afterwards and Element kept pointing at

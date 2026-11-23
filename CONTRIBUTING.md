@@ -170,6 +170,15 @@ that does not provide it yet.
   the closing brace, `${APP_URL:-https://gitea-${APP_DOMAIN}}/`. `APP_DOMAIN` stays fine for
   what is really the domain (`admin@${APP_DOMAIN}`), and another app's host is written as it
   is: nothing gives its address.
+
+  **Exception — a permanent identity.** A host that is baked into the app's data and can
+  never move once it exists is not an address, and must not follow one: the variables above
+  track the box's primary name form (dash or dot), so the day the form changes, the identity
+  would move under the data. Such a host is spelled out on the dot form, with a comment saying
+  why: the Matrix `server_name` is `matrix.${APP_DOMAIN}` (`Apps/Tuwunel`, `Apps/Synapse`),
+  Vaultwarden's `DOMAIN` (the WebAuthn RP ID passkeys are bound to) is
+  `https://vaultwarden.${APP_DOMAIN}` (`Apps/Vaultwarden`).
+  The URLs the app is *reached* at stay on the variables (`ROUTE_MATRIX_URL`).
 - **Fail:** an own host spelled `<app>-${APP_DOMAIN}` with no variable in front, or a list that
   names the box's other domains (nip.io, sslip.io) outside a fallback.
 

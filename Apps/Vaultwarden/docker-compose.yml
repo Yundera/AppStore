@@ -98,7 +98,9 @@ services:
       # variable to true." AppShield is that method, wired to the PCS SSO by the
       # router's path split.
       DISABLE_ADMIN_TOKEN: "true"
-      DOMAIN: ${APP_URL:-https://vaultwarden-${APP_DOMAIN}}
+      # Spelled out, not ${APP_URL}: passkeys and FIDO2 keys are bound to this host
+      # (WebAuthn RP ID), and APP_URL follows the box's primary name form (dash or dot).
+      DOMAIN: https://vaultwarden.${APP_DOMAIN}
       APP_NET: pcs
       SMTP_HOST: smtp
       SMTP_PORT: 587

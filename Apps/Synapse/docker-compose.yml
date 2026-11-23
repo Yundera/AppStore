@@ -9,8 +9,8 @@ x-logging: &logging
 
 services:
   # Matrix homeserver. Serves the client and federation APIs on the canonical
-  # Matrix identity domain, matrix-<domain> — the same one Tuwunel uses, so a
-  # user's @name:matrix-<domain> does not depend on which engine runs it.
+  # Matrix identity domain, matrix.<domain> — the same one Tuwunel uses, so a
+  # user's @name:matrix.<domain> does not depend on which engine runs it.
   # Federation runs over 443 (serve_server_wellknown), no port 8448 needed.
   synapse:
     image: ghcr.io/element-hq/synapse:v1.165.0
@@ -145,19 +145,19 @@ x-casaos:
       **Synapse** is the reference **Matrix homeserver**, built by the Element team. Matrix is an open, federated chat network: thousands of servers talk to each other, like email, and nobody owns the network.
 
       **What you get:**
-      - Your own chat identity: `@you:matrix-<your-domain>`, issued by your server
+      - Your own chat identity: `@you:matrix.<your-domain>`, issued by your server
       - Chat with anyone on Matrix (matrix.org, mozilla.org and thousands more)
       - End-to-end encrypted rooms, voice and video calls, file sharing
       - Message history and media stay on your server
       - **Element Web included**, already pointed at your server; works with Element on desktop, iOS and Android too
 
-      **Synapse or Tuwunel?** Both are Matrix homeservers on the same `matrix-<your-domain>` identity. Synapse is the most complete and widely used; Tuwunel is lighter. Install one of them, not both.
+      **Synapse or Tuwunel?** Both are Matrix homeservers on the same `matrix.<your-domain>` identity. Synapse is the most complete and widely used; Tuwunel is lighter. Install one of them, not both.
   tips:
     before_install:
       en_us: &tips |
-        **⚠️ Install either Synapse or Tuwunel, not both.** They serve the same `matrix-<your-domain>` identity and cannot run side by side.
+        **⚠️ Install either Synapse or Tuwunel, not both.** They serve the same `matrix.<your-domain>` identity and cannot run side by side.
 
-        **⚠️ Your Matrix identity is permanent.** User IDs look like `@name:matrix-<your-domain>` and cannot be renamed later.
+        **⚠️ Your Matrix identity is permanent.** User IDs look like `@name:matrix.<your-domain>` and cannot be renamed later.
 
         **🔑 Admin account**
 
@@ -166,14 +166,14 @@ x-casaos:
         **Add a user** (run on the server):
         `docker exec -it synapse register_new_matrix_user -c /data/homeserver.yaml http://localhost:8008`
 
-        **Connecting a client:** open the app for Element Web. In the Element desktop or mobile app, set the homeserver to `matrix-<your-domain>`.
+        **Connecting a client:** open the app for Element Web. In the Element desktop or mobile app, set the homeserver to `matrix.<your-domain>`.
 
         **🌍 Accounts from other servers are not self-hosted**
 
-        Matrix is federated: people with an account on another server (for example one created on matrix.org, which is Element's default) can join your rooms without an account here. Their account and a copy of every room they join live on that other server, not yours. Only `@name:matrix-<your-domain>` accounts are fully self-hosted. To keep everything on your server, create accounts here and have people pick `matrix-<your-domain>` as their homeserver.
+        Matrix is federated: people with an account on another server (for example one created on matrix.org, which is Element's default) can join your rooms without an account here. Their account and a copy of every room they join live on that other server, not yours. Only `@name:matrix.<your-domain>` accounts are fully self-hosted. To keep everything on your server, create accounts here and have people pick `matrix.<your-domain>` as their homeserver.
 
         **Keep it to your own accounts (optional):**
-        - **One room:** when creating it in Element, open *Advanced* and tick *Block anyone not part of matrix-<your-domain> from ever joining this room*. This cannot be changed later.
+        - **One room:** when creating it in Element, open *Advanced* and tick *Block anyone not part of matrix.<your-domain> from ever joining this room*. This cannot be changed later.
         - **The whole server:** add `federation_domain_whitelist: []` to `/DATA/AppData/synapse/data/homeserver.yaml` and restart the app. Your server then stops talking to every other Matrix server.
 
 x-compose-app:
@@ -184,8 +184,8 @@ x-compose-app:
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
   routes:
     - { service: synapse-element, name: synapse, upstream-port: 8080 }
-    # matrix-* is the CANONICAL Matrix identity domain shared with Tuwunel: the
-    # server_name, in every user id (@user:matrix-<domain>). Kept engine-neutral on
+    # matrix.<domain> is the CANONICAL Matrix identity domain shared with Tuwunel: the
+    # server_name, in every user id (@user:matrix.<domain>). Kept engine-neutral on
     # purpose so an identity survives a switch between homeservers. NEVER rename it.
     - { service: synapse, name: matrix, upstream-port: 8008 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
