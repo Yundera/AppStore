@@ -375,11 +375,20 @@ With an AppShield gate, the router goes where its job is:
 
 **Check:** static, confirmed by functional `auth-gate` · **Severity:** Critical · `rationale.md` can cover it
 
-- **Pass:** the web UI is behind an enabled login as shipped: AppShield SSO, the app's own login
-  with a generated credential, or basic auth. For a service app, the listener it publishes asks
-  for a credential as shipped.
-- **Fail:** a UI reachable with no login, or a login that is off until the user enables it. An
-  app that creates its first account on first visit, or a deliberately public site, passes only
+- **Pass:** the web UI is behind an enabled login as shipped, one of:
+  - AppShield SSO;
+  - the app's own login with a generated credential, set through something the app documents
+    for it (an environment variable, a config key, its CLI), not by writing into its database
+    or patching its image;
+  - the app's own onboarding, which creates the first account on first visit, when its login
+    is mandatory once that account exists and a later sign-up is refused or held for the
+    admin's approval (`Apps/Jellyfin`, `Apps/UptimeKuma`);
+  - basic auth.
+
+  For a service app, the listener it publishes asks for a credential as shipped.
+- **Fail:** a UI reachable with no login, a login that is off until the user enables it, an
+  onboarding after which anyone can still sign up, or a generated credential that only works
+  because the listing reaches into the app's storage. A deliberately public site passes only
   with a rationale.
 
 ### `appshield-wiring` — the SSO sidecar is wired so it cannot be bypassed
@@ -552,8 +561,10 @@ has nothing to open, so only `install` applies to it; its auth and data are judg
 **n-a:** a service app.
 
 - **Pass:** opening the app's URL in a fresh session lands on a login, and the protected UI is
-  unreachable without it. An app with no login passes only when `rationale.md` documents it as
-  deliberately public, the same exception `auth-default` accepts.
+  unreachable without it. Before the first account exists, an app with first-visit onboarding
+  may land on that onboarding instead; once the account is created, a fresh session lands on a
+  login. An app with no login passes only when `rationale.md` documents it as deliberately
+  public, the same exception `auth-default` accepts.
 
 ### `clean-boot` — no first-party errors on first load
 

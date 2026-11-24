@@ -504,12 +504,15 @@ x-compose-app:
 A login gate enabled by default is **mandatory**. Acceptable gates:
 
 - **AppShield** (recommended): an SSO sidecar that plugs into the PCS's built-in login.
-- The app's own login, protected by a [generated credential](#3-credentials).
-- An onboarding flow that creates the first account on first visit (e.g. Jellyfin). This
-  needs a `rationale.md` explaining why the window before the first account is created is
-  acceptable: that the app's own login is mandatory once the account exists, why no
-  credential can be generated for it, and what happens to a later sign-up (refused, or held
-  for the admin's approval). `Apps/UptimeKuma` and `Apps/Ollama` are examples.
+- The app's own login, protected by a [generated credential](#3-credentials). Seed it the way
+  the app documents (an environment variable, a config key, its CLI). Writing a hash into its
+  database or patching its image is a hack that breaks on the next upgrade: use another gate.
+- An onboarding flow that creates the first account on first visit (e.g. Jellyfin). Until
+  that account exists, whoever opens the app first claims it. That is common enough among
+  self-hosted apps to be accepted without a `rationale.md`, on two conditions: the app's own
+  login is mandatory once the account exists, and a later sign-up is refused or held for the
+  admin's approval. Say in `tips` that the first visit creates the admin account, so the owner
+  opens it right after install. `Apps/UptimeKuma` and `Apps/Jellyfin` are examples.
 
 What `auth-default` asks is that a login is **there** as shipped, not who provides it. An app
 whose own login is mandatory does not need AppShield in front of it as well.
@@ -1075,7 +1078,8 @@ An app that takes an exception ships `Apps/<AppName>/rationale.md`. Reviewers re
 It is required when the app:
 - runs as root with access to user folders, or mounts anything outside `/DATA/AppData/<app>/`
   and the user folders;
-- ships with no login enabled by default, or relies on first-visit onboarding;
+- ships with no login enabled by default (first-visit onboarding, as accepted under
+  [Authentication](#authentication), does not count);
 - changes the host from a step;
 - sets any `lifecycle` key to `false`;
 - deviates from anything else in this document.
