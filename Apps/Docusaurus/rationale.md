@@ -2,59 +2,59 @@
 
 ## What deviation / exception is being requested
 
-Both services run as root — `user: "root"` on the AppShield front door and
-`user: "0:0"` on the Nginx backend. The one-shot builder step runs as
-`$PUID:$PGID`.
-
-Authentication is **not** disabled: the app is fronted by the AppShield OIDC
-sidecar (`ghcr.io/yundera/appshield:2.0.6`) in OIDC-only mode, so every request
-is authenticated against the PCS's built-in SSO before it reaches the site.
+1. **No authentication.** The site is served without the AppShield SSO gate.
+2. **Root containers.** The Nginx web server and the `docusaurus-build` rebuild
+   container run with `user: "0:0"`.
 
 ## Why it is necessary
 
-- **`docusaurus` (AppShield sidecar)** — runs as root, the same as every other
-  AppShield-fronted app in this store. The sidecar image expects it.
-- **`docusaurus-init` (node:20-alpine)** — runs `npx create-docusaurus` and
-  `npm run build` as `$PUID:$PGID` (with `HOME=/tmp`, so npm has a writable
-  cache), then copies the generated project and its build output into two bind
-  mounts under `/DATA/AppData/$AppID/`, which end up owned by the user.
-- **`docusaurus-backend` (nginx:1.31.9-alpine)** — the official Nginx image's
-  entrypoint runs its template/permission setup as root and then drops the
-  worker processes to the unprivileged `nginx` user itself.
+- **No authentication** — Docusaurus publishes documentation: FAQs, guides and
+  knowledge bases meant to be read by anyone with the link, including customers
+  who have no account on the server. CONTRIBUTING lists "a public website that
+  does not require authentication" as an accepted exception. AppShield cannot
+  serve a whole site publicly (`ALLOWED_PATHS` opens sub-paths only, never `/`),
+  so the gate is left out rather than configured around.
+- **`docusaurus` (nginx:1.31.9-alpine)** — the official Nginx image's entrypoint
+  runs its template/permission setup as root and then drops the worker processes
+  to the unprivileged `nginx` user itself. It only touches its own app folder,
+  mounted read-only.
+- **`docusaurus-build` (node:20.19.2-alpine3.20)** — rebuilds the site on every
+  start. Installs made by the older root-run init left `node_modules` root-owned,
+  and the `npm ci` fallback (run when a build fails, e.g. after a restore dropped
+  `node_modules/.cache`) must be able to replace them.
+
+The one-shot `docusaurus-init` step runs as `$PUID:$PGID`, so the generated
+project stays editable by the user and by the Docusaurus MCP app.
 
 ## Security mitigations in place
 
-- **Authentication is on.** AppShield is the only service carrying Caddy labels
-  and the only one on the shared `pcs` network's front door; there is no
-  unauthenticated path to the site.
-- **The backend is not published.** `docusaurus-backend` and `docusaurus-init`
-  sit on the app-private `docusaurus-internal` network and are reachable only
-  through the sidecar. No `ports:` are published anywhere in the app.
-- **Read-only web serving.** Nginx mounts the build output `:ro`. There is no
-  admin panel, no upload path, and no write access through the web interface —
-  it serves static HTML only.
-- **Resource limits** (`cpu_shares`) are set on every service.
+- **Read-only, static only.** Nginx mounts the build output `:ro` and serves
+  static HTML. There is no admin panel, no login, no upload path and no write
+  access through the web interface, so there is nothing to protect behind a gate.
+- **Editing is not public.** Content is edited and rebuilt only through the
+  separate **Docusaurus MCP** app, which stays behind the SSO gate / OAuth.
+- **The build container is not reachable.** `docusaurus-build` has no route, is
+  not on the shared `pcs` network, and exits once the build is copied out.
+- **No published ports.** The site is reached only through its route on the
+  shared network; no `ports:` are published.
+- **Resource limits** (`cpu_shares`, memory limit) are set on every service.
 - **Data isolation.** Everything the app writes lives under
   `/DATA/AppData/$AppID/` (`src/` and `build/`). No user directory
   (`/DATA/Documents`, `/DATA/Downloads`, `/DATA/Media`, `/DATA/Gallery`) is
-  mounted, and nothing outside `/DATA/AppData/$AppID/` is touched.
-- **The builder is one-shot and unprivileged.** The `docusaurus-init` step runs
-  as `$PUID:$PGID` and exits as soon as the first build finishes.
+  mounted.
 
 ## Alternatives considered and rejected
 
+- **Keeping AppShield and opening paths with `ALLOWED_PATHS`** — tested on
+  AppShield 3.2.0: sub-paths such as `docs` open, but the root `/` (the home page)
+  cannot be bypassed with any value, so visitors would still hit a login on the
+  landing page.
 - **Running Nginx as a non-root user** — the official image's entrypoint needs
-  root for its own setup and drops privileges for the workers on its own; there
-  is no gain in pre-empting it.
-- **Serving the site without the AppShield gate** — a Docusaurus site is often
-  intended to be public, but this store's default is authenticated access and
-  the app ships that way. A user who wants the site public should say so
-  explicitly rather than have it be the shipped default.
+  root for its own setup and drops privileges for the workers on its own.
 
 ## Data protection
 
 - No user data is processed: the app serves static HTML generated from Markdown
   the user puts under `/DATA/AppData/docusaurus/src/`.
-- The web-facing container has read-only access to the build output.
-- Content is edited and rebuilt through the separate **Docusaurus MCP** app,
-  which is itself behind the same SSO gate.
+- Do not put private or internal-only content in the site: everything in the
+  build is readable by anyone with the link.

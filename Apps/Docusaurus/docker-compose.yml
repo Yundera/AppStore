@@ -8,55 +8,21 @@ x-logging: &logging
     max-file: "3"
 
 services:
+  # Public documentation site: Nginx serves the static build directly.
+  # No AppShield gate on purpose — readers must not need an account (see rationale.md).
   docusaurus:
-    image: ghcr.io/nsl-sh/appshield:4.2.0
+    image: nginx:1.31.9-alpine
     container_name: docusaurus
     hostname: docusaurus
-    restart: unless-stopped
-    expose:
-      - "80"
-    environment:
-      BACKEND_HOST: "docusaurus-backend"
-      BACKEND_PORT: "80"
-      LISTEN_PORT: "80"
-      # SSO comes from the platform (Maison's system env): the registrar on a
-      # Yundera box, or a provider the user configured. Where there is none (plain
-      # CasaOS) all four are empty and the gate protects the app with PASSWORD.
-      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
-      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
-      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
-      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
-      # Break-glass login while SSO is unavailable; the only login without SSO.
-      # Without a value (a platform that ignores x-compose-app) the gate generates
-      # one and prints it in its log.
-      PASSWORD: "${APPSHIELD_PASSWORD:-}"
-      # Every address the app is served at, primary first (Maison sets it).
-      # Empty elsewhere, where the gate falls back to REDIRECT_HOST_SUFFIXES.
-      PUBLIC_URL: "${APP_URLS:-}"
-      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
-    depends_on:
-      - docusaurus-backend
-    cpu_shares: 80
-    logging: *logging
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-    networks:
-      # On `pcs` because the router must reach it, and on the app's own
-      # network because that is where its backend lives.
-      - pcs
-      - docusaurus-internal
-
-  docusaurus-backend:
-    image: nginx:1.31.9-alpine
-    container_name: docusaurus-backend
     restart: unless-stopped
     user: "0:0"
     expose:
       - "80"
     volumes:
       - ${DATA_ROOT:-/DATA}/AppData/$AppID/build/:/usr/share/nginx/html/:ro
+    configs:
+      - source: docusaurus-nginx-v2
+        target: /etc/nginx/conf.d/default.conf
     cpu_shares: 50
     logging: *logging
     deploy:
@@ -64,17 +30,77 @@ services:
         limits:
           memory: 64M
     networks:
-      # App-private: reached only by this app's own services, so it
-      # has no business on the shared network.
-      - docusaurus-internal
+      - pcs
+
+  # Rebuilds the site on every start, so stopping and starting the app publishes
+  # edited Markdown without a terminal. Skips until the setup step has generated
+  # the project. Low CPU priority; the 2G cap covers a multi-locale build.
+  # Maison backups drop every `cache/` dir, which breaks node_modules after a
+  # restore (webpack/lib/cache), so a failed build reinstalls with `npm ci` once.
+  docusaurus-build:
+    image: node:20.19.2-alpine3.20
+    container_name: docusaurus-build
+    restart: "no"
+    # root: installs made by the old root-run init left node_modules root-owned,
+    # and `npm ci` must be able to replace them.
+    user: "0:0"
+    working_dir: /output
+    environment:
+      HOME: /tmp
+      NODE_OPTIONS: --max-old-space-size=1536
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/src/:/output
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/build/:/build-output
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        [ -e .initialized ] || { echo "Project not generated yet, skipping."; exit 0; }
+        echo "Building Docusaurus site..."
+        npm run build || { echo "Build failed, reinstalling dependencies..."; npm ci && npm run build; } || exit 1
+        cp -r build/* /build-output/ && echo "Build complete."
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+# Replaces the image's default.conf: its server block sets its own error_page, which
+# hides any http-level one, so the themed 404 needs a server block of our own.
+# absolute_redirect off: nginx's own "add the trailing slash" redirect would otherwise
+# name the internal host it was reached on (docusaurus-<ip>.nip.io) instead of the
+# address the visitor actually used.
+# gzip and Cache-Control: the stock image sends neither, so every page shipped
+# ~550KB uncompressed and hashed assets were revalidated on each visit.
+# Named -v2 because compose kept the old file in the running container when only
+# the content of the first version changed.
+configs:
+  docusaurus-nginx-v2:
+    content: |
+      absolute_redirect off;
+      gzip on;
+      gzip_vary on;
+      gzip_min_length 1024;
+      gzip_types text/css application/javascript application/json application/xml text/xml image/svg+xml;
+      map $$uri $$docusaurus_cache {
+        ~^/assets/  "public, max-age=31536000, immutable";
+        default     "no-cache";
+      }
+      server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+        add_header Cache-Control $$docusaurus_cache;
+        add_header X-Content-Type-Options nosniff;
+        add_header X-Frame-Options SAMEORIGIN;
+        add_header Referrer-Policy strict-origin-when-cross-origin;
+        error_page 404 /404.html;
+      }
 
 networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
-  # App-private link between this app's own services.
-  docusaurus-internal:
-    driver: bridge
 
 x-casaos:
   architectures:
@@ -106,35 +132,22 @@ x-casaos:
     before_install:
       en_us: |
         A new Docusaurus site is generated and built on first install, then
-        served read-only by Nginx behind the app's login gate (single sign-on, or the app password on a server without it).
+        served read-only by Nginx as a public site: anyone with the link can
+        read it, no login required.
 
         Your content lives on the server at /DATA/AppData/docusaurus/src/
         (Markdown pages under docs/); the published HTML lives at
         /DATA/AppData/docusaurus/build/.
 
         Editing the Markdown is not enough on its own — the site has to be
-        rebuilt before changes appear, and restarting this app does not rebuild
-        it: the build runs once, at first install. Install the **Docusaurus MCP**
-        app from this store to edit pages and trigger a rebuild; it works on the
-        same two directories.
+        rebuilt before changes appear. To rebuild, stop the app and start it
+        again: the site is rebuilt automatically on every start (it takes a
+        few minutes; the old version stays online until the build finishes).
+        The **Docusaurus MCP** app from this store lets an AI assistant edit
+        the pages; it works on the same two directories.
 
 x-compose-app:
   schema_version: 2
-  secrets:
-    # The AppShield gate's fallback password (see its PASSWORD).
-    APPSHIELD_PASSWORD: password:24
-  credentials:
-    - label:
-        en_us: App password
-      username: admin
-      password: ${APPSHIELD_PASSWORD}
-      note:
-        en_us: Signs in to this app. On a server with single sign-on, use that instead. This password then works only while single sign-on is unavailable.
-      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
-      prompt: false
-      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
-      change:
-        apply: env
   version: "3.10.1"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
@@ -167,19 +180,23 @@ x-compose-app:
   tips:
     en_us: |
       A new Docusaurus site is generated and built on first install, then
-      served read-only by Nginx behind the app's login gate (single sign-on, or the app password on a server without it).
+      served read-only by Nginx as a public site: anyone with the link can
+      read it, no login required.
 
       Your content lives on the server at /DATA/AppData/docusaurus/src/
       (Markdown pages under docs/); the published HTML lives at
       /DATA/AppData/docusaurus/build/.
 
       Editing the Markdown is not enough on its own — the site has to be
-      rebuilt before changes appear, and restarting this app does not rebuild
-      it: the build runs once, at first install. Install the **Docusaurus MCP**
-      app from this store to edit pages and trigger a rebuild; it works on the
-      same two directories.
+      rebuilt before changes appear. To rebuild, stop the app and start it
+      again: the site is rebuilt automatically on every start (it takes a
+      few minutes; the old version stays online until the build finishes).
+      The **Docusaurus MCP** app from this store lets an AI assistant edit
+      the pages; it works on the same two directories.
   # Generating the site needs Docusaurus's own build tooling, so it runs in a node
   # container. Guarded on the `.initialized` marker the build leaves behind.
+  # Runs as $PUID:$PGID so the generated project stays editable by the user and the
+  # Docusaurus MCP app; npm gets a writable HOME in /tmp since $PUID has none there.
   steps:
     - name: docusaurus-init
       at: setup

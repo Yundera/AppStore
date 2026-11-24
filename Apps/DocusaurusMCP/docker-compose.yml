@@ -20,7 +20,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 2G   # the rebuild tool runs `npm run build` in here; 256M got OOM-killed
     expose:
       - 9750
     environment:
