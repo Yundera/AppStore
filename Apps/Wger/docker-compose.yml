@@ -15,7 +15,7 @@ services:
   # and `x-casaos.main`, sending /ps/ to PowerSync and the rest to gunicorn. Its
   # config ships inline below (`configs: wger-router`).
   wger-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: wger-router
     # nginx's master process writes /var/run/nginx.pid and /var/cache/nginx,
     # neither of which is writable by an unprivileged uid in this image; the
