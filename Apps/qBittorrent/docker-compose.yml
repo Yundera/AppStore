@@ -132,7 +132,7 @@ services:
   # unchanged, so this sees exactly what the browser sent. See rationale.md.
   # On the app's own network only: the gate is the one way in.
   qbittorrent-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.9-alpine
     container_name: qbittorrent-router
     restart: unless-stopped
     cpu_shares: 50
