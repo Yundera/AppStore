@@ -643,8 +643,13 @@ and saving the app's settings:
 
 ```
 folders → secrets → variables → setup steps → seed → files
-        → docker compose up -d → started steps
+        → docker compose up -d --remove-orphans → started steps
 ```
+
+`--remove-orphans` means an update may drop or rename a service: Maison removes the old
+service's container, so its `container_name` is free for the new one and nothing is left
+running. Users don't have to clean up by hand, and you don't have to keep the old service
+around to retire it.
 
 An update that raises `data_version` also runs each pending [migration](#version-data_version-and-migrations)
 once, between `variables` and the setup steps.
