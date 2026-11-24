@@ -9,7 +9,7 @@ x-logging: &logging
 
 services:
   ollama:
-    image: ghcr.io/open-webui/open-webui:0.9.6
+    image: ghcr.io/open-webui/open-webui:0.13.4
     user: 0:0
     container_name: ollama
     restart: unless-stopped
@@ -34,7 +34,7 @@ services:
           memory: 1G
 
   ollama-api:
-    image: ollama/ollama:0.40.15
+    image: ollama/ollama:0.40.17
     user: 0:0
     container_name: ollama-api
     restart: unless-stopped
@@ -210,7 +210,7 @@ x-casaos:
 
 x-compose-app:
   schema_version: 2
-  version: "0.40.15"
+  version: "0.40.17"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
