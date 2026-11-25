@@ -1,0 +1,140 @@
+name: beaverhabittracker
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  beaverhabittracker:
+    image: daya0576/beaverhabits:0.10.1
+    container_name: beaverhabittracker
+    restart: unless-stopped
+    # The image runs as `nobody`; run it as the box's user so it owns its data folder.
+    user: $PUID:$PGID
+    environment:
+      TZ: $TZ
+      # SQLite database (accounts, habits, check-ins, notes) in /app/.user/habits.db.
+      HABITS_STORAGE: DATABASE
+      # The first visitor creates the account; every later sign-up is refused.
+      MAX_USER_COUNT: "1"
+      # MAX_USER_COUNT guards only the web sign-up page. The API sign-up
+      # (POST /auth/register) is closed separately: it then needs a login token
+      # of the ADMIN_EMAIL account, so no anonymous visitor can open an account.
+      REQUIRE_ADMIN_FOR_REGISTRATION: "true"
+      ADMIN_EMAIL: admin@${APP_DOMAIN:-localhost}
+      # Signing keys for login tokens and browser sessions, generated per install
+      # (the upstream defaults are the public strings "SECRET" and "dev").
+      JWT_SECRET: ${BEAVER_JWT_SECRET}
+      NICEGUI_STORAGE_SECRET: ${BEAVER_STORAGE_SECRET}
+    volumes:
+      # Database, browser session storage and uploaded note images.
+      - ${DATA_ROOT:-/DATA}/AppData/beaverhabittracker/data:/app/.user
+    expose:
+      - 8080
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: beaverhabittracker
+  webui_port: 8080
+  index: /
+  store_app_id: beaverhabittracker
+  category: Productivity
+  tags: ["habits", "tracker", "productivity"]
+  developer: daya0576
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  title:
+    en_us: Beaver Habit Tracker
+  tagline:
+    en_us: A self-hosted habit tracker without goals
+  description:
+    en_us: |
+      Beaver Habit Tracker is a minimal, self-hosted habit tracker. There are no goals or targets to set: you simply tick off each day you kept a habit and watch your streaks grow.
+
+      **Key features:**
+      • Daily check-ins in a compact week grid, with notes on any day
+      • Streaks, heatmaps and per-habit statistics
+      • Tags, ordering and custom completion statuses
+      • Import and export, plus a REST API with personal tokens
+      • Works well on phones and can be added to the home screen
+      • Your data stays on your server
+
+      Access is protected by Beaver's own login. The first person to open the app creates the account, and sign-up is closed after that.
+  tips:
+    before_install:
+      en_us: |
+        **Open it right after installing:** click **Create account** on the login page and
+        sign up with an email and a password. That first account is the only one: sign-up
+        is closed once it exists, and the same email and password are your login from then on.
+
+        A new account starts with a few sample habits: open **Add habit** from the menu to rename or delete them.
+x-compose-app:
+  schema_version: 2
+  version: "0.10.1"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: beaverhabittracker, name: beaverhabittracker, upstream-port: 8080 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: beaverhabittracker
+  title:
+    en_us: Beaver Habit Tracker
+  tagline:
+    en_us: A self-hosted habit tracker without goals
+  description:
+    en_us: |
+      Beaver Habit Tracker is a minimal, self-hosted habit tracker. There are no goals or targets to set: you simply tick off each day you kept a habit and watch your streaks grow.
+
+      **Key features:**
+      • Daily check-ins in a compact week grid, with notes on any day
+      • Streaks, heatmaps and per-habit statistics
+      • Tags, ordering and custom completion statuses
+      • Import and export, plus a REST API with personal tokens
+      • Works well on phones and can be added to the home screen
+      • Your data stays on your server
+
+      Access is protected by Beaver's own login. The first person to open the app creates the account, and sign-up is closed after that.
+  developer: daya0576
+  category: Productivity
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **Open it right after installing:** click **Create account** on the login page and
+      sign up with an email and a password. That first account is the only one: sign-up
+      is closed once it exists, and the same email and password are your login from then on.
+
+      A new account starts with a few sample habits: open **Add habit** from the menu to rename or delete them.
+  secrets:
+    # Signs login tokens (JWT_SECRET).
+    BEAVER_JWT_SECRET: hex:32
+    # Signs the browser session storage (NICEGUI_STORAGE_SECRET).
+    BEAVER_STORAGE_SECRET: hex:32
+  folders:
+    # Beaver runs as $PUID:$PGID and writes here from its first start.
+    - /DATA/AppData/beaverhabittracker/data
