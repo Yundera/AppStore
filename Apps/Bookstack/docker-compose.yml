@@ -1,0 +1,252 @@
+name: bookstack
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:26.09.3
+    container_name: bookstack
+    restart: unless-stopped
+    # linuxserver image: starts as root to prepare /config, then runs PHP and
+    # nginx as PUID:PGID. It touches only its own app folder.
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      # BookStack builds every link and asset URL from this.
+      APP_URL: "${APP_URL:-https://bookstack-${APP_DOMAIN}}"
+      # Laravel's encryption key (sessions, 2FA secrets); 32 characters, used as is.
+      APP_KEY: "${BOOKSTACK_APP_KEY}"
+      DB_HOST: bookstack-db
+      DB_PORT: "3306"
+      DB_DATABASE: bookstack
+      DB_USERNAME: bookstack
+      DB_PASSWORD: "${BOOKSTACK_DB_PASSWORD}"
+      # Read by the first-boot script below, which replaces BookStack's built-in
+      # default admin with this account.
+      BOOKSTACK_ADMIN_EMAIL: admin@bookstack.local
+      BOOKSTACK_ADMIN_PASSWORD: "${BOOKSTACK_ADMIN_PASSWORD}"
+    expose:
+      - 80
+    volumes:
+      # Everything BookStack keeps outside the database: .env, uploads, images,
+      # attachments, themes, logs and PHP/nginx config.
+      - ${DATA_ROOT:-/DATA}/AppData/bookstack/config:/config
+    configs:
+      # The image runs /custom-cont-init.d/* after its own init (database
+      # migrated) and before nginx and PHP start, so the default admin is
+      # replaced before the login page is ever served.
+      - source: bookstack-admin
+        target: /custom-cont-init.d/10-initial-admin
+        mode: 0755
+    depends_on:
+      bookstack-db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 50
+    logging: *logging
+    networks:
+      - pcs
+      - bookstack-internal
+
+  bookstack-db:
+    image: lscr.io/linuxserver/mariadb:11.8.10
+    container_name: bookstack-db
+    restart: unless-stopped
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      MYSQL_ROOT_PASSWORD: "${BOOKSTACK_DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: bookstack
+      MYSQL_USER: bookstack
+      MYSQL_PASSWORD: "${BOOKSTACK_DB_PASSWORD}"
+    volumes:
+      # The MariaDB data directory (books, pages, users, permissions).
+      - ${DATA_ROOT:-/DATA}/AppData/bookstack/db:/config
+    healthcheck:
+      # Over TCP, so it only succeeds once the real server (not the first-run
+      # bootstrap) is listening.
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 50
+    logging: *logging
+    networks:
+      # App-private: only BookStack talks to its database.
+      - bookstack-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  bookstack-internal:
+    driver: bridge
+
+configs:
+  bookstack-admin:
+    # Runs on every start of the bookstack container. It acts only while
+    # BookStack's built-in default admin (admin@admin.com) still exists, then
+    # leaves a marker, so an email or password the user has set since is never
+    # touched. If the default admin cannot be replaced it holds the start (the
+    # web server never comes up) rather than serve a login that accepts the
+    # publicly documented default password. `$$` is compose's escape for `$`.
+    content: |
+      #!/usr/bin/with-contenv bash
+      marker=/config/.initial-admin-done
+      [ -e "$$marker" ] && exit 0
+      cd /app/www || exit 1
+      s6-setuidgid abc php artisan bookstack:create-admin --initial \
+        --email="$$BOOKSTACK_ADMIN_EMAIL" --name="Admin" --password="$$BOOKSTACK_ADMIN_PASSWORD"
+      rc=$$?
+      # 0: default admin replaced; 2: an admin of the user's own already exists.
+      if [ "$$rc" -eq 0 ] || [ "$$rc" -eq 2 ]; then
+        touch "$$marker"
+        exit 0
+      fi
+      echo "[initial-admin] could not replace the default admin (exit $$rc); not starting the web server"
+      sleep infinity
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: bookstack
+  webui_port: 80
+  category: Documents
+  tags: ["wiki", "documentation", "knowledge-base"]
+  developer: Dan Brown (BookStack)
+  store_app_id: bookstack
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  index: /
+  title:
+    en_us: BookStack
+  tagline:
+    en_us: A simple wiki for notes and documentation, organised as shelves, books and pages
+  description:
+    en_us: |
+      **Self-hosted documentation and knowledge base**
+
+      BookStack is a simple, easy-to-use platform for organising and storing information.
+      Content is arranged like a library: shelves hold books, books hold chapters and pages.
+
+      **Key features:**
+      - WYSIWYG and Markdown editors, with page revisions and drafts
+      - Full-text search across everything, and tags
+      - Image and file attachments, and diagrams with the built-in draw.io editor
+      - Roles and fine-grained permissions per shelf, book, chapter or page
+      - Two-factor authentication; page exports to PDF, HTML or plain text
+      - A REST API, webhooks, themes and many languages
+
+      **Sign-in:** sign in with the administrator account Maison shows on first open
+      (also in the tile menu under **Credentials**).
+  tips:
+    before_install:
+      en_us: |
+        **Sign-in:** BookStack has its own login. Sign in as `admin@bookstack.local` with the
+        password Maison shows on first open (also in the tile menu under **Credentials**).
+        BookStack's well-known default admin account is replaced with this one before the
+        app first starts.
+
+        **First steps:** change the admin email and password under your profile
+        (top-right menu → **My Account**); the Credentials dialog keeps showing the initial
+        password. Public sign-up is off by default; add users from **Settings → Users**.
+
+        **Email:** no mail server is configured, so invitation and password-reset emails are
+        not sent until you set BookStack's `MAIL_*` variables in the app's settings.
+
+x-compose-app:
+  schema_version: 2
+  version: "26.09.3"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: bookstack, name: bookstack, upstream-port: 80 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: bookstack
+  title:
+    en_us: BookStack
+  tagline:
+    en_us: A simple wiki for notes and documentation, organised as shelves, books and pages
+  description:
+    en_us: |
+      **Self-hosted documentation and knowledge base**
+
+      BookStack is a simple, easy-to-use platform for organising and storing information.
+      Content is arranged like a library: shelves hold books, books hold chapters and pages.
+
+      **Key features:**
+      - WYSIWYG and Markdown editors, with page revisions and drafts
+      - Full-text search across everything, and tags
+      - Image and file attachments, and diagrams with the built-in draw.io editor
+      - Roles and fine-grained permissions per shelf, book, chapter or page
+      - Two-factor authentication; page exports to PDF, HTML or plain text
+      - A REST API, webhooks, themes and many languages
+
+      **Sign-in:** sign in with the administrator account Maison shows on first open
+      (also in the tile menu under **Credentials**).
+  developer: Dan Brown (BookStack)
+  category: Documents
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **Sign-in:** BookStack has its own login. Sign in as `admin@bookstack.local` with the
+      password Maison shows on first open (also in the tile menu under **Credentials**).
+      BookStack's well-known default admin account is replaced with this one before the
+      app first starts.
+
+      **First steps:** change the admin email and password under your profile
+      (top-right menu → **My Account**); the Credentials dialog keeps showing the initial
+      password. Public sign-up is off by default; add users from **Settings → Users**.
+
+      **Email:** no mail server is configured, so invitation and password-reset emails are
+      not sent until you set BookStack's `MAIL_*` variables in the app's settings.
+  credentials:
+    - label:
+        en_us: Administrator
+      username: admin@bookstack.local
+      password: ${BOOKSTACK_ADMIN_PASSWORD}
+      note:
+        en_us: The initial BookStack administrator. Change the email and password under My Account in BookStack.
+  secrets:
+    # The initial administrator's password (see configs.bookstack-admin).
+    BOOKSTACK_ADMIN_PASSWORD: alnum:24
+    # Laravel APP_KEY: exactly 32 characters, the AES-256-CBC key length.
+    BOOKSTACK_APP_KEY: alnum:32
+    # MariaDB: the app's own user, and root (used only inside the database container).
+    BOOKSTACK_DB_PASSWORD: alnum:32
+    BOOKSTACK_DB_ROOT_PASSWORD: alnum:32
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`: the
+  # two bind mounts above, so neither starts as a root-owned directory Compose
+  # made. Recursive, so a restored archive or an earlier install is reclaimed too.
+  folders:
+    - path: /DATA/AppData/bookstack/config
+      user: $PUID
+      group: $PGID
+      recursive: true
+    - path: /DATA/AppData/bookstack/db
+      user: $PUID
+      group: $PGID
+      recursive: true
