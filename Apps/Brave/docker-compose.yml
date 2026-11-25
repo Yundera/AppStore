@@ -1,0 +1,142 @@
+name: brave
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  brave:
+    image: kasmweb/brave:1.19.0
+    container_name: brave
+    # Fixed hostname: the Brave profile's SingletonLock names the host it was
+    # taken on, so a new random hostname on every recreate (update, restore,
+    # config save) made Brave refuse its own profile as "in use on another
+    # computer". With a stable name it clears its own stale lock.
+    hostname: brave
+    restart: unless-stopped
+    # The image runs as its own kasm-user (uid 1000) and only touches the app
+    # folder below, which `folders` creates with that owner.
+    cpu_shares: 80
+    logging: *logging
+    # Chromium-based browsers crash tabs with Docker's 64M default /dev/shm.
+    shm_size: "512m"
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+    environment:
+      # KasmVNC's basic-auth password for the user `kasm_user`, applied from this
+      # on every start. Generated per install under `secrets`.
+      VNC_PW: ${BRAVE_PASSWORD}
+      TZ: $TZ
+    volumes:
+      # The whole home directory: Brave profile (bookmarks, history, settings,
+      # extensions, cookies), Downloads and Uploads. The image copies its default
+      # profile in on first start when the folder is empty.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/home:/home/kasm-user
+    # KasmVNC web client; HTTPS only, with a self-signed certificate.
+    expose:
+      - 6901
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-compose-app:
+  schema_version: 2
+  id: brave
+  title:
+    en_us: Brave
+  tagline:
+    en_us: The Brave web browser, running on your server and used from any browser.
+  description:
+    en_us: |
+      Brave is a privacy-focused web browser with a built-in ad and tracker blocker. This app runs a full Brave desktop browser on your server (Kasm Workspaces image, streamed with KasmVNC) and lets you use it from any web browser, on any device. Browsing happens from your server's connection, so your local device never touches the sites you visit.
+
+      Your Brave profile (bookmarks, history, saved logins, extensions) and the files you download are kept in the app folder and survive restarts, updates and reinstalls.
+
+      Sign-in is KasmVNC's own login (user `kasm_user`), with a password generated for your server at install time.
+  developer: Kasm Technologies
+  category: Utilities
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  # 3G service limit plus room for the OS and other apps; CPU-bound because every
+  # frame is encoded on the server.
+  resources:
+    recommended: { cpu: 2, memory: 4G }
+  tips:
+    en_us: |
+      Sign in as `kasm_user`. The password is shown when you first open the app (tile menu -> Credentials). Your browser asks for it in its own sign-in prompt.
+
+      Files Brave downloads are kept in the app folder, `AppData/brave/home/Downloads`. The KasmVNC control panel (the tab on the left edge of the screen) also lets you upload files to the remote browser and download them to your device.
+
+      To change the password, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
+  routes:
+    # KasmVNC only speaks HTTPS, with a self-signed certificate.
+    - service: brave
+      name: brave
+      upstream-port: 6901
+      upstream-scheme: https
+      insecure-upstream: true
+  secrets:
+    # KasmVNC's login password (VNC_PW).
+    BRAVE_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: Brave login
+      username: kasm_user
+      password: ${BRAVE_PASSWORD}
+      # vnc_startup.sh rewrites the KasmVNC password from VNC_PW on every start.
+      change:
+        apply: env
+  folders:
+    # The image's kasm-user is uid/gid 1000; it must own its home directory.
+    - path: /DATA/AppData/brave/home
+      user: "1000"
+      group: "1000"
+      mode: "0750"
+
+x-casaos:
+  store_app_id: brave
+  main: brave
+  webui_port: 6901
+  scheme: https
+  hostname: brave-${domain}
+  index: /
+  title:
+    en_us: Brave
+  tagline:
+    en_us: The Brave web browser, running on your server and used from any browser.
+  description:
+    en_us: |
+      Brave is a privacy-focused web browser with a built-in ad and tracker blocker. This app runs a full Brave desktop browser on your server (Kasm Workspaces image, streamed with KasmVNC) and lets you use it from any web browser, on any device. Browsing happens from your server's connection, so your local device never touches the sites you visit.
+
+      Your Brave profile (bookmarks, history, saved logins, extensions) and the files you download are kept in the app folder and survive restarts, updates and reinstalls.
+
+      Sign-in is KasmVNC's own login (user `kasm_user`), with a password generated for your server at install time.
+  developer: Kasm Technologies
+  author: Yundera
+  category: Utilities
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    before_install:
+      en_us: |
+        Sign in as `kasm_user`. The password is shown when you first open the app (tile menu -> Credentials). Your browser asks for it in its own sign-in prompt.
+
+        Files Brave downloads are kept in the app folder, `AppData/brave/home/Downloads`. The KasmVNC control panel (the tab on the left edge of the screen) also lets you upload files to the remote browser and download them to your device.
+
+        To change the password, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
