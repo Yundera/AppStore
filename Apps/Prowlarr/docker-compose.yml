@@ -99,10 +99,13 @@ services:
   # could use it as a browser proxy, including against internal addresses.
   #
   # Memory is the one knob that matters. Every challenge is solved in its own
-  # Chromium (~250-300 MB while solving) and Prowlarr queries all tagged indexers
-  # in parallel; FlareSolverr has no concurrency cap. At 1G the cgroup OOM-killed
-  # Chromium thousands of times on a busy box and every tagged indexer failed
-  # with "tab crashed". 2G fits ~6-7 concurrent solves; idle it sits near 350 MB.
+  # Chromium and Prowlarr queries all tagged indexers in parallel. FlareSolverr
+  # serves at most 4 requests at once (waitress' default 4 threads), so 4 Chromiums
+  # is the worst case. A Cloudflare challenge measured ~750 MB in one container
+  # (v3.5.2, 2026-11): 4 parallel solves peaked at 2.8G, and the old 2G limit
+  # OOM-killed Chromium 667 times in 16 days on a busy box (every kill is a tagged
+  # indexer failing with "tab crashed"). 4G fits the worst case; idle it sits
+  # near 130 MB, and the limit is a cap, not a reservation.
   # (Not /dev/shm: FlareSolverr already starts Chrome with --disable-dev-shm-usage.)
   prowlarr-flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
@@ -124,7 +127,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 4G
 
 networks:
   pcs:
@@ -232,9 +235,9 @@ x-compose-app:
   thumbnail: thumbnail.png
   screenshots:
     - screenshot-1.png
-  # Sum of the service limits (~2.62G) plus room for the OS and other apps.
+  # Sum of the service limits (~4.62G) plus room for the OS and other apps.
   resources:
-    recommended: { memory: 4G }
+    recommended: { memory: 6G }
   architectures:
     - amd64
     - arm64

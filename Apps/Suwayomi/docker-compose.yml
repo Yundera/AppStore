@@ -47,6 +47,11 @@ services:
         limits:
           memory: 1G
 
+  # Solves Cloudflare challenges for protected sources, each one in its own
+  # Chromium. A single challenge measured ~750-850 MB (v3.5.2, 2026-11), so the
+  # old 512M could not fit even one solve: the cgroup OOM-killed Chromium 299
+  # times in 16 days on a busy box. 2G fits two concurrent solves; idle it sits
+  # near 40 MB, and the limit is a cap, not a reservation.
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
     container_name: suwayomi-flaresolverr
@@ -61,7 +66,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 2G
 
 networks:
   suwayomi-internal:
@@ -268,6 +273,9 @@ x-compose-app:
     - screenshot-1.png
     - screenshot-2.png
     - screenshot-3.png
+  # Sum of the service limits (3G) plus room for the OS and other apps.
+  resources:
+    recommended: { memory: 4G }
   architectures:
     - amd64
     - arm64
