@@ -1,0 +1,450 @@
+name: piwigo
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  piwigo:
+    # linuxserver image: nginx + php-fpm under s6. It starts as root, sets up
+    # /config and /gallery, then runs every process as PUID:PGID (see rationale.md).
+    image: lscr.io/linuxserver/piwigo:16.5.0
+    container_name: piwigo
+    restart: unless-stopped
+    networks:
+      - piwigo-internal
+      - pcs
+    expose:
+      - "80"
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+    volumes:
+      # Piwigo's own state: local/config (database.inc.php, config.inc.php),
+      # plugins, themes, _data (thumbnail cache), plus nginx/php config and logs.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config/:/config
+      # The photos themselves: upload/ (web uploads) and galleries/ (FTP-style sync).
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/gallery/:/gallery
+    depends_on:
+      piwigo-db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          # ImageMagick builds thumbnails and resized copies on upload.
+          memory: 1G
+    cpu_shares: 70
+    logging: *logging
+
+  piwigo-db:
+    image: mariadb:11.8.9
+    container_name: piwigo-db
+    restart: unless-stopped
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    networks:
+      - piwigo-internal
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/db/:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: $PIWIGO_DB_ROOT_PASSWORD
+      MYSQL_DATABASE: piwigo
+      MYSQL_USER: piwigo
+      MYSQL_PASSWORD: $PIWIGO_DB_PASSWORD
+      MARIADB_AUTO_UPGRADE: 1
+      MARIADB_DISABLE_UPGRADE_BACKUP: 1
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 70
+    logging: *logging
+
+networks:
+  piwigo-internal:
+    driver: bridge
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  category: Gallery
+  developer: Piwigo
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  index: /
+  tagline:
+    en_us: Self-hosted photo gallery to organize and share your pictures
+    ko_kr: 사진을 정리하고 공유하는 셀프호스팅 사진 갤러리
+    zh_cn: 用于整理和分享照片的自托管相册
+    fr_fr: Galerie photo auto-hebergee pour organiser et partager vos images
+    es_es: Galeria de fotos autoalojada para organizar y compartir tus imagenes
+  title:
+    en_us: Piwigo
+  store_app_id: piwigo
+  main: piwigo
+  webui_port: 80
+  description:
+    en_us: |
+      **Your own photo library on the web**
+
+      Piwigo is an open-source photo gallery that has been around for more than twenty years. Upload pictures from the browser or the mobile apps, sort them into albums and tags, and share them with family, friends or a team, each with exactly the albums they are allowed to see.
+
+      **What you can do:**
+      - Upload photos and videos from the browser, the Piwigo Android/iOS apps or desktop tools
+      - Organize with nested albums, tags, dates and a batch manager for thousands of photos at once
+      - Search by keyword, tag, date, author or EXIF data
+      - Invite users and groups and give each one access to specific albums
+      - Pick a theme and extend it with hundreds of plugins
+
+      **Ready to use:** the gallery is installed for you and private as shipped: sign in with the administrator password shown when you open the app. Photos are stored in the app's own folder.
+    ko_kr: |
+      **웹에서 쓰는 나만의 사진 라이브러리**
+
+      Piwigo는 20년 넘게 개발된 오픈소스 사진 갤러리입니다. 브라우저나 모바일 앱으로 사진을 올리고, 앨범과 태그로 정리하고, 가족·친구·팀과 공유할 수 있으며, 사용자마다 볼 수 있는 앨범을 정확히 지정할 수 있습니다.
+
+      **할 수 있는 것:**
+      - 브라우저, Piwigo Android/iOS 앱, 데스크톱 도구로 사진과 동영상 업로드
+      - 중첩 앨범, 태그, 날짜, 일괄 관리자로 수천 장도 한 번에 정리
+      - 키워드, 태그, 날짜, 작성자, EXIF 정보로 검색
+      - 사용자와 그룹을 초대하고 앨범별 접근 권한 부여
+      - 테마 선택과 수백 개의 플러그인으로 확장
+
+      **바로 사용 가능:** 갤러리가 자동으로 설치되며 기본적으로 비공개입니다. 앱을 열 때 표시되는 관리자 비밀번호로 로그인하세요. 사진은 앱 전용 폴더에 저장됩니다.
+    zh_cn: |
+      **属于你自己的网络照片库**
+
+      Piwigo 是一款已有二十多年历史的开源相册软件。通过浏览器或移动应用上传照片，用相册和标签整理，并与家人、朋友或团队分享，每个人只能看到被授权的相册。
+
+      **您可以做的事:**
+      - 通过浏览器、Piwigo Android/iOS 应用或桌面工具上传照片和视频
+      - 使用嵌套相册、标签、日期和批量管理器一次整理成千上万张照片
+      - 按关键词、标签、日期、作者或 EXIF 信息搜索
+      - 邀请用户和群组，并为每个人分配可访问的相册
+      - 选择主题，并用数百个插件扩展功能
+
+      **开箱即用:** 相册已自动安装，默认是私密的：打开应用时使用显示的管理员密码登录。照片保存在应用自己的文件夹中。
+    fr_fr: |
+      **Votre propre photothèque sur le web**
+
+      Piwigo est une galerie photo open source qui existe depuis plus de vingt ans. Envoyez vos photos depuis le navigateur ou les applications mobiles, classez-les en albums et en tags, et partagez-les avec votre famille, vos amis ou une equipe, chacun ne voyant que les albums autorises.
+
+      **Ce que vous pouvez faire:**
+      - Envoyer photos et videos depuis le navigateur, les applications Piwigo Android/iOS ou des outils de bureau
+      - Organiser avec des albums imbriques, des tags, des dates et une gestion par lot pour des milliers de photos
+      - Rechercher par mot-cle, tag, date, auteur ou donnees EXIF
+      - Inviter des utilisateurs et des groupes et donner a chacun l'acces a des albums precis
+      - Choisir un theme et l'etendre avec des centaines de plugins
+
+      **Pret a l'emploi:** la galerie est installee pour vous et privee par defaut : connectez-vous avec le mot de passe administrateur affiche a l'ouverture de l'application. Les photos sont stockees dans le dossier de l'application.
+    es_es: |
+      **Tu propia fototeca en la web**
+
+      Piwigo es una galeria de fotos de codigo abierto con mas de veinte anos de historia. Sube fotos desde el navegador o las apps moviles, ordenalas en albumes y etiquetas, y compartelas con familia, amigos o un equipo, cada uno con acceso solo a los albumes permitidos.
+
+      **Lo que puedes hacer:**
+      - Subir fotos y videos desde el navegador, las apps Piwigo para Android/iOS o herramientas de escritorio
+      - Organizar con albumes anidados, etiquetas, fechas y un gestor por lotes para miles de fotos
+      - Buscar por palabra clave, etiqueta, fecha, autor o datos EXIF
+      - Invitar usuarios y grupos y dar a cada uno acceso a albumes concretos
+      - Elegir un tema y ampliarlo con cientos de plugins
+
+      **Listo para usar:** la galeria se instala automaticamente y es privada por defecto: inicia sesion con la contrasena de administrador que se muestra al abrir la app. Las fotos se guardan en la carpeta propia de la app.
+  tips:
+    before_install:
+      en_us: |
+        **Signing in:** Piwigo is installed for you. Open the app and sign in as `admin` with the password Maison shows (also in the tile menu under **Credentials**). You can change it afterwards from your profile in Piwigo; the one shown by Maison is only the initial password.
+
+        **Private by default:** visitors who are not signed in only see the login page, self-registration is off, and new albums are private. To share with someone, create an account for them under **Administration > Users** and grant them albums under the album's **Permissions** tab.
+
+        **Making albums public:** set the album to *public* in its **Permissions** tab, then install the **LocalFiles Editor** plugin (**Administration > Plugins**) and change `guest_access` to `true` in the local configuration.
+
+        **Mobile apps:** the official Piwigo apps for Android and iOS work with this server: use the app's address and your Piwigo account.
+
+        **Your photos** are stored in `/DATA/AppData/piwigo/gallery/upload`.
+      ko_kr: |
+        **로그인:** Piwigo는 자동으로 설치됩니다. 앱을 열고 Maison이 보여주는 비밀번호로 `admin` 계정에 로그인하세요 (타일 메뉴의 **Credentials**에서도 확인 가능). 이후 Piwigo의 프로필에서 비밀번호를 바꿀 수 있으며, Maison에 표시되는 값은 초기 비밀번호일 뿐입니다.
+
+        **기본은 비공개:** 로그인하지 않은 방문자는 로그인 페이지만 보게 되고, 자체 회원가입은 꺼져 있으며, 새 앨범은 비공개로 만들어집니다. 다른 사람과 공유하려면 **Administration > Users**에서 계정을 만들고 앨범의 **Permissions** 탭에서 권한을 주세요.
+
+        **앨범 공개하기:** 앨범의 **Permissions** 탭에서 *public*으로 바꾼 뒤, **LocalFiles Editor** 플러그인을 설치하고 (**Administration > Plugins**) 로컬 설정에서 `guest_access`를 `true`로 바꾸세요.
+
+        **모바일 앱:** 공식 Piwigo Android/iOS 앱에서 이 서버 주소와 Piwigo 계정으로 접속할 수 있습니다.
+
+        **사진 저장 위치:** `/DATA/AppData/piwigo/gallery/upload`
+      zh_cn: |
+        **登录:** Piwigo 已自动安装。打开应用，使用 Maison 显示的密码以 `admin` 登录（也可在磁贴菜单的 **Credentials** 中查看）。之后可在 Piwigo 的个人资料中修改密码，Maison 显示的只是初始密码。
+
+        **默认私密:** 未登录的访客只能看到登录页面，自助注册已关闭，新相册默认为私密。要与他人分享，请在 **Administration > Users** 中为其创建账户，并在相册的 **Permissions** 选项卡中授权。
+
+        **公开相册:** 在相册的 **Permissions** 选项卡中设为 *public*，然后安装 **LocalFiles Editor** 插件（**Administration > Plugins**），在本地配置中把 `guest_access` 改为 `true`。
+
+        **移动应用:** 官方 Piwigo Android/iOS 应用可直接连接此服务器：填写应用地址和你的 Piwigo 账户即可。
+
+        **照片存放位置:** `/DATA/AppData/piwigo/gallery/upload`
+      fr_fr: |
+        **Connexion:** Piwigo est installe pour vous. Ouvrez l'application et connectez-vous en `admin` avec le mot de passe affiche par Maison (aussi dans le menu de la tuile, sous **Credentials**). Vous pouvez le changer ensuite depuis votre profil Piwigo ; celui affiche par Maison n'est que le mot de passe initial.
+
+        **Prive par defaut:** les visiteurs non connectes ne voient que la page de connexion, l'inscription libre est desactivee et les nouveaux albums sont prives. Pour partager, creez un compte sous **Administration > Users** et donnez-lui des albums dans l'onglet **Permissions** de l'album.
+
+        **Rendre des albums publics:** passez l'album en *public* dans son onglet **Permissions**, puis installez le plugin **LocalFiles Editor** (**Administration > Plugins**) et mettez `guest_access` a `true` dans la configuration locale.
+
+        **Applications mobiles:** les applications Piwigo officielles pour Android et iOS fonctionnent avec ce serveur : utilisez l'adresse de l'application et votre compte Piwigo.
+
+        **Vos photos** sont stockees dans `/DATA/AppData/piwigo/gallery/upload`.
+      es_es: |
+        **Inicio de sesion:** Piwigo se instala automaticamente. Abre la app e inicia sesion como `admin` con la contrasena que muestra Maison (tambien en el menu del icono, en **Credentials**). Puedes cambiarla despues desde tu perfil en Piwigo; la que muestra Maison es solo la contrasena inicial.
+
+        **Privado por defecto:** los visitantes sin sesion solo ven la pagina de inicio de sesion, el registro libre esta desactivado y los albumes nuevos son privados. Para compartir, crea una cuenta en **Administration > Users** y concede albumes en la pestana **Permissions** del album.
+
+        **Hacer albumes publicos:** pon el album en *public* en su pestana **Permissions**, instala el plugin **LocalFiles Editor** (**Administration > Plugins**) y cambia `guest_access` a `true` en la configuracion local.
+
+        **Apps moviles:** las apps oficiales de Piwigo para Android e iOS funcionan con este servidor: usa la direccion de la app y tu cuenta de Piwigo.
+
+        **Tus fotos** se guardan en `/DATA/AppData/piwigo/gallery/upload`.
+
+x-compose-app:
+  schema_version: 2
+  version: "16.5.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: piwigo, name: piwigo, upstream-port: 80 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: piwigo
+  title:
+    en_us: Piwigo
+  tagline:
+    en_us: Self-hosted photo gallery to organize and share your pictures
+    ko_kr: 사진을 정리하고 공유하는 셀프호스팅 사진 갤러리
+    zh_cn: 用于整理和分享照片的自托管相册
+    fr_fr: Galerie photo auto-hebergee pour organiser et partager vos images
+    es_es: Galeria de fotos autoalojada para organizar y compartir tus imagenes
+  description:
+    en_us: |
+      **Your own photo library on the web**
+
+      Piwigo is an open-source photo gallery that has been around for more than twenty years. Upload pictures from the browser or the mobile apps, sort them into albums and tags, and share them with family, friends or a team, each with exactly the albums they are allowed to see.
+
+      **What you can do:**
+      - Upload photos and videos from the browser, the Piwigo Android/iOS apps or desktop tools
+      - Organize with nested albums, tags, dates and a batch manager for thousands of photos at once
+      - Search by keyword, tag, date, author or EXIF data
+      - Invite users and groups and give each one access to specific albums
+      - Pick a theme and extend it with hundreds of plugins
+
+      **Ready to use:** the gallery is installed for you and private as shipped: sign in with the administrator password shown when you open the app. Photos are stored in the app's own folder.
+    ko_kr: |
+      **웹에서 쓰는 나만의 사진 라이브러리**
+
+      Piwigo는 20년 넘게 개발된 오픈소스 사진 갤러리입니다. 브라우저나 모바일 앱으로 사진을 올리고, 앨범과 태그로 정리하고, 가족·친구·팀과 공유할 수 있으며, 사용자마다 볼 수 있는 앨범을 정확히 지정할 수 있습니다.
+
+      **할 수 있는 것:**
+      - 브라우저, Piwigo Android/iOS 앱, 데스크톱 도구로 사진과 동영상 업로드
+      - 중첩 앨범, 태그, 날짜, 일괄 관리자로 수천 장도 한 번에 정리
+      - 키워드, 태그, 날짜, 작성자, EXIF 정보로 검색
+      - 사용자와 그룹을 초대하고 앨범별 접근 권한 부여
+      - 테마 선택과 수백 개의 플러그인으로 확장
+
+      **바로 사용 가능:** 갤러리가 자동으로 설치되며 기본적으로 비공개입니다. 앱을 열 때 표시되는 관리자 비밀번호로 로그인하세요. 사진은 앱 전용 폴더에 저장됩니다.
+    zh_cn: |
+      **属于你自己的网络照片库**
+
+      Piwigo 是一款已有二十多年历史的开源相册软件。通过浏览器或移动应用上传照片，用相册和标签整理，并与家人、朋友或团队分享，每个人只能看到被授权的相册。
+
+      **您可以做的事:**
+      - 通过浏览器、Piwigo Android/iOS 应用或桌面工具上传照片和视频
+      - 使用嵌套相册、标签、日期和批量管理器一次整理成千上万张照片
+      - 按关键词、标签、日期、作者或 EXIF 信息搜索
+      - 邀请用户和群组，并为每个人分配可访问的相册
+      - 选择主题，并用数百个插件扩展功能
+
+      **开箱即用:** 相册已自动安装，默认是私密的：打开应用时使用显示的管理员密码登录。照片保存在应用自己的文件夹中。
+    fr_fr: |
+      **Votre propre photothèque sur le web**
+
+      Piwigo est une galerie photo open source qui existe depuis plus de vingt ans. Envoyez vos photos depuis le navigateur ou les applications mobiles, classez-les en albums et en tags, et partagez-les avec votre famille, vos amis ou une equipe, chacun ne voyant que les albums autorises.
+
+      **Ce que vous pouvez faire:**
+      - Envoyer photos et videos depuis le navigateur, les applications Piwigo Android/iOS ou des outils de bureau
+      - Organiser avec des albums imbriques, des tags, des dates et une gestion par lot pour des milliers de photos
+      - Rechercher par mot-cle, tag, date, auteur ou donnees EXIF
+      - Inviter des utilisateurs et des groupes et donner a chacun l'acces a des albums precis
+      - Choisir un theme et l'etendre avec des centaines de plugins
+
+      **Pret a l'emploi:** la galerie est installee pour vous et privee par defaut : connectez-vous avec le mot de passe administrateur affiche a l'ouverture de l'application. Les photos sont stockees dans le dossier de l'application.
+    es_es: |
+      **Tu propia fototeca en la web**
+
+      Piwigo es una galeria de fotos de codigo abierto con mas de veinte anos de historia. Sube fotos desde el navegador o las apps moviles, ordenalas en albumes y etiquetas, y compartelas con familia, amigos o un equipo, cada uno con acceso solo a los albumes permitidos.
+
+      **Lo que puedes hacer:**
+      - Subir fotos y videos desde el navegador, las apps Piwigo para Android/iOS o herramientas de escritorio
+      - Organizar con albumes anidados, etiquetas, fechas y un gestor por lotes para miles de fotos
+      - Buscar por palabra clave, etiqueta, fecha, autor o datos EXIF
+      - Invitar usuarios y grupos y dar a cada uno acceso a albumes concretos
+      - Elegir un tema y ampliarlo con cientos de plugins
+
+      **Listo para usar:** la galeria se instala automaticamente y es privada por defecto: inicia sesion con la contrasena de administrador que se muestra al abrir la app. Las fotos se guardan en la carpeta propia de la app.
+  developer: Piwigo
+  category: Gallery
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **Signing in:** Piwigo is installed for you. Open the app and sign in as `admin` with the password Maison shows (also in the tile menu under **Credentials**). You can change it afterwards from your profile in Piwigo; the one shown by Maison is only the initial password.
+
+      **Private by default:** visitors who are not signed in only see the login page, self-registration is off, and new albums are private. To share with someone, create an account for them under **Administration > Users** and grant them albums under the album's **Permissions** tab.
+
+      **Making albums public:** set the album to *public* in its **Permissions** tab, then install the **LocalFiles Editor** plugin (**Administration > Plugins**) and change `guest_access` to `true` in the local configuration.
+
+      **Mobile apps:** the official Piwigo apps for Android and iOS work with this server: use the app's address and your Piwigo account.
+
+      **Your photos** are stored in `/DATA/AppData/piwigo/gallery/upload`.
+    ko_kr: |
+      **로그인:** Piwigo는 자동으로 설치됩니다. 앱을 열고 Maison이 보여주는 비밀번호로 `admin` 계정에 로그인하세요 (타일 메뉴의 **Credentials**에서도 확인 가능). 이후 Piwigo의 프로필에서 비밀번호를 바꿀 수 있으며, Maison에 표시되는 값은 초기 비밀번호일 뿐입니다.
+
+      **기본은 비공개:** 로그인하지 않은 방문자는 로그인 페이지만 보게 되고, 자체 회원가입은 꺼져 있으며, 새 앨범은 비공개로 만들어집니다. 다른 사람과 공유하려면 **Administration > Users**에서 계정을 만들고 앨범의 **Permissions** 탭에서 권한을 주세요.
+
+      **앨범 공개하기:** 앨범의 **Permissions** 탭에서 *public*으로 바꾼 뒤, **LocalFiles Editor** 플러그인을 설치하고 (**Administration > Plugins**) 로컬 설정에서 `guest_access`를 `true`로 바꾸세요.
+
+      **모바일 앱:** 공식 Piwigo Android/iOS 앱에서 이 서버 주소와 Piwigo 계정으로 접속할 수 있습니다.
+
+      **사진 저장 위치:** `/DATA/AppData/piwigo/gallery/upload`
+    zh_cn: |
+      **登录:** Piwigo 已自动安装。打开应用，使用 Maison 显示的密码以 `admin` 登录（也可在磁贴菜单的 **Credentials** 中查看）。之后可在 Piwigo 的个人资料中修改密码，Maison 显示的只是初始密码。
+
+      **默认私密:** 未登录的访客只能看到登录页面，自助注册已关闭，新相册默认为私密。要与他人分享，请在 **Administration > Users** 中为其创建账户，并在相册的 **Permissions** 选项卡中授权。
+
+      **公开相册:** 在相册的 **Permissions** 选项卡中设为 *public*，然后安装 **LocalFiles Editor** 插件（**Administration > Plugins**），在本地配置中把 `guest_access` 改为 `true`。
+
+      **移动应用:** 官方 Piwigo Android/iOS 应用可直接连接此服务器：填写应用地址和你的 Piwigo 账户即可。
+
+      **照片存放位置:** `/DATA/AppData/piwigo/gallery/upload`
+    fr_fr: |
+      **Connexion:** Piwigo est installe pour vous. Ouvrez l'application et connectez-vous en `admin` avec le mot de passe affiche par Maison (aussi dans le menu de la tuile, sous **Credentials**). Vous pouvez le changer ensuite depuis votre profil Piwigo ; celui affiche par Maison n'est que le mot de passe initial.
+
+      **Prive par defaut:** les visiteurs non connectes ne voient que la page de connexion, l'inscription libre est desactivee et les nouveaux albums sont prives. Pour partager, creez un compte sous **Administration > Users** et donnez-lui des albums dans l'onglet **Permissions** de l'album.
+
+      **Rendre des albums publics:** passez l'album en *public* dans son onglet **Permissions**, puis installez le plugin **LocalFiles Editor** (**Administration > Plugins**) et mettez `guest_access` a `true` dans la configuration locale.
+
+      **Applications mobiles:** les applications Piwigo officielles pour Android et iOS fonctionnent avec ce serveur : utilisez l'adresse de l'application et votre compte Piwigo.
+
+      **Vos photos** sont stockees dans `/DATA/AppData/piwigo/gallery/upload`.
+    es_es: |
+      **Inicio de sesion:** Piwigo se instala automaticamente. Abre la app e inicia sesion como `admin` con la contrasena que muestra Maison (tambien en el menu del icono, en **Credentials**). Puedes cambiarla despues desde tu perfil en Piwigo; la que muestra Maison es solo la contrasena inicial.
+
+      **Privado por defecto:** los visitantes sin sesion solo ven la pagina de inicio de sesion, el registro libre esta desactivado y los albumes nuevos son privados. Para compartir, crea una cuenta en **Administration > Users** y concede albumes en la pestana **Permissions** del album.
+
+      **Hacer albumes publicos:** pon el album en *public* en su pestana **Permissions**, instala el plugin **LocalFiles Editor** (**Administration > Plugins**) y cambia `guest_access` a `true` en la configuracion local.
+
+      **Apps moviles:** las apps oficiales de Piwigo para Android e iOS funcionan con este servidor: usa la direccion de la app y tu cuenta de Piwigo.
+
+      **Tus fotos** se guardan en `/DATA/AppData/piwigo/gallery/upload`.
+  # One secret per purpose: the login password is never a database password.
+  secrets:
+    PIWIGO_ADMIN_PASSWORD: password:24
+    PIWIGO_DB_PASSWORD: alnum:32
+    PIWIGO_DB_ROOT_PASSWORD: alnum:32
+  credentials:
+    - label:
+        en_us: Administrator
+      username: admin
+      password: ${PIWIGO_ADMIN_PASSWORD}
+      note:
+        en_us: The initial Piwigo administrator password. If you change it in Piwigo, this one stops working.
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`.
+  folders:
+    - path: /DATA/AppData/$AppID/config
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/$AppID/gallery
+      user: $PUID
+      group: $PGID
+    # Not /DATA/AppData/$AppID/db: piwigo-db starts as root and its image hands that
+    # directory to its own user; chowning it to $PUID here would leave the running
+    # database unable to write there.
+  # Resized copies and thumbnails: Piwigo rebuilds any missing one on demand.
+  backup:
+    exclude:
+      - config/www/_data/i/
+  steps:
+    # Piwigo's first visit is an install wizard asking for the database and an
+    # admin account. This step fills it in, so the first page the user sees is
+    # the login. It posts the wizard's own form (install.php) from inside the
+    # piwigo container (its image ships curl), so the values reach curl through
+    # `-e` and never appear on a command line.
+    #
+    # Guarded on the data: Piwigo is installed once its config table exists in the
+    # database. install.php writes local/config/database.inc.php *before* it
+    # creates the tables, so that file alone does not prove an install finished:
+    # if it is there without the tables, an earlier run died half-way, and the
+    # leftover file is removed so the wizard can run again.
+    #
+    # A `started` step runs as soon as the containers have started; piwigo itself
+    # only starts once piwigo-db is healthy (depends_on), but nginx/php-fpm need a
+    # few more seconds, so the wait is a bounded loop.
+    #
+    # Self-registration is a database setting in Piwigo (allow_user_registration,
+    # on in a fresh install) that local config cannot override, so it is turned
+    # off here, once, right after the install; an admin who turns it back on later
+    # keeps that choice.
+    - name: install
+      at: started
+      run: always
+      script: |
+        cfg="$APP_DIR/config/www/local/config/database.inc.php"
+        installed() {
+          compose exec -T -e PIWIGO_DB_PASSWORD piwigo-db sh -c \
+            'MYSQL_PWD="$PIWIGO_DB_PASSWORD" mariadb -upiwigo piwigo -N -e "SELECT 1 FROM piwigo_config LIMIT 1"' >/dev/null 2>&1
+        }
+        [ -e "$cfg" ] && installed && exit 0
+        rm -f "$cfg"
+        ready=
+        for i in $(seq 100); do
+          if compose exec piwigo curl -fs -o /dev/null http://localhost/install.php >/dev/null 2>&1; then
+            ready=1
+            break
+          fi
+          sleep 3
+        done
+        [ -n "$ready" ] || { echo "piwigo did not answer on http://localhost/install.php" >&2; exit 1; }
+        compose exec -e PIWIGO_DB_PASSWORD -e PIWIGO_ADMIN_PASSWORD -e APP_EMAIL -e APP_DOMAIN piwigo sh -c '
+          curl -fsS -o /dev/null http://localhost/install.php \
+            --data-urlencode dbhost=piwigo-db \
+            --data-urlencode dbuser=piwigo \
+            --data-urlencode "dbpasswd=$PIWIGO_DB_PASSWORD" \
+            --data-urlencode dbname=piwigo \
+            --data-urlencode prefix=piwigo_ \
+            --data-urlencode admin_name=admin \
+            --data-urlencode "admin_pass1=$PIWIGO_ADMIN_PASSWORD" \
+            --data-urlencode "admin_pass2=$PIWIGO_ADMIN_PASSWORD" \
+            --data-urlencode "admin_mail=${APP_EMAIL:-admin@$APP_DOMAIN}" \
+            --data-urlencode install=1'
+        [ -e "$cfg" ] && installed || { echo "install.php did not complete" >&2; exit 1; }
+        compose exec -e PIWIGO_DB_PASSWORD piwigo-db sh -c \
+          'MYSQL_PWD="$PIWIGO_DB_PASSWORD" mariadb -upiwigo piwigo -e "UPDATE piwigo_config SET value=\"false\" WHERE param=\"allow_user_registration\""'
