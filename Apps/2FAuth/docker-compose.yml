@@ -1,0 +1,234 @@
+name: twofauth
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # The login gate. 2FAuth's own registration is open to anyone who can reach it
+  # until an admin turns it off in its settings, so the whole app sits behind the
+  # platform SSO from the first start.
+  # The app id is `twofauth`, not `2fauth`: container names may not start with a
+  # digit, and this gate's container_name must equal the compose name.
+  twofauth-proxy:
+    image: ghcr.io/nsl-sh/appshield:4.2.0
+    container_name: twofauth
+    # The AppShield auth-service builds its OIDC redirect URIs from os.hostname(),
+    # and the auth-registrar attests this app's name via the container's PTR record.
+    hostname: twofauth
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: "twofauth-app"
+      BACKEND_PORT: "8000"
+      LISTEN_PORT: "80"
+      # SSO comes from the platform (Maison's system env). Where there is none
+      # (plain CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      PUBLIC_URL: "${APP_URLS:-}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+    expose:
+      - 80
+    depends_on:
+      twofauth-app:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    cpu_shares: 80
+    logging: *logging
+    networks:
+      # On the shared network to reach the platform's auth-registrar, and on the
+      # app's own network, where 2FAuth lives.
+      - pcs
+      - twofauth-internal
+
+  twofauth-app:
+    image: 2fauth/2fauth:9.0.3
+    container_name: twofauth-app
+    restart: unless-stopped
+    # No `user:` here: the image runs nginx and PHP-FPM as its own non-root user
+    # 1000:1000, and its code in /srv is readable by that uid only. It writes only
+    # its own app folder, declared under `folders` with that owner.
+    environment:
+      APP_NAME: 2FAuth
+      # Laravel's encryption key (sessions, and the 2FA secrets in the database);
+      # generated once per install and kept in .env.
+      APP_KEY: "${TWOFAUTH_APP_KEY}"
+      # The primary address: e-mailed links (password reset, WebAuthn recovery)
+      # and the Content-Security-Policy host list.
+      APP_URL: "${APP_URL:-https://twofauth-${APP_DOMAIN}}"
+      # Only the gate reaches this container (app network only), so the
+      # X-Forwarded-Proto/-For it passes on are trusted: pages are built as https.
+      TRUSTED_PROXIES: "*"
+      # SQLite in the mapped volume: the image's default path is a symlink to
+      # /2fauth/database.sqlite, created by the entrypoint on first start.
+      DB_CONNECTION: sqlite
+    expose:
+      - 8000
+    volumes:
+      # Everything the app keeps: the SQLite database (users, 2FA accounts,
+      # settings), storage/ (OAuth keys, uploaded icons, sessions, logs) and
+      # the install marker.
+      - ${DATA_ROOT:-/DATA}/AppData/twofauth/data:/2fauth
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/up >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 50
+    logging: *logging
+    networks:
+      # App-private only: reached solely through the gate.
+      - twofauth-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  twofauth-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: twofauth-proxy
+  webui_port: 80
+  category: Utilities
+  tags: ["security", "2fa", "otp", "authenticator"]
+  developer: Bubka
+  store_app_id: twofauth
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  index: /
+  title:
+    en_us: 2FAuth
+  tagline:
+    en_us: Manage your two-factor authentication accounts and generate their codes
+  description:
+    en_us: |
+      **Your 2FA codes, on your own server**
+
+      2FAuth is a web app to manage your Two-Factor Authentication (2FA) accounts and
+      generate their security codes (TOTP, HOTP and Steam Guard). It replaces the
+      authenticator app on your phone with a page you can open from any device.
+
+      **Key features:**
+      - Add accounts by scanning or uploading a QR code, or by entering the secret
+      - Import from Google Authenticator, Aegis, 2FAS and others; export your accounts
+      - Groups, icons and search to keep many accounts tidy
+      - Sign in with a password or a passkey (WebAuthn)
+      - The 2FA secrets are encrypted in the database
+
+      **Sign-in:** the app is protected by your server account (single sign-on). On first
+      open, register your 2FAuth account; the first account is the administrator.
+  tips:
+    before_install:
+      en_us: |
+        **Sign-in:** 2FAuth is protected by your server account (single sign-on).
+        On a server without single sign-on, use the app password Maison shows on first
+        open (also in the tile menu under **Credentials**).
+
+        **First run:** once past the sign-in, click **Register** and create your 2FAuth
+        account (name, email and password). The first account becomes the administrator.
+        Anyone else who can pass the sign-in can register an account of their own, until
+        you tick **Disable registration** under your account menu › **Admin panel** ›
+        **Authentication**.
+
+        **Note:** browser extensions and API clients talk to 2FAuth directly and cannot
+        pass the single sign-on gate; use the web app.
+
+x-compose-app:
+  schema_version: 2
+  version: "9.0.3"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: twofauth-proxy, name: twofauth, upstream-port: 80 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: twofauth
+  title:
+    en_us: 2FAuth
+  tagline:
+    en_us: Manage your two-factor authentication accounts and generate their codes
+  description:
+    en_us: |
+      **Your 2FA codes, on your own server**
+
+      2FAuth is a web app to manage your Two-Factor Authentication (2FA) accounts and
+      generate their security codes (TOTP, HOTP and Steam Guard). It replaces the
+      authenticator app on your phone with a page you can open from any device.
+
+      **Key features:**
+      - Add accounts by scanning or uploading a QR code, or by entering the secret
+      - Import from Google Authenticator, Aegis, 2FAS and others; export your accounts
+      - Groups, icons and search to keep many accounts tidy
+      - Sign in with a password or a passkey (WebAuthn)
+      - The 2FA secrets are encrypted in the database
+
+      **Sign-in:** the app is protected by your server account (single sign-on). On first
+      open, register your 2FAuth account; the first account is the administrator.
+  developer: Bubka
+  category: Utilities
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **Sign-in:** 2FAuth is protected by your server account (single sign-on).
+      On a server without single sign-on, use the app password Maison shows on first
+      open (also in the tile menu under **Credentials**).
+
+      **First run:** once past the sign-in, click **Register** and create your 2FAuth
+      account (name, email and password). The first account becomes the administrator.
+      Anyone else who can pass the sign-in can register an account of their own, until
+      you tick **Disable registration** under your account menu › **Admin panel** ›
+      **Authentication**.
+
+      **Note:** browser extensions and API clients talk to 2FAuth directly and cannot
+      pass the single sign-on gate; use the web app.
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in to the gate in front of 2FAuth. On a server with single sign-on, use that instead. This password then works only while single sign-on is unavailable.
+      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
+    # Laravel's APP_KEY: AES-256 needs exactly 32 characters.
+    TWOFAUTH_APP_KEY: alnum:32
+  # The image runs as its own uid 1000 and writes the whole mounted directory.
+  folders:
+    - path: /DATA/AppData/twofauth/data
+      user: "1000"
+      group: "1000"
+      mode: "0700"
