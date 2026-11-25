@@ -1,0 +1,355 @@
+name: odoomcp
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # The MCP server. Reachable only at odoomcp-backend:8000 on the shared network:
+  # it joins that network because it has to reach the Odoo app's container, and
+  # because its sibling beaconify proxies it. No port is published.
+  odoomcp-backend:
+    image: ivnvxd/mcp-server-odoo:0.9.0
+    container_name: odoomcp-backend
+    hostname: odoomcp-backend
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    expose:
+      - 8000
+    environment:
+      # Supplied by the user through x-compose-app.inputs, written to the app's .env.
+      # Defaults to the Odoo app from this store, which serves HTTP on port 80.
+      ODOO_URL: "${ODOO_URL:-http://odoo:80}"
+      # Empty on purpose: the connector auto-detects the database when the server
+      # exposes only one. It is only needed when database listing is restricted.
+      ODOO_DB: "${ODOO_DB:-}"
+      ODOO_USER: "${ODOO_USER:-}"
+      ODOO_API_KEY: "${ODOO_API_KEY:-}"
+      # Full access through the connector. The real limit is the Odoo user's own
+      # rights, so give the dedicated Odoo user only what it needs (for website
+      # work: Website = Editor and Designer, nothing under Administration).
+      # Odoo's own `mcp_server` module enforces per-model rules inside Odoo
+      # instead; install it and drop this line to use that route.
+      ODOO_YOLO: "true"
+      # XML-RPC works on every supported Odoo. The newer JSON-2 API exists only
+      # from Odoo 19, and only with an API key.
+      ODOO_RPC_TRANSPORT: "${ODOO_RPC_TRANSPORT:-xmlrpc}"
+      ODOO_MCP_TRANSPORT: "streamable-http"
+      ODOO_MCP_HOST: "0.0.0.0"
+      ODOO_MCP_PORT: "8000"
+      # Without this, HTTP sessions never expire on a long-running server.
+      ODOO_MCP_SESSION_IDLE_TIMEOUT: "3600"
+    networks:
+      - pcs
+
+  # Beaconify sidecar: answers Beacon's discovery on UDP 9099 and proxies the
+  # upstream MCP, so the tools appear in Beacon with no further configuration.
+  odoomcp-beacon:
+    image: ghcr.io/worph/beaconify:1.0.3
+    container_name: odoomcp-beacon
+    hostname: odoomcp-beacon
+    restart: unless-stopped
+    cpu_shares: 20
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    expose:
+      - 9099
+    environment:
+      BEACONIFY_NAME: odoo-mcp
+      BEACONIFY_DESCRIPTION: "Odoo: read and edit records, website pages, SEO fields and translations"
+      # The path takes NO trailing slash. With one, the upstream answers 307 and
+      # beaconify does not follow redirects, so Beacon lists the app with 0 tools.
+      BEACONIFY_UPSTREAM_URL: http://odoomcp-backend:8000/mcp
+    depends_on:
+      - odoomcp-backend
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-compose-app:
+  schema_version: 2
+  id: odoomcp
+  # Companion to the Odoo app from this store.
+  parent: odoo
+  version: "0.9.0"
+  # No `routes`: this is a service app. It publishes nothing and has no web UI.
+  # It is reached only from inside the shared Docker network, by Beacon or by a
+  # client already on that network. See rationale.md.
+  title:
+    en_us: Odoo MCP
+  tagline:
+    en_us: "MCP server for Odoo: read and edit records, pages, SEO and translations"
+    fr_fr: "Serveur MCP pour Odoo : lire et modifier fiches, pages, SEO et traductions"
+  description:
+    en_us: |
+      **Odoo control for AI assistants via MCP**
+
+      Odoo MCP exposes your [Odoo](https://www.odoo.com) instance as an MCP (Model Context Protocol) server, so LLMs and AI assistants can search and read records, create and update them, and work on website content: page text, headings, image alt text, SEO title, meta description, social share image and translations.
+
+      It wraps the community [`ivnvxd/mcp-server-odoo`](https://github.com/ivnvxd/mcp-server-odoo) server and talks to Odoo over XML-RPC with an API key, so it works against any Odoo from version 16 up, self-hosted or Odoo Online.
+
+      **Think of it like:** a programmable remote control for your Odoo, driven by natural language.
+
+      **Perfect if you:** maintain an Odoo website or database and would rather describe a change than click through the editor for every heading, alt text and meta description.
+
+      This app publishes no address of its own. It registers with **Beacon** through its bundled beaconify sidecar, and Beacon is the single authenticated door to every MCP server on the box.
+    fr_fr: |
+      **Pilotage d'Odoo par les assistants IA via MCP**
+
+      Odoo MCP expose votre instance [Odoo](https://www.odoo.com) comme serveur MCP (Model Context Protocol). Les assistants IA peuvent alors rechercher et lire des fiches, en creer et en modifier, et travailler le contenu du site : texte des pages, titres, texte alternatif des images, titre SEO, meta description, image de partage et traductions.
+
+      Il enveloppe le serveur communautaire [`ivnvxd/mcp-server-odoo`](https://github.com/ivnvxd/mcp-server-odoo) et dialogue avec Odoo en XML-RPC avec une cle API, ce qui fonctionne avec tout Odoo a partir de la version 16, auto-heberge ou Odoo Online.
+
+      **A voir comme :** une telecommande programmable de votre Odoo, pilotee en langage naturel.
+
+      **Parfait si vous :** maintenez un site ou une base Odoo et preferez decrire une modification plutot que de cliquer dans l'editeur pour chaque titre, texte alternatif et meta description.
+
+      Cette app ne publie aucune adresse. Elle s'enregistre aupres de **Beacon** grace a son conteneur beaconify, et Beacon est la porte unique et authentifiee vers tous les serveurs MCP de la machine.
+  developer: Yundera
+  category: Developer
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  # Developer and AI-agent tooling.
+  audience: technical
+  # What the user brings: an Odoo account and its API key. Nothing here can be generated.
+  inputs:
+    - env: ODOO_USER
+      label:
+        en_us: "Odoo login of the dedicated user (for example claude@example.com)"
+        fr_fr: "Identifiant Odoo de l'utilisateur dedie (par exemple claude@example.com)"
+      required: true
+    - env: ODOO_API_KEY
+      label:
+        en_us: "That user's Odoo API key (My Profile, Account Security, New API Key)"
+        fr_fr: "Cle API de cet utilisateur (Mon profil, Securite du compte, Nouvelle cle API)"
+      secret: true
+      required: true
+    - env: ODOO_URL
+      label:
+        en_us: "Odoo address (leave empty for the Odoo app on this server)"
+        fr_fr: "Adresse d'Odoo (laisser vide pour l'app Odoo de ce serveur)"
+      required: false
+    - env: ODOO_DB
+      label:
+        en_us: "Database name (only if your Odoo hides the database list)"
+        fr_fr: "Nom de la base (seulement si votre Odoo masque la liste des bases)"
+      required: false
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **This app has no page of its own. It appears inside Beacon.**
+
+      Odoo MCP is a service app: it publishes no address and there is nothing to
+      open in a browser. Its tools reach you through **Beacon**, the MCP
+      aggregator, which it registers with automatically.
+
+      **Prerequisites**
+
+      1. A reachable **Odoo** instance, version 16 or later. The Odoo app from
+         this store works out of the box: leave the Odoo address empty.
+      2. A **dedicated Odoo user** with an API key, not your administrator. This
+         connector can read and write everything that user can, so give it only
+         the rights it needs. For website work that is Website = Editor and
+         Designer, with nothing under Administration. Create the key while
+         signed in as that user: turn on developer mode, then My Profile,
+         Account Security, New API Key.
+      3. **Beacon** installed on this server, so the tools are exposed to your
+         AI client.
+
+      **How to use it**
+
+      Install Beacon, then point your AI client at Beacon's own address, which is
+      protected by this server's single sign-on. The Odoo tools appear under the
+      `odoo-mcp__*` namespace, next to every other MCP server on the box.
+
+      For a client running on this same server, the MCP endpoint is reachable
+      directly on the Docker network at `http://odoomcp-backend:8000/mcp`. That
+      path takes no trailing slash.
+
+      **Useful Odoo fields for website work**
+
+      | Field on `website.page` | What it is |
+      |---|---|
+      | `website_meta_title` | SEO title |
+      | `website_meta_description` | meta description |
+      | `website_meta_keywords` | keywords |
+      | `website_meta_og_img` | social share image |
+      | `is_published` | whether the page is live |
+
+      Page content itself lives in `ir.ui.view.arch_db`. To work on a
+      translation, pass the language in the call's context, for example `fr_FR`
+      or `ko_KR`.
+
+      **If Beacon shows the app with no tools**
+
+      Check the sidecar's log: `docker logs odoomcp-beacon`. The line
+      `Fetched 16 tools from upstream MCP` means everything is wired. The backend
+      refuses to start when the Odoo address, user or API key is wrong, so a
+      container that keeps restarting points at those values, not at the network.
+    fr_fr: |
+      **Cette app n'a pas de page a elle. Elle apparait dans Beacon.**
+
+      Odoo MCP est une app de service : elle ne publie aucune adresse et il n'y a
+      rien a ouvrir dans un navigateur. Ses outils vous parviennent par
+      **Beacon**, l'agregateur MCP, aupres duquel elle s'enregistre toute seule.
+
+      **Prerequis**
+
+      1. Une instance **Odoo** joignable, version 16 ou superieure. L'app Odoo de
+         ce catalogue fonctionne directement : laissez l'adresse vide.
+      2. Un **utilisateur Odoo dedie** avec une cle API, pas votre
+         administrateur. Ce connecteur peut lire et modifier tout ce que cet
+         utilisateur peut, donc ne lui donnez que les droits necessaires. Pour le
+         site, c'est Website = Editor and Designer, et rien sous Administration.
+         Creez la cle en etant connecte comme cet utilisateur : activez le mode
+         developpeur, puis Mon profil, Securite du compte, Nouvelle cle API.
+      3. **Beacon** installe sur ce serveur, pour que les outils soient exposes a
+         votre client IA.
+
+      **Comment s'en servir**
+
+      Installez Beacon, puis pointez votre client IA sur l'adresse de Beacon,
+      protegee par l'authentification unique de ce serveur. Les outils Odoo
+      apparaissent sous le prefixe `odoo-mcp__*`, a cote des autres serveurs MCP
+      de la machine.
+
+      Pour un client qui tourne sur ce meme serveur, le point d'acces MCP est
+      joignable directement sur le reseau Docker :
+      `http://odoomcp-backend:8000/mcp`. Ce chemin ne prend pas de barre oblique
+      finale.
+
+      **Champs Odoo utiles pour le site**
+
+      | Champ de `website.page` | Role |
+      |---|---|
+      | `website_meta_title` | titre SEO |
+      | `website_meta_description` | meta description |
+      | `website_meta_keywords` | mots-cles |
+      | `website_meta_og_img` | image de partage |
+      | `is_published` | page publiee ou non |
+
+      Le contenu de la page est dans `ir.ui.view.arch_db`. Pour travailler une
+      traduction, passez la langue dans le contexte de l'appel, par exemple
+      `fr_FR` ou `ko_KR`.
+
+      **Si Beacon affiche l'app sans aucun outil**
+
+      Regardez le journal du conteneur accompagnateur :
+      `docker logs odoomcp-beacon`. La ligne
+      `Fetched 16 tools from upstream MCP` signifie que tout est en place. Le
+      backend refuse de demarrer si l'adresse d'Odoo, l'utilisateur ou la cle API
+      sont faux : un conteneur qui redemarre en boucle pointe donc vers ces
+      valeurs, pas vers le reseau.
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  # No routed service: nothing is served to a browser.
+  main: odoomcp-backend
+  author: Yundera
+  developer: Yundera
+  category: Developer
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  title:
+    en_us: Odoo MCP
+  tagline:
+    en_us: "MCP server for Odoo: read and edit records, pages, SEO and translations"
+  # Same values as x-compose-app above, under CasaOS names.
+  description:
+    en_us: |
+      **Odoo control for AI assistants via MCP**
+
+      Odoo MCP exposes your [Odoo](https://www.odoo.com) instance as an MCP (Model Context Protocol) server, so LLMs and AI assistants can search and read records, create and update them, and work on website content: page text, headings, image alt text, SEO title, meta description, social share image and translations.
+
+      It wraps the community [`ivnvxd/mcp-server-odoo`](https://github.com/ivnvxd/mcp-server-odoo) server and talks to Odoo over XML-RPC with an API key, so it works against any Odoo from version 16 up, self-hosted or Odoo Online.
+
+      **Think of it like:** a programmable remote control for your Odoo, driven by natural language.
+
+      **Perfect if you:** maintain an Odoo website or database and would rather describe a change than click through the editor for every heading, alt text and meta description.
+
+      This app publishes no address of its own. It registers with **Beacon** through its bundled beaconify sidecar, and Beacon is the single authenticated door to every MCP server on the box.
+  tips:
+    en_us: |
+      **This app has no page of its own. It appears inside Beacon.**
+
+      Odoo MCP is a service app: it publishes no address and there is nothing to
+      open in a browser. Its tools reach you through **Beacon**, the MCP
+      aggregator, which it registers with automatically.
+
+      **Prerequisites**
+
+      1. A reachable **Odoo** instance, version 16 or later. The Odoo app from
+         this store works out of the box: leave the Odoo address empty.
+      2. A **dedicated Odoo user** with an API key, not your administrator. This
+         connector can read and write everything that user can, so give it only
+         the rights it needs. For website work that is Website = Editor and
+         Designer, with nothing under Administration. Create the key while
+         signed in as that user: turn on developer mode, then My Profile,
+         Account Security, New API Key.
+      3. **Beacon** installed on this server, so the tools are exposed to your
+         AI client.
+
+      **How to use it**
+
+      Install Beacon, then point your AI client at Beacon's own address, which is
+      protected by this server's single sign-on. The Odoo tools appear under the
+      `odoo-mcp__*` namespace, next to every other MCP server on the box.
+
+      For a client running on this same server, the MCP endpoint is reachable
+      directly on the Docker network at `http://odoomcp-backend:8000/mcp`. That
+      path takes no trailing slash.
+
+      **Useful Odoo fields for website work**
+
+      | Field on `website.page` | What it is |
+      |---|---|
+      | `website_meta_title` | SEO title |
+      | `website_meta_description` | meta description |
+      | `website_meta_keywords` | keywords |
+      | `website_meta_og_img` | social share image |
+      | `is_published` | whether the page is live |
+
+      Page content itself lives in `ir.ui.view.arch_db`. To work on a
+      translation, pass the language in the call's context, for example `fr_FR`
+      or `ko_KR`.
+
+      **If Beacon shows the app with no tools**
+
+      Check the sidecar's log: `docker logs odoomcp-beacon`. The line
+      `Fetched 16 tools from upstream MCP` means everything is wired. The backend
+      refuses to start when the Odoo address, user or API key is wrong, so a
+      container that keeps restarting points at those values, not at the network.
+  envs:
+    - container: ODOO_URL
+      description:
+        en_us: "Odoo address. Defaults to the Odoo app on this server."
+    - container: ODOO_USER
+      description:
+        en_us: "Odoo login of the dedicated user."
+    - container: ODOO_API_KEY
+      description:
+        en_us: "That user's Odoo API key."
+    - container: ODOO_DB
+      description:
+        en_us: "Database name. Only needed if the database list is restricted."
