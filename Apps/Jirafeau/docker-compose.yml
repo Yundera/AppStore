@@ -1,0 +1,574 @@
+name: jirafeau
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # The app's own router: the only routed service. Jirafeau is a file drop, so the
+  # owner's side (the upload page, script.php, admin.php, everything else) goes
+  # through the AppShield gate, while the handful of paths a recipient's download
+  # page needs go straight to Jirafeau. Same pattern as Apps/Vaultwarden, inverted:
+  # there only /admin is gated, here everything but the download page is.
+  # See rationale.md.
+  jirafeau-router:
+    image: nginx:1.31.9-alpine
+    container_name: jirafeau-router
+    restart: unless-stopped
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    expose:
+      - 80
+    configs:
+      - source: jirafeau-router
+        target: /etc/nginx/conf.d/default.conf
+    networks:
+      - pcs
+      - jirafeau-internal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # AppShield SSO gate in front of the upload side. Not the route's service: the
+  # router sends it every path except the public download ones.
+  jirafeau:
+    image: ghcr.io/nsl-sh/appshield:4.2.0
+    container_name: jirafeau
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar attests this app's name via the
+    # container's PTR record. Must equal the app name.
+    hostname: jirafeau
+    restart: unless-stopped
+    expose:
+      - 80
+    environment:
+      BACKEND_HOST: "jirafeau-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      # SSO comes from the platform (Maison's system env). Where there is none
+      # (plain CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      PUBLIC_URL: "${APP_URLS:-}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+      # No path exemptions here: the router keeps the public download paths away
+      # from the gate, so everything the gate sees is gated.
+    depends_on:
+      - jirafeau-backend
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - pcs                 # reaches the auth-registrar
+      - jirafeau-internal   # reaches the backend
+
+  jirafeau-backend:
+    image: registry.gitlab.com/jirafeau/jirafeau:4.8.0
+    container_name: jirafeau-backend
+    restart: unless-stopped
+    # No `user:`: the image starts as root, writes lib/config.local.php from the
+    # environment, chowns /data to lighttpd:www-data (100:82), then serves through
+    # lighttpd (user lighttpd) and php-fpm (user www-data). It touches only its own
+    # app folder.
+    environment:
+      TZ: $TZ
+      # Links Jirafeau prints after an upload.
+      WEB_ROOT: "${APP_URL:-https://jirafeau-${APP_DOMAIN}}/"
+      # Admin page (admin.php) password, read on every container creation.
+      ADMIN_PASSWORD: "${JIRAFEAU_ADMIN_PASSWORD}"
+      # Shown in the footer and the terms of service instead of upstream's "ACME".
+      ORGANISATION: "${APP_DOMAIN}"
+      # MB, 0 = unlimited. The browser uploads in small chunks, so PHP's own
+      # post_max_size / upload_max_filesize do not cap the file size.
+      MAXIMAL_UPLOAD_SIZE: "0"
+    volumes:
+      # Uploaded files, links and unfinished uploads (files/, links/, async/).
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data/:/data
+    configs:
+      # The image's own lighttpd.conf with keep-alive off (see the config below).
+      - source: jirafeau-lighttpd
+        target: /etc/lighttpd/lighttpd.conf
+    expose:
+      - 80                  # no route, no ports, not on pcs: reachable only via the router and the gate
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - jirafeau-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  jirafeau-internal:
+    driver: bridge
+
+configs:
+  # Upstream 4.8.0 docker/lighttpd.conf, unchanged except the last setting.
+  # lighttpd closes an idle keep-alive connection after 5 s while the AppShield gate
+  # keeps it in its pool longer, so a POST (admin login, upload chunk) landing on a
+  # just-closed connection came back 502. With keep-alive off every request from
+  # the gate gets a fresh connection. `$$` is compose's escape for `$`.
+  jirafeau-lighttpd:
+    content: |
+      var.basedir  = "/www"
+      var.logdir   = "/var/log/lighttpd"
+      var.statedir = "/var/lib/lighttpd"
+
+      server.port = 80
+      server.modules = (
+          "mod_access",
+          "mod_expire",
+          "mod_accesslog"
+      )
+
+      include "mod_fastcgi_fpm.conf"
+
+      server.username      = "lighttpd"
+      server.groupname     = "www-data"
+
+      server.pid-file      = "/run/lighttpd.pid"
+      server.errorlog      = var.logdir  + "/error.log"
+      server.indexfiles    = ("index.php", "index.html", "index.htm")
+      server.follow-symlink = "enable"
+      server.document-root = var.basedir
+      server.max-request-size = 0
+
+      dir-listing.show-header = "disable"
+      dir-listing.hide-header-file = "enable"
+      dir-listing.activate = "disable"
+
+      static-file.exclude-extensions = (".php")
+
+      accesslog.filename   = var.logdir + "/access.log"
+      url.access-deny = ("~", ".inc")
+      $$HTTP["url"] =~ "^/var-*" {
+           url.access-deny = ("")
+      }
+
+      server.max-keep-alive-requests = 0
+
+  jirafeau-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      map $$http_x_forwarded_proto $$fwd_proto { default $$http_x_forwarded_proto; "" $$scheme; }
+      # The client address is the LAST X-Forwarded-For entry: the one the proxy in
+      # front appended, which a client cannot forge.
+      map $$http_x_forwarded_for $$client_ip { "~([^,\s]+)\s*$$" $$1; default $$remote_addr; }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # Uploads (many chunks to script.php) and downloads (f.php) stream through.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$client_ip;
+        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$fwd_proto;
+        proxy_set_header X-Forwarded-Host $$http_host;
+
+        set $$gate jirafeau:80;
+        set $$jirafeau jirafeau-backend:80;
+
+        location = /_router/health { access_log off; return 204; }
+
+        # Public: exactly what a recipient's download page loads (f.php, its
+        # script, its stylesheet and icons, the terms of service it links to).
+        # The exact locations pass a fixed path, so a trick like
+        # /index.php/..%2Ff.php cannot reach another script.
+        location = /f.php                { proxy_pass http://$$jirafeau/f.php$$is_args$$args; }
+        location = /lib/functions.js.php { proxy_pass http://$$jirafeau/lib/functions.js.php; }
+        location = /tos.php              { proxy_pass http://$$jirafeau/tos.php; }
+        # Theme files have plain names: refuse any encoding or dot segment, and
+        # forward the raw URI (proxy_pass with no URI part). Never splice nginx's
+        # decoded $$uri here: lighttpd decodes again, so /media/%252e%252e/script.php
+        # would run the upload script without the gate.
+        location /media/ {
+          if ($$request_uri ~ "%|\.\.") { return 400; }
+          proxy_pass http://$$jirafeau;
+        }
+
+        # The gate's own endpoints (login, SSO callback, logout), and its pre-4.0 ones.
+        location /AppShield/ { proxy_pass http://$$gate; }
+        location /nhl-auth/  { proxy_pass http://$$gate; }
+
+        # Everything else -- the upload page, script.php, admin.php, install.php --
+        # through the SSO gate.
+        location / { proxy_pass http://$$gate; }
+      }
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: jirafeau-router
+  store_app_id: jirafeau
+  category: Cloud
+  tags: ["files", "personal"]
+  developer: Jirafeau project
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  title:
+    en_us: Jirafeau
+  tagline:
+    en_us: One-click file sharing. Upload a file, get a download link.
+    ko_kr: 원클릭 파일 공유. 파일을 올리면 다운로드 링크가 나옵니다.
+    fr_fr: Partage de fichiers en un clic. Envoyez un fichier, obtenez un lien.
+    es_es: Compartir archivos con un clic. Sube un archivo y obtén un enlace.
+    zh_cn: 一键文件分享。上传文件，获得下载链接。
+  description:
+    en_us: |
+      **Jirafeau** is a simple, open-source file sharing app: select a file, upload it,
+      and share the link it gives you. Nobody needs an account to download.
+
+      - **One upload, one link**: a download page, a direct download link, a preview link and a private delete link
+      - **Large files**: the browser uploads in chunks, so the size is limited only by your disk
+      - **Expiry**: from one minute to one month (one month by default), cleaned up automatically
+      - **One-time downloads**: a file can delete itself after its first download
+      - **Download passwords**: protect a link with a password if you want
+      - **Admin page**: list, search and delete every file
+
+      **Who can do what:** uploading and the admin page are behind your server's sign-in.
+      The download links you hand out work for anyone who has them, with no login.
+      Files are stored in `/DATA/AppData/jirafeau/data`.
+    ko_kr: |
+      **Jirafeau**는 간단한 오픈소스 파일 공유 앱입니다. 파일을 골라 올리고, 나온 링크를
+      공유하면 끝입니다. 받는 사람은 계정이 필요 없습니다.
+
+      - **업로드 하나에 링크 하나**: 다운로드 페이지, 직접 다운로드 링크, 미리보기 링크, 비공개 삭제 링크
+      - **대용량 파일**: 브라우저가 조각으로 나눠 올리므로 크기 제한은 디스크 용량뿐
+      - **만료**: 1분부터 1개월까지 (기본 1개월), 자동으로 정리
+      - **1회용 다운로드**: 첫 다운로드 후 파일이 스스로 삭제되도록 설정 가능
+      - **다운로드 비밀번호**: 원하면 링크에 비밀번호 설정
+      - **관리자 페이지**: 모든 파일 목록, 검색, 삭제
+
+      **권한:** 업로드와 관리자 페이지는 서버 로그인 뒤에 있습니다. 나눠준 다운로드 링크는
+      링크를 가진 누구나 로그인 없이 쓸 수 있습니다. 파일은 `/DATA/AppData/jirafeau/data`에 저장됩니다.
+    fr_fr: |
+      **Jirafeau** est une application de partage de fichiers simple et open source :
+      choisissez un fichier, envoyez-le et partagez le lien obtenu. Aucun compte n'est
+      nécessaire pour télécharger.
+
+      - **Un envoi, un lien** : page de téléchargement, lien direct, lien d'aperçu et lien de suppression privé
+      - **Gros fichiers** : le navigateur envoie par morceaux, la taille n'est limitée que par votre disque
+      - **Expiration** : d'une minute à un mois (un mois par défaut), nettoyage automatique
+      - **Téléchargement unique** : un fichier peut se supprimer après son premier téléchargement
+      - **Mot de passe de téléchargement** : protégez un lien si vous le souhaitez
+      - **Page d'administration** : lister, chercher et supprimer tous les fichiers
+
+      **Qui peut faire quoi :** l'envoi et la page d'administration sont derrière la connexion
+      de votre serveur. Les liens de téléchargement que vous partagez fonctionnent pour toute
+      personne qui les a, sans connexion. Les fichiers sont stockés dans `/DATA/AppData/jirafeau/data`.
+    es_es: |
+      **Jirafeau** es una aplicación de código abierto sencilla para compartir archivos:
+      elige un archivo, súbelo y comparte el enlace que te da. Nadie necesita una cuenta
+      para descargar.
+
+      - **Una subida, un enlace**: página de descarga, enlace directo, enlace de vista previa y enlace privado de borrado
+      - **Archivos grandes**: el navegador sube por partes, el tamaño solo lo limita tu disco
+      - **Caducidad**: de un minuto a un mes (un mes por defecto), con limpieza automática
+      - **Descarga única**: un archivo puede borrarse tras su primera descarga
+      - **Contraseña de descarga**: protege un enlace con contraseña si quieres
+      - **Página de administración**: listar, buscar y borrar todos los archivos
+
+      **Quién puede hacer qué:** la subida y la página de administración están detrás del inicio
+      de sesión de tu servidor. Los enlaces de descarga que compartes funcionan para cualquiera
+      que los tenga, sin iniciar sesión. Los archivos se guardan en `/DATA/AppData/jirafeau/data`.
+    zh_cn: |
+      **Jirafeau** 是一个简单的开源文件分享应用：选择文件、上传，然后分享生成的链接。
+      下载者无需账户。
+
+      - **一次上传，一个链接**：下载页面、直接下载链接、预览链接和私密删除链接
+      - **大文件**：浏览器分块上传，大小只受磁盘空间限制
+      - **有效期**：从一分钟到一个月（默认一个月），自动清理
+      - **一次性下载**：文件可在首次下载后自动删除
+      - **下载密码**：可按需为链接设置密码
+      - **管理页面**：列出、搜索和删除所有文件
+
+      **权限说明：** 上传和管理页面需要登录您的服务器。您分享出去的下载链接任何持有者都可以
+      直接使用，无需登录。文件保存在 `/DATA/AppData/jirafeau/data`。
+  tips:
+    before_install:
+      en_us: |
+        **Uploading** opens with your server account (single sign-on), or the app password
+        where there is none (tile menu → Credentials).
+
+        **Sharing**: after an upload, send the *Download page* link. Recipients do not need
+        to sign in. Keep the *Delete link* for yourself: anyone who has it can delete the file.
+
+        **Admin page**: [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php), after
+        signing in, asks for the Jirafeau admin password (tile menu → Credentials).
+
+        Expired files are removed once a day.
+      ko_kr: |
+        **업로드**는 서버 계정(통합 인증)으로 열립니다. 통합 인증이 없으면 앱 비밀번호를
+        쓰세요 (타일 메뉴 → Credentials).
+
+        **공유**: 업로드 후 *다운로드 페이지* 링크를 보내세요. 받는 사람은 로그인할 필요가
+        없습니다. *삭제 링크*는 본인만 가지고 있으세요. 그 링크가 있으면 누구나 파일을 지울 수 있습니다.
+
+        **관리자 페이지**: [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php)는
+        로그인 후 Jirafeau 관리자 비밀번호를 묻습니다 (타일 메뉴 → Credentials).
+
+        만료된 파일은 하루에 한 번 삭제됩니다.
+      fr_fr: |
+        **L'envoi** s'ouvre avec votre compte serveur (authentification unique), ou avec le
+        mot de passe de l'app s'il n'y en a pas (menu de la tuile → Credentials).
+
+        **Partage** : après un envoi, transmettez le lien *Page de téléchargement*. Les
+        destinataires n'ont pas à se connecter. Gardez le *lien de suppression* pour vous :
+        quiconque l'a peut supprimer le fichier.
+
+        **Page d'administration** : [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php),
+        après connexion, demande le mot de passe admin de Jirafeau (menu de la tuile → Credentials).
+
+        Les fichiers expirés sont supprimés une fois par jour.
+      es_es: |
+        **La subida** se abre con tu cuenta del servidor (inicio de sesión único), o con la
+        contraseña de la app si no lo hay (menú del icono → Credentials).
+
+        **Compartir**: tras subir, envía el enlace *Página de descarga*. Los destinatarios no
+        necesitan iniciar sesión. Guarda el *enlace de borrado* para ti: quien lo tenga puede
+        borrar el archivo.
+
+        **Página de administración**: [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php),
+        tras iniciar sesión, pide la contraseña de administrador de Jirafeau (menú del icono → Credentials).
+
+        Los archivos caducados se eliminan una vez al día.
+      zh_cn: |
+        **上传**页面使用您的服务器账户（单点登录）打开；没有单点登录时使用应用密码
+        （磁贴菜单 → Credentials）。
+
+        **分享**：上传后发送*下载页面*链接，接收者无需登录。*删除链接*请自己保留：
+        任何持有它的人都可以删除文件。
+
+        **管理页面**：[admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php)
+        登录后会要求输入 Jirafeau 管理员密码（磁贴菜单 → Credentials）。
+
+        过期文件每天清理一次。
+  index: /
+  webui_port: 80
+
+x-compose-app:
+  schema_version: 2
+  id: jirafeau
+  version: "4.8.0"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: jirafeau-router, name: jirafeau, upstream-port: 80 }
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
+    # Jirafeau's own admin page (admin.php).
+    JIRAFEAU_ADMIN_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in to the upload page. On a server with single sign-on, use that instead. This password then works only while single sign-on is unavailable.
+      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
+    - label:
+        en_us: Admin page (/admin.php)
+      password: ${JIRAFEAU_ADMIN_PASSWORD}
+      note:
+        en_us: Jirafeau's own admin page, to list, search and delete every file. Asked after you sign in.
+      prompt: false
+      # The image writes the hash of ADMIN_PASSWORD into a fresh lib/config.local.php
+      # whenever the container is created, so .env plus a recreate is the change.
+      change:
+        apply: env
+  # 100:82 is what the image itself sets on /data at every start (lighttpd:www-data);
+  # declaring the same owner keeps Maison and the image from fighting over it.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: "100"
+      group: "82"
+      mode: "0770"
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Jirafeau
+  tagline:
+    en_us: One-click file sharing. Upload a file, get a download link.
+    ko_kr: 원클릭 파일 공유. 파일을 올리면 다운로드 링크가 나옵니다.
+    fr_fr: Partage de fichiers en un clic. Envoyez un fichier, obtenez un lien.
+    es_es: Compartir archivos con un clic. Sube un archivo y obtén un enlace.
+    zh_cn: 一键文件分享。上传文件，获得下载链接。
+  description:
+    en_us: |
+      **Jirafeau** is a simple, open-source file sharing app: select a file, upload it,
+      and share the link it gives you. Nobody needs an account to download.
+
+      - **One upload, one link**: a download page, a direct download link, a preview link and a private delete link
+      - **Large files**: the browser uploads in chunks, so the size is limited only by your disk
+      - **Expiry**: from one minute to one month (one month by default), cleaned up automatically
+      - **One-time downloads**: a file can delete itself after its first download
+      - **Download passwords**: protect a link with a password if you want
+      - **Admin page**: list, search and delete every file
+
+      **Who can do what:** uploading and the admin page are behind your server's sign-in.
+      The download links you hand out work for anyone who has them, with no login.
+      Files are stored in `/DATA/AppData/jirafeau/data`.
+    ko_kr: |
+      **Jirafeau**는 간단한 오픈소스 파일 공유 앱입니다. 파일을 골라 올리고, 나온 링크를
+      공유하면 끝입니다. 받는 사람은 계정이 필요 없습니다.
+
+      - **업로드 하나에 링크 하나**: 다운로드 페이지, 직접 다운로드 링크, 미리보기 링크, 비공개 삭제 링크
+      - **대용량 파일**: 브라우저가 조각으로 나눠 올리므로 크기 제한은 디스크 용량뿐
+      - **만료**: 1분부터 1개월까지 (기본 1개월), 자동으로 정리
+      - **1회용 다운로드**: 첫 다운로드 후 파일이 스스로 삭제되도록 설정 가능
+      - **다운로드 비밀번호**: 원하면 링크에 비밀번호 설정
+      - **관리자 페이지**: 모든 파일 목록, 검색, 삭제
+
+      **권한:** 업로드와 관리자 페이지는 서버 로그인 뒤에 있습니다. 나눠준 다운로드 링크는
+      링크를 가진 누구나 로그인 없이 쓸 수 있습니다. 파일은 `/DATA/AppData/jirafeau/data`에 저장됩니다.
+    fr_fr: |
+      **Jirafeau** est une application de partage de fichiers simple et open source :
+      choisissez un fichier, envoyez-le et partagez le lien obtenu. Aucun compte n'est
+      nécessaire pour télécharger.
+
+      - **Un envoi, un lien** : page de téléchargement, lien direct, lien d'aperçu et lien de suppression privé
+      - **Gros fichiers** : le navigateur envoie par morceaux, la taille n'est limitée que par votre disque
+      - **Expiration** : d'une minute à un mois (un mois par défaut), nettoyage automatique
+      - **Téléchargement unique** : un fichier peut se supprimer après son premier téléchargement
+      - **Mot de passe de téléchargement** : protégez un lien si vous le souhaitez
+      - **Page d'administration** : lister, chercher et supprimer tous les fichiers
+
+      **Qui peut faire quoi :** l'envoi et la page d'administration sont derrière la connexion
+      de votre serveur. Les liens de téléchargement que vous partagez fonctionnent pour toute
+      personne qui les a, sans connexion. Les fichiers sont stockés dans `/DATA/AppData/jirafeau/data`.
+    es_es: |
+      **Jirafeau** es una aplicación de código abierto sencilla para compartir archivos:
+      elige un archivo, súbelo y comparte el enlace que te da. Nadie necesita una cuenta
+      para descargar.
+
+      - **Una subida, un enlace**: página de descarga, enlace directo, enlace de vista previa y enlace privado de borrado
+      - **Archivos grandes**: el navegador sube por partes, el tamaño solo lo limita tu disco
+      - **Caducidad**: de un minuto a un mes (un mes por defecto), con limpieza automática
+      - **Descarga única**: un archivo puede borrarse tras su primera descarga
+      - **Contraseña de descarga**: protege un enlace con contraseña si quieres
+      - **Página de administración**: listar, buscar y borrar todos los archivos
+
+      **Quién puede hacer qué:** la subida y la página de administración están detrás del inicio
+      de sesión de tu servidor. Los enlaces de descarga que compartes funcionan para cualquiera
+      que los tenga, sin iniciar sesión. Los archivos se guardan en `/DATA/AppData/jirafeau/data`.
+    zh_cn: |
+      **Jirafeau** 是一个简单的开源文件分享应用：选择文件、上传，然后分享生成的链接。
+      下载者无需账户。
+
+      - **一次上传，一个链接**：下载页面、直接下载链接、预览链接和私密删除链接
+      - **大文件**：浏览器分块上传，大小只受磁盘空间限制
+      - **有效期**：从一分钟到一个月（默认一个月），自动清理
+      - **一次性下载**：文件可在首次下载后自动删除
+      - **下载密码**：可按需为链接设置密码
+      - **管理页面**：列出、搜索和删除所有文件
+
+      **权限说明：** 上传和管理页面需要登录您的服务器。您分享出去的下载链接任何持有者都可以
+      直接使用，无需登录。文件保存在 `/DATA/AppData/jirafeau/data`。
+  developer: Jirafeau project
+  category: Cloud
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+    - screenshot-3.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: |
+      **Uploading** opens with your server account (single sign-on), or the app password
+      where there is none (tile menu → Credentials).
+
+      **Sharing**: after an upload, send the *Download page* link. Recipients do not need
+      to sign in. Keep the *Delete link* for yourself: anyone who has it can delete the file.
+
+      **Admin page**: [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php), after
+      signing in, asks for the Jirafeau admin password (tile menu → Credentials).
+
+      Expired files are removed once a day.
+    ko_kr: |
+      **업로드**는 서버 계정(통합 인증)으로 열립니다. 통합 인증이 없으면 앱 비밀번호를
+      쓰세요 (타일 메뉴 → Credentials).
+
+      **공유**: 업로드 후 *다운로드 페이지* 링크를 보내세요. 받는 사람은 로그인할 필요가
+      없습니다. *삭제 링크*는 본인만 가지고 있으세요. 그 링크가 있으면 누구나 파일을 지울 수 있습니다.
+
+      **관리자 페이지**: [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php)는
+      로그인 후 Jirafeau 관리자 비밀번호를 묻습니다 (타일 메뉴 → Credentials).
+
+      만료된 파일은 하루에 한 번 삭제됩니다.
+    fr_fr: |
+      **L'envoi** s'ouvre avec votre compte serveur (authentification unique), ou avec le
+      mot de passe de l'app s'il n'y en a pas (menu de la tuile → Credentials).
+
+      **Partage** : après un envoi, transmettez le lien *Page de téléchargement*. Les
+      destinataires n'ont pas à se connecter. Gardez le *lien de suppression* pour vous :
+      quiconque l'a peut supprimer le fichier.
+
+      **Page d'administration** : [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php),
+      après connexion, demande le mot de passe admin de Jirafeau (menu de la tuile → Credentials).
+
+      Les fichiers expirés sont supprimés une fois par jour.
+    es_es: |
+      **La subida** se abre con tu cuenta del servidor (inicio de sesión único), o con la
+      contraseña de la app si no lo hay (menú del icono → Credentials).
+
+      **Compartir**: tras subir, envía el enlace *Página de descarga*. Los destinatarios no
+      necesitan iniciar sesión. Guarda el *enlace de borrado* para ti: quien lo tenga puede
+      borrar el archivo.
+
+      **Página de administración**: [admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php),
+      tras iniciar sesión, pide la contraseña de administrador de Jirafeau (menú del icono → Credentials).
+
+      Los archivos caducados se eliminan una vez al día.
+    zh_cn: |
+      **上传**页面使用您的服务器账户（单点登录）打开；没有单点登录时使用应用密码
+      （磁贴菜单 → Credentials）。
+
+      **分享**：上传后发送*下载页面*链接，接收者无需登录。*删除链接*请自己保留：
+      任何持有它的人都可以删除文件。
+
+      **管理页面**：[admin.php](${APP_URL:-https://jirafeau-${APP_DOMAIN}}/admin.php)
+      登录后会要求输入 Jirafeau 管理员密码（磁贴菜单 → Credentials）。
+
+      过期文件每天清理一次。
