@@ -1,0 +1,126 @@
+name: adguardhome
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  adguardhome:
+    image: adguard/adguardhome:v1.0.0
+    container_name: adguardhome
+    restart: unless-stopped
+    # The image runs as root; it only touches its own app folder.
+    networks:
+      - pcs
+    # Web UI, API and DNS-over-HTTPS (/dns-query), reached through the box's proxy.
+    expose:
+      - "80"
+    # Plain DNS (53/tcp+udp) is not published: on most boxes the port is taken by the
+    # host's own resolver or unreachable behind NAT, and on a public address it would be
+    # an open resolver. Devices use DNS-over-HTTPS instead (see tips). To serve plain DNS
+    # to your LAN, publish it bound to the box's LAN address in the app's override, e.g.:
+    # ports:
+    #   - "192.168.1.10:53:53/udp"   # DNS
+    #   - "192.168.1.10:53:53/tcp"   # DNS
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/conf:/opt/adguardhome/conf
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/work:/opt/adguardhome/work
+    environment:
+      TZ: $TZ
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    cpu_shares: 80
+    logging: *logging
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: adguardhome
+  store_app_id: adguardhome
+  webui_port: 80
+  index: /
+  category: Network
+  developer: AdGuard
+  tags: ["dns", "adblock", "privacy"]
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  title:
+    en_us: AdGuard Home
+  tagline:
+    en_us: Network-wide ad and tracker blocking DNS server
+  description:
+    en_us: &description |
+      **Block ads and trackers for every device, without installing anything on them**
+
+      AdGuard Home is a network-wide DNS server that blocks ads, trackers and malicious domains. Point a device's DNS at it and every app and browser on that device is filtered, with no client-side software.
+
+      **What you can do:**
+      - Block ads and trackers with curated blocklists, or add your own rules
+      - See which domains every device queries, and what was blocked
+      - Block whole services (social networks, games) per device or on a schedule
+      - Force safe search and parental filtering
+      - Encrypt DNS to its upstreams (DNS-over-HTTPS, DNS-over-TLS, DNSCrypt)
+
+      Your devices reach it over **DNS-over-HTTPS** at the app's address, so it works from anywhere, not only on your home network.
+  tips:
+    before_install:
+      en_us: &tips |
+        # Sign in
+
+        The username and password are shown when you open the app (tile menu → Credentials).
+
+        # Use it from your devices
+
+        AdGuard Home answers **DNS-over-HTTPS** at the app's own address followed by `/dns-query` — open the app, copy its address from the browser, and add `/dns-query`. In the app, **Setup guide** shows the same address with per-device instructions.
+
+        - **Android 9+** (Private DNS) and **iOS/macOS** take DNS-over-HTTPS through a profile or an app such as AdGuard; browsers (Firefox, Chrome, Edge) accept the URL directly under *Secure DNS*.
+        - To tell devices apart, append a name: `/dns-query/phone`. You can then allow only named clients under **Settings → DNS settings → Access settings**.
+
+        Plain DNS on port 53 is not published by default (see the comment in the compose file to serve it on your LAN).
+
+x-compose-app:
+  schema_version: 2
+  version: "1.0.0"
+  routes:
+    - { service: adguardhome, name: adguardhome, upstream-port: 80 }
+  id: adguardhome
+  title:
+    en_us: AdGuard Home
+  tagline:
+    en_us: Network-wide ad and tracker blocking DNS server
+  description:
+    en_us: *description
+  developer: AdGuard
+  category: Network
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    en_us: *tips
+  secrets:
+    ADGUARDHOME_ADMIN_PASSWORD: password:24
+    # AdGuard Home reads the bcrypt hash of each user from `users` in its config
+    # (seed/conf/AdGuardHome.yaml.tmpl); the seeded file also skips the open wizard.
+    ADGUARDHOME_ADMIN_HASH: bcrypt:${ADGUARDHOME_ADMIN_PASSWORD}
+  credentials:
+    - label:
+        en_us: Administrator
+      username: admin
+      password: ${ADGUARDHOME_ADMIN_PASSWORD}

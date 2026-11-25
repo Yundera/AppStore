@@ -1,0 +1,41 @@
+# First-boot configuration, written once by Maison (create-if-absent). Its presence
+# makes AdGuard Home skip the open first-run wizard: the web UI listens on :80 and is
+# behind the admin login below from the first request. AdGuard Home fills every key
+# left out here with its own defaults and rewrites this file when settings change.
+http:
+  address: 0.0.0.0:80
+  session_ttl: 720h
+  doh:
+    routes:
+      - GET /dns-query
+      - POST /dns-query
+      - GET /dns-query/{ClientID}
+      - POST /dns-query/{ClientID}
+    # The box's proxy terminates HTTPS and forwards plain HTTP, so DNS-over-HTTPS
+    # must be accepted on the HTTP listener.
+    insecure_enabled: true
+users:
+  - name: admin
+    password: '${ADGUARDHOME_ADMIN_HASH}'
+auth_attempts: 5
+block_auth_min: 15
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: 53
+  upstream_dns:
+    - https://dns.cloudflare.com/dns-query
+    - https://dns.quad9.net/dns-query
+  bootstrap_dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    - 9.9.9.9
+  # The proxy in front reaches the container over the box's private Docker network:
+  # trust its X-Forwarded-For so DNS-over-HTTPS clients show up with their own address.
+  trusted_proxies:
+    - 127.0.0.0/8
+    - ::1/128
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+schema_version: 35
