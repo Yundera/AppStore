@@ -1,0 +1,244 @@
+name: authentik
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Shared by the server and the worker: one image, one database, one key.
+# Since 2025.10 authentik keeps its cache, sessions and task queue in
+# PostgreSQL, so there is no Redis.
+x-authentik-env: &authentik-env
+  AUTHENTIK_POSTGRESQL__HOST: authentik-db
+  AUTHENTIK_POSTGRESQL__NAME: authentik
+  AUTHENTIK_POSTGRESQL__USER: authentik
+  AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+  AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+  # Password and email of the built-in `akadmin` account, through authentik's
+  # documented bootstrap variables. They are read on the first start only;
+  # with a usable password set, the initial-setup flow refuses to run, so
+  # nobody can claim the instance before its owner.
+  AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_ADMIN_PASSWORD}
+  AUTHENTIK_BOOTSTRAP_EMAIL: akadmin@${APP_DOMAIN}
+  # The address authentik writes into links and shows its admins. It seeds the
+  # base URL setting while that is empty and never overwrites it afterwards.
+  AUTHENTIK_WEB__BASE_URL: ${APP_URL:-https://authentik-${APP_DOMAIN}}
+  AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+
+services:
+  authentik-db:
+    image: postgres:16.15-alpine
+    container_name: authentik-db
+    restart: unless-stopped
+    # No `user:`: the image starts as root and hands its data directory to its
+    # own postgres user. It touches only its own app folder.
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/authentik/database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - authentik-internal
+    cpu_shares: 70
+    logging: *logging
+
+  authentik:
+    image: ghcr.io/goauthentik/server:2026.8.6
+    container_name: authentik
+    restart: unless-stopped
+    command: server
+    user: "$PUID:$PGID"
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+    environment:
+      <<: *authentik-env
+    # The image keeps its temporary files in /dev/shm (TMPDIR).
+    shm_size: 512mb
+    # The image's own check, plus: the login flow exists. On a first start the
+    # worker creates the default flows a few minutes after the server answers,
+    # and until then the login page is a 404. The probe sets no session.
+    healthcheck:
+      test: ["CMD-SHELL", "ak healthcheck && python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9000/flows/-/default/authentication/', timeout=10)\""]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 600s
+    expose:
+      - "9000"
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/authentik/data:/data
+      - ${DATA_ROOT:-/DATA}/AppData/authentik/custom-templates:/templates
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    networks:
+      - authentik-internal
+      - pcs
+    cpu_shares: 80
+    logging: *logging
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2026.8.6
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: worker
+    # Not root and no Docker socket: the upstream compose gives the worker both
+    # only so it can deploy outposts as containers on the host. The embedded
+    # outpost works without them; other outposts can be deployed by hand.
+    user: "$PUID:$PGID"
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+    environment:
+      <<: *authentik-env
+    shm_size: 512mb
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/authentik/data:/data
+      - ${DATA_ROOT:-/DATA}/AppData/authentik/certs:/certs
+      - ${DATA_ROOT:-/DATA}/AppData/authentik/custom-templates:/templates
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - authentik-internal
+    cpu_shares: 30
+    logging: *logging
+
+networks:
+  authentik-internal:
+    driver: bridge
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: authentik
+  webui_port: 9000
+  store_app_id: authentik
+  category: Utilities
+  tags: ["security", "authentication", "sso"]
+  developer: Authentik Security Inc.
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  title:
+    en_us: Authentik
+  tagline:
+    en_us: Self-hosted identity provider with single sign-on and MFA
+  description:
+    en_us: &description |
+      **Open-source identity provider and single sign-on**
+
+      Authentik is a self-hosted identity and access management platform. It keeps your
+      user accounts in one place and signs them in to your other applications, with
+      role-based access control and multi-factor authentication.
+
+      **Key features:**
+      - Single sign-on over OAuth2 / OpenID Connect, SAML, LDAP and RADIUS
+      - A forward-auth proxy for applications with no login of their own
+      - Multi-factor authentication: TOTP, WebAuthn / passkeys, static codes
+      - Users, groups and role-based access control
+      - Customisable login, enrolment and recovery flows
+      - Federation with Google, GitHub, Microsoft Entra ID and other sources
+      - An audit log of every login and change
+
+      The administrator account `akadmin` is created at install with a generated
+      password, shown from the app's tile.
+  tips:
+    before_install:
+      en_us: &tips |
+        **Signing in**
+
+        Open Authentik from its tile and sign in as **akadmin** with the password shown
+        in the tile's **Credentials** dialog. To change it later, use authentik's own
+        *Admin interface › Directory › Users*; the Credentials dialog keeps showing the
+        password it was installed with.
+
+        **Getting started**
+
+        - The *Admin interface* button opens the management console, where applications,
+          providers and users are managed.
+        - Add an *Application* with an OAuth2/OpenID or SAML *Provider* for every app that
+          should sign in through Authentik.
+        - Self-service sign-up is off: users are created by an administrator, or through
+          an enrolment flow you add yourself.
+
+        Outposts that authentik would normally start as Docker containers are not
+        started automatically here (the worker has no Docker access). The embedded
+        outpost works as is; other outposts can be deployed by hand.
+  index: /
+
+x-compose-app:
+  schema_version: 2
+  version: "2026.8.6"
+  id: authentik
+  # How the app is reached, stated without a domain or a proxy: the box's
+  # routing setting decides. authentik's plain-HTTP listener is 9000.
+  routes:
+    - { service: authentik, name: authentik, upstream-port: 9000 }
+  title:
+    en_us: Authentik
+  tagline:
+    en_us: Self-hosted identity provider with single sign-on and MFA
+  description:
+    en_us: *description
+  developer: Authentik Security Inc.
+  category: Utilities
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  # Sum of the service limits (~3G) plus room for the OS and other apps.
+  resources:
+    recommended: { cpu: 2, memory: 4G }
+  tips:
+    en_us: *tips
+  secrets:
+    # Signs sessions and tokens; a key that changes logs everyone out.
+    AUTHENTIK_SECRET_KEY: alnum:60
+    # The Postgres role password; internal, nobody types it.
+    AUTHENTIK_DB_PASSWORD: alnum:32
+    # The akadmin login (AUTHENTIK_BOOTSTRAP_PASSWORD).
+    AUTHENTIK_ADMIN_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: Administrator
+      username: akadmin
+      password: ${AUTHENTIK_ADMIN_PASSWORD}
+      note:
+        en_us: Set on the first start only. Change it later in authentik's admin interface.
+  # Directories Maison creates and chowns to $PUID:$PGID before every `up`; the
+  # server and the worker run as that user. Not the database directory: the
+  # postgres image hands it to its own user.
+  folders:
+    - path: /DATA/AppData/authentik/data
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/authentik/certs
+      user: $PUID
+      group: $PGID
+    - path: /DATA/AppData/authentik/custom-templates
+      user: $PUID
+      group: $PGID
+
