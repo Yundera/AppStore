@@ -202,6 +202,61 @@ services:
         max-size: "10m"
         max-file: "2"
 
+  # Talk High-Performance Backend: the official Nextcloud AIO talk image bundles the
+  # signaling server, Janus (SFU), NATS and an eturnal TURN server. Without it Talk
+  # runs every call peer-to-peer, which falls apart past ~4 participants.
+  # Browsers reach signaling over HTTPS on its own route (nextcloud-signaling → 8081);
+  # media goes through TURN on 3478 tcp/udp of the server's public IP, which Janus
+  # also relays through, so 3478 is the only port the call path needs.
+  talk:
+    image: ghcr.io/nextcloud-releases/aio-talk:20260929_105435
+    container_name: nextcloud-talk
+    restart: unless-stopped
+    user: $PUID:$PGID
+    init: true
+    read_only: true
+    tmpfs:
+      - /run
+      - /opt/eturnal/run
+      - /conf
+      - /tmp
+    cap_drop:
+      - NET_RAW
+    cpu_shares: 80
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    expose:
+      - 8081
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+    environment:
+      - TZ=$TZ
+      - NC_DOMAIN=${APP_HOST:-nextcloud-${APP_DOMAIN}}
+      # Same as AIO: TALK_HOST is the container itself, so TURN relays on the
+      # container address and Janus (same container) reaches TURN without hairpin.
+      - TALK_HOST=nextcloud-talk
+      - TURN_DOMAIN=nextcloud-talk
+      - TALK_PORT=3478
+      - TURN_SECRET=${TALK_TURN_SECRET}
+      - SIGNALING_SECRET=${TALK_SIGNALING_SECRET}
+      - INTERNAL_SECRET=${TALK_INTERNAL_SECRET}
+      - AIO_LOG_LEVEL=warn
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - pcs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
 networks:
   nextcloud-network:
     driver: bridge
@@ -223,7 +278,9 @@ x-casaos:
 
   category: Utilities
 
-  tags: ["files", "productivity", "business", "personal"]
+  # `needs-public-ip`: the talk service publishes TURN on 3478 tcp/udp, which call
+  # participants reach directly. See the ports: block on that service.
+  tags: ["files", "productivity", "business", "personal", "needs-public-ip"]
   architectures: [amd64, arm64]
   developer: Nextcloud GmbH
   description:
@@ -510,6 +567,8 @@ x-casaos:
         First-time install takes 1–3 minutes. If the page shows "Gateway time-out" or appears stuck, **refresh** after a minute and the login screen will appear.
 
         To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
+
+        **Talk video calls** come with a High-Performance Backend already connected, so group calls stay smooth beyond a handful of people. Calls need TCP and UDP port **3478** reachable on the server's public IP.
       ko_kr: |
         **로그인**
 
@@ -518,6 +577,8 @@ x-casaos:
         최초 설치는 1~3분 소요됩니다. 페이지에 "Gateway time-out"이 표시되거나 멈춘 것처럼 보이면 1분 후 **새로고침**하면 로그인 화면이 나타납니다.
 
         변경하려면 Maison의 앱 설정(보안 탭)을 사용하세요. 그래야 자격 증명 창이 정확하게 유지됩니다.
+
+        **Talk 화상통화**에는 고성능 백엔드가 이미 연결되어 있어, 여러 명이 참여하는 그룹 통화도 원활합니다. 통화를 하려면 서버 공인 IP의 TCP/UDP **3478** 포트가 열려 있어야 합니다.
       zh_cn: |
         **登录**
 
@@ -526,6 +587,8 @@ x-casaos:
         首次安装需要 1~3 分钟。如果页面显示 "Gateway time-out" 或看起来卡住，请等待 1 分钟后**刷新页面**即可看到登录界面。
 
         如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
+
+        **Talk 视频通话**已连接高性能后端，多人群组通话也能保持流畅。通话需要服务器公网 IP 的 TCP/UDP **3478** 端口可访问。
       fr_fr: |
         **Connexion**
 
@@ -534,6 +597,8 @@ x-casaos:
         La première installation prend 1 à 3 minutes. Si la page affiche "Gateway time-out" ou semble bloquée, **rafraîchissez** après une minute pour voir l'écran de connexion.
 
         Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
+
+        **Les appels vidéo Talk** sont déjà reliés à un backend haute performance, pour des appels de groupe fluides au-delà de quelques participants. Les appels nécessitent que les ports TCP et UDP **3478** soient joignables sur l'IP publique du serveur.
       es_es: |
         **Inicio de sesión**
 
@@ -543,6 +608,8 @@ x-casaos:
 
         Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
 
+        **Las videollamadas de Talk** ya están conectadas a un backend de alto rendimiento, para llamadas grupales fluidas más allá de unas pocas personas. Las llamadas necesitan los puertos TCP y UDP **3478** accesibles en la IP pública del servidor.
+
 x-compose-app:
   schema_version: 2
   version: "33.0.10"
@@ -551,6 +618,9 @@ x-compose-app:
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
   routes:
     - { service: nextcloud, name: nextcloud, upstream-port: 80 }
+    # Talk's signaling server (HPB) on its own host; the talk-backend step registers
+    # it in Nextcloud as ROUTE_NEXTCLOUD_SIGNALING_URL.
+    - { service: talk, name: nextcloud-signaling, upstream-port: 8081 }
   # The store card and the tile. Maison reads x-compose-app only: x-casaos is
   # kept for CasaOS and for Maison builds that predate this, and must match.
   title:
@@ -583,9 +653,13 @@ x-compose-app:
     - screenshot-2.png
     - screenshot-3.png
   architectures: [amd64, arm64]
-  # Sum of the service limits (~2.75G) plus room for the OS and other apps.
+  # Sum of the service limits (~3.75G with the Talk backend) plus room for the OS
+  # and other apps.
   resources:
-    recommended: { memory: 4G }
+    recommended: { memory: 5G }
+  # Talk's TURN relay (3478 tcp/udp) must be dialled from the internet: hidden on a
+  # box behind NAT or the tunnel.
+  requires: [public-ip]
   tips:
     en_us: |
       **Login**
@@ -595,6 +669,8 @@ x-compose-app:
       First-time install takes 1–3 minutes. If the page shows "Gateway time-out" or appears stuck, **refresh** after a minute and the login screen will appear.
 
       To change it, use the app's settings in Maison (Security tab), so the Credentials dialog stays correct.
+
+      **Talk video calls** come with a High-Performance Backend already connected, so group calls stay smooth beyond a handful of people. Calls need TCP and UDP port **3478** reachable on the server's public IP.
     ko_kr: |
       **로그인**
 
@@ -603,6 +679,8 @@ x-compose-app:
       최초 설치는 1~3분 소요됩니다. 페이지에 "Gateway time-out"이 표시되거나 멈춘 것처럼 보이면 1분 후 **새로고침**하면 로그인 화면이 나타납니다.
 
       변경하려면 Maison의 앱 설정(보안 탭)을 사용하세요. 그래야 자격 증명 창이 정확하게 유지됩니다.
+
+      **Talk 화상통화**에는 고성능 백엔드가 이미 연결되어 있어, 여러 명이 참여하는 그룹 통화도 원활합니다. 통화를 하려면 서버 공인 IP의 TCP/UDP **3478** 포트가 열려 있어야 합니다.
     zh_cn: |
       **登录**
 
@@ -611,6 +689,8 @@ x-compose-app:
       首次安装需要 1~3 分钟。如果页面显示 "Gateway time-out" 或看起来卡住，请等待 1 分钟后**刷新页面**即可看到登录界面。
 
       如需修改，请在 Maison 的应用设置（安全选项卡）中进行，以便凭据对话框保持正确。
+
+      **Talk 视频通话**已连接高性能后端，多人群组通话也能保持流畅。通话需要服务器公网 IP 的 TCP/UDP **3478** 端口可访问。
     fr_fr: |
       **Connexion**
 
@@ -619,6 +699,8 @@ x-compose-app:
       La première installation prend 1 à 3 minutes. Si la page affiche "Gateway time-out" ou semble bloquée, **rafraîchissez** après une minute pour voir l'écran de connexion.
 
       Pour le changer, passez par les réglages de l'application dans Maison (onglet Sécurité), afin que la fenêtre Identifiants reste juste.
+
+      **Les appels vidéo Talk** sont déjà reliés à un backend haute performance, pour des appels de groupe fluides au-delà de quelques participants. Les appels nécessitent que les ports TCP et UDP **3478** soient joignables sur l'IP publique du serveur.
     es_es: |
       **Inicio de sesión**
 
@@ -627,6 +709,8 @@ x-compose-app:
       La primera instalación tarda 1-3 minutos. Si la página muestra "Gateway time-out" o parece bloqueada, **actualiza** después de un minuto para ver la pantalla de inicio de sesión.
 
       Para cambiarla, usa los ajustes de la app en Maison (pestaña Seguridad), así el diálogo de credenciales sigue siendo correcto.
+
+      **Las videollamadas de Talk** ya están conectadas a un backend de alto rendimiento, para llamadas grupales fluidas más allá de unas pocas personas. Las llamadas necesitan los puertos TCP y UDP **3478** accesibles en la IP pública del servidor.
   # Seeded: an installed Nextcloud was initialised (admin account, MariaDB,
   # Redis config written into config.php) with the box-wide password and keeps
   # it; a fresh install gets its own values.
@@ -635,6 +719,10 @@ x-compose-app:
     NEXTCLOUD_DB_ROOT_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
     NEXTCLOUD_REDIS_PASSWORD: ${APP_DEFAULT_PASSWORD}|alnum:32
     NEXTCLOUD_ADMIN_PASSWORD: ${APP_DEFAULT_PASSWORD}|password:24
+    # Talk HPB: shared between the talk service and the talk-backend step only.
+    TALK_SIGNALING_SECRET: hex:32
+    TALK_TURN_SECRET: hex:32
+    TALK_INTERNAL_SECRET: hex:32
   credentials:
     - label:
         en_us: Administrator
@@ -698,7 +786,8 @@ x-compose-app:
       script: |
         timeout=300
         while [ $timeout -gt 0 ]; do
-          if compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true'; then
+          status=$(compose exec nextcloud php occ status 2>/dev/null || true)
+          if case "$status" in *"installed: true"*) true ;; *) false ;; esac; then
             echo "NextCloud installation complete"
             break
           fi
@@ -709,10 +798,13 @@ x-compose-app:
         # The loop above always ends with status 0, so check the outcome itself: on a
         # timeout, fail loudly (Maison logs the failed step and retries it on the next
         # up) instead of running occ against an uninstalled Nextcloud.
-        compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || {
-          echo "Nextcloud did not finish installing within 300 s; Redis cache and cron were not configured" >&2
-          exit 1
-        }
+        # Read the status into a variable: `occ status | grep -q` lets grep exit early,
+        # occ dies of SIGPIPE and under pipefail the check fails at random.
+        status=$(compose exec nextcloud php occ status 2>/dev/null || true)
+        case "$status" in
+          *"installed: true"*) ;;
+          *) echo "Nextcloud did not finish installing within 300 s; Redis cache and cron were not configured" >&2; exit 1 ;;
+        esac
         compose exec nextcloud bash -c '
           php occ config:system:set redis host --value redis
           php occ config:system:set redis port --value 6379 --type=integer
@@ -721,6 +813,36 @@ x-compose-app:
           php occ config:system:set memcache.locking --value "\OC\Memcache\Redis"
           php occ background:cron && echo "Background jobs set to cron mode"
         '
+    # Talk + its High-Performance Backend (the `talk` service), re-applied on every
+    # start so a new address or public IP follows. Runs after configure-redis-and-cron,
+    # which waits for the install. Each server is deleted before being added so a
+    # rerun never stacks duplicates.
+    - name: talk-backend
+      at: started
+      run: always
+      script: |
+        # Read the status into a variable first: piping occ into `grep -q` lets grep
+        # exit early, occ dies of SIGPIPE, and under pipefail the check fails at random.
+        status=$(compose exec nextcloud php occ status 2>/dev/null || true)
+        case "$status" in
+          *"installed: true"*) ;;
+          *) echo "Nextcloud is not installed yet; Talk backend not configured" >&2; exit 1 ;;
+        esac
+        compose exec \
+          -e SIG_URL="${ROUTE_NEXTCLOUD_SIGNALING_URL:-https://nextcloud-signaling-$APP_DOMAIN}" \
+          -e SIG_SECRET="$TALK_SIGNALING_SECRET" \
+          -e TURN_HOST="$APP_PUBLIC_IPV4:3478" \
+          -e TURN_SECRET="$TALK_TURN_SECRET" \
+          nextcloud bash -c '
+          php occ app:install spreed >/dev/null 2>&1 || php occ app:enable spreed
+          php occ talk:signaling:delete "$SIG_URL" >/dev/null 2>&1 || true
+          php occ talk:signaling:add "$SIG_URL" "$SIG_SECRET"
+          php occ talk:turn:delete turn "$TURN_HOST" udp,tcp >/dev/null 2>&1 || true
+          php occ talk:turn:add turn "$TURN_HOST" udp,tcp --secret="$TURN_SECRET"
+          php occ talk:stun:delete "$TURN_HOST" >/dev/null 2>&1 || true
+          php occ talk:stun:add "$TURN_HOST"
+          echo "Talk High-Performance Backend configured"
+        '
     # Every address the app is reached at, re-applied on every start so a domain the
     # box gains later is trusted too (NEXTCLOUD_TRUSTED_DOMAINS only acts at install).
     # Index 0 is localhost and 1 the bare domain, both set by the image at install.
@@ -728,7 +850,8 @@ x-compose-app:
       at: started
       run: always
       script: |
-        compose exec nextcloud php occ status 2>/dev/null | grep -q 'installed: true' || exit 0
+        status=$(compose exec nextcloud php occ status 2>/dev/null || true)
+        case "$status" in *"installed: true"*) ;; *) exit 0 ;; esac
         # Installs from before OVERWRITEHOST was dropped keep it in config.php.
         compose exec nextcloud php occ config:system:delete overwritehost >/dev/null || true
         i=2
