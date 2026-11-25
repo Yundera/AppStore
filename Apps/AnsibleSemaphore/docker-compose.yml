@@ -1,0 +1,191 @@
+name: ansiblesemaphore
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  ansiblesemaphore:
+    image: semaphoreui/semaphore:v2.20.24
+    container_name: ansiblesemaphore
+    restart: unless-stopped
+    # The image's own non-root user (uid 1001, group root). Its home, its Ansible
+    # virtualenv and its scratch directory belong to that user, so it runs as shipped;
+    # the two mounted folders below are created for it (see `folders`).
+    user: "1001:0"
+    environment:
+      # SQLite in the app folder: no database service to run. The image's entrypoint
+      # writes /etc/semaphore/config.json on the first start (and only then), including
+      # the key that encrypts stored SSH keys and passwords.
+      SEMAPHORE_DB_DIALECT: sqlite
+      SEMAPHORE_DB_HOST: /var/lib/semaphore/database.sqlite
+      # First administrator, created by that first-start setup (documented by the image).
+      SEMAPHORE_ADMIN: admin
+      SEMAPHORE_ADMIN_NAME: Administrator
+      SEMAPHORE_ADMIN_EMAIL: "admin@${APP_DOMAIN:-localhost}"
+      SEMAPHORE_ADMIN_PASSWORD: "${SEMAPHORE_ADMIN_PASSWORD}"
+      TZ: "${TZ:-UTC}"
+    expose:
+      - 3000
+    volumes:
+      # config.json (database location, encryption keys).
+      - ${DATA_ROOT:-/DATA}/AppData/ansiblesemaphore/config:/etc/semaphore
+      # The SQLite database: users, projects, inventories, keys, templates, task history.
+      - ${DATA_ROOT:-/DATA}/AppData/ansiblesemaphore/data:/var/lib/semaphore
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/ping >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          # Playbooks run inside this container, so leave room for Ansible itself.
+          memory: 1G
+    cpu_shares: 80
+    logging: *logging
+    networks:
+      - pcs
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: ansiblesemaphore
+  webui_port: 3000
+  category: Developer
+  tags: ["ansible", "automation", "devops", "infrastructure"]
+  developer: Semaphore UI
+  store_app_id: ansiblesemaphore
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  index: /
+  title:
+    en_us: Ansible Semaphore
+  tagline:
+    en_us: A web UI to run Ansible playbooks, Terraform and scripts
+  description:
+    en_us: |
+      **A modern web interface for Ansible**
+
+      Semaphore UI lets you run Ansible playbooks from the browser instead of the command
+      line, see the output live, keep a history of every run and control who may deploy what.
+
+      **Key features:**
+      - Projects with inventories, repositories, environments and SSH keys or vault passwords
+      - Task templates you run with one click, on a schedule or from a webhook
+      - Live task output and a full history of past runs
+      - Notifications on failure (email, Slack, Telegram and more)
+      - Users and teams with per-project roles
+      - Also runs Terraform/OpenTofu and shell scripts
+
+      **Sign-in:** an administrator account is created at install with a generated password,
+      shown by Maison on first open. Further users are added by the administrator; there is
+      no public sign-up.
+
+      For technical users: you need Ansible playbooks in a Git repository and hosts the
+      container can reach over SSH.
+  tips:
+    before_install:
+      en_us: |
+        **Sign-in:** log in as **admin** with the password Maison shows on first open
+        (also in the tile menu under **Credentials**). You can change it afterwards in
+        Semaphore under **admin > Edit user**; the Credentials entry then stays on the
+        original password.
+
+        **First run:** create a project, then add a **Key Store** entry (SSH key or login),
+        a **Repository** (the Git URL of your playbooks), an **Inventory** and an
+        **Environment**, and finally a **Task Template** that ties them together. Run it
+        from the template's page.
+
+        Playbooks run inside the Semaphore container, so target hosts must be reachable
+        from your server.
+
+x-compose-app:
+  schema_version: 2
+  version: "2.20.24"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: ansiblesemaphore, name: ansiblesemaphore, upstream-port: 3000 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: ansiblesemaphore
+  title:
+    en_us: Ansible Semaphore
+  tagline:
+    en_us: A web UI to run Ansible playbooks, Terraform and scripts
+  description:
+    en_us: |
+      **A modern web interface for Ansible**
+
+      Semaphore UI lets you run Ansible playbooks from the browser instead of the command
+      line, see the output live, keep a history of every run and control who may deploy what.
+
+      **Key features:**
+      - Projects with inventories, repositories, environments and SSH keys or vault passwords
+      - Task templates you run with one click, on a schedule or from a webhook
+      - Live task output and a full history of past runs
+      - Notifications on failure (email, Slack, Telegram and more)
+      - Users and teams with per-project roles
+      - Also runs Terraform/OpenTofu and shell scripts
+
+      **Sign-in:** an administrator account is created at install with a generated password,
+      shown by Maison on first open. Further users are added by the administrator; there is
+      no public sign-up.
+
+      For technical users: you need Ansible playbooks in a Git repository and hosts the
+      container can reach over SSH.
+  developer: Semaphore UI
+  category: Developer
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  audience: technical
+  tips:
+    en_us: |
+      **Sign-in:** log in as **admin** with the password Maison shows on first open
+      (also in the tile menu under **Credentials**). You can change it afterwards in
+      Semaphore under **admin > Edit user**; the Credentials entry then stays on the
+      original password.
+
+      **First run:** create a project, then add a **Key Store** entry (SSH key or login),
+      a **Repository** (the Git URL of your playbooks), an **Inventory** and an
+      **Environment**, and finally a **Task Template** that ties them together. Run it
+      from the template's page.
+
+      Playbooks run inside the Semaphore container, so target hosts must be reachable
+      from your server.
+  credentials:
+    - label:
+        en_us: Administrator
+      username: admin
+      password: ${SEMAPHORE_ADMIN_PASSWORD}
+      note:
+        en_us: Created on the first start. Semaphore keeps its own copy, so a password changed in the app is not reflected here.
+  secrets:
+    # The first administrator's password (SEMAPHORE_ADMIN_PASSWORD, read at first start only).
+    SEMAPHORE_ADMIN_PASSWORD: password:24
+  # The service runs as uid 1001 and writes both mounted directories.
+  folders:
+    - path: /DATA/AppData/ansiblesemaphore/config
+      user: "1001"
+      group: "0"
+      mode: "0700"
+    - path: /DATA/AppData/ansiblesemaphore/data
+      user: "1001"
+      group: "0"
+      mode: "0700"
