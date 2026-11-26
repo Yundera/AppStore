@@ -1,0 +1,174 @@
+name: chatpad
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  chatpad:
+    image: ghcr.io/nsl-sh/appshield:4.2.0
+    container_name: chatpad
+    # OIDC identity: the auth-registrar attests this app's name from the container's
+    # hostname, so it must equal the app name (and container_name).
+    hostname: chatpad
+    restart: unless-stopped
+    expose:
+      - 80
+    environment:
+      BACKEND_HOST: "chatpad-backend"
+      BACKEND_PORT: "80"
+      LISTEN_PORT: "80"
+      # SSO comes from the platform (Maison's system env). Where there is none
+      # (plain CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      PUBLIC_URL: "${APP_URLS:-}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+    depends_on:
+      - chatpad-backend
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      # On `pcs` for the platform proxy and the auth-registrar; on the app's own
+      # network to reach the backend.
+      - pcs
+      - chatpad-internal
+
+  chatpad-backend:
+    # Static single-page app served by nginx on port 80. Image tags are upstream
+    # commit SHAs; this one is the head of deiucanta/chatpad main (2024-06-13).
+    # No volume: chats, settings and the API key live in the browser (see rationale.md).
+    image: ghcr.io/deiucanta/chatpad:bb5f4abb36b45320df69dfccb64e734f36ca9bb3
+    container_name: chatpad-backend
+    restart: unless-stopped
+    expose:
+      - 80
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      # Reached only by the gate.
+      - chatpad-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  chatpad-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: chatpad
+  webui_port: 80
+  index: /
+  category: Chat
+  tags: ["ai", "chat", "chatgpt"]
+  developer: deiucanta
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  title:
+    en_us: Chatpad
+  tagline:
+    en_us: Not just another ChatGPT user interface
+  description:
+    en_us: |
+      Chatpad is a slick, open-source web interface for ChatGPT. Chat with OpenAI models using your own API key, keep as many conversations as you like, search them, pin prompts you reuse, set a writing character, tone, style and format for each chat, and export or import everything as a file.
+
+      Everything is kept in your browser: conversations, prompts, settings and your OpenAI API key are stored on your device, not on the server, and messages go straight from your browser to OpenAI.
+
+      **You need an OpenAI API key** (platform.openai.com), with API credit: OpenAI bills its usage. Chatpad asks for it on first open.
+
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
+  tips:
+    before_install:
+      en_us: |
+        **Sign-in:** Chatpad is protected by your server account (single sign-on).
+        On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
+
+        **First open:** click **Enter OpenAI Key** and paste an OpenAI API key from https://platform.openai.com/api-keys. OpenAI bills its usage.
+
+        **Your data stays in your browser:** chats and the key are stored per browser, not on the server. Use **Database > Export Data** (the database icon at the bottom left) to keep a copy or move them to another device.
+
+        Access via: `${APP_URL:-https://chatpad-${APP_DOMAIN}}`
+
+x-compose-app:
+  schema_version: 2
+  id: chatpad
+  version: "bb5f4abb"
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in to this app. On a server with single sign-on, use that instead. This password then works only while single sign-on is unavailable.
+      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: chatpad, name: chatpad, upstream-port: 80 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Chatpad
+  tagline:
+    en_us: Not just another ChatGPT user interface
+  description:
+    en_us: |
+      Chatpad is a slick, open-source web interface for ChatGPT. Chat with OpenAI models using your own API key, keep as many conversations as you like, search them, pin prompts you reuse, set a writing character, tone, style and format for each chat, and export or import everything as a file.
+
+      Everything is kept in your browser: conversations, prompts, settings and your OpenAI API key are stored on your device, not on the server, and messages go straight from your browser to OpenAI.
+
+      **You need an OpenAI API key** (platform.openai.com), with API credit: OpenAI bills its usage. Chatpad asks for it on first open.
+
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
+  developer: deiucanta
+  category: Chat
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  # What the user brings (GUIDELINES › What the user brings): an OpenAI API key
+  # with credit, entered in Chatpad's own first screen and kept in the browser.
+  cost: paid
+  accounts:
+    - provider: OpenAI
+      url: https://platform.openai.com/
+  tips:
+    en_us: |
+      **Sign-in:** Chatpad is protected by your server account (single sign-on).
+      On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
+
+      **First open:** click **Enter OpenAI Key** and paste an OpenAI API key from https://platform.openai.com/api-keys. OpenAI bills its usage.
+
+      **Your data stays in your browser:** chats and the key are stored per browser, not on the server. Use **Database > Export Data** (the database icon at the bottom left) to keep a copy or move them to another device.
+
+      Access via: `${APP_URL:-https://chatpad-${APP_DOMAIN}}`
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
