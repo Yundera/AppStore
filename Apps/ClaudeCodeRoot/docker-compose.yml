@@ -59,7 +59,7 @@ services:
   # else gated by it (auth_request) and then proxied to ttyd. This was a Caddy
   # forward_auth tree; the platform now only routes a host to port 80 here.
   clauderoot-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.10-alpine
     container_name: clauderoot-router
     restart: unless-stopped
     cpu_shares: 50
@@ -381,3 +381,4 @@ x-compose-app:
           chown claude:claude /home/claude/.ssh /home/claude/.ssh/authorized_keys 2>/dev/null || true
           exit 0
         ' || echo "host claude provisioning skipped (host-SSH may be unavailable); continuing"
+
