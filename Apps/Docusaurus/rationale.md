@@ -13,7 +13,7 @@
   does not require authentication" as an accepted exception. AppShield cannot
   serve a whole site publicly (`ALLOWED_PATHS` opens sub-paths only, never `/`),
   so the gate is left out rather than configured around.
-- **`docusaurus` (nginx:1.31.9-alpine)** — the official Nginx image's entrypoint
+- **`docusaurus` (nginx:1.31.10-alpine)** — the official Nginx image's entrypoint
   runs its template/permission setup as root and then drops the worker processes
   to the unprivileged `nginx` user itself. It only touches its own app folder,
   mounted read-only.
