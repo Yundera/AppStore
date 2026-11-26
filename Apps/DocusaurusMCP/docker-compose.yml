@@ -301,6 +301,10 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
+  # Limits add up to 2.25G (the backend's 2G is for the rebuild tool's `npm run build`),
+  # so the store notes a box below this (requirement `resources-declared`).
+  resources:
+    recommended: { memory: 3G }
   tips:
     en_us: |
       **Prerequisites:**
