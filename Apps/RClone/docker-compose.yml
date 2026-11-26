@@ -68,7 +68,7 @@ services:
   # to the GUI, every other method to the API, and a browser that has never
   # connected is sent once to /login?url=<this host>.
   rclone-router:
-    image: nginx:1.31.8-alpine
+    image: nginx:1.31.10-alpine
     container_name: rclone-router
     restart: unless-stopped
     cpu_shares: 70
