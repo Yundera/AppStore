@@ -3,8 +3,7 @@
 ## What deviation / exception is being requested
 
 1. **No authentication.** The site is served without the AppShield SSO gate.
-2. **Root containers.** The Nginx web server and the `docusaurus-rebuild` step's
-   node container run with `user: "0:0"`.
+2. **Root container.** The Nginx web server runs with `user: "0:0"`.
 
 ## Why it is necessary
 
@@ -18,13 +17,10 @@
   runs its template/permission setup as root and then drops the worker processes
   to the unprivileged `nginx` user itself. It only touches its own app folder,
   mounted read-only.
-- **`docusaurus-rebuild` step (node:20.19.2-alpine3.20)** — rebuilds the site on
-  every start. Installs made by the older root-run init left `node_modules` root-owned,
-  and the `npm ci` fallback (run when a build fails, e.g. after a restore dropped
-  `node_modules/.cache`) must be able to replace them.
-
-The one-shot `docusaurus-init` step runs as `$PUID:$PGID`, so the generated
-project stays editable by the user and by the Docusaurus MCP app.
+Both node steps (`docusaurus-init` and `docusaurus-rebuild`) run as `$PUID:$PGID`,
+so the generated project stays editable by the user and by the Docusaurus MCP app.
+Files that earlier root-run builds left in `src/` and `build/` are re-owned by the
+`folders` declaration (`recursive: true`) before each start.
 
 ## Security mitigations in place
 
