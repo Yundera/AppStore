@@ -59,7 +59,7 @@ services:
   # to the host-mode web UI via the docker host-gateway (host.docker.internal:51821).
   # nginx.conf ships in seed/ (create-if-absent on every up) and is bind-mounted read-only.
   wgeasyhost-proxy:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.31.10-alpine
     container_name: wgeasyhost-proxy
     restart: unless-stopped
     # Must be root: the CasaOS installer injects `user: $PUID:$PGID` into any service
@@ -87,7 +87,7 @@ networks:
 
 x-casaos:
   # ghcr.io/wg-easy/wg-easy:15.5.0 publishes only linux/amd64 and linux/arm64
-  # (no 32-bit armv7); nginx:1.31.9-alpine is broader, so this is the intersection.
+  # (no 32-bit armv7); nginx:1.31.10-alpine is broader, so this is the intersection.
   architectures:
     - amd64
     - arm64
