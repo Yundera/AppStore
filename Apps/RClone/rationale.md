@@ -31,10 +31,11 @@
 
 **Important**: Users must mount cloud remotes to `/data` inside the container for files to appear at `/DATA/Rclone` on the host system.
 
-### Read-only host file mounts (`/etc/passwd`, `/etc/group`, `/etc/fuse.conf`)
-**Rationale**: FUSE needs to resolve host UIDs/GIDs to names and to honour the host's
-`user_allow_other` setting so that `--allow-other` mounts are visible to other containers.
-All three are mounted `:ro` and are never written to.
+### Read-only host file mounts (`/etc/passwd`, `/etc/group`)
+**Rationale**: FUSE needs to resolve host UIDs/GIDs to names. Both are mounted `:ro` and are
+never written to. `/etc/fuse.conf` is deliberately **not** bind-mounted from the host: on a
+host where that file does not exist, Docker creates a directory in its place and the container
+cannot start. The image's own `/etc/fuse.conf` is used instead.
 
 ## Configuration Requirements
 

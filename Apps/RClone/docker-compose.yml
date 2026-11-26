@@ -34,7 +34,8 @@ services:
       - ${DATA_ROOT:-/DATA}/Rclone/:/data/:rshared,z
       - /etc/passwd:/etc/passwd:ro
       - /etc/group:/etc/group:ro
-      - /etc/fuse.conf:/etc/fuse.conf:ro
+      # No /etc/fuse.conf bind: a host without that file made Docker create a
+      # directory there and the start fail. The image ships its own fuse.conf.
     cap_add:
       - SYS_ADMIN
     privileged: true
@@ -352,3 +353,4 @@ x-compose-app:
     - path: /DATA/Rclone
       user: $PUID
       group: $PGID
+
