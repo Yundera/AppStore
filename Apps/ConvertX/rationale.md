@@ -27,7 +27,8 @@ While running as root, the following security measures are in place:
 1. **Authentication Required**
    - The **AppShield** OIDC sidecar (`ghcr.io/nsl-sh/appshield`) is the authentication
      boundary: it fronts the app, authenticates every request against the PCS's built-in
-     Authelia SSO, and is the only service carrying Caddy labels
+     Authelia SSO. Every path except the PWA manifest (see below) reaches the app only
+     through it
    - The ConvertX backend is not published. It sits on the app-private
      `convertx-internal` network and is reachable only through the sidecar
    - `ALLOW_UNAUTHENTICATED=true` is set on the backend deliberately — ConvertX's own
@@ -50,6 +51,21 @@ While running as root, the following security measures are in place:
 5. **Isolated AppData**
    - All writable data confined to `/DATA/AppData/$AppID/`
    - No direct access to system-critical directories
+
+6. **`/site.webmanifest` is served outside the gate, by the app's own router**
+   - ConvertX's pages link `<link rel="manifest" href="/site.webmanifest">` with no
+     `crossorigin` attribute, so browsers fetch it without credentials and the SSO cookie
+     never reaches the gate: it answered with a redirect to the login host, and the browser
+     logged a CORS error on a user's first visit
+   - The manifest is static PWA metadata (app name, theme colour, icon paths), identical for
+     every visitor, and carries nothing about the user
+   - The gate carries **no** `ALLOWED_PATHS` (AppShield matches an exempt path as a raw
+     prefix and forwards it un-normalised). Instead `convertx-router` (nginx, in front of
+     the gate, as in `Apps/Linkwarden` and `Apps/ChangeDetection`) has one exact-match
+     `location = /site.webmanifest`, GET only, proxied to the backend with that fixed URI.
+     nginx resolves dot segments and percent-escapes before matching, so a path such as
+     `/site.webmanifest/../history` normalises to `/history` and goes to the gate like
+     every other path. This is not a machine-client path, so `OAUTH_RESOURCE` does not apply
 
 ### Alternative Approaches Considered
 
