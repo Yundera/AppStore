@@ -154,6 +154,14 @@ services:
       KOPIA_PERSIST_CREDENTIALS_ON_CONNECT: "true"
       KOPIA_CACHE_DIRECTORY: "/DATA/AppData/kopia/engine/cache"
       KOPIA_LOG_DIR: "/DATA/AppData/kopia/engine/logs"
+      # Bounds on kopia's own log FILES (one debug-level file per invocation, under
+      # KOPIA_LOG_DIR). Its defaults keep 30 days and up to 1 GB per directory: 1.1 GB
+      # on a box checked 2026-11-27. Each kopia process sweeps against these at start.
+      # Same values on kopia-engine, which shares the directory.
+      KOPIA_LOG_DIR_MAX_AGE: "168h"
+      KOPIA_LOG_DIR_MAX_SIZE_MB: "20"
+      KOPIA_CONTENT_LOG_DIR_MAX_AGE: "168h"
+      KOPIA_CONTENT_LOG_DIR_MAX_SIZE_MB: "50"
       TZ: $TZ
     volumes:
       - type: bind
@@ -215,6 +223,12 @@ services:
       MAISON_ENGINE_CONTAINER: "kopia-engine"
       KOPIA_CACHE_DIRECTORY: "/DATA/AppData/kopia/engine/cache"
       KOPIA_LOG_DIR: "/DATA/AppData/kopia/engine/logs"
+      # Log-file bounds: see kopia-app. `docker exec` inherits them and the adapter
+      # passes them through to kopia.
+      KOPIA_LOG_DIR_MAX_AGE: "168h"
+      KOPIA_LOG_DIR_MAX_SIZE_MB: "20"
+      KOPIA_CONTENT_LOG_DIR_MAX_AGE: "168h"
+      KOPIA_CONTENT_LOG_DIR_MAX_SIZE_MB: "50"
       TZ: $TZ
     volumes:
       # The whole of /DATA: it is what gets backed up and restored. Maison passes
