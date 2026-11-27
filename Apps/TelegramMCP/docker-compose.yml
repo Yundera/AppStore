@@ -120,7 +120,7 @@ services:
   # whose X-Telegram-Bot-Api-Secret-Token header does not match. In polling mode (the
   # default) it answers 404.
   telegrammcp-router:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.31.10-alpine
     container_name: telegrammcp-router
     restart: unless-stopped
     cpu_shares: 50
