@@ -73,7 +73,7 @@ services:
 
   # Behind the gate, on the app's own network only: every request is gated anyway.
   kopia-router:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.31.10-alpine
     container_name: kopia-router
     restart: unless-stopped
     expose:
