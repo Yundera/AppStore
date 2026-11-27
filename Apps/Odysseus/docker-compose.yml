@@ -74,8 +74,9 @@ services:
     hostname: odysseus
     restart: unless-stopped
     environment:
-      BACKEND_HOST: "odysseus-backend"
-      BACKEND_PORT: "7000"
+      # The app's own router, not the backend (see odysseus-router below).
+      BACKEND_HOST: "odysseus-router"
+      BACKEND_PORT: "80"
       LISTEN_PORT: "80"
       # SSO comes from the platform (Maison's system env): the registrar on a
       # Yundera box, or a provider the user configured. Where there is none (plain
@@ -97,7 +98,7 @@ services:
     labels:
       icon: https://cdn.jsdelivr.net/gh/Yundera/AppStore@main/Apps/Odysseus/icon.png
     depends_on:
-      - odysseus-backend
+      - odysseus-router
     deploy:
       resources:
         limits:
@@ -105,8 +106,46 @@ services:
     cpu_shares: 80
     logging: *logging
     networks:
-      # Only `pcs`: the router reaches it here, and so is its backend.
+      # `pcs` for the platform's proxy and the auth-registrar; the app's own
+      # network for its router.
       - pcs
+      - odysseus-internal
+
+  # ── The app's own router, between the gate and the backend ─────────
+  # With AUTH_ENABLED=false (AppShield is the only login, see rationale.md) the
+  # browser carries no Odysseus session, and two reads the Settings dialog makes
+  # on open still demand one: GET /api/auth/2fa/status answers 401 and
+  # GET /api/auth/users answers 403. The page copes, but each lands in the
+  # console as a failed request. For exactly those two GETs, and only while the
+  # request has no `odysseus_session` cookie, the router gives the answer that is
+  # true in this mode: 2FA is off, and there are no app accounts to manage.
+  # Everything else, and both paths for a browser that does hold a session, goes
+  # to the backend untouched. On the app's own network only: the gate is the
+  # one way in.
+  odysseus-router:
+    image: nginx:1.31.10-alpine
+    container_name: odysseus-router
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    expose:
+      - 80
+    configs:
+      - source: odysseus-router
+        target: /etc/nginx/conf.d/default.conf
+    depends_on:
+      - odysseus-backend
+    networks:
+      - odysseus-internal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   odysseus-backend:
     image: ghcr.io/odysseus-dev/odysseus:1.0.3-9d0d372
@@ -127,7 +166,7 @@ services:
         condition: service_started
       odysseus-searxng:
         condition: service_healthy
-    # reached only by AppShield (nginxhashlock), which owns the published routes
+    # reached only through AppShield and odysseus-router, which own the published route
     expose:
       - "7000"
     extra_hosts:
@@ -195,6 +234,57 @@ networks:
   pcs:
     name: ${APP_NET:-pcs}
     external: true
+
+configs:
+  odysseus-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      map $$http_upgrade $$connection_upgrade { default upgrade; "" close; }
+      # 1 for a GET from a browser holding no Odysseus session (every request,
+      # with AUTH_ENABLED=false).
+      map "$$request_method:$$cookie_odysseus_session" $$nosession_get { "GET:" 1; default 0; }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # The gate caps uploads; nothing to add here. Chat replies stream (SSE).
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+
+        proxy_http_version 1.1;
+        # The gate already set these from the real client; pass them on as they are.
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$http_x_real_ip;
+        proxy_set_header X-Forwarded-For $$http_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $$http_x_forwarded_host;
+        proxy_set_header Upgrade $$http_upgrade;
+        proxy_set_header Connection $$connection_upgrade;
+
+        set $$backend odysseus-backend:7000;
+
+        location = /_router/health { access_log off; return 204; }
+
+        # The Settings dialog's 2FA panel: no session, no 2FA.
+        location = /api/auth/2fa/status {
+          default_type application/json;
+          if ($$nosession_get) { return 200 '{"enabled":false}'; }
+          proxy_pass http://$$backend;
+        }
+        # The admin Users tab: no app accounts are managed while AppShield is the login.
+        location = /api/auth/users {
+          default_type application/json;
+          if ($$nosession_get) { return 200 '{"users":[]}'; }
+          proxy_pass http://$$backend;
+        }
+
+        location / { proxy_pass http://$$backend; }
+      }
 
 x-casaos:
   architectures:
@@ -340,8 +430,8 @@ x-casaos:
         then downloads the embedding model used for memory and search. Watch
         progress with `docker logs -f odysseus`.
 
-        **Resource use:** this app runs four containers (AppShield, Odysseus,
-        ChromaDB, SearXNG) and reserves up to ~4.6 GB of RAM in total. Running a model
+        **Resource use:** this app runs five containers (AppShield, its router,
+        Odysseus, ChromaDB, SearXNG) and reserves up to ~4.7 GB of RAM in total. Running a model
         locally on the same machine needs considerably more on top of that.
       ko_kr: |
         **별도 로그인 불필요.** Odysseus는 AppShield로 보호되므로 대시보드에서 앱을 열면
@@ -358,7 +448,7 @@ x-casaos:
         **첫 시작은 몇 분 걸립니다.** 설정 스크립트 실행 후 임베딩 모델을
         다운로드합니다. `docker logs -f odysseus`로 확인하세요.
 
-        **리소스:** 컨테이너 4개(AppShield, Odysseus, ChromaDB, SearXNG)가 최대 약 4.6GB
+        **리소스:** 컨테이너 5개(AppShield, 라우터, Odysseus, ChromaDB, SearXNG)가 최대 약 4.7GB
         RAM을 사용합니다.
       zh_cn: |
         **无需单独登录。** Odysseus 由 AppShield 保护，从仪表板打开即以您的 PCS 账户
@@ -375,8 +465,8 @@ x-casaos:
         **首次启动需要几分钟**，会下载嵌入模型。可用
         `docker logs -f odysseus` 查看进度。
 
-        **资源占用：** 运行四个容器（AppShield、Odysseus、ChromaDB、SearXNG），
-        总计最多约 4.6 GB 内存。
+        **资源占用：** 运行五个容器（AppShield、路由、Odysseus、ChromaDB、SearXNG），
+        总计最多约 4.7 GB 内存。
       fr_fr: |
         **Aucune connexion separee.** Odysseus est protege par AppShield : ouvrir
         l'application depuis votre tableau de bord vous connecte avec votre compte
@@ -394,7 +484,7 @@ x-casaos:
         **Le premier demarrage prend quelques minutes** (telechargement du
         modele d'embedding). Suivez avec `docker logs -f odysseus`.
 
-        **Ressources :** quatre conteneurs, jusqu'a ~4,6 Go de RAM au total.
+        **Ressources :** cinq conteneurs, jusqu'a ~4,7 Go de RAM au total.
       es_es: |
         **Sin inicio de sesion aparte.** Odysseus esta protegido por AppShield: al abrir
         la aplicacion desde tu panel entras con tu cuenta del PCS, sin usuario ni
@@ -412,7 +502,7 @@ x-casaos:
         **El primer arranque tarda unos minutos** (descarga del modelo de
         embeddings). Sigue el progreso con `docker logs -f odysseus`.
 
-        **Recursos:** cuatro contenedores, hasta ~4,6 GB de RAM en total.
+        **Recursos:** cinco contenedores, hasta ~4,7 GB de RAM en total.
 
 x-compose-app:
   schema_version: 2
@@ -553,7 +643,7 @@ x-compose-app:
   architectures:
     - amd64
     - arm64
-  # Sum of the service limits (~4.6G, rationale.md).
+  # Sum of the service limits (~4.7G, rationale.md).
   resources:
     recommended: { memory: 6G }
   tips:
@@ -575,8 +665,8 @@ x-compose-app:
       then downloads the embedding model used for memory and search. Watch
       progress with `docker logs -f odysseus`.
 
-      **Resource use:** this app runs four containers (AppShield, Odysseus,
-      ChromaDB, SearXNG) and reserves up to ~4.6 GB of RAM in total. Running a model
+      **Resource use:** this app runs five containers (AppShield, its router,
+      Odysseus, ChromaDB, SearXNG) and reserves up to ~4.7 GB of RAM in total. Running a model
       locally on the same machine needs considerably more on top of that.
     ko_kr: |
       **별도 로그인 불필요.** Odysseus는 AppShield로 보호되므로 대시보드에서 앱을 열면
@@ -593,7 +683,7 @@ x-compose-app:
       **첫 시작은 몇 분 걸립니다.** 설정 스크립트 실행 후 임베딩 모델을
       다운로드합니다. `docker logs -f odysseus`로 확인하세요.
 
-      **리소스:** 컨테이너 4개(AppShield, Odysseus, ChromaDB, SearXNG)가 최대 약 4.6GB
+      **리소스:** 컨테이너 5개(AppShield, 라우터, Odysseus, ChromaDB, SearXNG)가 최대 약 4.7GB
       RAM을 사용합니다.
     zh_cn: |
       **无需单独登录。** Odysseus 由 AppShield 保护，从仪表板打开即以您的 PCS 账户
@@ -610,8 +700,8 @@ x-compose-app:
       **首次启动需要几分钟**，会下载嵌入模型。可用
       `docker logs -f odysseus` 查看进度。
 
-      **资源占用：** 运行四个容器（AppShield、Odysseus、ChromaDB、SearXNG），
-      总计最多约 4.6 GB 内存。
+      **资源占用：** 运行五个容器（AppShield、路由、Odysseus、ChromaDB、SearXNG），
+      总计最多约 4.7 GB 内存。
     fr_fr: |
       **Aucune connexion separee.** Odysseus est protege par AppShield : ouvrir
       l'application depuis votre tableau de bord vous connecte avec votre compte
@@ -629,7 +719,7 @@ x-compose-app:
       **Le premier demarrage prend quelques minutes** (telechargement du
       modele d'embedding). Suivez avec `docker logs -f odysseus`.
 
-      **Ressources :** quatre conteneurs, jusqu'a ~4,6 Go de RAM au total.
+      **Ressources :** cinq conteneurs, jusqu'a ~4,7 Go de RAM au total.
     es_es: |
       **Sin inicio de sesion aparte.** Odysseus esta protegido por AppShield: al abrir
       la aplicacion desde tu panel entras con tu cuenta del PCS, sin usuario ni
@@ -647,7 +737,7 @@ x-compose-app:
       **El primer arranque tarda unos minutos** (descarga del modelo de
       embeddings). Sigue el progreso con `docker logs -f odysseus`.
 
-      **Recursos:** cuatro contenedores, hasta ~4,6 GB de RAM en total.
+      **Recursos:** cinco contenedores, hasta ~4,7 GB de RAM en total.
   # SearXNG's session secret. Generated once by Maison and kept in the app's .env,
   # then substituted into seed/searxng/settings.yml.tmpl on first start.
   #
@@ -692,3 +782,4 @@ x-compose-app:
     # Regenerable data: restored empty, rebuilt by the app. Declared in folders above.
     exclude:
       - logs/
+

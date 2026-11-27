@@ -24,13 +24,14 @@ The 1.0.3 image honours `AUTH_ENABLED=false` in its admin-gated configuration ro
 (upstream #6029). The 1.0.2 rebuild did not, so with AppShield as the only auth layer
 Settings › Integrations answered 403 and could not be used at all.
 
-## Four containers, ~4.6 GB of memory limits
+## Five containers, ~4.7 GB of memory limits
 
 Odysseus needs both a vector store and a search backend to be functional:
 
 | Service | Limit | Why |
 |---|---|---|
 | `odysseus-proxy` | 128 MB | AppShield auth proxy, owns the published routes |
+| `odysseus-router` | 64 MB | nginx between the gate and the backend (see below) |
 | `odysseus-backend` | 3 GB | Python app + FastEmbed (ONNX MiniLM) + a headless Chromium for the built-in browser MCP server |
 | `odysseus-chromadb` | 1 GB | persistent long-term memory |
 | `odysseus-searxng` | 512 MB | private metasearch backing Deep Research |
@@ -82,6 +83,10 @@ other co-resident container can reach `odysseus-backend:7000` directly, unauthen
 That is not a gap specific to this app: 11 of the 24 AppShield-fronted store apps place
 their backend on `pcs` the same way, including Jellyfin, which ships
 `AUTH_DISABLED=true` by the same reasoning and audits clean.
+
+The shield proxies to `odysseus-router` (nginx, on `odysseus-internal` only), which
+proxies everything to `odysseus-backend:7000` — see the next section for the two
+requests it answers itself.
 
 `hostname: odysseus` is required: AppShield derives its OIDC redirect URIs from
 `os.hostname()` and the auth-registrar attests the app name via the container's PTR
@@ -137,6 +142,23 @@ original `Host`, so the origins the app sees are unchanged.
   support, so every published hostname must be listed (Maison passes them as
   `APP_URLS`). Omitting the `ip.<zone>`
   and `.sslip.io` entries breaks login on those URLs.
+
+## `odysseus-router`: two account reads answered for a browser with no session
+
+With `AUTH_ENABLED=false` no browser ever holds an Odysseus session, yet opening
+Settings makes two reads that require one and that the 1.0.3 backend does not
+relax in that mode: `GET /api/auth/2fa/status` answers 401 and `GET /api/auth/users`
+answers 403 (upstream refuses the user list deliberately when auth is off —
+`tests/test_admin_routes_auth_disabled.py`). The page handles both, but each failed
+fetch is a console error on first use, which `clean-boot` does not allow.
+
+The router answers exactly those two `GET`s itself, and only when the request
+carries no `odysseus_session` cookie: `{"enabled":false}` and `{"users":[]}`. Both
+are what is true in this mode — nobody has 2FA, and there are no app accounts to
+manage, AppShield being the login. Any other method, and either path for a browser
+that does hold a session, reaches the backend unchanged, as does every other
+request. The router sits behind the gate (the `Apps/qBittorrent` shape), so nothing
+reaches it without passing AppShield first.
 
 ## `user: "0:0"` on the main service
 
@@ -217,3 +239,4 @@ Caddy's ACME order is cancelled by a config-reload race whenever a new app is
 added, and it then pins the local-CA fallback certificate. This is not specific
 to this app — `casadash-<ip>.sslip.io`, already installed on the same host, fails
 identically. The gateway (`nsl.sh`) and `nip.io` routes both work.
+
