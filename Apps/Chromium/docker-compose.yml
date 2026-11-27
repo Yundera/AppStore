@@ -1,0 +1,193 @@
+name: chromium
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # AppShield: the SSO gate in front of the browser. It is the only service on
+  # the shared network and the one the route points at; the backend has no login
+  # of its own here and is reachable only through it.
+  chromium:
+    image: ghcr.io/nsl-sh/appshield:4.2.0
+    container_name: chromium
+    # OIDC identity: AppShield builds its redirect URIs from os.hostname(), and the
+    # auth-registrar checks it against the container's name. Must equal the app name.
+    hostname: chromium
+    restart: unless-stopped
+    expose:
+      - 80
+    environment:
+      BACKEND_HOST: "chromium-backend"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+      # SSO comes from the platform (Maison's system env). Where there is none
+      # (plain CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      PUBLIC_URL: "${APP_URLS:-}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+    volumes:
+      # The gate's sessions (sessions.json): without it every recreate (update,
+      # restore, config save) signs everyone out, and an open tab is left on a
+      # dead stream. The gate runs as uid 65534; `folders` gives it this directory.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/appshield:/data
+    depends_on:
+      - chromium-backend
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      # On the shared network for the platform's proxy, and on the app's own
+      # network, where the backend lives.
+      - pcs
+      - chromium-internal
+
+  chromium-backend:
+    image: lscr.io/linuxserver/chromium:b8f70cfa-ls65
+    container_name: chromium-backend
+    # Fixed hostname: Chromium's profile SingletonLock names the host it was taken
+    # on, so a random hostname on every recreate would make it refuse its own profile.
+    hostname: chromium-backend
+    restart: unless-stopped
+    # No `user:`: the linuxserver s6 init starts as root, owns /config for
+    # PUID:PGID and runs the desktop and Chromium as that user. It touches only
+    # the app folder below.
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      TITLE: Chromium
+    volumes:
+      # The whole home of the desktop user: Chromium profile (bookmarks, history,
+      # saved logins, extensions, cookies), Downloads and desktop settings.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/config:/config
+    # Selkies web client, plain HTTP (3001 is the same over a self-signed HTTPS
+    # and is not used).
+    expose:
+      - 3000
+    # Chromium crashes tabs with Docker's 64M default /dev/shm.
+    shm_size: "1gb"
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+    networks:
+      # App-private: reached only through the gate.
+      - chromium-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  # App-private link between the gate and the browser.
+  chromium-internal:
+    driver: bridge
+
+x-compose-app:
+  schema_version: 2
+  id: chromium
+  title:
+    en_us: Chromium
+  tagline:
+    en_us: The Chromium web browser, running on your server and used from any browser.
+  description:
+    en_us: |
+      Chromium is the open-source web browser that Google Chrome is built on. This app runs a full Chromium desktop browser on your server (the linuxserver.io image, streamed to your browser with Selkies) and lets you use it from any web browser, on any device. Browsing happens from your server's connection, so your local device never touches the sites you visit.
+
+      Your Chromium profile (bookmarks, history, saved logins, extensions) and the files you download are kept in the app folder and survive restarts, updates and reinstalls.
+
+      The app is protected by your server's single sign-on.
+  developer: linuxserver.io
+  category: Utilities
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  # 3G browser limit plus the gate and room for the OS; CPU-bound because every
+  # frame is encoded on the server.
+  resources:
+    recommended: { cpu: 2, memory: 4G }
+  tips:
+    en_us: |
+      Sign in with your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
+
+      Files Chromium downloads are kept in the app folder, `AppData/chromium/config/Downloads`. The Selkies side panel (the handle on the left edge of the screen) also lets you upload files to the remote browser, download them to your device, and share the clipboard.
+
+      If the screen stays black with "WebSocket disconnected", reload the page: your sign-in has expired and the reload takes you through it again.
+  routes:
+    - { service: chromium, name: chromium, upstream-port: 80 }
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in to this app. On a server with single sign-on, use that instead. This password then works only while single sign-on is unavailable.
+      # Behind SSO nobody needs it on the first click: tile menu only.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
+  folders:
+    # AppShield runs as nobody (65534) and keeps its sessions here.
+    - path: /DATA/AppData/chromium/appshield
+      user: "65534"
+      group: "65534"
+      mode: "0700"
+    # The desktop user runs as $PUID:$PGID and must own its home.
+    - path: /DATA/AppData/chromium/config
+      user: $PUID
+      group: $PGID
+      mode: "0750"
+
+x-casaos:
+  store_app_id: chromium
+  main: chromium
+  webui_port: 80
+  index: /
+  title:
+    en_us: Chromium
+  tagline:
+    en_us: The Chromium web browser, running on your server and used from any browser.
+  description:
+    en_us: |
+      Chromium is the open-source web browser that Google Chrome is built on. This app runs a full Chromium desktop browser on your server (the linuxserver.io image, streamed to your browser with Selkies) and lets you use it from any web browser, on any device. Browsing happens from your server's connection, so your local device never touches the sites you visit.
+
+      Your Chromium profile (bookmarks, history, saved logins, extensions) and the files you download are kept in the app folder and survive restarts, updates and reinstalls.
+
+      The app is protected by your server's single sign-on.
+  developer: linuxserver.io
+  author: Yundera
+  category: Utilities
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  tips:
+    before_install:
+      en_us: |
+        Sign in with your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
+
+        Files Chromium downloads are kept in the app folder, `AppData/chromium/config/Downloads`. The Selkies side panel (the handle on the left edge of the screen) also lets you upload files to the remote browser, download them to your device, and share the clipboard.
+
+        If the screen stays black with "WebSocket disconnected", reload the page: your sign-in has expired and the reload takes you through it again.
