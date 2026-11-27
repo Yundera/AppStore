@@ -43,7 +43,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:8.10.3-alpine
+    image: redis:8.12.0-alpine
     user: 0:0
     container_name: seafile-redis
     restart: unless-stopped
@@ -228,7 +228,7 @@ services:
   # Caddy handle_path tree lives here instead. The platform only ever routes a
   # host to this container's port 80.
   seafile-router:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.31.10-alpine
     container_name: seafile-router
     restart: unless-stopped
     cpu_shares: 50
