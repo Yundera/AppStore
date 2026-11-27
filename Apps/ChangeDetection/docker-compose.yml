@@ -79,7 +79,7 @@ services:
   # /site.webmanifest, straight to changedetection.io and everything else to the
   # AppShield gate. See rationale.md.
   changedetection-router:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.31.10-alpine
     container_name: changedetection-router
     restart: unless-stopped
     depends_on:
