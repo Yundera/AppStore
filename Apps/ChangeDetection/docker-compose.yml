@@ -200,8 +200,8 @@ x-casaos:
         password setting off.
         -----------------------------
         **First visit:** paste a URL into **Web page URL** at the top and press **Watch**.
-        Two example watches are already there to show how it works. The first check runs
-        at once; **Preview** shows what was fetched and **History** each change as it comes.
+        The first check runs at once; **Preview** shows what was fetched and **History**
+        each change as it comes.
         Set up where notifications go under **Settings > Notifications**.
         -----------------------------
         Every request goes through the single sign-on gate, so the REST API, RSS feeds and
@@ -261,13 +261,16 @@ x-compose-app:
       password setting off.
       -----------------------------
       **First visit:** paste a URL into **Web page URL** at the top and press **Watch**.
-      Two example watches are already there to show how it works. The first check runs
-      at once; **Preview** shows what was fetched and **History** each change as it comes.
+      The first check runs at once; **Preview** shows what was fetched and **History**
+      each change as it comes.
       Set up where notifications go under **Settings > Notifications**.
       -----------------------------
       Every request goes through the single sign-on gate, so the REST API, RSS feeds and
       the MCP endpoint cannot be reached by outside clients. Use it from the browser.
-  # changedetection.io runs as $PUID:$PGID and writes its whole state here.
+  # changedetection.io runs as $PUID:$PGID and writes its whole state here. A fresh
+  # datastore is seeded (seed/datastore/changedetection.json.tmpl, create-if-absent) with
+  # the box's timezone as the scheduler default: without one the watch Edit and Settings
+  # pages omit the scheduler checkbox their script expects, and throw a console error.
   folders:
     - path: /DATA/AppData/$AppID/datastore
       user: $PUID
