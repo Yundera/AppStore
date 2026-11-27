@@ -70,7 +70,7 @@ services:
   # below. Being off the shared network is what keeps the RPC API away from every
   # other container on the box too, since it has no authentication of its own.
   kubo-backend:
-    image: ipfs/kubo:v0.43.1
+    image: ipfs/kubo:v0.43.2
     container_name: kubo-backend
     user: $PUID:$PGID
     restart: unless-stopped
@@ -150,7 +150,7 @@ services:
   # It is answered from the gateway port, which serves only what the node already
   # holds -- the same content the kubo-gateway host shows anyone.
   kubo-router:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.31.10-alpine
     container_name: kubo-router
     restart: unless-stopped
     cpu_shares: 50
@@ -390,7 +390,7 @@ x-compose-app:
       # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
       change:
         apply: env
-  version: "0.43.1"
+  version: "0.43.2"
   # How the app is reached, stated without a domain or a proxy: the box's routing
   # setting decides. The first route is the web UI; each name is the host the app
   # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
@@ -534,7 +534,7 @@ x-compose-app:
       at: started
       run: always
       script: |
-        docker run --rm -i --entrypoint sh --network kubo-internal ipfs/kubo:v0.43.1 -s <<'SH'
+        docker run --rm -i --entrypoint sh --network kubo-internal ipfs/kubo:v0.43.2 -s <<'SH'
         API=/dns/kubo-backend/tcp/5001
         # A started step runs when `compose up` returns -- the container has started, the
         # daemon has not necessarily finished opening its repo.
