@@ -59,7 +59,7 @@ services:
     logging: *logging
 
   db:
-    image: mariadb:11.8.9
+    image: mariadb:11.8.10
     container_name: ghost-db
     restart: unless-stopped
     user: "0:0"
