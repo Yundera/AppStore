@@ -127,7 +127,7 @@ services:
       - coolify-internal
 
   coolify-redis:
-    image: redis:8.2.2-alpine
+    image: redis:8.12.0-alpine
     container_name: coolify-redis
     restart: unless-stopped
     cpu_shares: 50
@@ -136,7 +136,9 @@ services:
       resources:
         limits:
           memory: 256M
-    command: ["sh", "-c", "exec redis-server --save 20 1 --loglevel warning --requirepass \"$$REDIS_PASSWORD\""]
+    # Redis 8.12 turned on off-CPU tracking, which logs a warning on every event-loop cycle the
+    # container is starved of CPU (routine under cpu_shares on a busy box); keep 8.2's behaviour.
+    command: ["sh", "-c", "exec redis-server --save 20 1 --loglevel warning --off-cpu-tracking no --requirepass \"$$REDIS_PASSWORD\""]
     environment:
       REDIS_PASSWORD: ${COOLIFY_REDIS_PASSWORD}
     volumes:
