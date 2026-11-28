@@ -1,0 +1,327 @@
+name: coolify
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # The app's own router, and the only service on the shared network. Coolify answers
+  # on three ports in one container (web 8080, the Reverb websocket 6001, the terminal
+  # websocket 6002); its own proxy config sends /app/* and /terminal/ws to the last
+  # two, and this does the same, so the browser reaches all of them on one host.
+  coolify-router:
+    image: nginx:1.31.10-alpine
+    container_name: coolify-router
+    restart: unless-stopped
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    expose:
+      - 80
+    configs:
+      - source: coolify-router
+        target: /etc/nginx/conf.d/default.conf
+    depends_on:
+      - coolify
+    networks:
+      - pcs
+      - coolify-internal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/_router/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  coolify:
+    image: ghcr.io/coollabsio/coolify:4.7.9
+    container_name: coolify-app
+    restart: unless-stopped
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    # The image runs as www-data (uid 9999); its folders are declared for that uid.
+    expose:
+      - 8080
+      - 6001
+      - 6002
+    environment:
+      APP_ENV: production
+      APP_NAME: Coolify
+      APP_ID: ${COOLIFY_APP_ID}
+      APP_KEY: base64:${COOLIFY_APP_KEY}
+      APP_URL: ${APP_URL:-https://coolify-${APP_DOMAIN}}
+      DB_CONNECTION: pgsql
+      DB_HOST: coolify-db
+      DB_PORT: "5432"
+      DB_DATABASE: coolify
+      DB_USERNAME: coolify
+      DB_PASSWORD: ${COOLIFY_DB_PASSWORD}
+      REDIS_HOST: coolify-redis
+      REDIS_PASSWORD: ${COOLIFY_REDIS_PASSWORD}
+      PUSHER_APP_ID: ${COOLIFY_PUSHER_APP_ID}
+      PUSHER_APP_KEY: ${COOLIFY_PUSHER_APP_KEY}
+      PUSHER_APP_SECRET: ${COOLIFY_PUSHER_APP_SECRET}
+      PUSHER_BACKEND_PORT: "6001"
+      # Coolify updates itself by running its installer on the host over SSH, which a
+      # store app cannot do: updates come from the store instead.
+      AUTOUPDATE: "false"
+      PHP_MEMORY_LIMIT: 256M
+      PHP_FPM_PM_CONTROL: dynamic
+      PHP_FPM_PM_START_SERVERS: "1"
+      PHP_FPM_PM_MIN_SPARE_SERVERS: "1"
+      PHP_FPM_PM_MAX_SPARE_SERVERS: "10"
+      TZ: $TZ
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/ssh:/var/www/html/storage/app/ssh
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/applications:/var/www/html/storage/app/applications
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/databases:/var/www/html/storage/app/databases
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/services:/var/www/html/storage/app/services
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/backups:/var/www/html/storage/app/backups
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/images:/var/www/html/storage/app/images
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/webhooks-during-maintenance:/var/www/html/storage/app/webhooks-during-maintenance
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/health >/dev/null && curl -fsS http://127.0.0.1:6001/up >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 2s
+      retries: 12
+      start_period: 1m
+    depends_on:
+      coolify-db:
+        condition: service_healthy
+      coolify-redis:
+        condition: service_healthy
+    networks:
+      - coolify-internal
+
+  coolify-db:
+    image: postgres:15.17-alpine
+    container_name: coolify-db
+    restart: unless-stopped
+    cpu_shares: 70
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      POSTGRES_USER: coolify
+      POSTGRES_PASSWORD: ${COOLIFY_DB_PASSWORD}
+      POSTGRES_DB: coolify
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "coolify", "-d", "coolify"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+    networks:
+      - coolify-internal
+
+  coolify-redis:
+    image: redis:8.2.2-alpine
+    container_name: coolify-redis
+    restart: unless-stopped
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    command: ["sh", "-c", "exec redis-server --save 20 1 --loglevel warning --requirepass \"$$REDIS_PASSWORD\""]
+    environment:
+      REDIS_PASSWORD: ${COOLIFY_REDIS_PASSWORD}
+    volumes:
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+    networks:
+      - coolify-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  coolify-internal:
+    driver: bridge
+
+configs:
+  coolify-router:
+    # `$$` is compose's escape for nginx's own `$`.
+    content: |
+      # Upstreams are variables so nginx starts before they exist and re-resolves
+      # them through Docker's DNS when a container is recreated with a new IP.
+      resolver 127.0.0.11 valid=10s ipv6=off;
+
+      map $$http_upgrade $$connection_upgrade { default upgrade; "" close; }
+      # The proxy in front terminated TLS: keep its scheme, not ours (http).
+      map $$http_x_forwarded_proto $$fwd_proto { default $$http_x_forwarded_proto; "" $$scheme; }
+      # Coolify rate-limits sign-up and login per client address. The client controls
+      # the first X-Forwarded-For entries; the last one is what the platform proxy saw.
+      map $$http_x_forwarded_for $$client_ip {
+        "~(?<last>[^,\s]+)\s*$$" $$last;
+        default $$remote_addr;
+      }
+
+      server {
+        listen 80;
+        absolute_redirect off;
+
+        # Database backups are uploaded and downloaded through here.
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $$http_host;
+        proxy_set_header X-Real-IP $$client_ip;
+        proxy_set_header X-Forwarded-For $$client_ip;
+        proxy_set_header X-Forwarded-Proto $$fwd_proto;
+        proxy_set_header X-Forwarded-Host $$http_host;
+        proxy_set_header Upgrade $$http_upgrade;
+        proxy_set_header Connection $$connection_upgrade;
+
+        set $$web coolify-app:8080;
+        set $$realtime coolify-app:6001;
+        set $$terminal coolify-app:6002;
+
+        location = /_router/health { access_log off; return 204; }
+
+        # Reverb (Pusher protocol): live deployment logs and status updates.
+        location /app/ {
+          proxy_pass http://$$realtime;
+        }
+        # The in-browser terminal.
+        location = /terminal/ws {
+          proxy_pass http://$$terminal;
+        }
+        location / {
+          proxy_pass http://$$web;
+        }
+      }
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: coolify-router
+  webui_port: 80
+  store_app_id: coolify
+  category: Developer
+  developer: coollabsio
+  author: Yundera
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+  tags: ["paas", "deployment", "docker", "devops"]
+  title:
+    en_us: Coolify
+  tagline:
+    en_us: Self-hosted PaaS to deploy apps, databases and services on your own servers
+  description:
+    en_us: &description |
+      Coolify is an open-source, self-hostable alternative to Heroku, Netlify and Vercel.
+      Connect your own servers over SSH and deploy applications from Git repositories,
+      Dockerfiles or Docker Compose files, databases (PostgreSQL, MySQL, MariaDB, MongoDB,
+      Redis and more) and hundreds of one-click services, with automatic HTTPS, scheduled
+      database backups, webhooks and live deployment logs.
+
+      **How it runs here:** this is Coolify's control panel. It manages the servers you
+      add to it by SSH (a VPS, a home server, a Raspberry Pi); it does not deploy onto
+      this PCS itself, whose web ports belong to the platform. The first visit creates
+      the admin account. For technical users.
+  tips:
+    before_install:
+      en_us: &tips |
+        **First visit creates the admin account.** Open Coolify right after it installs and
+        register: the first account becomes the root user, and registration then closes.
+        For safety the sign-up form is only open for 10 minutes after Coolify starts. If it
+        says the window has closed, restart the app from its tile and open it again.
+
+        **Add a server to deploy to.** In the onboarding, choose **Remote Server** (or later
+        **Servers › Add**), paste or generate an SSH key, and add its public key to the
+        `root` (or a sudo user's) `~/.ssh/authorized_keys` on that machine. Coolify installs
+        Docker and its proxy there and deploys your apps to it.
+
+        The built-in **localhost** server points at the machine Coolify runs on; on a PCS it
+        stays unreachable, and that is expected. Coolify's self-update is turned off: new
+        versions come through the store.
+  index: /
+
+x-compose-app:
+  schema_version: 2
+  version: "4.7.9"
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI; each name is the host the app
+  # reads back as APP_* (the first) or ROUTE_<NAME>_* (the others).
+  routes:
+    - { service: coolify-router, name: coolify, upstream-port: 80 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  id: coolify
+  title:
+    en_us: Coolify
+  tagline:
+    en_us: Self-hosted PaaS to deploy apps, databases and services on your own servers
+  description:
+    en_us: *description
+  developer: coollabsio
+  category: Developer
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+  architectures:
+    - amd64
+    - arm64
+  audience: technical
+  resources:
+    recommended: { cpu: 2, memory: 4G }
+  tips:
+    en_us: *tips
+  # Generated once and kept: none of these is a login, nobody types them.
+  secrets:
+    COOLIFY_APP_ID: hex:16
+    COOLIFY_APP_KEY: base64:32
+    COOLIFY_DB_PASSWORD: alnum:32
+    COOLIFY_REDIS_PASSWORD: alnum:32
+    COOLIFY_PUSHER_APP_ID: hex:16
+    COOLIFY_PUSHER_APP_KEY: hex:16
+    COOLIFY_PUSHER_APP_SECRET: hex:32
+  # The coolify image runs as www-data (uid/gid 9999, as Coolify's own installer
+  # chowns /data/coolify). Postgres and Redis start as root and own their folders.
+  folders:
+    - path: /DATA/AppData/$AppID/ssh
+      user: "9999"
+      group: "9999"
+      mode: "0700"
+    - path: /DATA/AppData/$AppID/applications
+      user: "9999"
+      group: "9999"
+    - path: /DATA/AppData/$AppID/databases
+      user: "9999"
+      group: "9999"
+    - path: /DATA/AppData/$AppID/services
+      user: "9999"
+      group: "9999"
+    - path: /DATA/AppData/$AppID/backups
+      user: "9999"
+      group: "9999"
+    - path: /DATA/AppData/$AppID/images
+      user: "9999"
+      group: "9999"
+    - path: /DATA/AppData/$AppID/webhooks-during-maintenance
+      user: "9999"
+      group: "9999"
