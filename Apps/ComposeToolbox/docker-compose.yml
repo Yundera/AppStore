@@ -1,0 +1,181 @@
+name: composetoolbox
+
+# Bounded container logs (requirement `log-limits`): json-file never rotates on its own.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # The SSO gate: Compose Toolbox has no login of its own, so every request goes
+  # through AppShield before it reaches the app.
+  composetoolbox:
+    image: ghcr.io/nsl-sh/appshield:4.2.0
+    container_name: composetoolbox
+    # OIDC identity: the AppShield auth-service builds its OIDC redirect URIs from
+    # os.hostname(), and the auth-registrar attests this app's name via the
+    # container's PTR record. Must equal the app name.
+    hostname: composetoolbox
+    restart: unless-stopped
+    expose:
+      - 80
+    environment:
+      BACKEND_HOST: "composetoolbox-backend"
+      BACKEND_PORT: "3000"
+      LISTEN_PORT: "80"
+      # SSO comes from the platform (Maison's system env). Where there is none
+      # (plain CasaOS) all four are empty and the gate protects the app with PASSWORD.
+      OIDC_REGISTRAR_URL: "${OIDC_REGISTRAR_URL:-}"
+      OIDC_ISSUER_URL: "${OIDC_ISSUER_URL:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      # Break-glass login while SSO is unavailable; the only login without SSO.
+      PASSWORD: "${APPSHIELD_PASSWORD:-}"
+      # Every address the app is served at, primary first (Maison sets it).
+      PUBLIC_URL: "${APP_URLS:-}"
+      REDIRECT_HOST_SUFFIXES: "${APP_HOST_SUFFIXES:-${APP_DOMAIN}}"
+    depends_on:
+      - composetoolbox-backend
+    cpu_shares: 80
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      # On the shared network to be routed and to reach the platform's
+      # auth-registrar; on the app's own network to reach the backend.
+      - pcs
+      - composetoolbox-internal
+
+  composetoolbox-backend:
+    # Upstream publishes only the floating `latest`/`main` tags, so the image is
+    # pinned by digest (multi-arch index: amd64 + arm64), built 2026-08-19 from
+    # bluegoosemedia/composetoolbox@3e3b1cf.
+    image: ghcr.io/bluegoosemedia/composetoolbox@sha256:1cb6f19f3ea5ef08467870f542155619f9389bcf0dc68499e2c57a7c540f39b2
+    container_name: composetoolbox-backend
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      NODE_ENV: production
+    expose:
+      - 3000
+    volumes:
+      # The start-up template and the custom quick-insert templates. The image
+      # creates both files on first start and never overwrites them.
+      - ${DATA_ROOT:-/DATA}/AppData/$AppID/data:/app/data
+    cpu_shares: 50
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      # App-private: reached only by the gate.
+      - composetoolbox-internal
+
+networks:
+  pcs:
+    name: ${APP_NET:-pcs}
+    external: true
+  # App-private link between the gate and the backend.
+  composetoolbox-internal:
+    driver: bridge
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: composetoolbox
+  webui_port: 80
+  index: /
+  category: Developer
+  tags: ["developer", "docker"]
+  developer: bluegoosemedia
+  icon: icon.png
+  screenshot_link:
+    - screenshot-1.png
+    - screenshot-2.png
+  title:
+    en_us: Compose Toolbox
+  tagline:
+    en_us: Edit, validate and improve docker-compose files
+  description:
+    en_us: |
+      Compose Toolbox is a web editor for docker-compose.yml files. Paste or write a compose file in its full code editor and it validates it as you type, shows a breakdown of what every service, port, volume and network does, and suggests improvements. Quick-insert templates add common blocks in one click.
+
+      The file you edit stays in your browser. On the server the app keeps only two files you can customise, in `/DATA/AppData/composetoolbox/data`: `startup/startup-template.yml` (what the editor opens with) and `custom-templates/custom-templates.yml` (your own quick-insert templates).
+
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
+  tips:
+    before_install:
+      en_us: |
+        **Sign-in:** Compose Toolbox is protected by your server account (single sign-on).
+        On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
+
+        **Customise:** edit `startup/startup-template.yml` (the file the editor opens with) and `custom-templates/custom-templates.yml` (quick-insert templates) in `/DATA/AppData/composetoolbox/data`, then reload the page.
+
+        Access via: `${APP_URL:-https://composetoolbox-${APP_DOMAIN}}`
+
+x-compose-app:
+  schema_version: 2
+  id: composetoolbox
+  version: "2026.08.19"
+  credentials:
+    - label:
+        en_us: App password
+      username: admin
+      password: ${APPSHIELD_PASSWORD}
+      note:
+        en_us: Signs in to this app. On a server with single sign-on, use that instead. This password then works only while single sign-on is unavailable.
+      # Behind SSO nobody needs it on the first click: tile menu only. Without SSO, Maison shows it anyway.
+      prompt: false
+      # The gate reads PASSWORD on every start, so .env plus a recreate is the change.
+      change:
+        apply: env
+  # How the app is reached, stated without a domain or a proxy: the box's routing
+  # setting decides. The first route is the web UI.
+  routes:
+    - { service: composetoolbox, name: composetoolbox, upstream-port: 80 }
+  # The store card and the tile. Maison reads x-compose-app only: x-casaos is
+  # kept for CasaOS and for Maison builds that predate this, and must match.
+  title:
+    en_us: Compose Toolbox
+  tagline:
+    en_us: Edit, validate and improve docker-compose files
+  description:
+    en_us: |
+      Compose Toolbox is a web editor for docker-compose.yml files. Paste or write a compose file in its full code editor and it validates it as you type, shows a breakdown of what every service, port, volume and network does, and suggests improvements. Quick-insert templates add common blocks in one click.
+
+      The file you edit stays in your browser. On the server the app keeps only two files you can customise, in `/DATA/AppData/composetoolbox/data`: `startup/startup-template.yml` (what the editor opens with) and `custom-templates/custom-templates.yml` (your own quick-insert templates).
+
+      The app is protected by your server account (single sign-on). On a server without single sign-on, use the app password Maison shows on first open (also in the tile menu under **Credentials**).
+  developer: bluegoosemedia
+  category: Developer
+  icon: icon.png
+  screenshots:
+    - screenshot-1.png
+    - screenshot-2.png
+  architectures:
+    - amd64
+    - arm64
+  audience: technical
+  tips:
+    en_us: |
+      **Sign-in:** Compose Toolbox is protected by your server account (single sign-on).
+      On a server without single sign-on, or while it is unavailable, sign in with the app password Maison shows on first open (also in the tile menu under **Credentials**).
+
+      **Customise:** edit `startup/startup-template.yml` (the file the editor opens with) and `custom-templates/custom-templates.yml` (quick-insert templates) in `/DATA/AppData/composetoolbox/data`, then reload the page.
+
+      Access via: `${APP_URL:-https://composetoolbox-${APP_DOMAIN}}`
+  secrets:
+    # The AppShield gate's fallback password (see its PASSWORD).
+    APPSHIELD_PASSWORD: password:24
+  # Created and owned by $PUID:$PGID before every start: the backend runs as
+  # that user and writes its two template files here on first start.
+  folders:
+    - path: /DATA/AppData/$AppID/data
+      user: $PUID
+      group: $PGID
+      mode: "0755"
